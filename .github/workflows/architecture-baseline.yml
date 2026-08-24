@@ -1,0 +1,77 @@
+name: Architecture Baseline
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/architecture-baseline.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/architecture-baseline.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-architecture-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required architecture documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            README.md
+            docs/architecture/EXPADIO-MASTER-ARCHITECTURE.md
+            docs/architecture/AI-INTELLIGENCE-AND-VOICE.md
+            docs/architecture/PROVIDER-ABSTRACTION-BYOK-BYOC.md
+            docs/architecture/TECHNICAL-BLUEPRINT.md
+            docs/migration/BEMP-CORE-EXTRACTION-MAP.md
+            docs/migration/DENTEX-EXTRACTION-MAP.md
+            docs/migration/GFSM-EXTRACTION-MAP.md
+            docs/migration/LIMS-TPA-EXTRACTION-MAP.md
+            docs/migration/REPOSITORY-EXTRACTION-MATRIX.md
+          )
+
+          for file in "${required[@]}"; do
+            test -s "$file" || { echo "Missing or empty required document: $file"; exit 1; }
+          done
+
+      - name: Verify extraction baseline is source-verified
+        shell: bash
+        run: |
+          set -euo pipefail
+          matrix=docs/migration/REPOSITORY-EXTRACTION-MATRIX.md
+          grep -q 'Status:.*Verified extraction baseline' "$matrix"
+          grep -q 'BEMP.*KEEP AS CORE' "$matrix"
+          grep -q 'DENTEX-EXTRACTION-MAP.md' "$matrix"
+          grep -q 'GFSM-EXTRACTION-MAP.md' "$matrix"
+          grep -q 'LIMS-TPA-EXTRACTION-MAP.md' "$matrix"
+          grep -q 'Do not create a second workflow/Decision Fabric engine' "$matrix"
+          grep -q 'Do not treat tamper evidence as WORM/immutability' "$matrix"
+
+      - name: Reject unresolved merge markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' README.md docs; then
+            echo 'Unresolved merge-conflict markers found.'
+            exit 1
+          fi
+
+      - name: Verify migration maps identify source and target
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in docs/migration/*-EXTRACTION-MAP.md; do
+            grep -qi 'source' "$file" || { echo "$file does not identify a source"; exit 1; }
+            grep -qi 'target' "$file" || { echo "$file does not identify a target"; exit 1; }
+          done
