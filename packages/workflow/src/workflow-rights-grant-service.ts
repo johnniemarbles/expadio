@@ -8,6 +8,7 @@ import type { WorkflowRightsGrantRepository } from './workflow-rights-repository
 import type { WorkflowRightsProfileProvider } from './workflow-rights-profile-provider.ts';
 import { validateWorkflowRightsGrant } from './workflow-rights-validation.ts';
 
+/** Validates and records rights; it deliberately performs no provisioning side effects. */
 export class RepositoryWorkflowRightsGrantService implements WorkflowRightsGrantService {
   readonly #profiles: WorkflowRightsProfileProvider;
   readonly #repository: WorkflowRightsGrantRepository;
