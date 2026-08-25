@@ -160,3 +160,28 @@ test('listVersions preserves descending database version order', async () => {
   assert.deepEqual(client.calls[0]?.values, [tenantDefinition.tenantId, tenantDefinition.blueprintKey]);
   assert.match(client.calls[0]?.text ?? '', /ORDER BY version DESC/);
 });
+
+test('listActiveForWorkType returns only ACTIVE candidates within the requested scope', async () => {
+  const client = new ScriptedClient();
+  client.responses.push({
+    rows: [
+      tenantRow,
+      { ...tenantRow, blueprint_key: 'partner-onboarding-alt', version: 1 },
+    ],
+    rowCount: 2,
+  });
+
+  const result = await new PostgresWorkflowBlueprintRepository(client).listActiveForWorkType({
+    scope: { type: 'TENANT', tenantId: tenantDefinition.tenantId! },
+    workTypeKey: tenantDefinition.workTypeKey,
+  });
+
+  assert.deepEqual(result.map((item) => item.blueprintKey), [
+    'partner-onboarding',
+    'partner-onboarding-alt',
+  ]);
+  assert.deepEqual(client.calls[0]?.values, [tenantDefinition.tenantId, tenantDefinition.workTypeKey]);
+  assert.match(client.calls[0]?.text ?? '', /work_type_key = \$2/);
+  assert.match(client.calls[0]?.text ?? '', /state = 'ACTIVE'/);
+  assert.match(client.calls[0]?.text ?? '', /ORDER BY version DESC, blueprint_key ASC/);
+});
