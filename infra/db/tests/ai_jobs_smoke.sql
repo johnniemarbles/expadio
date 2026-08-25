@@ -96,7 +96,7 @@ BEGIN
     ) VALUES (
       'a0000000-0000-0000-0000-000000000013',
       'a0000000-0000-0000-0000-000000000001',
-      'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1',
+      'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1',
       3, 'CANCELLED', now(), 'worker-a', 'Invalid sequence.',
       'a0000000-0000-0000-0000-000000000114',
       ARRAY['worker:lease-a']
