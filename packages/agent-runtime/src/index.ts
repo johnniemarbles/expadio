@@ -278,3 +278,4 @@ function validInstant(value: string): boolean {
 
 export * from './approval.ts';
 export * from './budget.ts';
+export * from './history.ts';
