@@ -27,7 +27,8 @@
     "./business-configuration": "./src/business-configuration.ts",
     "./governed-configuration": "./src/governed-configuration.ts",
     "./ai-job": "./src/ai-job.ts",
-    "./agent-run": "./src/agent-run.ts"
+    "./agent-run": "./src/agent-run.ts",
+    "./intelligence-usage": "./src/intelligence-usage.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
@@ -42,6 +43,7 @@
     "@expadio/tenancy-persistence": "workspace:*",
     "@expadio/workflow": "workspace:*",
     "@expadio/business-config": "workspace:*",
-    "@expadio/agent-runtime": "workspace:*"
+    "@expadio/agent-runtime": "workspace:*",
+    "@expadio/usage-metering": "workspace:*"
   }
 }
