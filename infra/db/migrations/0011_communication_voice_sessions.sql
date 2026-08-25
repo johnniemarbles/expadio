@@ -28,7 +28,7 @@ CREATE TABLE platform.communication_voice_sessions (
     ON DELETE CASCADE,
   FOREIGN KEY (conversation_id, tenant_id)
     REFERENCES platform.communication_conversations(conversation_id, tenant_id)
-    ON DELETE SET NULL,
+    ON DELETE RESTRICT,
   CONSTRAINT communication_voice_session_timestamps CHECK (
     (answered_at IS NULL OR answered_at >= requested_at)
     AND (ended_at IS NULL OR ended_at >= requested_at)
