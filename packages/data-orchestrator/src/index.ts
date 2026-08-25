@@ -278,3 +278,5 @@ function result(
     ? { valid: true, issues: [] }
     : { valid: false, issues };
 }
+
+export * from './execution.ts';
