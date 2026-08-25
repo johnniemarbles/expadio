@@ -6,11 +6,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./provider-registry": "./src/provider-registry.ts",
-    "./authorization": "./src/authorization.ts"
+    "./authorization": "./src/authorization.ts",
+    "./access-runtime": "./src/access-runtime.ts"
   },
   "dependencies": {
+    "@expadio/access-runtime": "workspace:*",
     "@expadio/authorization": "workspace:*",
     "@expadio/authorization-persistence": "workspace:*",
+    "@expadio/capabilities": "workspace:*",
     "@expadio/capability-persistence": "workspace:*",
     "@expadio/provider-registry": "workspace:*",
     "@expadio/tenancy": "workspace:*",
