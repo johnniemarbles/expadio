@@ -23,7 +23,8 @@
     "./workflow-activation": "./src/workflow-activation.ts",
     "./workflow-activation-blueprint": "./src/workflow-activation-blueprint.ts",
     "./workflow-activation-verification": "./src/workflow-activation-verification.ts",
-    "./workflow-activation-lifecycle": "./src/workflow-activation-lifecycle.ts"
+    "./workflow-activation-lifecycle": "./src/workflow-activation-lifecycle.ts",
+    "./business-configuration": "./src/business-configuration.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
@@ -35,6 +36,7 @@
     "@expadio/provider-registry": "workspace:*",
     "@expadio/tenancy": "workspace:*",
     "@expadio/tenancy-persistence": "workspace:*",
-    "@expadio/workflow": "workspace:*"
+    "@expadio/workflow": "workspace:*",
+    "@expadio/business-config": "workspace:*"
   }
 }
