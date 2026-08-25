@@ -70,8 +70,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply capability registry migration
-        run: psql -h localhost -U postgres -d expadio_test -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_platform_capability_registry.sql
+      - name: Apply core migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in infra/db/migrations/*.sql; do
+            echo "Applying ${file}"
+            psql -h localhost -U postgres -d expadio_test -v ON_ERROR_STOP=1 -f "${file}"
+          done
 
-      - name: Run capability registry smoke checks
-        run: psql -h localhost -U postgres -d expadio_test -v ON_ERROR_STOP=1 -f infra/db/tests/capability_registry_smoke.sql
+      - name: Run database contract smoke checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in infra/db/tests/*.sql; do
+            echo "Running ${file}"
+            psql -h localhost -U postgres -d expadio_test -v ON_ERROR_STOP=1 -f "${file}"
+          done
