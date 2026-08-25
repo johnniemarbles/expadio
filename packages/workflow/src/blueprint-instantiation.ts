@@ -27,6 +27,7 @@ export function instantiateWorkflowBlueprint(input: {
   return {
     blueprintKey: blueprint.blueprintKey,
     version: blueprint.version,
+    scope: blueprint.source === 'PLATFORM' ? 'PLATFORM' : 'TENANT',
     workTypeKey: blueprint.workTypeKey,
     stages: order.map((stageKey, sequence) => ({
       ...byKey.get(stageKey)!,
