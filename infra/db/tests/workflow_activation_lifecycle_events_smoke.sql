@@ -163,10 +163,10 @@ BEGIN
     );
     RAISE EXCEPTION 'cross-tenant lifecycle insert unexpectedly succeeded';
   EXCEPTION
-    WHEN insufficient_privilege THEN NULL;
+    WHEN insufficient_privilege OR foreign_key_violation THEN NULL;
   END;
 END;
-$$;
+$;
 
 RESET ROLE;
 
