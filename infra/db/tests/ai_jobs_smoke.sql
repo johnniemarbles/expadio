@@ -1,8 +1,8 @@
 \set ON_ERROR_STOP on
 
 INSERT INTO platform.tenants (tenant_id, name) VALUES
-  ('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'AI Job Tenant A'),
-  ('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'AI Job Tenant B');
+  ('7b4c1d2e-8f90-4a31-b2c3-d4e5f6071829', 'AI Job Tenant A'),
+  ('8c5d2e3f-901a-4b42-c3d4-e5f60718293a', 'AI Job Tenant B');
 
 INSERT INTO platform.ai_jobs (
   job_id, tenant_id, invocation_id, operation, purpose,
@@ -14,7 +14,7 @@ INSERT INTO platform.ai_jobs (
 ) VALUES
   (
     'a0000000-0000-0000-0000-000000000001',
-    'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1',
+    '7b4c1d2e-8f90-4a31-b2c3-d4e5f6071829',
     'invocation-a', 'EXTRACT', 'Extract facts for review.',
     'object://tenant-a/document-1', NULL,
     'extract-facts', 1, ARRAY['eu'], ARRAY['regulated'],
@@ -25,7 +25,7 @@ INSERT INTO platform.ai_jobs (
   ),
   (
     'a0000000-0000-0000-0000-000000000002',
-    'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2',
+    '8c5d2e3f-901a-4b42-c3d4-e5f60718293a',
     'invocation-b', 'SUMMARIZE', 'Summarize call for review.',
     'object://tenant-b/call-1', NULL,
     'call-summary', 1, ARRAY['us'], ARRAY['regulated'],
@@ -42,7 +42,7 @@ INSERT INTO platform.ai_job_events (
   (
     'a0000000-0000-0000-0000-000000000011',
     'a0000000-0000-0000-0000-000000000002',
-    'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2',
+    '8c5d2e3f-901a-4b42-c3d4-e5f60718293a',
     1, 'STARTED', now(), 'worker-b', 'Start summary.',
     'a0000000-0000-0000-0000-000000000112',
     ARRAY['worker:lease-b']
@@ -58,7 +58,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 SET ROLE expadio_ai_jobs_test;
 SELECT set_config(
   'app.tenant_id',
-  'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1',
+  '7b4c1d2e-8f90-4a31-b2c3-d4e5f6071829',
   false
 );
 
@@ -81,7 +81,7 @@ INSERT INTO platform.ai_job_events (
 ) VALUES (
   'a0000000-0000-0000-0000-000000000012',
   'a0000000-0000-0000-0000-000000000001',
-  'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1',
+  '7b4c1d2e-8f90-4a31-b2c3-d4e5f6071829',
   1, 'STARTED', now(), 'worker-a', 'Start extraction.',
   'a0000000-0000-0000-0000-000000000113',
   ARRAY['worker:lease-a']
@@ -96,7 +96,7 @@ BEGIN
     ) VALUES (
       'a0000000-0000-0000-0000-000000000013',
       'a0000000-0000-0000-0000-000000000001',
-      'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1',
+      '7b4c1d2e-8f90-4a31-b2c3-d4e5f6071829',
       3, 'CANCELLED', now(), 'worker-a', 'Invalid sequence.',
       'a0000000-0000-0000-0000-000000000114',
       ARRAY['worker:lease-a']
@@ -122,7 +122,7 @@ BEGIN
       created_by_subject_id, created_at, reason, correlation_id, evidence_refs
     ) VALUES (
       'a0000000-0000-0000-0000-000000000003',
-      'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2',
+      '8c5d2e3f-901a-4b42-c3d4-e5f60718293a',
       'cross-tenant', 'GENERATE', 'Cross tenant.',
       'object://tenant-b/input', 'generate', 1,
       ARRAY[]::text[], ARRAY[]::text[], 1, 'cross-tenant',
