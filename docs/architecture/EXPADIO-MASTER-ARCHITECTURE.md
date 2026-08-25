@@ -20,6 +20,12 @@ EXPADIO
 │   ├── Workflow / Decision Fabric
 │   ├── Assignment
 │   ├── Communication
+│   │   ├── Email / SMS / messaging / push
+│   │   ├── Voice transport
+│   │   ├── Notifications
+│   │   ├── Conversations / unified inbox
+│   │   ├── Templates / campaigns / automation
+│   │   └── Delivery tracking / provider routing
 │   ├── Entitlements
 │   ├── Compliance / governance primitives
 │   └── Audit / provenance
@@ -39,8 +45,7 @@ EXPADIO
 │   ├── LMS
 │   ├── Professional Community
 │   ├── Jobs
-│   ├── Marketplace
-│   └── Notifications
+│   └── Marketplace
 │
 ├── Industry Packs / Verticals
 │   ├── DENTEX
@@ -61,6 +66,8 @@ EXPADIO
     ├── Embedded
     └── AI Agent
 ```
+
+Notification delivery is owned by BEMP Communication. A vertical or horizontal module may emit notification intents, but it must not implement a competing notification transport, provider-routing or delivery-tracking engine.
 
 ## 3. Business-neutral domain model
 
