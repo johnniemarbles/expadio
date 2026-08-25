@@ -8,7 +8,8 @@
     "./provider-registry": "./src/provider-registry.ts",
     "./authorization": "./src/authorization.ts",
     "./access-runtime": "./src/access-runtime.ts",
-    "./conversation": "./src/conversation.ts"
+    "./conversation": "./src/conversation.ts",
+    "./suppression": "./src/suppression.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
