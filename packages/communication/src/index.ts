@@ -104,6 +104,109 @@ export interface CommunicationDeliveryUpdate {
   readonly reasonCode?: string;
 }
 
+export type CommunicationIntentErrorCode =
+  | 'TRIGGER_REQUIRED'
+  | 'TENANT_REQUIRED'
+  | 'IDEMPOTENCY_REQUIRED'
+  | 'MARKETING_CONSENT_REQUIRED'
+  | 'RECIPIENT_REQUIRED'
+  | 'CHANNEL_RECIPIENT_MISMATCH';
+
+export class CommunicationIntentError extends Error {
+  constructor(
+    readonly code: CommunicationIntentErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'CommunicationIntentError';
+  }
+}
+
+export interface ValidatedCommunicationIntent {
+  readonly intent: CommunicationIntent;
+  readonly channel: CommunicationChannel;
+  readonly recipientKey: string;
+}
+
+/**
+ * Validates domain-level invariants before templates, suppression, routing or
+ * provider selection run. This is intentionally provider-neutral.
+ */
+export function validateCommunicationIntent(intent: CommunicationIntent): ValidatedCommunicationIntent {
+  if (!nonBlank(intent.triggerKey)) {
+    throw new CommunicationIntentError('TRIGGER_REQUIRED', 'triggerKey is required.');
+  }
+  if (!nonBlank(intent.tenantId)) {
+    throw new CommunicationIntentError('TENANT_REQUIRED', 'tenantId is required.');
+  }
+  if (!nonBlank(intent.idempotencyKey)) {
+    throw new CommunicationIntentError('IDEMPOTENCY_REQUIRED', 'idempotencyKey is required.');
+  }
+  if (intent.purpose === 'marketing' && intent.consentRequired !== true) {
+    throw new CommunicationIntentError(
+      'MARKETING_CONSENT_REQUIRED',
+      'Marketing communication requires consentRequired=true.',
+    );
+  }
+
+  const channel = intent.channel ?? inferDefaultCommunicationChannel(intent.recipient);
+  if (channel === null) {
+    throw new CommunicationIntentError('RECIPIENT_REQUIRED', 'Recipient has no routable address.');
+  }
+  if (!recipientSupportsChannel(intent.recipient, channel)) {
+    throw new CommunicationIntentError(
+      'CHANNEL_RECIPIENT_MISMATCH',
+      `Recipient does not support communication channel ${channel}.`,
+    );
+  }
+
+  return {
+    intent,
+    channel,
+    recipientKey: communicationRecipientKey(intent.recipient, channel),
+  };
+}
+
+/**
+ * Deterministic default preserves BEMP's email -> WhatsApp -> SMS precedence.
+ * Subject-only recipients resolve to in-app; voice/RCS/push require explicit
+ * policy/routing selection and are never guessed from a shared address.
+ */
+export function inferDefaultCommunicationChannel(
+  recipient: CommunicationRecipient,
+): CommunicationChannel | null {
+  if (nonBlank(recipient.email)) return 'email';
+  if (nonBlank(recipient.whatsapp)) return 'whatsapp';
+  if (nonBlank(recipient.phone)) return 'sms';
+  if (nonBlank(recipient.subjectId)) return 'in_app';
+  return null;
+}
+
+export function communicationRecipientKey(
+  recipient: CommunicationRecipient,
+  channel: CommunicationChannel,
+): string {
+  if (!recipientSupportsChannel(recipient, channel)) {
+    throw new CommunicationIntentError(
+      'CHANNEL_RECIPIENT_MISMATCH',
+      `Recipient does not support communication channel ${channel}.`,
+    );
+  }
+
+  switch (communicationChannelMetadata(channel).addressKind) {
+    case 'email':
+      return recipient.email!.trim().toLowerCase();
+    case 'phone':
+      return recipient.phone!.trim();
+    case 'whatsapp':
+      return (recipient.whatsapp ?? recipient.phone)!.trim();
+    case 'subject':
+      return recipient.subjectId!.trim();
+    case 'push':
+      return (recipient.pushEndpoint ?? recipient.subjectId)!.trim();
+  }
+}
+
 export function recipientSupportsChannel(
   recipient: CommunicationRecipient,
   channel: CommunicationChannel,
