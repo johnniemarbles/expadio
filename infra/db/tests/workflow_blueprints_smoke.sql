@@ -1,8 +1,8 @@
 \set ON_ERROR_STOP on
 
 INSERT INTO platform.tenants (tenant_id, name) VALUES
-  ('12121212-1212-1212-1212-121212121212', 'Workflow Tenant A'),
-  ('34343434-3434-3434-3434-343434343434', 'Workflow Tenant B');
+  ('92929292-9292-9292-9292-929292929292', 'Workflow Tenant A'),
+  ('94949494-9494-9494-9494-949494949494', 'Workflow Tenant B');
 
 INSERT INTO platform.workflow_blueprints (
   blueprint_id, tenant_id, blueprint_key, version, label, work_type_key,
@@ -10,23 +10,23 @@ INSERT INTO platform.workflow_blueprints (
   allows_stage_deactivation, minimum_required_stage_keys, stages
 ) VALUES
   (
-    '12120000-0000-0000-0000-000000000001', NULL,
+    '92920000-0000-0000-0000-000000000001', NULL,
     'partner-onboarding', 1, 'Platform partner onboarding', 'partner-onboarding',
     'PLATFORM', 'ACTIVE', true, true, true,
     ARRAY['qualification','decision'],
     '[{"stageKey":"qualification","sequence":0},{"stageKey":"decision","sequence":1}]'::jsonb
   ),
   (
-    '12120000-0000-0000-0000-000000000002',
-    '12121212-1212-1212-1212-121212121212',
+    '92920000-0000-0000-0000-000000000002',
+    '92929292-9292-9292-9292-929292929292',
     'partner-onboarding', 1, 'Tenant A partner onboarding', 'partner-onboarding',
     'TENANT_CUSTOMIZED', 'ACTIVE', true, true, true,
     ARRAY['qualification','decision'],
     '[{"stageKey":"qualification","sequence":0},{"stageKey":"review","sequence":1},{"stageKey":"decision","sequence":2}]'::jsonb
   ),
   (
-    '34340000-0000-0000-0000-000000000001',
-    '34343434-3434-3434-3434-343434343434',
+    '94940000-0000-0000-0000-000000000001',
+    '94949494-9494-9494-9494-949494949494',
     'partner-onboarding', 1, 'Tenant B partner onboarding', 'partner-onboarding',
     'TENANT_CUSTOMIZED', 'ACTIVE', true, true, true,
     ARRAY['qualification','decision'],
@@ -39,7 +39,7 @@ BEGIN
     INSERT INTO platform.workflow_blueprints (
       tenant_id, blueprint_key, version, label, work_type_key, source, state, stages
     ) VALUES (
-      '12121212-1212-1212-1212-121212121212',
+      '92929292-9292-9292-9292-929292929292',
       'invalid-platform-scope', 1, 'Invalid', 'invalid', 'PLATFORM', 'DRAFT', '[]'::jsonb
     );
     RAISE EXCEPTION 'platform blueprint with tenant unexpectedly succeeded';
@@ -78,7 +78,7 @@ BEGIN
     INSERT INTO platform.workflow_blueprints (
       tenant_id, blueprint_key, version, label, work_type_key, source, state, stages
     ) VALUES (
-      '12121212-1212-1212-1212-121212121212',
+      '92929292-9292-9292-9292-929292929292',
       'partner-onboarding', 1, 'Duplicate tenant A', 'partner-onboarding',
       'TENANT_CUSTOMIZED', 'ACTIVE', '[]'::jsonb
     );
@@ -95,7 +95,7 @@ GRANT USAGE ON SCHEMA platform TO expadio_workflow_test;
 GRANT SELECT, INSERT, UPDATE, DELETE ON platform.workflow_blueprints TO expadio_workflow_test;
 
 SET ROLE expadio_workflow_test;
-SELECT set_config('app.tenant_id', '12121212-1212-1212-1212-121212121212', false);
+SELECT set_config('app.tenant_id', '92929292-9292-9292-9292-929292929292', false);
 
 DO $$
 DECLARE
@@ -108,7 +108,7 @@ BEGIN
     FROM platform.workflow_blueprints WHERE tenant_id IS NULL;
   SELECT count(*) INTO tenant_count
     FROM platform.workflow_blueprints
-    WHERE tenant_id = '12121212-1212-1212-1212-121212121212';
+    WHERE tenant_id = '92929292-9292-9292-9292-929292929292';
 
   IF visible_count <> 2 THEN
     RAISE EXCEPTION 'tenant A expected platform + own blueprint, got %', visible_count;
@@ -122,7 +122,7 @@ $$;
 INSERT INTO platform.workflow_blueprints (
   tenant_id, blueprint_key, version, label, work_type_key, source, state, stages
 ) VALUES (
-  '12121212-1212-1212-1212-121212121212',
+  '92929292-9292-9292-9292-929292929292',
   'tenant-a-custom', 1, 'Tenant A custom', 'custom',
   'TENANT_CUSTOMIZED', 'DRAFT', '[]'::jsonb
 );
@@ -145,7 +145,7 @@ BEGIN
     INSERT INTO platform.workflow_blueprints (
       tenant_id, blueprint_key, version, label, work_type_key, source, state, stages
     ) VALUES (
-      '34343434-3434-3434-3434-343434343434',
+      '94949494-9494-9494-9494-949494949494',
       'forbidden-cross-tenant', 1, 'Forbidden tenant B', 'custom',
       'TENANT_CUSTOMIZED', 'DRAFT', '[]'::jsonb
     );
