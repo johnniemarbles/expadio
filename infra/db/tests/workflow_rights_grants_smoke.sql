@@ -6,7 +6,7 @@ INSERT INTO platform.tenants (tenant_id, name) VALUES
 
 INSERT INTO platform.organizations (organization_id, tenant_id, name) VALUES
   ('96960000-0000-0000-0000-000000000001', '96969696-9696-9696-9696-969696969696', 'Rights Org A'),
-  ('97970000-0000-0000-0000-000000000001', '97979797-9797-9797-9797-979797979797', 'Rights Org B');
+  ('97970000-0000-0000-0000-000000000001', '97979797-9797-9797-979797979797', 'Rights Org B');
 
 INSERT INTO platform.workflow_instances (
   instance_id, tenant_id, work_type_key, subject_type, subject_id,
@@ -111,10 +111,26 @@ SELECT set_config('app.tenant_id', '96969696-9696-9696-9696-969696969696', false
 DO $$
 DECLARE
   visible_count integer;
+  changed_count integer;
 BEGIN
   SELECT count(*) INTO visible_count FROM platform.workflow_rights_grants;
   IF visible_count <> 1 THEN
     RAISE EXCEPTION 'tenant A expected exactly one visible rights grant, got %', visible_count;
+  END IF;
+
+  UPDATE platform.workflow_rights_grants
+     SET state = 'SUSPENDED'
+   WHERE grant_id = '96960000-0000-0000-0000-000000000020';
+  GET DIAGNOSTICS changed_count = ROW_COUNT;
+  IF changed_count <> 0 THEN
+    RAISE EXCEPTION 'tenant update unexpectedly affected % rows', changed_count;
+  END IF;
+
+  DELETE FROM platform.workflow_rights_grants
+   WHERE grant_id = '96960000-0000-0000-0000-000000000020';
+  GET DIAGNOSTICS changed_count = ROW_COUNT;
+  IF changed_count <> 0 THEN
+    RAISE EXCEPTION 'tenant delete unexpectedly affected % rows', changed_count;
   END IF;
 END;
 $$;
@@ -140,12 +156,20 @@ BEGIN
   EXCEPTION
     WHEN insufficient_privilege THEN NULL;
   END;
+END;
+$$;
 
+RESET ROLE;
+
+-- The tenant role cannot reach UPDATE/DELETE rows because there are no mutation
+-- RLS policies. The trigger is a second backstop for privileged/table-owner paths.
+DO $$
+BEGIN
   BEGIN
     UPDATE platform.workflow_rights_grants
        SET state = 'SUSPENDED'
      WHERE grant_id = '96960000-0000-0000-0000-000000000020';
-    RAISE EXCEPTION 'immutable rights update unexpectedly succeeded';
+    RAISE EXCEPTION 'privileged immutable rights update unexpectedly succeeded';
   EXCEPTION
     WHEN raise_exception THEN
       IF SQLERRM NOT LIKE 'workflow rights grants are immutable%' THEN
@@ -156,7 +180,7 @@ BEGIN
   BEGIN
     DELETE FROM platform.workflow_rights_grants
      WHERE grant_id = '96960000-0000-0000-0000-000000000020';
-    RAISE EXCEPTION 'immutable rights delete unexpectedly succeeded';
+    RAISE EXCEPTION 'privileged immutable rights delete unexpectedly succeeded';
   EXCEPTION
     WHEN raise_exception THEN
       IF SQLERRM NOT LIKE 'workflow rights grants are immutable%' THEN
@@ -165,7 +189,5 @@ BEGIN
   END;
 END;
 $$;
-
-RESET ROLE;
 
 SELECT 'workflow rights grants smoke: ok' AS result;
