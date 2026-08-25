@@ -166,7 +166,7 @@ BEGIN
     WHEN insufficient_privilege OR foreign_key_violation THEN NULL;
   END;
 END;
-$;
+$$;
 
 RESET ROLE;
 
