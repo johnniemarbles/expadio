@@ -31,7 +31,8 @@
       "@expadio/access-runtime": ["packages/access-runtime/src/index.ts"],
       "@expadio/communication": ["packages/communication/src/index.ts"],
       "@expadio/ai-gateway": ["packages/ai-gateway/src/index.ts"],
-      "@expadio/voice-gateway": ["packages/voice-gateway/src/index.ts"]
+      "@expadio/voice-gateway": ["packages/voice-gateway/src/index.ts"],
+      "@expadio/data-orchestrator": ["packages/data-orchestrator/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*.ts"]
