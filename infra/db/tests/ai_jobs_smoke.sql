@@ -10,7 +10,8 @@ INSERT INTO platform.ai_jobs (
   prompt_configuration_key, prompt_configuration_version,
   required_residency_tags, required_compliance_tags,
   maximum_cost_minor_units, maximum_attempts, idempotency_key,
-  created_by_subject_id, created_at, reason, correlation_id, evidence_refs
+  created_by_subject_id, created_at, requested_at,
+  reason, correlation_id, evidence_refs
 ) VALUES
   (
     'a0000000-0000-0000-0000-000000000001',
@@ -19,7 +20,7 @@ INSERT INTO platform.ai_jobs (
     'object://tenant-a/document-1', NULL,
     'extract-facts', 1, ARRAY['eu'], ARRAY['regulated'],
     20, 2, 'extract:document-1:v1',
-    'worker-a', now(), 'Queue extraction.',
+    'worker-a', now(), '2026-08-25T15:00:00Z', 'Queue extraction.',
     'a0000000-0000-0000-0000-000000000101',
     ARRAY['queue:message-a']
   ),
@@ -30,7 +31,7 @@ INSERT INTO platform.ai_jobs (
     'object://tenant-b/call-1', NULL,
     'call-summary', 1, ARRAY['us'], ARRAY['regulated'],
     10, 2, 'summarize:call-1:v1',
-    'worker-b', now(), 'Queue summary.',
+    'worker-b', now(), '2026-08-25T15:00:00Z', 'Queue summary.',
     'a0000000-0000-0000-0000-000000000102',
     ARRAY['queue:message-b']
   );
@@ -119,14 +120,15 @@ BEGIN
       input_reference, prompt_configuration_key,
       prompt_configuration_version, required_residency_tags,
       required_compliance_tags, maximum_attempts, idempotency_key,
-      created_by_subject_id, created_at, reason, correlation_id, evidence_refs
+      created_by_subject_id, created_at, requested_at,
+      reason, correlation_id, evidence_refs
     ) VALUES (
       'a0000000-0000-0000-0000-000000000003',
       '8c5d2e3f-901a-4b42-c3d4-e5f60718293a',
       'cross-tenant', 'GENERATE', 'Cross tenant.',
       'object://tenant-b/input', 'generate', 1,
       ARRAY[]::text[], ARRAY[]::text[], 1, 'cross-tenant',
-      'worker-a', now(), 'Cross tenant insert.',
+      'worker-a', now(), '2026-08-25T15:00:00Z', 'Cross tenant insert.',
       'a0000000-0000-0000-0000-000000000115',
       ARRAY['negative:test']
     );
