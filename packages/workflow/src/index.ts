@@ -101,3 +101,4 @@ export * from './workflow-participant-gate.ts';
 export * from './workflow-gate-chain.ts';
 export * from './workflow-authorization.ts';
 export * from './workflow-authorization-gate.ts';
+export * from './workflow-decision.ts';
