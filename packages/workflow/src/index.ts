@@ -80,3 +80,5 @@ export interface PinnedWorkflowBlueprint {
   readonly blueprintKey: string;
   readonly version: number;
 }
+
+export * from './blueprint-validation.ts';
