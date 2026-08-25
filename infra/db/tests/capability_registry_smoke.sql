@@ -32,11 +32,11 @@ WITH capability AS (
 INSERT INTO platform.tenant_capability_bindings (
   tenant_id, capability_id, connector_id, mode, is_entitled, is_within_bounds
 )
-SELECT 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', capability.capability_id, connectors.connector_id, 'B', true, true
+SELECT 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, capability.capability_id, connectors.connector_id, 'B', true, true
 FROM capability
 JOIN platform.connectors connectors ON connectors.connector_key = 'tenant-a-email'
 UNION ALL
-SELECT 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', capability.capability_id, connectors.connector_id, 'B', true, true
+SELECT 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, capability.capability_id, connectors.connector_id, 'B', true, true
 FROM capability
 JOIN platform.connectors connectors ON connectors.connector_key = 'tenant-b-email';
 
