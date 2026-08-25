@@ -3,11 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./workflow": "./src/workflow.ts"
+  },
   "dependencies": {
     "@expadio/access-control": "workspace:*",
     "@expadio/authorization-persistence": "workspace:*",
     "@expadio/capabilities": "workspace:*",
-    "@expadio/tenancy": "workspace:*"
+    "@expadio/tenancy": "workspace:*",
+    "@expadio/workflow": "workspace:*"
   }
 }
