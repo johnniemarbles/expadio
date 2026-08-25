@@ -22,7 +22,8 @@
     "./workflow-rights-profile": "./src/workflow-rights-profile.ts",
     "./workflow-activation": "./src/workflow-activation.ts",
     "./workflow-activation-blueprint": "./src/workflow-activation-blueprint.ts",
-    "./workflow-activation-verification": "./src/workflow-activation-verification.ts"
+    "./workflow-activation-verification": "./src/workflow-activation-verification.ts",
+    "./workflow-activation-lifecycle": "./src/workflow-activation-lifecycle.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
