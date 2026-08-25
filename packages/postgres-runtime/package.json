@@ -10,7 +10,8 @@
     "./access-runtime": "./src/access-runtime.ts",
     "./conversation": "./src/conversation.ts",
     "./suppression": "./src/suppression.ts",
-    "./consent": "./src/consent.ts"
+    "./consent": "./src/consent.ts",
+    "./template": "./src/template.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
