@@ -90,3 +90,4 @@ export * from './blueprint-resolver.ts';
 export * from './workflow-instance.ts';
 export * from './workflow-transition.ts';
 export * from './workflow-instance-repository.ts';
+export * from './workflow-gate.ts';
