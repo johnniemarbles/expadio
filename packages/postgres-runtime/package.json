@@ -12,7 +12,8 @@
     "./suppression": "./src/suppression.ts",
     "./consent": "./src/consent.ts",
     "./template": "./src/template.ts",
-    "./sender": "./src/sender.ts"
+    "./sender": "./src/sender.ts",
+    "./delivery": "./src/delivery.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
