@@ -3,9 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./provider-registry": "./src/provider-registry.ts"
+  },
   "dependencies": {
     "@expadio/capability-persistence": "workspace:*",
+    "@expadio/provider-registry": "workspace:*",
     "@expadio/tenancy": "workspace:*",
     "@expadio/tenancy-persistence": "workspace:*"
   }
