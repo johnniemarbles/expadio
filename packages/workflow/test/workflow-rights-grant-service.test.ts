@@ -39,8 +39,12 @@ function service(input?: {
   readonly recordStatus?: 'COMMITTED' | 'ALREADY_RECORDED' | 'CONFLICT';
 }) {
   const writes: unknown[] = [];
+  const profileLookups: unknown[] = [];
   const profiles: WorkflowRightsProfileProvider = {
-    async resolve() { return input?.profile === undefined ? profile : input.profile; },
+    async resolve(lookup) {
+      profileLookups.push(lookup);
+      return input?.profile === undefined ? profile : input.profile;
+    },
   };
   const repository: WorkflowRightsGrantRepository = {
     async find() { return null; },
@@ -57,6 +61,7 @@ function service(input?: {
   };
   return {
     writes,
+    profileLookups,
     service: new RepositoryWorkflowRightsGrantService({
       profiles,
       repository,
@@ -64,6 +69,16 @@ function service(input?: {
     }),
   };
 }
+
+test('resolves the exact tenant/profile/version requested before validating the grant', async () => {
+  const fixture = service();
+  await fixture.service.grant(request);
+  assert.deepEqual(fixture.profileLookups, [{
+    tenantId: request.tenantId,
+    profileKey: request.profile.profileKey,
+    version: request.profile.version,
+  }]);
+});
 
 test('denies when exact rights profile cannot be resolved without writing a grant', async () => {
   const fixture = service({ profile: null });
