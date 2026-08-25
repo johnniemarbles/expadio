@@ -112,14 +112,21 @@ export type ContextEngineErrorCode =
   | 'CONTEXT_ASSEMBLED_AT_INVALID';
 
 export class ContextEngineError extends Error {
+  readonly code: ContextEngineErrorCode;
+  readonly reference: ContextReference | undefined;
+  readonly reasonKey: string | undefined;
+
   constructor(
-    readonly code: ContextEngineErrorCode,
+    code: ContextEngineErrorCode,
     message: string,
-    readonly reference?: ContextReference,
-    readonly reasonKey?: string,
+    reference?: ContextReference,
+    reasonKey?: string,
   ) {
     super(message);
     this.name = 'ContextEngineError';
+    this.code = code;
+    this.reference = reference;
+    this.reasonKey = reasonKey;
   }
 }
 
@@ -130,11 +137,11 @@ export interface AuthorizedContextEngineDependencies {
 }
 
 export class AuthorizedContextEngine {
+  private readonly dependencies: AuthorizedContextEngineDependencies;
   private readonly providers = new Map<ContextKind, ContextProvider>();
 
-  constructor(
-    private readonly dependencies: AuthorizedContextEngineDependencies,
-  ) {
+  constructor(dependencies: AuthorizedContextEngineDependencies) {
+    this.dependencies = dependencies;
     for (const provider of dependencies.providers) {
       if (this.providers.has(provider.kind)) {
         throw new ContextEngineError(
