@@ -99,6 +99,49 @@ test('applyTransition locks, updates transport evidence, and appends an event', 
   assert.match(client.calls[3]?.text ?? '', /communication_voice_events/);
 });
 
+test('same-state provider evidence is persisted instead of discarded', async () => {
+  const completed = {
+    ...row,
+    state: 'COMPLETED',
+    provider_call_id: 'provider-call-1',
+    answered_at: '2026-08-25T05:01:00.000Z',
+    ended_at: '2026-08-25T05:05:00.000Z',
+  };
+  const client = new ScriptedClient();
+  client.responses.push(
+    { rows: [completed], rowCount: 1 },
+    { rows: [{ exists: false }], rowCount: 1 },
+    {
+      rows: [{
+        ...completed,
+        recording_ref: 'recording://late',
+        transcript_ref: 'transcript://late',
+        updated_at: '2026-08-25T05:06:00.000Z',
+      }],
+      rowCount: 1,
+    },
+    { rows: [], rowCount: 1 },
+  );
+
+  const result = await new PostgresVoiceTransportRepository(client).applyTransition({
+    tenantId: row.tenant_id,
+    callId: row.call_id,
+    transition: {
+      from: 'COMPLETED',
+      to: 'COMPLETED',
+      occurredAt: '2026-08-25T05:06:00.000Z',
+      providerEventId: 'voice-evidence-1',
+      recordingRef: 'recording://late',
+      transcriptRef: 'transcript://late',
+    },
+  });
+
+  assert.equal(result.applied, true);
+  assert.equal(result.session.recordingRef, 'recording://late');
+  assert.equal(result.session.transcriptRef, 'transcript://late');
+  assert.match(client.calls[3]?.text ?? '', /communication_voice_events/);
+});
+
 test('duplicate provider events are idempotent', async () => {
   const client = new ScriptedClient();
   client.responses.push(
