@@ -73,12 +73,14 @@ export interface WorkflowBlueprintDefinition extends WorkflowBlueprintIdentity {
 }
 
 /**
- * Running workflow instances must refer to an explicit blueprint version.
- * Resolution of which version to use belongs to the resolver contract.
+ * Running workflow instances pin both blueprint identity and ownership scope so
+ * a later lookup cannot accidentally cross from a tenant override to a
+ * platform blueprint (or vice versa) with the same key/version.
  */
 export interface PinnedWorkflowBlueprint {
   readonly blueprintKey: string;
   readonly version: number;
+  readonly scope: 'PLATFORM' | 'TENANT';
 }
 
 export * from './blueprint-validation.ts';
