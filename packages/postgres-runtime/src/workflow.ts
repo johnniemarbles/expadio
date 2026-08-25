@@ -125,6 +125,27 @@ export class PostgresWorkflowBlueprintRepository implements WorkflowBlueprintRep
 
     return result.rows.map(mapRow);
   }
+
+  async listActiveForWorkType(input: {
+    readonly scope: WorkflowBlueprintScope;
+    readonly workTypeKey: string;
+  }): Promise<readonly WorkflowBlueprintDefinition[]> {
+    const tenantId = input.scope.type === 'TENANT' ? input.scope.tenantId : null;
+    const result = await this.#client.query<WorkflowBlueprintRow>(
+      `SELECT ${SELECT_COLUMNS}
+         FROM platform.workflow_blueprints
+        WHERE work_type_key = $2
+          AND state = 'ACTIVE'
+          AND (
+            ($1::uuid IS NULL AND tenant_id IS NULL)
+            OR tenant_id = $1::uuid
+          )
+        ORDER BY version DESC, blueprint_key ASC`,
+      [tenantId, input.workTypeKey],
+    );
+
+    return result.rows.map(mapRow);
+  }
 }
 
 function mapRequiredRow(
