@@ -88,3 +88,4 @@ export * from './blueprint-instantiation.ts';
 export * from './blueprint-repository.ts';
 export * from './blueprint-resolver.ts';
 export * from './workflow-instance.ts';
+export * from './workflow-transition.ts';
