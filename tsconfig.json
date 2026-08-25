@@ -14,6 +14,7 @@
     "baseUrl": ".",
     "paths": {
       "@expadio/tenancy": ["packages/tenancy/src/index.ts"],
+      "@expadio/tenancy-persistence": ["packages/tenancy-persistence/src/index.ts"],
       "@expadio/authorization": ["packages/authorization/src/index.ts"],
       "@expadio/capabilities": ["packages/capabilities/src/index.ts"],
       "@expadio/capability-persistence": ["packages/capability-persistence/src/index.ts"],
