@@ -17,7 +17,8 @@
     "./voice-transport": "./src/voice-transport.ts",
     "./workflow": "./src/workflow.ts",
     "./workflow-instance": "./src/workflow-instance.ts",
-    "./workflow-decision": "./src/workflow-decision.ts"
+    "./workflow-decision": "./src/workflow-decision.ts",
+    "./workflow-rights": "./src/workflow-rights.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
