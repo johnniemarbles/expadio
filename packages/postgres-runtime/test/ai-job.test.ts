@@ -57,7 +57,7 @@ test('creates a reference-only immutable AI job registration', async () => {
   assert.equal(client.calls.length, 1);
   assert.match(client.calls[0]?.text ?? '', /INSERT INTO platform\.ai_jobs/);
   assert.equal(client.calls[0]?.values[14], job.intent.requestedAt);
-  assert.equal(client.calls[0]?.values[19], job.evidenceRefs);
+  assert.deepEqual(client.calls[0]?.values[19], job.evidenceRefs);
 });
 
 test('maps an immutable registration from PostgreSQL', async () => {
