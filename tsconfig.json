@@ -16,12 +16,14 @@
       "@expadio/tenancy": ["packages/tenancy/src/index.ts"],
       "@expadio/tenancy-persistence": ["packages/tenancy-persistence/src/index.ts"],
       "@expadio/authorization": ["packages/authorization/src/index.ts"],
+      "@expadio/authorization-persistence": ["packages/authorization-persistence/src/index.ts"],
       "@expadio/capabilities": ["packages/capabilities/src/index.ts"],
       "@expadio/capability-persistence": ["packages/capability-persistence/src/index.ts"],
       "@expadio/provider-registry": ["packages/provider-registry/src/index.ts"],
       "@expadio/provider-registry/repository": ["packages/provider-registry/src/repository.ts"],
       "@expadio/postgres-runtime": ["packages/postgres-runtime/src/index.ts"],
       "@expadio/postgres-runtime/provider-registry": ["packages/postgres-runtime/src/provider-registry.ts"],
+      "@expadio/postgres-runtime/authorization": ["packages/postgres-runtime/src/authorization.ts"],
       "@expadio/access-control": ["packages/access-control/src/index.ts"]
     }
   },
