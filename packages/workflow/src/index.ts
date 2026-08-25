@@ -106,3 +106,4 @@ export * from './workflow-decision-gate.ts';
 export * from './workflow-decision-repository.ts';
 export * from './workflow-approval-authority.ts';
 export * from './workflow-decision-capture.ts';
+export * from './workflow-decision-capture-service.ts';
