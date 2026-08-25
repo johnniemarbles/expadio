@@ -18,7 +18,8 @@
     "./workflow": "./src/workflow.ts",
     "./workflow-instance": "./src/workflow-instance.ts",
     "./workflow-decision": "./src/workflow-decision.ts",
-    "./workflow-rights": "./src/workflow-rights.ts"
+    "./workflow-rights": "./src/workflow-rights.ts",
+    "./workflow-rights-profile": "./src/workflow-rights-profile.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
