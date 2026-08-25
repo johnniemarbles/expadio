@@ -183,8 +183,7 @@ function uniqueContext(context: readonly ConversationContextRef[]): readonly Con
   const references = new Map<string, ConversationContextRef>();
   for (const reference of context) {
     const key = conversationContextKey(reference);
-    const [kind, ...idParts] = key.split(':');
-    references.set(key, { kind: kind!, id: idParts.join(':') });
+    references.set(key, { kind: reference.kind.trim(), id: reference.id.trim() });
   }
   return [...references.values()];
 }
