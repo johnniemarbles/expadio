@@ -8,6 +8,7 @@ import type {
   CommunicationDeliveryRecord,
   CommunicationDeliveryRepository,
   CreateCommunicationDeliveryInput,
+  RecordCommunicationDeliveryAttemptInput,
 } from '@expadio/communication/delivery-repository';
 import type { CommunicationChannel } from '@expadio/communication';
 import type { PostgresClient } from './index.ts';
@@ -92,6 +93,53 @@ export class PostgresCommunicationDeliveryRepository
       [input.tenantId, input.connectorKey, input.providerMessageId],
     );
     return result.rows[0] === undefined ? null : mapDelivery(result.rows[0]);
+  }
+
+  async recordAttempt(
+    input: RecordCommunicationDeliveryAttemptInput,
+  ): Promise<CommunicationDeliveryRecord> {
+    const currentResult = await this.#client.query<DeliveryRow>(
+      `SELECT ${DELIVERY_COLUMNS}
+         FROM platform.communication_deliveries
+        WHERE tenant_id = $1::uuid AND delivery_id = $2::uuid
+        FOR UPDATE`,
+      [input.tenantId, input.deliveryId],
+    );
+    const current = mapRequired(currentResult.rows[0]);
+
+    const updatedResult = await this.#client.query<DeliveryRow>(
+      `UPDATE platform.communication_deliveries
+          SET attempt_count = attempt_count + 1,
+              last_reason_code = $3,
+              last_reason = $4,
+              updated_at = $5
+        WHERE tenant_id = $1::uuid AND delivery_id = $2::uuid
+        RETURNING ${DELIVERY_COLUMNS}`,
+      [
+        input.tenantId,
+        input.deliveryId,
+        input.reasonCode,
+        input.reason ?? null,
+        input.occurredAt,
+      ],
+    );
+    const updated = mapRequired(updatedResult.rows[0]);
+
+    await this.#client.query(
+      `INSERT INTO platform.communication_delivery_events (
+         delivery_id, tenant_id, from_state, to_state, reason_code, reason, occurred_at
+       ) VALUES ($1::uuid, $2::uuid, $3, $3, $4, $5, $6)`,
+      [
+        input.deliveryId,
+        input.tenantId,
+        current.state,
+        input.reasonCode,
+        input.reason ?? null,
+        input.occurredAt,
+      ],
+    );
+
+    return updated;
   }
 
   async applyTransition(
