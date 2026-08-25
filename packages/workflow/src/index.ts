@@ -92,3 +92,4 @@ export * from './workflow-transition.ts';
 export * from './workflow-instance-repository.ts';
 export * from './workflow-gate.ts';
 export * from './workflow-route.ts';
+export * from './workflow-condition-evaluator.ts';
