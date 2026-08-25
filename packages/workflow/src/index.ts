@@ -117,3 +117,4 @@ export * from './workflow-activation-validation.ts';
 export * from './workflow-activation-repository.ts';
 export * from './workflow-activation-blueprint-provider.ts';
 export * from './workflow-activation-service.ts';
+export * from './workflow-activation-verification.ts';
