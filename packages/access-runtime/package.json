@@ -1,0 +1,13 @@
+{
+  "name": "@expadio/access-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@expadio/access-control": "workspace:*",
+    "@expadio/authorization-persistence": "workspace:*",
+    "@expadio/capabilities": "workspace:*",
+    "@expadio/tenancy": "workspace:*"
+  }
+}
