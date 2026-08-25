@@ -9,8 +9,8 @@ export class PersistedWorkflowAuthorizationProvider
   implements WorkflowTransitionAuthorizationProvider {
   readonly #dependencies: AccessRuntimeDependencies;
   readonly #effectiveContext: EffectiveContext;
-  readonly #entitlements?: ReadonlySet<string>;
-  readonly #requiredCapabilityKey?: string;
+  readonly #entitlements: ReadonlySet<string> | undefined;
+  readonly #requiredCapabilityKey: string | undefined;
 
   constructor(input: {
     readonly dependencies: AccessRuntimeDependencies;
