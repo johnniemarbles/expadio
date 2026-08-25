@@ -56,9 +56,10 @@ DO $$
 BEGIN
   BEGIN
     INSERT INTO platform.communication_sender_identities (
-      scope, channel, address, purposes, is_system_fallback
+      scope, tenant_id, channel, address, purposes, is_system_fallback
     ) VALUES (
-      'TENANT', 'email', 'invalid-fallback@example.test', ARRAY['system']::text[], true
+      'TENANT', '61616161-6161-6161-6161-616161616161', 'email',
+      'invalid-fallback@example.test', ARRAY['system']::text[], true
     );
     RAISE EXCEPTION 'invalid system fallback sender unexpectedly succeeded';
   EXCEPTION
