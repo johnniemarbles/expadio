@@ -124,3 +124,4 @@ export * from './workflow-activation-verification-service.ts';
 export * from './workflow-activation-lifecycle.ts';
 export * from './workflow-activation-lifecycle-validation.ts';
 export * from './workflow-activation-lifecycle-repository.ts';
+export * from './workflow-activation-lifecycle-service.ts';
