@@ -5,8 +5,8 @@ INSERT INTO platform.tenants (tenant_id, name) VALUES
   ('cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd', 'Suppression Tenant C');
 
 INSERT INTO platform.organizations (organization_id, tenant_id, name) VALUES
-  ('a1111111-1111-1111-1111-111111111111', 'abababab-abab-abab-abab-abababababab', 'Suppression Org A'),
-  ('c1111111-1111-1111-1111-111111111111', 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd', 'Suppression Org C');
+  ('ab700000-0000-0000-0000-000000000001', 'abababab-abab-abab-abab-abababababab', 'Suppression Org A'),
+  ('cd700000-0000-0000-0000-000000000001', 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd', 'Suppression Org C');
 
 INSERT INTO platform.communication_suppressions (
   tenant_id, organization_id, recipient_key, channel, reason, source_message_id
@@ -21,7 +21,7 @@ INSERT INTO platform.communication_suppressions (
   ),
   (
     'abababab-abab-abab-abab-abababababab',
-    'a1111111-1111-1111-1111-111111111111',
+    'ab700000-0000-0000-0000-000000000001',
     '+14165550100',
     'sms',
     'OPT_OUT',
@@ -29,7 +29,7 @@ INSERT INTO platform.communication_suppressions (
   ),
   (
     'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd',
-    'c1111111-1111-1111-1111-111111111111',
+    'cd700000-0000-0000-0000-000000000001',
     'other@example.com',
     'email',
     'UNSUBSCRIBE',
@@ -43,7 +43,7 @@ BEGIN
       tenant_id, organization_id, recipient_key, channel, reason
     ) VALUES (
       'abababab-abab-abab-abab-abababababab',
-      'c1111111-1111-1111-1111-111111111111',
+      'cd700000-0000-0000-0000-000000000001',
       'cross-tenant@example.com',
       'email',
       'LEGAL_HOLD'
@@ -93,7 +93,7 @@ BEGIN
     FROM platform.communication_suppressions WHERE organization_id IS NULL;
   SELECT count(*) INTO org_specific_count
     FROM platform.communication_suppressions
-   WHERE organization_id = 'a1111111-1111-1111-1111-111111111111';
+   WHERE organization_id = 'ab700000-0000-0000-0000-000000000001';
 
   IF visible_count <> 2 THEN
     RAISE EXCEPTION 'tenant A expected 2 visible suppressions, got %', visible_count;
@@ -114,7 +114,7 @@ BEGIN
       tenant_id, organization_id, recipient_key, channel, reason
     ) VALUES (
       'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd',
-      'c1111111-1111-1111-1111-111111111111',
+      'cd700000-0000-0000-0000-000000000001',
       'forbidden@example.com',
       'email',
       'BOUNCE'
