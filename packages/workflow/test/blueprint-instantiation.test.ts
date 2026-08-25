@@ -54,11 +54,12 @@ const blueprint: WorkflowBlueprintDefinition = {
   ],
 };
 
-test('pins blueprint identity and normalizes default sequence deterministically', () => {
+test('pins blueprint identity, scope, and normalizes default sequence deterministically', () => {
   const instance = instantiateWorkflowBlueprint({ blueprint });
 
   assert.equal(instance.blueprintKey, 'partner-onboarding');
   assert.equal(instance.version, 7);
+  assert.equal(instance.scope, 'PLATFORM');
   assert.deepEqual(instance.stages.map((stage) => stage.stageKey), ['qualification', 'decision']);
   assert.deepEqual(instance.stages.map((stage) => stage.sequence), [0, 1]);
 });

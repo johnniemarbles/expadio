@@ -2,6 +2,7 @@ import type {
   PinnedWorkflowBlueprint,
   WorkflowBlueprintDefinition,
 } from './index.ts';
+import type { WorkflowBlueprintRepository, WorkflowBlueprintScope } from './blueprint-repository.ts';
 
 export type WorkflowBlueprintResolutionReason =
   | 'TENANT_ACTIVE_OVERRIDE'
@@ -12,8 +13,8 @@ export interface WorkflowBlueprintResolutionContext {
   readonly tenantId: string;
   readonly workTypeKey: string;
   /**
-   * When present, the resolver must return this exact blueprint identity or
-   * fail. This is used after a workflow boundary has frozen a version.
+   * When present, the resolver must return this exact blueprint identity from
+   * the pinned scope or fail. Frozen pins may resolve SUPERSEDED versions.
    */
   readonly pinned?: PinnedWorkflowBlueprint;
 }
@@ -25,10 +26,10 @@ export interface WorkflowBlueprintResolutionResult {
 }
 
 /**
- * Resolves an executable ACTIVE workflow blueprint for a tenant/work type.
+ * Resolves an executable workflow blueprint for a tenant/work type.
  *
  * Precedence contract:
- * 1. an explicit pin wins and must resolve exactly;
+ * 1. an explicit pin wins and must resolve exactly from its pinned scope;
  * 2. otherwise the tenant ACTIVE customization wins;
  * 3. otherwise the platform ACTIVE default is used;
  * 4. absence is an explicit resolution failure, never an implicit draft pick.
@@ -46,11 +47,15 @@ export interface WorkflowBlueprintResolver {
 export class WorkflowBlueprintResolutionError extends Error {
   readonly code:
     | 'WORKFLOW_BLUEPRINT_PIN_NOT_FOUND'
+    | 'WORKFLOW_BLUEPRINT_PIN_WORK_TYPE_MISMATCH'
+    | 'WORKFLOW_BLUEPRINT_ACTIVE_AMBIGUOUS'
     | 'WORKFLOW_BLUEPRINT_ACTIVE_NOT_FOUND';
 
   constructor(
     code:
       | 'WORKFLOW_BLUEPRINT_PIN_NOT_FOUND'
+      | 'WORKFLOW_BLUEPRINT_PIN_WORK_TYPE_MISMATCH'
+      | 'WORKFLOW_BLUEPRINT_ACTIVE_AMBIGUOUS'
       | 'WORKFLOW_BLUEPRINT_ACTIVE_NOT_FOUND',
     message: string,
   ) {
@@ -58,4 +63,111 @@ export class WorkflowBlueprintResolutionError extends Error {
     this.name = 'WorkflowBlueprintResolutionError';
     this.code = code;
   }
+}
+
+/** Framework-free resolver over the repository port. */
+export class RepositoryWorkflowBlueprintResolver implements WorkflowBlueprintResolver {
+  readonly #repository: WorkflowBlueprintRepository;
+
+  constructor(repository: WorkflowBlueprintRepository) {
+    this.#repository = repository;
+  }
+
+  async resolve(
+    context: WorkflowBlueprintResolutionContext,
+  ): Promise<WorkflowBlueprintResolutionResult> {
+    const pinned = context.pinned;
+    if (pinned !== undefined) {
+      return this.#resolvePinned(context.tenantId, context.workTypeKey, pinned);
+    }
+
+    const tenantCandidates = await this.#repository.listActiveForWorkType({
+      scope: { type: 'TENANT', tenantId: context.tenantId },
+      workTypeKey: context.workTypeKey,
+    });
+    const tenant = exactlyOneOrNone(
+      tenantCandidates,
+      'tenant',
+      context.workTypeKey,
+    );
+    if (tenant !== null) {
+      return {
+        blueprint: tenant,
+        reason: 'TENANT_ACTIVE_OVERRIDE',
+        precedenceTrace: ['tenant-active'],
+      };
+    }
+
+    const platformCandidates = await this.#repository.listActiveForWorkType({
+      scope: { type: 'PLATFORM' },
+      workTypeKey: context.workTypeKey,
+    });
+    const platform = exactlyOneOrNone(
+      platformCandidates,
+      'platform',
+      context.workTypeKey,
+    );
+    if (platform !== null) {
+      return {
+        blueprint: platform,
+        reason: 'PLATFORM_ACTIVE_DEFAULT',
+        precedenceTrace: ['tenant-active:none', 'platform-active'],
+      };
+    }
+
+    throw new WorkflowBlueprintResolutionError(
+      'WORKFLOW_BLUEPRINT_ACTIVE_NOT_FOUND',
+      `No ACTIVE workflow blueprint found for work type "${context.workTypeKey}".`,
+    );
+  }
+
+  async #resolvePinned(
+    tenantId: string,
+    workTypeKey: string,
+    pinned: PinnedWorkflowBlueprint,
+  ): Promise<WorkflowBlueprintResolutionResult> {
+    const scope: WorkflowBlueprintScope = pinned.scope === 'PLATFORM'
+      ? { type: 'PLATFORM' }
+      : { type: 'TENANT', tenantId };
+
+    const blueprint = await this.#repository.findByIdentity({
+      scope,
+      identity: {
+        blueprintKey: pinned.blueprintKey,
+        version: pinned.version,
+      },
+    });
+
+    if (blueprint === null) {
+      throw new WorkflowBlueprintResolutionError(
+        'WORKFLOW_BLUEPRINT_PIN_NOT_FOUND',
+        `Pinned ${pinned.scope} workflow blueprint ${pinned.blueprintKey}@${pinned.version} was not found.`,
+      );
+    }
+    if (blueprint.workTypeKey !== workTypeKey) {
+      throw new WorkflowBlueprintResolutionError(
+        'WORKFLOW_BLUEPRINT_PIN_WORK_TYPE_MISMATCH',
+        `Pinned workflow blueprint belongs to work type "${blueprint.workTypeKey}", not "${workTypeKey}".`,
+      );
+    }
+
+    return {
+      blueprint,
+      reason: 'EXPLICIT_PIN',
+      precedenceTrace: [`explicit-pin:${pinned.scope.toLowerCase()}`],
+    };
+  }
+}
+
+function exactlyOneOrNone(
+  candidates: readonly WorkflowBlueprintDefinition[],
+  scope: string,
+  workTypeKey: string,
+): WorkflowBlueprintDefinition | null {
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0]!;
+  throw new WorkflowBlueprintResolutionError(
+    'WORKFLOW_BLUEPRINT_ACTIVE_AMBIGUOUS',
+    `Multiple ACTIVE ${scope} workflow blueprints found for work type "${workTypeKey}".`,
+  );
 }
