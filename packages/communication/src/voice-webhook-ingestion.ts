@@ -1,12 +1,37 @@
 import type { CommunicationProviderWebhookRequest } from './provider-webhook.ts';
-import type { VoiceTransportRepository } from './voice-transport-repository.ts';
-import type { CommunicationProviderVoiceWebhookNormalizer } from './voice-webhook.ts';
+import type {
+  CreateVoiceTransportSessionInput,
+  VoiceTransportRepository,
+} from './voice-transport-repository.ts';
+import type {
+  CommunicationProviderVoiceEvent,
+  CommunicationProviderVoiceWebhookNormalizer,
+} from './voice-webhook.ts';
+
+export interface VoiceInboundBootstrapResolution {
+  readonly callId: string;
+  readonly organizationId?: string;
+  readonly conversationId?: string;
+  readonly agentId?: string;
+}
+
+/**
+ * The composition root owns ID generation and business-context resolution for
+ * inbound calls. Communication never guesses organization/conversation/agent.
+ */
+export interface VoiceInboundBootstrapResolver {
+  resolve(input: {
+    readonly tenantId: string;
+    readonly event: CommunicationProviderVoiceEvent;
+  }): Promise<VoiceInboundBootstrapResolution | null>;
+}
 
 export interface IngestCommunicationVoiceWebhookInput {
   readonly tenantId: string;
   readonly request: CommunicationProviderWebhookRequest;
   readonly normalizer: CommunicationProviderVoiceWebhookNormalizer;
   readonly voiceRepository: VoiceTransportRepository;
+  readonly inboundBootstrap?: VoiceInboundBootstrapResolver;
 }
 
 export type IngestCommunicationVoiceWebhookResult =
@@ -20,6 +45,7 @@ export type IngestCommunicationVoiceWebhookResult =
       readonly applied: number;
       readonly duplicateOrNoop: number;
       readonly unmatched: number;
+      readonly bootstrappedInbound: number;
       readonly ignoredRegressions: number;
     };
 
@@ -38,14 +64,40 @@ export async function ingestCommunicationVoiceWebhook(
   let applied = 0;
   let duplicateOrNoop = 0;
   let unmatched = 0;
+  let bootstrappedInbound = 0;
   let ignoredRegressions = 0;
 
   for (const event of normalized.events) {
-    const session = await input.voiceRepository.findByProviderCallId({
+    let session = await input.voiceRepository.findByProviderCallId({
       tenantId: input.tenantId,
       connectorKey: event.connectorKey,
       providerCallId: event.providerCallId,
     });
+
+    if (session === null && canBootstrapInbound(event, input.inboundBootstrap)) {
+      const resolved = await input.inboundBootstrap.resolve({
+        tenantId: input.tenantId,
+        event,
+      });
+      if (resolved !== null) {
+        const createInput: CreateVoiceTransportSessionInput = {
+          callId: resolved.callId,
+          tenantId: input.tenantId,
+          ...(resolved.organizationId === undefined ? {} : { organizationId: resolved.organizationId }),
+          connectorKey: event.connectorKey,
+          providerCallId: event.providerCallId,
+          direction: 'INBOUND',
+          from: { address: event.fromAddress },
+          to: { address: event.toAddress },
+          requestedAt: event.occurredAt,
+          ...(resolved.conversationId === undefined ? {} : { conversationId: resolved.conversationId }),
+          ...(resolved.agentId === undefined ? {} : { agentId: resolved.agentId }),
+        };
+        session = await input.voiceRepository.create(createInput);
+        bootstrappedInbound += 1;
+      }
+    }
+
     if (session === null) {
       unmatched += 1;
       continue;
@@ -82,8 +134,25 @@ export async function ingestCommunicationVoiceWebhook(
     applied,
     duplicateOrNoop,
     unmatched,
+    bootstrappedInbound,
     ignoredRegressions,
   };
+}
+
+function canBootstrapInbound(
+  event: CommunicationProviderVoiceEvent,
+  resolver: VoiceInboundBootstrapResolver | undefined,
+): event is CommunicationProviderVoiceEvent & {
+  readonly direction: 'INBOUND';
+  readonly fromAddress: string;
+  readonly toAddress: string;
+  readonly state: 'REQUESTED' | 'RINGING' | 'ANSWERED';
+} {
+  if (resolver === undefined) return false;
+  return event.direction === 'INBOUND'
+    && event.fromAddress !== undefined
+    && event.toAddress !== undefined
+    && (event.state === 'REQUESTED' || event.state === 'RINGING' || event.state === 'ANSWERED');
 }
 
 function isRegression(error: unknown): boolean {
