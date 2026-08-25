@@ -103,3 +103,4 @@ export * from './workflow-authorization.ts';
 export * from './workflow-authorization-gate.ts';
 export * from './workflow-decision.ts';
 export * from './workflow-decision-gate.ts';
+export * from './workflow-decision-repository.ts';
