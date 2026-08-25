@@ -1,10 +1,9 @@
 \set ON_ERROR_STOP on
 
--- CI retrigger only: no behavioral change. Keeps PR #107 on a fresh check suite after runner allocation failures.
-
 INSERT INTO platform.tenants (tenant_id, name) VALUES
   ('97979797-9797-9797-9797-979797979797', 'Rights Profile Tenant A'),
-  ('98989898-9898-9898-9898-989898989898', 'Rights Profile Tenant B');
+  ('98989898-9898-9898-9898-989898989898', 'Rights Profile Tenant B')
+ON CONFLICT (tenant_id) DO NOTHING;
 
 INSERT INTO platform.workflow_rights_profiles (
   rights_profile_id, tenant_id, profile_key, version, label, right_types,
