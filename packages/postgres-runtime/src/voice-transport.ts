@@ -133,7 +133,14 @@ export class PostgresVoiceTransportRepository implements VoiceTransportRepositor
       if (duplicate.rows[0]?.exists === true) return { applied: false, session: current };
     }
 
-    if (current.state === input.transition.to) return { applied: false, session: current };
+    const sameState = current.state === input.transition.to;
+    const carriesEvidence = input.transition.providerEventId !== undefined
+      || input.transition.providerCallId !== undefined
+      || input.transition.recordingRef !== undefined
+      || input.transition.transcriptRef !== undefined
+      || input.transition.reasonCode !== undefined;
+
+    if (sameState && !carriesEvidence) return { applied: false, session: current };
     if (input.transition.from !== current.state) {
       throw new Error(`VOICE_CALL_STALE_FROM_STATE:${input.transition.from}->${current.state}`);
     }
@@ -157,7 +164,7 @@ export class PostgresVoiceTransportRepository implements VoiceTransportRepositor
                 WHEN $8::boolean THEN COALESCE(ended_at, $7)
                 ELSE ended_at
               END,
-              last_reason_code = $9,
+              last_reason_code = COALESCE($9, last_reason_code),
               updated_at = $7
         WHERE tenant_id = $1::uuid AND call_id = $2::uuid
         RETURNING ${VOICE_COLUMNS}`,
