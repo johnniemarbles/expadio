@@ -79,8 +79,8 @@ test('maps role capabilities and restrictions into the pure authorization contra
   assert.deepEqual(policy.assignments, [{
     roleKey: 'CASE_MANAGER',
     capabilities: [
-      { action: 'close', resourceType: 'case', blockedStates: ['CLOSED'] },
       { action: 'read', resourceType: 'case' },
+      { action: 'close', resourceType: 'case', blockedStates: ['CLOSED'] },
     ],
     actionScope: {
       tenantId: context.tenantId,
