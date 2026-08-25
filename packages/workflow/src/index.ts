@@ -83,3 +83,4 @@ export interface PinnedWorkflowBlueprint {
 
 export * from './blueprint-validation.ts';
 export * from './blueprint-instantiation.ts';
+export * from './blueprint-repository.ts';
