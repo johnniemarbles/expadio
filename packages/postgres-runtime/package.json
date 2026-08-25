@@ -25,10 +25,12 @@
     "./workflow-activation-verification": "./src/workflow-activation-verification.ts",
     "./workflow-activation-lifecycle": "./src/workflow-activation-lifecycle.ts",
     "./business-configuration": "./src/business-configuration.ts",
-    "./governed-configuration": "./src/governed-configuration.ts"
+    "./governed-configuration": "./src/governed-configuration.ts",
+    "./ai-job": "./src/ai-job.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
+    "@expadio/ai-gateway": "workspace:*",
     "@expadio/authorization": "workspace:*",
     "@expadio/authorization-persistence": "workspace:*",
     "@expadio/capabilities": "workspace:*",
