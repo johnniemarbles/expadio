@@ -97,3 +97,4 @@ export * from './workflow-requirement.ts';
 export * from './workflow-composite-gate.ts';
 export * from './workflow-transition-service.ts';
 export * from './workflow-participant-assignment.ts';
+export * from './workflow-participant-gate.ts';
