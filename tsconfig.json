@@ -24,7 +24,9 @@
       "@expadio/postgres-runtime": ["packages/postgres-runtime/src/index.ts"],
       "@expadio/postgres-runtime/provider-registry": ["packages/postgres-runtime/src/provider-registry.ts"],
       "@expadio/postgres-runtime/authorization": ["packages/postgres-runtime/src/authorization.ts"],
-      "@expadio/access-control": ["packages/access-control/src/index.ts"]
+      "@expadio/postgres-runtime/access-runtime": ["packages/postgres-runtime/src/access-runtime.ts"],
+      "@expadio/access-control": ["packages/access-control/src/index.ts"],
+      "@expadio/access-runtime": ["packages/access-runtime/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*.ts"]
