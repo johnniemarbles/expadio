@@ -109,3 +109,4 @@ export * from './workflow-decision-capture.ts';
 export * from './workflow-decision-capture-service.ts';
 export * from './workflow-rights.ts';
 export * from './workflow-rights-validation.ts';
+export * from './workflow-rights-repository.ts';
