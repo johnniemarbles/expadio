@@ -19,4 +19,13 @@ export interface WorkflowBlueprintRepository {
     readonly scope: WorkflowBlueprintScope;
     readonly blueprintKey: string;
   }): Promise<readonly WorkflowBlueprintDefinition[]>;
+
+  /**
+   * Returns ACTIVE candidates for one work type within exactly one scope.
+   * Resolver precedence and ambiguity handling remain outside persistence.
+   */
+  listActiveForWorkType(input: {
+    readonly scope: WorkflowBlueprintScope;
+    readonly workTypeKey: string;
+  }): Promise<readonly WorkflowBlueprintDefinition[]>;
 }
