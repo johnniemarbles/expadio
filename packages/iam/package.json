@@ -1,0 +1,11 @@
+{
+  "name": "@expadio/iam",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@expadio/tenancy": "workspace:*",
+    "@expadio/tenancy-persistence": "workspace:*"
+  }
+}

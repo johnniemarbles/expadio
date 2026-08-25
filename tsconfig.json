@@ -13,6 +13,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@expadio/iam": ["packages/iam/src/index.ts"],
       "@expadio/tenancy": ["packages/tenancy/src/index.ts"],
       "@expadio/tenancy-persistence": ["packages/tenancy-persistence/src/index.ts"],
       "@expadio/authorization": ["packages/authorization/src/index.ts"],
