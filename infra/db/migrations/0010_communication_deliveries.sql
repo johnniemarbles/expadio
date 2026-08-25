@@ -20,7 +20,8 @@ CREATE TABLE platform.communication_deliveries (
   FOREIGN KEY (organization_id, tenant_id)
     REFERENCES platform.organizations(organization_id, tenant_id)
     ON DELETE CASCADE,
-  UNIQUE (tenant_id, idempotency_key)
+  UNIQUE (tenant_id, idempotency_key),
+  UNIQUE (delivery_id, tenant_id)
 );
 
 CREATE INDEX communication_deliveries_provider_message_idx
@@ -29,7 +30,7 @@ CREATE INDEX communication_deliveries_provider_message_idx
 
 CREATE TABLE platform.communication_delivery_events (
   event_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  delivery_id uuid NOT NULL REFERENCES platform.communication_deliveries(delivery_id) ON DELETE CASCADE,
+  delivery_id uuid NOT NULL,
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
   from_state text NOT NULL CHECK (from_state IN ('PENDING','ACCEPTED','SENT','DELIVERED','FAILED','BOUNCED','COMPLAINED','CANCELLED')),
   to_state text NOT NULL CHECK (to_state IN ('PENDING','ACCEPTED','SENT','DELIVERED','FAILED','BOUNCED','COMPLAINED','CANCELLED')),
@@ -43,9 +44,6 @@ CREATE TABLE platform.communication_delivery_events (
     ON DELETE CASCADE,
   UNIQUE (tenant_id, provider_event_id)
 );
-
-ALTER TABLE platform.communication_deliveries
-  ADD CONSTRAINT communication_deliveries_id_tenant_uq UNIQUE (delivery_id, tenant_id);
 
 CREATE OR REPLACE FUNCTION platform.reject_communication_delivery_event_mutation()
 RETURNS trigger
