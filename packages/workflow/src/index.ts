@@ -100,3 +100,4 @@ export * from './workflow-participant-assignment.ts';
 export * from './workflow-participant-gate.ts';
 export * from './workflow-gate-chain.ts';
 export * from './workflow-authorization.ts';
+export * from './workflow-authorization-gate.ts';
