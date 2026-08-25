@@ -5,9 +5,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./provider-registry": "./src/provider-registry.ts"
+    "./provider-registry": "./src/provider-registry.ts",
+    "./authorization": "./src/authorization.ts"
   },
   "dependencies": {
+    "@expadio/authorization": "workspace:*",
+    "@expadio/authorization-persistence": "workspace:*",
     "@expadio/capability-persistence": "workspace:*",
     "@expadio/provider-registry": "workspace:*",
     "@expadio/tenancy": "workspace:*",
