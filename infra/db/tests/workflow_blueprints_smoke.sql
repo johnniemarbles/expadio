@@ -89,6 +89,43 @@ BEGIN
 END;
 $$;
 
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO platform.workflow_blueprints (
+      blueprint_key, version, label, work_type_key, source, state, stages
+    ) VALUES (
+      'platform-alternate-active', 1, 'Alternate active platform workflow',
+      'partner-onboarding', 'PLATFORM', 'ACTIVE', '[]'::jsonb
+    );
+    RAISE EXCEPTION 'second active platform workflow for same work type unexpectedly succeeded';
+  EXCEPTION
+    WHEN unique_violation THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO platform.workflow_blueprints (
+      tenant_id, blueprint_key, version, label, work_type_key, source, state, stages
+    ) VALUES (
+      '92929292-9292-9292-9292-929292929292',
+      'tenant-alternate-active', 1, 'Alternate active tenant workflow',
+      'partner-onboarding', 'TENANT_CUSTOMIZED', 'ACTIVE', '[]'::jsonb
+    );
+    RAISE EXCEPTION 'second active tenant workflow for same work type unexpectedly succeeded';
+  EXCEPTION
+    WHEN unique_violation THEN NULL;
+  END;
+
+  INSERT INTO platform.workflow_blueprints (
+    tenant_id, blueprint_key, version, label, work_type_key, source, state, stages
+  ) VALUES (
+    '92929292-9292-9292-9292-929292929292',
+    'tenant-alternate-draft', 1, 'Alternate draft tenant workflow',
+    'partner-onboarding', 'TENANT_CUSTOMIZED', 'DRAFT', '[]'::jsonb
+  );
+END;
+$$;
+
 DROP ROLE IF EXISTS expadio_workflow_test;
 CREATE ROLE expadio_workflow_test NOLOGIN;
 GRANT USAGE ON SCHEMA platform TO expadio_workflow_test;
@@ -110,10 +147,10 @@ BEGIN
     FROM platform.workflow_blueprints
     WHERE tenant_id = '92929292-9292-9292-9292-929292929292';
 
-  IF visible_count <> 2 THEN
-    RAISE EXCEPTION 'tenant A expected platform + own blueprint, got %', visible_count;
+  IF visible_count <> 3 THEN
+    RAISE EXCEPTION 'tenant A expected platform + own active + own draft blueprint, got %', visible_count;
   END IF;
-  IF platform_count <> 1 OR tenant_count <> 1 THEN
+  IF platform_count <> 1 OR tenant_count <> 2 THEN
     RAISE EXCEPTION 'tenant A workflow blueprint visibility was incorrect';
   END IF;
 END;
