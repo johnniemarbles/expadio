@@ -75,12 +75,16 @@ test('allows usage below the soft limit', () => {
 
 test('emits a soft alert while retaining hard-limit headroom', () => {
   assert.deepEqual(
-    evaluateMonthlyUsageBudget(policy, position, usage),
+    evaluateMonthlyUsageBudget(
+      policy,
+      { ...position, committedCostMinorUnits: 780 },
+      usage,
+    ),
     {
       status: 'ALLOW_WITH_ALERT',
       reasonKey: 'SOFT_LIMIT_REACHED',
-      projectedCostMinorUnits: 730,
-      remainingHardLimitMinorUnits: 270,
+      projectedCostMinorUnits: 810,
+      remainingHardLimitMinorUnits: 190,
     },
   );
 });
