@@ -13,7 +13,8 @@
     "./consent": "./src/consent.ts",
     "./template": "./src/template.ts",
     "./sender": "./src/sender.ts",
-    "./delivery": "./src/delivery.ts"
+    "./delivery": "./src/delivery.ts",
+    "./voice-transport": "./src/voice-transport.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
