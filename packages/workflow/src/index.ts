@@ -115,3 +115,5 @@ export * from './workflow-rights-grant-service.ts';
 export * from './workflow-activation.ts';
 export * from './workflow-activation-validation.ts';
 export * from './workflow-activation-repository.ts';
+export * from './workflow-activation-blueprint-provider.ts';
+export * from './workflow-activation-service.ts';
