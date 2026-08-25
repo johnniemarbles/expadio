@@ -26,7 +26,8 @@
     "./workflow-activation-lifecycle": "./src/workflow-activation-lifecycle.ts",
     "./business-configuration": "./src/business-configuration.ts",
     "./governed-configuration": "./src/governed-configuration.ts",
-    "./ai-job": "./src/ai-job.ts"
+    "./ai-job": "./src/ai-job.ts",
+    "./agent-run": "./src/agent-run.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
@@ -40,6 +41,7 @@
     "@expadio/tenancy": "workspace:*",
     "@expadio/tenancy-persistence": "workspace:*",
     "@expadio/workflow": "workspace:*",
-    "@expadio/business-config": "workspace:*"
+    "@expadio/business-config": "workspace:*",
+    "@expadio/agent-runtime": "workspace:*"
   }
 }
