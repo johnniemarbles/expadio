@@ -33,6 +33,31 @@ FROM platform.connectors WHERE connector_key = 'platform-email';
 WITH capability AS (
   SELECT capability_id FROM platform.capabilities WHERE capability_key = 'email.delivery'
 )
+INSERT INTO platform.connector_routing_policies (
+  tenant_id, capability_id, required_regions, required_residency_tags,
+  required_compliance_tags, prefer_tenant_owned
+)
+SELECT
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  capability_id,
+  ARRAY['ca-central']::text[],
+  ARRAY['CA']::text[],
+  ARRAY['PIPEDA']::text[],
+  true
+FROM capability
+UNION ALL
+SELECT
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+  capability_id,
+  ARRAY['ca-central']::text[],
+  ARRAY['CA']::text[],
+  ARRAY['PIPEDA']::text[],
+  true
+FROM capability;
+
+WITH capability AS (
+  SELECT capability_id FROM platform.capabilities WHERE capability_key = 'email.delivery'
+)
 INSERT INTO platform.tenant_capability_bindings (
   tenant_id, capability_id, connector_id, mode, is_entitled, is_within_bounds
 )
@@ -92,8 +117,16 @@ DROP ROLE IF EXISTS expadio_app;
 CREATE ROLE expadio_app NOLOGIN;
 GRANT USAGE ON SCHEMA platform TO expadio_app;
 GRANT SELECT ON platform.capabilities, platform.connectors, platform.connector_capabilities,
-  platform.tenant_capability_bindings, platform.capability_proofs,
-  platform.capability_state, platform.capability_state_events TO expadio_app;
+  platform.connector_routing_policies, platform.tenant_capability_bindings,
+  platform.capability_proofs, platform.capability_state, platform.capability_state_events TO expadio_app;
+
+DO $$
+BEGIN
+  IF has_table_privilege('expadio_app', 'platform.connector_credentials', 'SELECT') THEN
+    RAISE EXCEPTION 'tenant application role must not read connector credential references';
+  END IF;
+END;
+$$;
 
 SET ROLE expadio_app;
 SELECT set_config('app.tenant_id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
@@ -101,6 +134,7 @@ SELECT set_config('app.tenant_id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false
 DO $$
 DECLARE
   connector_count integer;
+  policy_count integer;
   binding_count integer;
   state_count integer;
   event_count integer;
@@ -108,6 +142,11 @@ BEGIN
   SELECT count(*) INTO connector_count FROM platform.connectors;
   IF connector_count <> 2 THEN
     RAISE EXCEPTION 'tenant A expected 2 visible connectors (platform + own), got %', connector_count;
+  END IF;
+
+  SELECT count(*) INTO policy_count FROM platform.connector_routing_policies;
+  IF policy_count <> 1 THEN
+    RAISE EXCEPTION 'tenant A expected 1 routing policy, got %', policy_count;
   END IF;
 
   SELECT count(*) INTO binding_count FROM platform.tenant_capability_bindings;
