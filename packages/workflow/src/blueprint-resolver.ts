@@ -76,8 +76,9 @@ export class RepositoryWorkflowBlueprintResolver implements WorkflowBlueprintRes
   async resolve(
     context: WorkflowBlueprintResolutionContext,
   ): Promise<WorkflowBlueprintResolutionResult> {
-    if (context.pinned !== undefined) {
-      return this.#resolvePinned(context);
+    const pinned = context.pinned;
+    if (pinned !== undefined) {
+      return this.#resolvePinned(context.tenantId, context.workTypeKey, pinned);
     }
 
     const tenantCandidates = await this.#repository.listActiveForWorkType({
@@ -121,37 +122,39 @@ export class RepositoryWorkflowBlueprintResolver implements WorkflowBlueprintRes
   }
 
   async #resolvePinned(
-    context: WorkflowBlueprintResolutionContext & { readonly pinned: PinnedWorkflowBlueprint },
+    tenantId: string,
+    workTypeKey: string,
+    pinned: PinnedWorkflowBlueprint,
   ): Promise<WorkflowBlueprintResolutionResult> {
-    const scope: WorkflowBlueprintScope = context.pinned.scope === 'PLATFORM'
+    const scope: WorkflowBlueprintScope = pinned.scope === 'PLATFORM'
       ? { type: 'PLATFORM' }
-      : { type: 'TENANT', tenantId: context.tenantId };
+      : { type: 'TENANT', tenantId };
 
     const blueprint = await this.#repository.findByIdentity({
       scope,
       identity: {
-        blueprintKey: context.pinned.blueprintKey,
-        version: context.pinned.version,
+        blueprintKey: pinned.blueprintKey,
+        version: pinned.version,
       },
     });
 
     if (blueprint === null) {
       throw new WorkflowBlueprintResolutionError(
         'WORKFLOW_BLUEPRINT_PIN_NOT_FOUND',
-        `Pinned ${context.pinned.scope} workflow blueprint ${context.pinned.blueprintKey}@${context.pinned.version} was not found.`,
+        `Pinned ${pinned.scope} workflow blueprint ${pinned.blueprintKey}@${pinned.version} was not found.`,
       );
     }
-    if (blueprint.workTypeKey !== context.workTypeKey) {
+    if (blueprint.workTypeKey !== workTypeKey) {
       throw new WorkflowBlueprintResolutionError(
         'WORKFLOW_BLUEPRINT_PIN_WORK_TYPE_MISMATCH',
-        `Pinned workflow blueprint belongs to work type "${blueprint.workTypeKey}", not "${context.workTypeKey}".`,
+        `Pinned workflow blueprint belongs to work type "${blueprint.workTypeKey}", not "${workTypeKey}".`,
       );
     }
 
     return {
       blueprint,
       reason: 'EXPLICIT_PIN',
-      precedenceTrace: [`explicit-pin:${context.pinned.scope.toLowerCase()}`],
+      precedenceTrace: [`explicit-pin:${pinned.scope.toLowerCase()}`],
     };
   }
 }
