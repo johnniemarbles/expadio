@@ -61,6 +61,7 @@ export async function ingestCommunicationVoiceWebhook(
     };
   }
 
+  const inboundBootstrap = input.inboundBootstrap;
   let applied = 0;
   let duplicateOrNoop = 0;
   let unmatched = 0;
@@ -74,8 +75,8 @@ export async function ingestCommunicationVoiceWebhook(
       providerCallId: event.providerCallId,
     });
 
-    if (session === null && canBootstrapInbound(event, input.inboundBootstrap)) {
-      const resolved = await input.inboundBootstrap.resolve({
+    if (session === null && canBootstrapInbound(event, inboundBootstrap)) {
+      const resolved = await inboundBootstrap.resolve({
         tenantId: input.tenantId,
         event,
       });
