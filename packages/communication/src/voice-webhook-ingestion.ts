@@ -75,7 +75,11 @@ export async function ingestCommunicationVoiceWebhook(
       providerCallId: event.providerCallId,
     });
 
-    if (session === null && canBootstrapInbound(event, inboundBootstrap)) {
+    if (
+      session === null
+      && inboundBootstrap !== undefined
+      && canBootstrapInbound(event)
+    ) {
       const resolved = await inboundBootstrap.resolve({
         tenantId: input.tenantId,
         event,
@@ -142,14 +146,12 @@ export async function ingestCommunicationVoiceWebhook(
 
 function canBootstrapInbound(
   event: CommunicationProviderVoiceEvent,
-  resolver: VoiceInboundBootstrapResolver | undefined,
 ): event is CommunicationProviderVoiceEvent & {
   readonly direction: 'INBOUND';
   readonly fromAddress: string;
   readonly toAddress: string;
   readonly state: 'REQUESTED' | 'RINGING' | 'ANSWERED';
 } {
-  if (resolver === undefined) return false;
   return event.direction === 'INBOUND'
     && event.fromAddress !== undefined
     && event.toAddress !== undefined
