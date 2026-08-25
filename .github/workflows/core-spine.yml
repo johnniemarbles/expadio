@@ -33,61 +33,104 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-
       - name: Enable pnpm
         shell: bash
         run: |
           corepack enable
           corepack prepare pnpm@10.15.0 --activate
           pnpm --version
-
       - name: Install workspace dependencies
         run: pnpm install --no-frozen-lockfile
-
       - name: Typecheck and test
         run: pnpm check
 
   postgres-contract:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: expadio_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d expadio_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       PGPASSWORD: postgres
+      DB_CONTAINER: expadio-postgres-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect database changes
+        id: changes
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            base_sha="${PR_BASE_SHA}"
+          else
+            base_sha="${PUSH_BEFORE_SHA}"
+          fi
+
+          if [ -z "${base_sha}" ] || [[ "${base_sha}" =~ ^0+$ ]]; then
+            database_changed=true
+          elif git diff --quiet "${base_sha}" "${GITHUB_SHA}" -- infra/db; then
+            database_changed=false
+          else
+            database_changed=true
+          fi
+
+          echo "database_changed=${database_changed}" >> "${GITHUB_OUTPUT}"
+          echo "Database files changed: ${database_changed}"
+
+      - name: Start PostgreSQL
+        if: steps.changes.outputs.database_changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --rm \
+            --name "${DB_CONTAINER}" \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=expadio_test \
+            -p 5432:5432 \
+            postgres:16
+
+          for attempt in {1..30}; do
+            if docker exec "${DB_CONTAINER}" \
+              pg_isready -U postgres -d expadio_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker logs "${DB_CONTAINER}"
+          exit 1
 
       - name: Apply core migrations
+        if: steps.changes.outputs.database_changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
           for file in infra/db/migrations/*.sql; do
             echo "Applying ${file}"
-            psql -h localhost -U postgres -d expadio_test -v ON_ERROR_STOP=1 -f "${file}"
+            psql -h localhost -U postgres -d expadio_test \
+              -v ON_ERROR_STOP=1 -f "${file}"
           done
 
       - name: Run database contract smoke checks
+        if: steps.changes.outputs.database_changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
           for file in infra/db/tests/*.sql; do
             echo "Running ${file}"
-            psql -h localhost -U postgres -d expadio_test -v ON_ERROR_STOP=1 -f "${file}"
+            psql -h localhost -U postgres -d expadio_test \
+              -v ON_ERROR_STOP=1 -f "${file}"
           done
+
+      - name: Stop PostgreSQL
+        if: always() && steps.changes.outputs.database_changed == 'true'
+        shell: bash
+        run: docker stop "${DB_CONTAINER}" || true
