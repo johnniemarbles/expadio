@@ -1,0 +1,12 @@
+{
+  "name": "@expadio/postgres-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@expadio/capability-persistence": "workspace:*",
+    "@expadio/tenancy": "workspace:*",
+    "@expadio/tenancy-persistence": "workspace:*"
+  }
+}
