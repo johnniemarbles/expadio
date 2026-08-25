@@ -74,7 +74,7 @@ export interface WorkflowBlueprintDefinition extends WorkflowBlueprintIdentity {
 
 /**
  * Running workflow instances must refer to an explicit blueprint version.
- * Resolution of which version to use belongs to a later resolver contract.
+ * Resolution of which version to use belongs to the resolver contract.
  */
 export interface PinnedWorkflowBlueprint {
   readonly blueprintKey: string;
@@ -84,3 +84,4 @@ export interface PinnedWorkflowBlueprint {
 export * from './blueprint-validation.ts';
 export * from './blueprint-instantiation.ts';
 export * from './blueprint-repository.ts';
+export * from './blueprint-resolver.ts';
