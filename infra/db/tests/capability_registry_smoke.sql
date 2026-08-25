@@ -1,5 +1,9 @@
 \set ON_ERROR_STOP on
 
+INSERT INTO platform.tenants (tenant_id, name) VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tenant A'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Tenant B');
+
 INSERT INTO platform.capabilities (capability_key, display_name, permitted_modes)
 VALUES ('email.delivery', 'Email Delivery', ARRAY['A','B']::text[]);
 
