@@ -112,3 +112,4 @@ export * from './workflow-rights-validation.ts';
 export * from './workflow-rights-repository.ts';
 export * from './workflow-rights-profile-provider.ts';
 export * from './workflow-rights-grant-service.ts';
+export * from './workflow-activation.ts';
