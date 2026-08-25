@@ -6,7 +6,7 @@ INSERT INTO platform.tenants (tenant_id, name) VALUES
 
 INSERT INTO platform.organizations (organization_id, tenant_id, name) VALUES
   ('96960000-0000-0000-0000-000000000001', '96969696-9696-9696-9696-969696969696', 'Rights Org A'),
-  ('97970000-0000-0000-0000-000000000001', '97979797-9797-9797-979797979797', 'Rights Org B');
+  ('97970000-0000-0000-0000-000000000001', '97979797-9797-9797-9797-979797979797', 'Rights Org B');
 
 INSERT INTO platform.workflow_instances (
   instance_id, tenant_id, work_type_key, subject_type, subject_id,
