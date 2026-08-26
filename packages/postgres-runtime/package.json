@@ -32,7 +32,8 @@
     "./knowledge-index": "./src/knowledge-index.ts",
     "./storage-operation": "./src/storage-operation.ts",
     "./credential-lease-event": "./src/credential-lease-event.ts",
-    "./credential-rotation": "./src/credential-rotation.ts"
+    "./credential-rotation": "./src/credential-rotation.ts",
+    "./sensitive-read-event": "./src/sensitive-read-event.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
@@ -50,6 +51,7 @@
     "@expadio/agent-runtime": "workspace:*",
     "@expadio/usage-metering": "workspace:*",
     "@expadio/knowledge": "workspace:*",
-    "@expadio/storage": "workspace:*"
+    "@expadio/storage": "workspace:*",
+    "@expadio/audit": "workspace:*"
   }
 }
