@@ -1,11 +1,12 @@
+import { requestedOrganizationId, type RouteSearchParams } from '@/lib/request-context';
 import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
 import { WiringBanner, ActivityTimeline, ActivityTimelineItem, EmptyState, DeniedState } from '@expadio/ui';
 import type { PublicationEvent } from '@/lib/brain-contracts';
 import { isDenied } from '@expadio/ui/contracts';
 import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
-export default async function BrainHistoryPage() {
-  const orgId = 'org_dreamware';
+export default async function BrainHistoryPage({ searchParams }: { searchParams: RouteSearchParams }) {
+  const orgId = await requestedOrganizationId(searchParams);
   const historyResult = await brainFixtureAdapter.loadPublicationHistory(orgId);
   
   if (isDenied(historyResult)) {
