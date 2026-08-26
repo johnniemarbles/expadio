@@ -1,7 +1,2 @@
-export default function Loading() {
-  return (
-    <div style={{ padding: 40, display: "flex", justifyContent: "center" }}>
-      <p style={{ color: "var(--ink-500)", fontSize: 13, fontWeight: 600 }}>Loading...</p>
-    </div>
-  );
-}
+import styles from "./route-state.module.css";
+export default function Loading() { return <div className={styles.loadingState} role="status" aria-live="polite" aria-busy="true"><span className="sr-only">Loading workspace view</span><div className={styles.loadingHeader} aria-hidden="true"/><div className={styles.loadingLine} aria-hidden="true"/><div className={styles.loadingPanel} aria-hidden="true"/></div>; }

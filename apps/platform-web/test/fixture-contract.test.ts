@@ -36,3 +36,13 @@ test("company brain fixture uses full SHA-256 digests and evidence", async () =>
     assert.ok(corrections.every((correction) => correction.evidenceRefs.length > 0));
   }
 });
+
+test("fixture overview never claims live Company Brain health", async () => {
+  const overview = await brainFixtureAdapter.loadOverview("org_dreamware");
+  assert.equal("denied" in overview, false);
+  if (!("denied" in overview)) {
+    assert.match(overview.healthSummary, /fixture/i);
+    assert.match(overview.healthSummary, /not connected/i);
+    assert.doesNotMatch(overview.healthSummary, /healthy/i);
+  }
+});

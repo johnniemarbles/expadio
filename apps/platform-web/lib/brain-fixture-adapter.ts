@@ -22,7 +22,7 @@ const brainOverview: BrainOverview = {
   pendingCorrections: 4,
   freshnessTargetHours: 24,
   lastIndexedAt: '2026-08-26T08:05:00.000Z',
-  healthSummary: 'Healthy - 98% sources fresh'
+  healthSummary: 'Fixture snapshot - live freshness not connected'
 };
 
 const brainSources: BrainSource[] = [
