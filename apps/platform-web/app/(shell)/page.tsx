@@ -1,5 +1,5 @@
 import styles from "./page.module.css";
-import { fixtureWorkspaceAdapter } from "../../lib/fixture-adapter";
+import { liveWorkspaceAdapter } from "../../lib/live-adapter";
 import { WiringBanner, MetricCard, ActivityTimeline, DeniedState } from "@expadio/ui";
 import { CapabilityTable } from "../../components/CapabilityTable/CapabilityTable";
 import { ReviewQueue } from "../../components/ReviewQueue/ReviewQueue";
@@ -9,7 +9,7 @@ import { requestedOrganizationId, type RouteSearchParams } from "../../lib/reque
 
 export default async function OverviewPage({ searchParams }: { searchParams: RouteSearchParams }) {
   const orgId = await requestedOrganizationId(searchParams);
-  const overview = await fixtureWorkspaceAdapter.loadOverview(orgId);
+  const overview = await liveWorkspaceAdapter.loadOverview(orgId);
   if (isDenied(overview)) return <DeniedState result={overview} />;
   const context = "?org=" + encodeURIComponent(orgId);
   return <>

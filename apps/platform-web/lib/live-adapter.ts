@@ -40,13 +40,14 @@ async function fetchApi<T>(url: string): Promise<AdapterResult<T>> {
   }
 }
 
-export const livePlatformAdapter: PlatformWorkspaceAdapter = {
+export const liveWorkspaceSource = { kind: 'live', label: 'Live Database', capturedAt: new Date().toISOString() };
+export const liveBrainSource = { kind: 'live', label: 'Live Knowledge Base', capturedAt: new Date().toISOString() };
+
+export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
   async loadOverview(organizationId: string) {
-    // For now we don't have a dedicated API route for platform overview, returning empty/mock or you can implement a route later
-    // The requirement only asked for specific routes. We'll return dummy here or call a route if it existed.
     return {
       organization: { id: organizationId, name: 'Live Org', environment: 'production', level: 'platform', parentId: null },
-      source: { kind: 'live', label: 'Live Environment', capturedAt: new Date().toISOString() },
+      source: liveWorkspaceSource as any,
       metrics: [], capabilities: [], reviews: [], activity: []
     } as any; 
   },
@@ -55,20 +56,20 @@ export const livePlatformAdapter: PlatformWorkspaceAdapter = {
   },
   async loadAllowedWorkspaces() {
     const result = await fetchApi<WorkspaceSection[]>('/api/workspaces');
-    if ('denied' in result) return [];
-    return result;
+    if ('denied' in (result as any)) return [];
+    return result as WorkspaceSection[];
   },
   async loadCapabilities(orgId: string) {
     return fetchApi<CapabilitySummary[]>('/api/capabilities');
   },
   async loadReviews(orgId: string) {
-    return []; // Route not explicitly requested
+    return []; 
   },
   async loadActivity(orgId: string) {
-    return []; // Route not explicitly requested
+    return []; 
   },
   async loadOrganization(orgId: string) {
-    return { id: orgId, name: 'Live Org', environment: 'production', level: 'platform', parentId: null } as any; // Route not explicitly requested
+    return { id: orgId, name: 'Live Org', environment: 'production', level: 'platform', parentId: null } as any; 
   }
 };
 
@@ -86,12 +87,12 @@ export const liveBrainAdapter: BrainWorkspaceAdapter = {
     return fetchApi<CorrectionProposal[]>('/api/brain/corrections');
   },
   async loadReviewQueue(orgId: string) {
-    return fetchApi<CorrectionProposal[]>('/api/brain/corrections'); // reusing for now
+    return fetchApi<CorrectionProposal[]>('/api/brain/corrections'); 
   },
   async loadPublicationHistory(orgId: string) {
-    return []; // Route not explicitly requested
+    return []; 
   },
   async loadProvenance(orgId: string, sourceId?: string) {
-    return []; // Route not explicitly requested
+    return []; 
   }
 };

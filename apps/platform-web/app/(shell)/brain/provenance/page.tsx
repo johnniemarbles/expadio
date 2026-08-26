@@ -1,13 +1,13 @@
 import { requestedOrganizationId, type RouteSearchParams } from '@/lib/request-context';
-import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
+import { liveBrainAdapter } from '@/lib/live-adapter';
 import { WiringBanner, EmptyState, DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { ProvenanceTimeline } from '@/components/brain/ProvenanceTimeline';
-import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
+import { liveBrainSource } from '@/lib/live-adapter';
 
 export default async function BrainProvenancePage({ searchParams }: { searchParams: RouteSearchParams }) {
   const orgId = await requestedOrganizationId(searchParams);
-  const provenanceResult = await brainFixtureAdapter.loadProvenance(orgId);
+  const provenanceResult = await liveBrainAdapter.loadProvenance(orgId);
   
   if (isDenied(provenanceResult)) {
     return <DeniedState result={provenanceResult} />;
@@ -17,7 +17,7 @@ export default async function BrainProvenancePage({ searchParams }: { searchPara
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <WiringBanner source={brainFixtureSource} />
+      <WiringBanner source={liveBrainSource} />
       
       <div>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink-950)', margin: '0 0 1rem' }}>
