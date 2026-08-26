@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { ShellFrame } from "../../components/ShellFrame/ShellFrame";
 import { liveWorkspaceAdapter } from "../../lib/live-adapter";
