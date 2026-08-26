@@ -281,3 +281,5 @@ export * from './budget.ts';
 export * from './history.ts';
 
 export * from './correction-proposal.ts';
+
+export * from './correction-changeset.ts';
