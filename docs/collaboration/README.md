@@ -1,17 +1,19 @@
 # EXPADIO AI Collaboration Framework
 
-**Purpose:** Enable robust, multi-AI collaboration between **Grok**, **ChatGPT**, **Gemini**, and **Claude** (plus the human owner) on the EXPADIO / BEMP platform.
+**Purpose:** Enable robust multi-AI collaboration on the EXPADIO / BEMP platform.
 
-This folder is the shared workspace. All four AIs are expected to treat each other as senior engineering colleagues — not as tools or competitors.
+This folder is the shared workspace.
 
-## Participating AIs
+## Participants
 
-| AI       | Prompt file                          |
-|----------|--------------------------------------|
-| Grok     | `GROK_COLLABORATION_PROMPT.md`       |
-| ChatGPT  | `CHATGPT_COLLABORATION_PROMPT.md`    |
-| Gemini   | `GEMINI_COLLABORATION_PROMPT.md`     |
-| Claude   | `CLAUDE_COLLABORATION_PROMPT.md`     |
+| Participant | Role | Prompt file |
+|-------------|------|-------------|
+| Grok | Reasoning peer (Primary / Reviewer) | `GROK_COLLABORATION_PROMPT.md` |
+| ChatGPT | Reasoning peer (Primary / Reviewer) | `CHATGPT_COLLABORATION_PROMPT.md` |
+| Gemini | Reasoning peer (Primary / Reviewer) | `GEMINI_COLLABORATION_PROMPT.md` |
+| Claude | Reasoning peer (Primary / Reviewer) | `CLAUDE_COLLABORATION_PROMPT.md` |
+| Hermes Agent | Executor / Persistent Memory / Automation | `HERMES_COLLABORATION_PROMPT.md` |
+| Human Owner | Final decision maker | — |
 
 ## Operating Model
 
@@ -19,8 +21,9 @@ This folder is the shared workspace. All four AIs are expected to treat each oth
 
 Short version:
 
-- Any AI can be the **Primary Worker** on a task.
-- The other three can **evaluate, raise red flags, applaud, or suggest** at any time.
+- Any of the four reasoning AIs can be the **Primary Worker** on a task.
+- The other three reasoning AIs can **evaluate, raise red flags, applaud, or suggest** at any time.
+- **Hermes Agent** executes scoped tasks, maintains artefacts, and accumulates project memory. It is **not** a fifth peer reviewer.
 - The **human owner is the sole final decision maker**.
 
 ## Goals
@@ -30,20 +33,15 @@ Short version:
 - Celebrate high-quality work so good patterns get reinforced.
 - Propose ideas constructively.
 - Maintain a transparent accept / counter / reject trail so decisions are auditable.
+- Give the collaboration durable execution and memory via Hermes.
 
 ## How to use
 
 1. **Start every session** by loading the relevant prompt for the AI you are talking to.
-2. Load or reference `OPERATING-MODEL.md` so the continuous Primary / Reviewer rhythm is clear.
-3. When evaluating work (PRs, packages, migrations, architecture docs):
-   - Structure feedback using the shared evaluation template below.
-   - Prefer concrete evidence (file paths, code snippets, architecture rules from `docs/architecture/`).
-4. When proposing an idea:
-   - Create a new file in `suggestions/` following the naming convention.
-   - Any of the other AIs (and the human) can then Accept / Counter / Reject with rationale.
-5. Keep the master architecture documents as the source of truth:
-   - `docs/architecture/EXPADIO-MASTER-ARCHITECTURE.md`
-   - Related ADRs and status docs in the same folder.
+2. Load or reference `OPERATING-MODEL.md` so roles and rhythm are clear.
+3. When evaluating work, use the Shared Evaluation Template below.
+4. When proposing an idea, create a file in `suggestions/` following the naming convention.
+5. Architecture source of truth remains `docs/architecture/`.
 
 ## Shared Evaluation Template
 
@@ -71,16 +69,17 @@ Short version:
 
 See `suggestions/README.md`.
 
-## Ground Rules (all four AIs)
+## Ground Rules
 
 - Be direct and evidence-based. No fluff.
 - Prefer the architecture documents over personal preference.
-- Never suggest violating the non-negotiable engineering rules (no direct provider SDKs from business modules, no unrestricted AI DB access, etc.).
-- When in doubt, raise a red flag and propose a discussion rather than silently approving.
+- Never suggest violating the non-negotiable engineering rules.
+- When in doubt, raise a red flag rather than silently approving.
 - Celebrate precision, test coverage, clean boundaries, and thoughtful ADRs.
-- Treat the other three AIs as peers. Disagreement is welcome; competition is not.
-- Follow the continuous operating model in `OPERATING-MODEL.md`.
+- Reasoning AIs treat each other as peers. Hermes stays in the Executor/Memory lane.
+- Only the human issues binding decisions.
+- Follow `OPERATING-MODEL.md`.
 
 ---
 
-*Last updated: continuous multi-AI operating model*
+*Last updated: Hermes Agent added as Executor/Memory*

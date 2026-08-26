@@ -1,6 +1,6 @@
 # Suggestions Workspace
 
-This folder holds ideas proposed by Grok, ChatGPT, Gemini, Claude, or the human. It is the durable record of collaborative thinking.
+This folder holds ideas proposed by Grok, ChatGPT, Gemini, Claude, Hermes Agent, or the human. It is the durable record of collaborative thinking.
 
 ## Naming convention
 
@@ -8,16 +8,12 @@ This folder holds ideas proposed by Grok, ChatGPT, Gemini, Claude, or the human.
 YYYY-MM-DD-short-title.md
 ```
 
-Examples:
-- `2026-08-26-provider-registry-lease-hardening.md`
-- `2026-08-26-workflow-gate-composition-tests.md`
-
 ## Required structure for every suggestion
 
 ```markdown
 # [Title]
 
-**Proposed by:** Grok | ChatGPT | Gemini | Claude | Human  
+**Proposed by:** Grok | ChatGPT | Gemini | Claude | Hermes | Human  
 **Date:** YYYY-MM-DD  
 **Status:** Open | Accepted | Countered | Rejected | Implemented  
 **Related area:** [package / architecture doc / migration / etc.]
@@ -45,7 +41,7 @@ Examples:
 ## Decision trail
 
 - **YYYY-MM-DD** — Proposed by [who]
-- **YYYY-MM-DD** — [Grok / ChatGPT / Gemini / Claude / Human] response: Accept / Counter / Reject — [short rationale]
+- **YYYY-MM-DD** — [who] response: Accept / Counter / Reject — [short rationale]
 - ...
 ```
 
@@ -62,6 +58,7 @@ Examples:
 - One clear idea per file.
 - Prefer small, reviewable suggestions over large redesigns unless the architecture genuinely needs it.
 - Always reference the architecture documents when claiming a violation or improvement.
-- Update the Decision trail promptly so the other AIs and the human stay in sync.
+- Update the Decision trail promptly.
+- Hermes may create or update suggestion files when maintaining artefacts or reporting execution findings, but architectural judgment remains with the reasoning peers and the human.
 
-All four AIs should periodically scan this folder at the start of a session.
+All participants should periodically scan this folder at the start of a session.
