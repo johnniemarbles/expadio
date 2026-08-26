@@ -112,15 +112,16 @@ async function seed() {
            (tenant_id, collection_reference, document_reference, document_version, source_reference, source_digest, 
             metadata_reference, embedding_configuration_key, embedding_configuration_version, 
             access_policy_key, access_policy_version, retention_policy_key, retention_policy_version,
-            authorization_decision_id, indexed_at, indexed_by_subject_id, reason, correlation_id, evidence_refs)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), $15, $16, $17, $18)
+            authorization_decision_id, indexed_at, indexed_by_subject_id, reason, correlation_id, evidence_refs,
+            index_reference, ingestion_id, purpose, requested_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), $15, $16, $17, $18, $19, $20, $21, NOW())
            ON CONFLICT DO NOTHING`,
           [
             DEFAULT_TENANT, doc.collection, doc.doc, doc.version, doc.source, digest,
             'meta:' + doc.doc, 'text-embedding-3-small', 1,
             'default-read', 1, 'standard-90d', 1,
             'seed-decision-' + doc.doc, SUBJECT_ID || 'seed-system', doc.reason, corrId,
-            ['seed:initial-index']
+            ['seed:initial-index'], doc.source, 'seed-ingestion-' + doc.doc, doc.reason
           ]
         );
       }

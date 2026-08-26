@@ -46,7 +46,7 @@ async function getBaseUrl() {
   return process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
 }
 
-async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
+export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
   try {
     const baseUrl = await getBaseUrl();
     if (!baseUrl && typeof window === 'undefined') {

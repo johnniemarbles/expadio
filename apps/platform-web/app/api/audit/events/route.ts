@@ -18,11 +18,27 @@ export async function GET(request: Request) {
     );
 
   try {
-    await resolve();
-    // TODO: replace with real DB query to fetch audit events
-    const events: any[] = [];
+    const effectiveContext = await resolve();
+    const result = await dbPool.query(
+      `SELECT event_id, request_id, requested_by_subject_id, resource_type, resource_id, outcome, recorded_at 
+       FROM platform.sensitive_read_events 
+       WHERE tenant_id = $1 
+       ORDER BY recorded_at DESC LIMIT 50`,
+      [effectiveContext.tenantId]
+    );
+
+    const events = result.rows.map((row: any) => ({
+      id: row.event_id,
+      actor: row.requested_by_subject_id || 'System',
+      action: `Sensitive Read: ${row.outcome}`,
+      target: `${row.resource_type} ${row.resource_id}`,
+      time: row.recorded_at,
+      timeLabel: new Date(row.recorded_at).toLocaleString()
+    }));
+
     return NextResponse.json(events);
   } catch (error: any) {
+    console.error("Audit Events API Error:", error);
     const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: error.message || 'Unknown error' };
     return NextResponse.json(denied, { status: 500 });
   }
