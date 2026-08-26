@@ -3,10 +3,13 @@ import test from "node:test";
 import { fixtureWorkspaceAdapter } from "../lib/fixture-adapter.ts";
 import { brainFixtureAdapter } from "../lib/brain-fixture-adapter.ts";
 
-test("fixture accounts expose only declared organization scopes", async () => {
+test("fixture accounts expose labelled, declared organization scopes", async () => {
   const context = await fixtureWorkspaceAdapter.loadWorkspaceContext();
   const known = new Set(context.organizations.map((organization) => organization.id));
   for (const account of context.accounts) {
+    assert.ok(account.name.trim());
+    assert.ok(account.role.trim());
+    assert.ok(account.initials.trim());
     assert.ok(account.allowedOrganizationIds.length > 0);
     assert.ok(account.allowedOrganizationIds.every((id) => known.has(id)));
   }
