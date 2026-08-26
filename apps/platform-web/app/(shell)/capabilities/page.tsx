@@ -2,7 +2,8 @@ import { fixtureWorkspaceAdapter } from "../../../lib/fixture-adapter";
 import { CapabilityCatalog } from "../../../components/CapabilityCatalog/CapabilityCatalog";
 import styles from "../page.module.css";
 import { isDenied } from "@expadio/ui/contracts";
-import { DeniedState } from "@expadio/ui";
+import { WiringBanner, DeniedState } from "@expadio/ui";
+import { brainFixtureSource } from "@/lib/brain-fixture-adapter";
 
 export default async function CapabilitiesPage() {
   const result = await fixtureWorkspaceAdapter.loadCapabilities("org_dreamware");
@@ -13,6 +14,7 @@ export default async function CapabilitiesPage() {
 
   return (
     <>
+      <WiringBanner source={brainFixtureSource} />
       <section className={styles.pageHeading} aria-labelledby="page-title">
         <div>
           <p className={styles.eyebrow}>Command center</p>

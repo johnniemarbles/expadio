@@ -1,8 +1,9 @@
 import { fixtureWorkspaceAdapter } from "../../../lib/fixture-adapter";
 import styles from "../page.module.css";
 import { isDenied } from "@expadio/ui/contracts";
-import { DeniedState } from "@expadio/ui";
+import { WiringBanner, DeniedState } from "@expadio/ui";
 import { ReviewQueue } from "../../../components/ReviewQueue/ReviewQueue";
+import { brainFixtureSource } from "@/lib/brain-fixture-adapter";
 
 export default async function GovernancePage() {
   const result = await fixtureWorkspaceAdapter.loadReviews("org_dreamware");
@@ -13,6 +14,7 @@ export default async function GovernancePage() {
 
   return (
     <>
+      <WiringBanner source={brainFixtureSource} />
       <section className={styles.pageHeading} aria-labelledby="page-title">
         <div>
           <p className={styles.eyebrow}>Command center</p>

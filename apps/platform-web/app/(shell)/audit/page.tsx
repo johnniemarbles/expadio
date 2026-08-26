@@ -1,7 +1,8 @@
 import { fixtureWorkspaceAdapter } from "../../../lib/fixture-adapter";
 import styles from "../page.module.css";
 import { isDenied } from "@expadio/ui/contracts";
-import { DeniedState, ActivityTimeline } from "@expadio/ui";
+import { WiringBanner, DeniedState, ActivityTimeline } from "@expadio/ui";
+import { brainFixtureSource } from "@/lib/brain-fixture-adapter";
 
 export default async function AuditPage() {
   const result = await fixtureWorkspaceAdapter.loadActivity("org_dreamware");
@@ -12,6 +13,7 @@ export default async function AuditPage() {
 
   return (
     <>
+      <WiringBanner source={brainFixtureSource} />
       <section className={styles.pageHeading} aria-labelledby="page-title">
         <div>
           <p className={styles.eyebrow}>Command center</p>

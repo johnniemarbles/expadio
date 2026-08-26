@@ -6,9 +6,15 @@ import { CapabilityTable } from "../../components/CapabilityTable/CapabilityTabl
 import { ReviewQueue } from "../../components/ReviewQueue/ReviewQueue";
 import Link from "next/link";
 import { isDenied } from "@expadio/ui/contracts";
+import { DeniedState } from "@expadio/ui";
 
 export default async function OverviewPage() {
-  const overview = await fixtureWorkspaceAdapter.loadOverview("org_dreamware");
+  const overviewResult = await fixtureWorkspaceAdapter.loadOverview("org_dreamware");
+
+  if (isDenied(overviewResult)) {
+    return <DeniedState result={overviewResult} />;
+  }
+  const overview = overviewResult;
 
   return (
     <>
