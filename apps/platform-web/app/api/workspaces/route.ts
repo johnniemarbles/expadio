@@ -54,6 +54,7 @@ export async function GET(request: Request) {
     const workspaces: WorkspaceSection[] = [
       { id: 'ws_live_platform', label: `Platform Operations (${effectiveContext.subjectId.slice(-4)})`, short: 'PL', href: '/' },
       { id: 'ws_live_brain', label: 'Knowledge Brain', short: 'KB', href: '/brain' },
+      { id: 'ws_live_communications', label: 'Communications', short: 'CO', href: '/communications' },
       { id: 'ws_live_governance', label: 'Governance Center', short: 'GC', href: '/governance' },
       { id: 'ws_live_agents', label: 'Agent Runs', short: 'AR', href: '/agents' },
       { id: 'ws_live_usage', label: 'Usage Metering', short: 'UM', href: '/usage' },
