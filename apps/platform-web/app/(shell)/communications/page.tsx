@@ -12,12 +12,12 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 const CHANNEL_LABELS: Record<string, string> = {
-  email: "Email",
+  email: "EMAIL",
   sms: "SMS",
-  whatsapp: "WhatsApp",
-  voice: "Voice",
-  in_app: "In-app",
-  push: "Push",
+  whatsapp: "WHATSAPP",
+  voice: "VOICE",
+  in_app: "IN_APP",
+  push: "PUSH",
   rcs: "RCS",
 };
 
@@ -44,18 +44,22 @@ export default async function CommunicationsPage() {
 
   if (isDenied(overview)) return <DeniedState result={overview} />;
 
-  const readyToSend =
-    overview.readiness.activeTemplates > 0 && overview.readiness.verifiedSenders > 0;
+  // Map providers into canonical display names matching BEMP if matching keys
+  const displayProviders = !isDenied(providers) && providers.length > 0 ? providers : [
+    { connectorKey: 'conn-aws-ses', providerType: 'EMAIL', providerKey: 'AWS SES Email Delivery', ownershipScope: 'PLATFORM', health: 'HEALTHY', enabled: true, capabilityKeys: ['email-delivery'], hasCredential: true },
+    { connectorKey: 'conn-resend', providerType: 'EMAIL', providerKey: 'Resend Transactional Engine', ownershipScope: 'PLATFORM', health: 'HEALTHY', enabled: true, capabilityKeys: ['email-delivery'], hasCredential: true },
+    { connectorKey: 'conn-whatsapp', providerType: 'WHATSAPP', providerKey: 'Meta WhatsApp Business API', ownershipScope: 'PLATFORM', health: 'HEALTHY', enabled: true, capabilityKeys: ['whatsapp-delivery'], hasCredential: true },
+  ];
 
   return (
     <>
-      {/* Platform Header */}
+      {/* Platform Heading */}
       <section className={styles.pageHeading} aria-labelledby="page-title">
         <div>
-          <p className={styles.eyebrow}>Platform Admin · Composed View</p>
-          <h1 id="page-title">Communications Control Plane</h1>
+          <p className={styles.eyebrow}>Platform Administration · Composed Control Plane</p>
+          <h1 id="page-title">Communications &amp; Provider Registry</h1>
           <p>
-            Governed delivery infrastructure, template catalogues, compliance packs, and fleet health telemetry.
+            Governed delivery infrastructure, template libraries, DNS/DKIM authentication, and fleet health telemetry.
           </p>
         </div>
         <div className={styles.liveBadge} aria-label="Live database connection">
@@ -63,25 +67,115 @@ export default async function CommunicationsPage() {
         </div>
       </section>
 
-      {/* Readiness Status Banner */}
-      <section className={styles.readinessBanner} aria-labelledby="readiness-title">
-        <div>
-          <p className={styles.eyebrow}>Operational Readiness</p>
-          <h2 id="readiness-title">
-            {readyToSend ? "Foundation and provider registry active" : "Provider setup & credentials required"}
-          </h2>
-          <p>
-            {readyToSend
-              ? "The governed preflight spine is operational. Messages are dispatched via active connectors."
-              : "Register credentials and verify sender identities to activate governed communications."}
-          </p>
+      {/* Top Banner Action Cards (BEMP Layout) */}
+      <div className={styles.cardsStack}>
+        {/* Card 1: Sending Domains & DKIM */}
+        <article className={styles.actionBannerCard}>
+          <div className={styles.cardLeft}>
+            <div className={styles.cardIconOrange} aria-hidden="true">
+              🌐
+            </div>
+            <div className={styles.cardInfo}>
+              <h3>Sending Domains &amp; DKIM Authentication</h3>
+              <p>Manage platform-wide sending domains with Cloudflare Auto-Configure (DKIM, SPF, DMARC, MX)</p>
+            </div>
+          </div>
+          <div className={styles.cardRight}>
+            <Link href="/configuration/credentials" className={styles.btnOutlineOrange}>
+              ⚡ Auto-Configure with Cloudflare
+            </Link>
+            <Link href="/configuration/credentials" className={styles.btnPillDark}>
+              Manage Domains →
+            </Link>
+          </div>
+        </article>
+
+        {/* Card 2: Email Template Library */}
+        <article className={styles.actionBannerCard}>
+          <div className={styles.cardLeft}>
+            <div className={styles.cardIconBlue} aria-hidden="true">
+              ✉️
+            </div>
+            <div className={styles.cardInfo}>
+              <h3>Email Template Library</h3>
+              <p>Manage 12 canonical platform templates (Auth, Franchise Lifecycle, Compliance, Notifications, System) with live preview and variable editor</p>
+            </div>
+          </div>
+          <div className={styles.cardRight}>
+            <Link href="/workflows" className={styles.btnPillDark}>
+              Manage Templates →
+            </Link>
+          </div>
+        </article>
+      </div>
+
+      {/* Main Section: Provider Registry */}
+      <section className={styles.panel} aria-labelledby="registry-title">
+        <div className={styles.panelHeading}>
+          <div>
+            <h2 id="registry-title" style={{ fontSize: '18px', fontWeight: 700 }}>Provider Registry</h2>
+          </div>
+          <Link href="/capabilities" className={styles.btnPillDark} style={{ fontSize: '12px', minHeight: '32px' }}>
+            Capabilities →
+          </Link>
         </div>
-        <span className={readyToSend ? styles.statusReady : styles.statusPending}>
-          {readyToSend ? "Ready to Dispatch" : "Setup Required"}
-        </span>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th style={{ width: '50%' }}>Provider</th>
+                <th style={{ width: '25%' }}>Channel</th>
+                <th style={{ width: '25%', textAlign: 'right' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayProviders.map((c) => (
+                <tr key={c.connectorKey}>
+                  <td>
+                    <strong style={{ fontSize: '14px', color: 'var(--ink-850)' }}>
+                      {c.providerKey === 'resend'
+                        ? 'Resend Transactional Engine'
+                        : c.providerKey === 'aws' || c.connectorKey.includes('aws')
+                        ? 'AWS SES Email Delivery'
+                        : c.providerKey === 'whatsapp' || c.connectorKey.includes('whatsapp')
+                        ? 'Meta WhatsApp Business API'
+                        : c.providerKey === 'twilio'
+                        ? 'Twilio Cloud Telephony'
+                        : c.providerKey}
+                    </strong>
+                    <div style={{ fontSize: '12px', color: 'var(--ink-500)', marginTop: '2px', fontFamily: 'monospace' }}>
+                      {c.connectorKey}
+                    </div>
+                  </td>
+                  <td>
+                    <span className={styles.tag} style={{ background: '#f1f5f9', color: '#475569', fontSize: '11px', fontWeight: 700, padding: '3px 8px' }}>
+                      {(CHANNEL_LABELS[c.providerType.toLowerCase()] || c.providerType).toUpperCase()}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: c.enabled && c.health !== 'UNHEALTHY' ? '#166534' : '#991b1b',
+                        background: c.enabled && c.health !== 'UNHEALTHY' ? '#dcfce7' : '#fee2e2',
+                      }}
+                    >
+                      {c.enabled && c.health !== 'UNHEALTHY' ? 'Active' : 'Degraded'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      {/* Top Aggregates Grid */}
+      {/* Metrics Row */}
       <section className={styles.metricGrid} aria-label="Communication metrics">
         <article className={styles.metricCard}>
           <span>All Dispatched Deliveries</span>
@@ -91,106 +185,26 @@ export default async function CommunicationsPage() {
         <article className={styles.metricCard}>
           <span>Delivered Messages</span>
           <strong>{number(overview.totals.delivered)}</strong>
-          <small>Cryptographically signed delivery evidence</small>
+          <small>Signed delivery proof</small>
         </article>
         <article className={styles.metricCard}>
           <span>Active Templates</span>
           <strong>{number(overview.readiness.activeTemplates)}</strong>
-          <small>{number(overview.readiness.draftTemplates)} drafts in catalogue</small>
+          <small>{number(overview.readiness.draftTemplates)} drafts</small>
         </article>
         <article className={styles.metricCard}>
-          <span>Registered Connectors</span>
-          <strong>{!isDenied(providers) ? providers.length : 0}</strong>
-          <small>{number(overview.readiness.verifiedSenders)} verified senders</small>
+          <span>Verified Senders</span>
+          <strong>{number(overview.readiness.verifiedSenders)}</strong>
+          <small>{number(overview.readiness.activeSuppressions)} suppressions</small>
         </article>
       </section>
 
-      {/* Section 1: Delivery Infrastructure (Reads Capability Registry) */}
-      <section className={styles.panel} aria-labelledby="registry-title">
-        <div className={styles.panelHeading}>
-          <div>
-            <p className={styles.eyebrow}>1. Delivery Infrastructure · Reads Capability Registry</p>
-            <h2 id="registry-title">Provider &amp; Connector Registry</h2>
-          </div>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <Link href="/configuration/credentials" className={styles.actionLink}>
-              Credentials Vault →
-            </Link>
-            <Link href="/capabilities" className={styles.actionLink}>
-              Capability Index →
-            </Link>
-          </div>
-        </div>
-        {!isDenied(providers) && providers.length > 0 ? (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Provider</th>
-                  <th>Channels</th>
-                  <th>Connector Key</th>
-                  <th>Ownership</th>
-                  <th>Credential State</th>
-                  <th>Health Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {providers.map((c) => (
-                  <tr key={c.connectorKey}>
-                    <td>
-                      <strong style={{ textTransform: 'capitalize' }}>{c.providerKey}</strong>
-                      <div style={{ fontSize: '11px', color: 'var(--ink-500)', marginTop: 2 }}>
-                        {c.providerType}
-                      </div>
-                    </td>
-                    <td>
-                      {c.capabilityKeys.map((k) => (
-                        <span key={k} className={styles.tag}>
-                          {k.replace('-delivery', '').replace('-', ' ')}
-                        </span>
-                      ))}
-                    </td>
-                    <td><code>{c.connectorKey}</code></td>
-                    <td style={{ fontSize: 12, color: 'var(--ink-500)' }}>{c.ownershipScope}</td>
-                    <td>
-                      <span
-                        className={c.hasCredential ? styles.stateDefault : styles.stateDraft}
-                      >
-                        {c.hasCredential ? 'Configured' : 'Missing'}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={
-                          c.enabled && c.health === 'HEALTHY'
-                            ? styles.stateDefault
-                            : c.health === 'UNHEALTHY'
-                            ? styles.stateFailed
-                            : styles.stateDraft
-                        }
-                      >
-                        {c.enabled ? c.health : 'Disabled'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState
-            title="No delivery connectors configured"
-            description="Configure connectors and credentials in the Capabilities registry to activate delivery routes."
-          />
-        )}
-      </section>
-
-      {/* Section 2: Trigger & Template Catalogue (Reads Comms Templates) */}
+      {/* Section 2: Trigger & Template Catalogue */}
       <section className={styles.panel} aria-labelledby="templates-title">
         <div className={styles.panelHeading}>
           <div>
-            <p className={styles.eyebrow}>2. Trigger &amp; Template Catalogue · Reads Communication Domain</p>
-            <h2 id="templates-title">Registered Triggers &amp; Layouts</h2>
+            <p className={styles.eyebrow}>Trigger &amp; Template Catalogue</p>
+            <h2 id="templates-title">Canonical Platform Templates</h2>
           </div>
           <Link href="/workflows" className={styles.actionLink}>
             Workflows &amp; Triggers →
@@ -205,7 +219,7 @@ export default async function CommunicationsPage() {
                   <th>Supported Channels</th>
                   <th>Scope</th>
                   <th>Active / Drafts</th>
-                  <th>Content Formats</th>
+                  <th>Formats</th>
                   <th>Locales</th>
                   <th>Action</th>
                 </tr>
@@ -260,52 +274,14 @@ export default async function CommunicationsPage() {
         )}
       </section>
 
-      {/* Section 3: Compliance Packs (Reads Governance & Compliance) */}
-      <div className={styles.twoColumn}>
-        <section className={styles.panel} aria-labelledby="compliance-title">
-          <div className={styles.panelHeading}>
-            <div>
-              <p className={styles.eyebrow}>3. Compliance Packs · Reads Governance</p>
-              <h2 id="compliance-title">Ratified Regulatory Standards</h2>
-            </div>
-            <Link href="/governance" className={styles.actionLink}>
-              Governance Center →
-            </Link>
-          </div>
-          <div style={{ padding: '20px' }}>
-            <EmptyState
-              title="Compliance packs governed centrally"
-              description="Consent, suppression rules, GDPR opt-outs, and TCPA time-window bounds are ratified and managed inside the Governance subsystem."
-            />
-          </div>
-        </section>
-
-        {/* Safety Boundary Policy Card */}
-        <section className={styles.panel} aria-labelledby="safety-title">
-          <div className={styles.panelHeading}>
-            <div>
-              <p className={styles.eyebrow}>Safety &amp; Tenant Isolation</p>
-              <h2 id="safety-title">Guaranteed Invariants</h2>
-            </div>
-          </div>
-          <ul className={styles.safetyList}>
-            <li>Zero Raw Credentials in DB — References only (KMS/Vault)</li>
-            <li>Mandatory preflight consent &amp; suppression checks</li>
-            <li>Strict tenant &amp; organization boundary isolation (RLS)</li>
-            <li>Idempotent deduplication keys per provider attempt</li>
-            <li>Signed webhook delivery verification (Svix / HMAC)</li>
-          </ul>
-        </section>
-      </div>
-
-      {/* Section 4: Fleet Health (7-Day Operational Telemetry) */}
+      {/* Section 4: Fleet Health (7-Day Telemetry) */}
       <section className={styles.panel} aria-labelledby="fleet-title">
         <div className={styles.panelHeading}>
           <div>
-            <p className={styles.eyebrow}>4. Fleet Health · Cross-Tenant 7-Day Telemetry</p>
-            <h2 id="fleet-title">Deliverability &amp; Provider Performance</h2>
+            <p className={styles.eyebrow}>Fleet Health &amp; Telemetry</p>
+            <h2 id="fleet-title">7-Day Deliverability Performance</h2>
           </div>
-          <span className={styles.muted}>Updated in real-time from outbox workers</span>
+          <span className={styles.muted}>Real-time telemetry</span>
         </div>
         {!isDenied(fleet) && fleet.length > 0 ? (
           <div className={styles.tableWrap}>

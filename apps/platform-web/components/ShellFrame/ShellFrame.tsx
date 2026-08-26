@@ -129,9 +129,45 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
     <main className={styles.main} aria-hidden={mobileOpen ? true : undefined}>
       <header className={styles.topbar}>
         <button type="button" ref={mobileMenuRef} className={styles.mobileMenu} onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-expanded={mobileOpen}><span aria-hidden="true">☰</span></button>
-        <div className={styles.breadcrumb}><span>Platform</span><span>/</span><strong>{currentSection?.label ?? "Overview"}</strong></div>
+        
+        {/* Audience Selector Pills */}
+        <div className={styles.audiencePills} role="tablist" aria-label="Audience Scope">
+          <button type="button" className={styles.audiencePill}>
+            <span style={{ opacity: 0.7 }}>⊞</span> Brand
+          </button>
+          <button type="button" className={[styles.audiencePill, styles.audiencePillActive].join(" ")}>
+            <span>🛡️</span> Platform
+          </button>
+          <button type="button" className={styles.audiencePill}>
+            <span>🔗</span> Portal
+          </button>
+          <button type="button" className={styles.audiencePill}>
+            Plan
+          </button>
+        </div>
+
+        {/* Global Search */}
+        <div className={styles.searchBar}>
+          <span style={{ fontSize: '13px', color: 'var(--ink-400)' }}>🔍</span>
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Search fleet &amp; connectors..."
+            readOnly
+          />
+          <span className={styles.searchKbd}>⌘K</span>
+        </div>
+
         <div className={styles.topbarActions}>
           <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{selectableOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
+          
+          {/* Theme Mode Toggle */}
+          <div className={styles.themeToggle}>
+            <button type="button" className={[styles.themeBtn, styles.themeBtnActive].join(" ")}>☀️ Light</button>
+            <button type="button" className={styles.themeBtn}>🌙 Dark</button>
+            <button type="button" className={styles.themeBtn}>🖥️ Auto</button>
+          </div>
+
           <span className={styles.sourceContext}><SourceBadge source={overview.source}/></span>
           <div ref={notificationAreaRef} className={styles.notificationArea}><button type="button" ref={notificationButtonRef} className={styles.iconButton} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notification-panel" onClick={() => { setNotificationsOpen((value) => !value); setAccountOpen(false); }}><span aria-hidden="true">◎</span></button>{notificationsOpen && <div id="notification-panel" className={styles.notificationPanel} role="region" aria-label="Notifications status"><strong>Notifications not connected</strong><span>Live alerts will appear after the notification adapter is available.</span></div>}</div>
         </div>
