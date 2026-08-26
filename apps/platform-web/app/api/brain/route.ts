@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     }
 
     const sourcesResult = await dbPool.query('SELECT count(*) as count FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]);
-    const correctionsResult = await dbPool.query('SELECT count(*) as count FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND stage = $2', [effectiveContext.tenantId, 'pending']);
+    const correctionsResult = await dbPool.query("SELECT count(*) as count FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND status = 'UNREVIEWED'", [effectiveContext.tenantId]);
 
     const overview: BrainOverview = {
       source: { kind: 'live', label: 'Live Core Brain Database', capturedAt: new Date().toISOString() },

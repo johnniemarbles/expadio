@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     );
 
     const result = await dbPool.query(
-      `SELECT id, stage, created_at, created_by 
+      `SELECT proposal_reference, status, category, proposer_subject_id, created_at 
        FROM platform.company_brain_correction_proposals 
        WHERE tenant_id = $1
        ORDER BY created_at DESC`,
@@ -36,11 +36,11 @@ export async function GET(request: Request) {
     );
 
     const corrections: CorrectionProposal[] = result.rows.map((row: any) => ({
-      id: row.id,
+      id: row.proposal_reference,
       title: 'Database Correction',
-      category: 'fact',
-      stage: row.stage || 'reviewing',
-      proposedBy: row.created_by || 'system',
+      category: row.category || 'fact',
+      stage: row.status || 'reviewing',
+      proposedBy: row.proposer_subject_id || 'system',
       evidenceRefs: [],
       createdAt: row.created_at || new Date().toISOString(),
       updatedAt: row.created_at || new Date().toISOString()
