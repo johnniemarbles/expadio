@@ -34,7 +34,7 @@
     "./credential-lease-event": "./src/credential-lease-event.ts",
     "./credential-rotation": "./src/credential-rotation.ts",
     "./sensitive-read-event": "./src/sensitive-read-event.ts",
-    "./company-brain-correction": "./src/company-brain-correction.ts"
+    "./company-brain-correction": "./src/company-brain-correction.ts",\n    "./agent-capability-manifest": "./src/agent-capability-manifest.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
