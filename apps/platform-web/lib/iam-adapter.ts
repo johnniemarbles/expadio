@@ -11,8 +11,8 @@ export class ClerkIdentityVerifier implements IdentityVerifier {
     
     return {
       providerKey: userId,
-      subjectId: user.primaryEmailAddress?.emailAddress ?? userId,
-      issuer: 'clerk',
+      subjectId: userId,
+      issuer: 'https://clerk.expadio.com',
       actorKind: 'user'
     };
   }
