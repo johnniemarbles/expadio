@@ -6,6 +6,7 @@ import pg from 'pg';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+if (!process.env.DATABASE_URL) { console.error("FATAL ERROR: DATABASE_URL is not set in environment variables! Railway cannot connect to PostgreSQL."); process.exit(1); }
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL
 });
