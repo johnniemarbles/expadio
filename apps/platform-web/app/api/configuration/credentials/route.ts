@@ -37,20 +37,55 @@ export async function POST(request: Request) {
       { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
     );
     
-    const { connector_key } = await request.json();
+    const body = await request.json();
+    const { connector_key } = body;
     if (!connector_key) return NextResponse.json({ error: 'connector_key required' }, { status: 400 });
 
     const crypto = require('crypto');
+    let replacementRef = 'provider-secret://staged';
+
+    // Extract and validate credentials
+    if (connector_key.startsWith('twilio')) {
+      const { accountSid, authToken } = body;
+      if (!accountSid || !authToken) {
+        return NextResponse.json({ error: 'Account SID and Auth Token required for Twilio' }, { status: 400 });
+      }
+      const tokenHash = crypto.createHash('sha256').update(authToken).digest('hex').slice(0, 16);
+      replacementRef = `provider-secret://${connector_key}/${accountSid}/${tokenHash}`;
+    } else if (connector_key === 'resend-email-v1') {
+      const { apiKey } = body;
+      if (!apiKey) {
+        return NextResponse.json({ error: 'API Key required for Resend' }, { status: 400 });
+      }
+      const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex').slice(0, 16);
+      replacementRef = `provider-secret://${connector_key}/${keyHash}`;
+    }
+
     const result = await dbPool.query(
       `INSERT INTO platform.credential_rotation_events 
-       (event_id, rotation_reference, sequence, request_id, tenant_id, requested_by_subject_id, connector_key, current_credential_reference, replacement_credential_reference, event_type, occurred_at)
-       VALUES ($1, $2, 1, $3, $4, $5, $6, 'secret://old', 'secret://new', 'STAGED', NOW())
+       (event_id, rotation_reference, sequence, request_id, tenant_id, requested_by_subject_id, connector_key, 
+        current_credential_reference, replacement_credential_reference, event_type, 
+        authorization_decision_id, reason, occurred_at, correlation_id, evidence_refs)
+       VALUES ($1, $2, 1, $3, $4, $5, $6, 'provider-secret://current', $7, 'STAGED', $8, $9, NOW(), $10, $11)
        RETURNING event_id`,
-      [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID(), effectiveContext.tenantId, userId, connector_key]
+      [
+        crypto.randomUUID(), 
+        crypto.randomUUID(), 
+        crypto.randomUUID(), 
+        effectiveContext.tenantId, 
+        userId, 
+        connector_key,
+        replacementRef,
+        'decision-auth-' + crypto.randomUUID().slice(0, 8),
+        `Rotate provider keys for ${connector_key}`,
+        crypto.randomUUID(),
+        ['audit:credentials-rotation']
+      ]
     );
 
     return NextResponse.json({ success: true, rotation_id: result.rows[0].event_id });
   } catch (err: any) {
+    console.error("Credentials POST Error:", err);
     return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
   }
 }
