@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       }
     );
 
-    const result = await dbPool.query('SELECT * FROM platform.knowledge_index_reference WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await dbPool.query('SELECT * FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]);
 
     if (result.rowCount === 0) {
       const slices: ContextSlice[] = [
@@ -39,21 +39,21 @@ export async function GET(request: Request) {
 
     const slices: ContextSlice[] = result.rows.map((row: any) => ({
       id: row.id,
-      purpose: row.purpose || 'Unknown Purpose',
-      sourceCount: row.source_count || 1,
-      itemLimit: row.item_limit || 100,
-      tenantScope: row.tenant_scope || 'Global',
+      purpose: row.title || 'Unknown Purpose',
+      sourceCount: 1,
+      itemLimit: 100,
+      tenantScope: 'Global',
       lastResolved: row.updated_at || new Date().toISOString()
     }));
 
     return NextResponse.json(slices);
-  } catch (error) {
-    console.error("IAM Resolution Error:", error);
+  } catch (error: any) {
+    console.error("Brain Slices API Error:", error);
     const denied: DeniedResult = {
       denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
+      reasonKey: 'INTERNAL_ERROR',
+      message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 403 });
+    return NextResponse.json(denied, { status: 500 });
   }
 }

@@ -11,7 +11,6 @@ import { liveBrainSource } from '@/lib/live-adapter';
 export default async function BrainOverviewPage({ searchParams }: { searchParams: RouteSearchParams }) {
   const orgId = await requestedOrganizationId(searchParams);
   const overviewResult = await liveBrainAdapter.loadOverview(orgId);
-  const provenanceResult = await liveBrainAdapter.loadProvenance(orgId);
   
   if (isDenied(overviewResult)) {
     return <DeniedState result={overviewResult} />;
@@ -20,9 +19,6 @@ export default async function BrainOverviewPage({ searchParams }: { searchParams
   const overview = overviewResult;
   
   let recentActivity: ProvenanceEntry[] = [];
-  if (!isDenied(provenanceResult)) {
-    recentActivity = provenanceResult.slice(0, 5);
-  }
 
   return (
     <div className={styles.container}>

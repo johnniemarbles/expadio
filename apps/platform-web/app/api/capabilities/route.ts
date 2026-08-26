@@ -28,20 +28,20 @@ export async function GET(request: Request) {
     );
 
     const result = await dbPool.query(
-      `SELECT id, name, kind, version, state, scope, updated_at 
+      `SELECT binding_id, state, updated_at 
        FROM platform.capability_state 
-       WHERE tenant_id = $1 AND state = 'PUBLISHED'`,
+       WHERE tenant_id = $1 AND state = 'ACTIVE'`,
       [effectiveContext.tenantId]
     );
 
     const capabilities: CapabilitySummary[] = result.rows.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      kind: row.kind,
-      version: row.version,
-      state: row.state,
-      scope: row.scope,
-      updated: row.updated_at,
+      id: row.binding_id,
+      name: 'Governed Capability',
+      kind: 'Worker',
+      version: '1.0.0',
+      state: row.state === 'ACTIVE' ? 'Published' : 'Review',
+      scope: 'Global',
+      updated: row.updated_at || new Date().toISOString(),
     }));
 
     // If there are no capabilities in DB yet, fallback to dummy data for development
@@ -53,13 +53,13 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(capabilities);
-  } catch (error) {
-    console.error("IAM Resolution Error:", error);
+  } catch (error: any) {
+    console.error("Capabilities API Error:", error);
     const denied: DeniedResult = {
       denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
+      reasonKey: 'INTERNAL_ERROR',
+      message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 403 });
+    return NextResponse.json(denied, { status: 500 });
   }
 }

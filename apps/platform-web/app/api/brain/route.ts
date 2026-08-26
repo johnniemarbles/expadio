@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       }
     );
 
-    const result = await dbPool.query('SELECT * FROM platform.knowledge_index WHERE tenant_id = $1 LIMIT 1', [effectiveContext.tenantId]);
+    const result = await dbPool.query('SELECT * FROM platform.knowledge_documents WHERE tenant_id = $1 LIMIT 1', [effectiveContext.tenantId]);
     
     if (result.rowCount === 0) {
       const overview: BrainOverview = {
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       return NextResponse.json(overview);
     }
 
-    const sourcesResult = await dbPool.query('SELECT count(*) as count FROM platform.knowledge_index WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const sourcesResult = await dbPool.query('SELECT count(*) as count FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]);
     const correctionsResult = await dbPool.query('SELECT count(*) as count FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND stage = $2', [effectiveContext.tenantId, 'pending']);
 
     const overview: BrainOverview = {

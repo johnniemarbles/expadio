@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       }
     );
 
-    const result = await dbPool.query('SELECT * FROM platform.knowledge_index WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await dbPool.query('SELECT * FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]);
     
     if (result.rowCount === 0) {
       const sources: BrainSource[] = [
@@ -39,24 +39,24 @@ export async function GET(request: Request) {
 
     const sources: BrainSource[] = result.rows.map((row: any) => ({
       id: row.id,
-      name: row.name || 'Unknown Source',
-      kind: row.kind || 'unknown',
-      precedence: row.precedence || 1,
-      reviewStatus: row.review_status || 'approved',
-      contentDigest: row.content_digest || '',
-      effectiveDate: row.effective_date || new Date().toISOString(),
+      name: row.title || 'Unknown Source',
+      kind: 'tenant-policy',
+      precedence: 1,
+      reviewStatus: 'approved',
+      contentDigest: row.content_hash || '',
+      effectiveDate: row.created_at || new Date().toISOString(),
       lastIndexed: row.updated_at || new Date().toISOString(),
-      classification: row.classification || 'Public'
+      classification: row.security_level || 'Public'
     }));
 
     return NextResponse.json(sources);
-  } catch (error) {
-    console.error("IAM Resolution Error:", error);
+  } catch (error: any) {
+    console.error("Brain Sources API Error:", error);
     const denied: DeniedResult = {
       denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
+      reasonKey: 'INTERNAL_ERROR',
+      message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 403 });
+    return NextResponse.json(denied, { status: 500 });
   }
 }
