@@ -161,7 +161,8 @@ function validate(event: CredentialLeaseAuditEvent): void {
     }
   } else if (event.leaseReference !== null ||
     event.issuerAuditReference !== null || event.issuedAt !== null ||
-    event.expiresAt !== null || event.failureReasonKey?.trim() === '') {
+    event.expiresAt !== null || event.failureReasonKey === null ||
+    event.failureReasonKey.trim() === '') {
     throw new Error('CREDENTIAL_LEASE_EVENT_INVALID');
   }
 }
