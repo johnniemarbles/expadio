@@ -30,7 +30,8 @@
     "./agent-run": "./src/agent-run.ts",
     "./intelligence-usage": "./src/intelligence-usage.ts",
     "./knowledge-index": "./src/knowledge-index.ts",
-    "./storage-operation": "./src/storage-operation.ts"
+    "./storage-operation": "./src/storage-operation.ts",
+    "./credential-lease-event": "./src/credential-lease-event.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
