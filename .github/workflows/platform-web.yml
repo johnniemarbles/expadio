@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22.16.0'
+          package-manager-cache: false
       - run: |
           corepack enable
           corepack prepare pnpm@10.15.0 --activate
