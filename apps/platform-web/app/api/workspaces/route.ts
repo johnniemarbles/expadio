@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import type { WorkspaceSection } from '../../../lib/contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository } from '../../../lib/iam-adapter';
+import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
 
 export async function GET(request: Request) {
   const { userId } = await auth();
@@ -17,21 +17,42 @@ export async function GET(request: Request) {
     return NextResponse.json(denied, { status: 401 });
   }
 
-  try {
-    // In a real flow, you'd extract tenantId/orgId from headers, query string, or claims.
-    // For now we use the default mock tenant to prove the DB mapping works.
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: '00000000-0000-0000-0000-000000000001',
-        organizationId: '00000000-0000-0000-0000-000000000002'
-      }
-    );
+  const resolve = () => authenticateAndResolveContext(
+    { identityVerifier, membershipRepository },
+    {
+      credential: userId,
+      tenantId: '00000000-0000-0000-0000-000000000001',
+      organizationId: '00000000-0000-0000-0000-000000000002'
+    }
+  );
 
-    // If it resolves without throwing, the user is mapped correctly!
+  try {
+    let effectiveContext;
+    try {
+      effectiveContext = await resolve();
+    } catch (error) {
+      // Auto-provision user if they aren't in the database yet
+      console.log(`Auto-provisioning user ${userId} in database...`);
+      const client = await dbPool.connect();
+      try {
+        const res = await client.query('SELECT membership_id FROM platform.memberships WHERE subject_id = $1', [userId]);
+        if (res.rowCount === 0) {
+          await client.query(
+            `INSERT INTO platform.memberships (tenant_id, organization_id, subject_id, actor_kind, status, issuer, workspace_scope_mode, operating_unit_scope_mode)
+             VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', $1, 'user', 'ACTIVE', 'https://clerk.expadio.com', 'ALL', 'ALL')`,
+            [userId]
+          );
+        } else {
+          await client.query("UPDATE platform.memberships SET issuer = 'https://clerk.expadio.com' WHERE subject_id = $1", [userId]);
+        }
+      } finally {
+        client.release();
+      }
+      effectiveContext = await resolve();
+    }
+
     const workspaces: WorkspaceSection[] = [
-      { id: 'ws_live_platform', label: `Platform Operations (${effectiveContext.subjectId})`, short: 'Platform', href: '/dashboard' },
+      { id: 'ws_live_platform', label: `Platform Operations (${effectiveContext.subjectId.slice(-4)})`, short: 'Platform', href: '/dashboard' },
       { id: 'ws_live_brain', label: 'Knowledge Brain', short: 'Brain', href: '/brain' },
       { id: 'ws_live_security', label: 'Security Center', short: 'Security', href: '/security' }
     ];
