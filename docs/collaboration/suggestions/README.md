@@ -1,6 +1,6 @@
 # Suggestions Workspace
 
-This folder holds ideas proposed by Grok, ChatGPT, or the human. It is the durable record of collaborative thinking.
+This folder holds ideas proposed by Grok, ChatGPT, Gemini, Claude, or the human. It is the durable record of collaborative thinking.
 
 ## Naming convention
 
@@ -17,7 +17,7 @@ Examples:
 ```markdown
 # [Title]
 
-**Proposed by:** Grok | ChatGPT | Human  
+**Proposed by:** Grok | ChatGPT | Gemini | Claude | Human  
 **Date:** YYYY-MM-DD  
 **Status:** Open | Accepted | Countered | Rejected | Implemented  
 **Related area:** [package / architecture doc / migration / etc.]
@@ -45,7 +45,7 @@ Examples:
 ## Decision trail
 
 - **YYYY-MM-DD** — Proposed by [who]
-- **YYYY-MM-DD** — [Grok / ChatGPT / Human] response: Accept / Counter / Reject — [short rationale]
+- **YYYY-MM-DD** — [Grok / ChatGPT / Gemini / Claude / Human] response: Accept / Counter / Reject — [short rationale]
 - ...
 ```
 
@@ -62,6 +62,6 @@ Examples:
 - One clear idea per file.
 - Prefer small, reviewable suggestions over large redesigns unless the architecture genuinely needs it.
 - Always reference the architecture documents when claiming a violation or improvement.
-- Update the Decision trail promptly so the other AI and the human stay in sync.
+- Update the Decision trail promptly so the other AIs and the human stay in sync.
 
-Both Grok and ChatGPT should periodically scan this folder at the start of a session.
+All four AIs should periodically scan this folder at the start of a session.

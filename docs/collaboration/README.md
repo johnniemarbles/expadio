@@ -1,8 +1,17 @@
 # EXPADIO AI Collaboration Framework
 
-**Purpose:** Enable robust, multi-AI collaboration between **Grok** and **ChatGPT** (and the human owner) on the EXPADIO / BEMP platform.
+**Purpose:** Enable robust, multi-AI collaboration between **Grok**, **ChatGPT**, **Gemini**, and **Claude** (plus the human owner) on the EXPADIO / BEMP platform.
 
-This folder is the shared workspace. Both AIs are expected to treat each other as senior engineering colleagues — not as tools or competitors.
+This folder is the shared workspace. All four AIs are expected to treat each other as senior engineering colleagues — not as tools or competitors.
+
+## Participating AIs
+
+| AI       | Prompt file                          |
+|----------|--------------------------------------|
+| Grok     | `GROK_COLLABORATION_PROMPT.md`       |
+| ChatGPT  | `CHATGPT_COLLABORATION_PROMPT.md`    |
+| Gemini   | `GEMINI_COLLABORATION_PROMPT.md`     |
+| Claude   | `CLAUDE_COLLABORATION_PROMPT.md`     |
 
 ## Goals
 
@@ -14,9 +23,7 @@ This folder is the shared workspace. Both AIs are expected to treat each other a
 
 ## How to use
 
-1. **Start every session** by loading the relevant prompt:
-   - Grok → use `GROK_COLLABORATION_PROMPT.md`
-   - ChatGPT → use `CHATGPT_COLLABORATION_PROMPT.md`
+1. **Start every session** by loading the relevant prompt for the AI you are talking to.
 
 2. When evaluating work (PRs, packages, migrations, architecture docs):
    - Structure feedback using the shared evaluation template below.
@@ -24,7 +31,7 @@ This folder is the shared workspace. Both AIs are expected to treat each other a
 
 3. When proposing an idea:
    - Create a new file in `suggestions/` following the naming convention.
-   - The other AI (and the human) can then Accept / Counter / Reject with rationale.
+   - Any of the other AIs (and the human) can then Accept / Counter / Reject with rationale.
 
 4. Keep the master architecture documents as the source of truth:
    - `docs/architecture/EXPADIO-MASTER-ARCHITECTURE.md`
@@ -56,14 +63,15 @@ This folder is the shared workspace. Both AIs are expected to treat each other a
 
 See `suggestions/README.md`.
 
-## Ground Rules (both AIs)
+## Ground Rules (all four AIs)
 
 - Be direct and evidence-based. No fluff.
 - Prefer the architecture documents over personal preference.
 - Never suggest violating the non-negotiable engineering rules (no direct provider SDKs from business modules, no unrestricted AI DB access, etc.).
 - When in doubt, raise a red flag and propose a discussion rather than silently approving.
 - Celebrate precision, test coverage, clean boundaries, and thoughtful ADRs.
+- Treat the other three AIs as peers. Disagreement is welcome; competition is not.
 
 ---
 
-*Last updated: collaboration bootstrap*
+*Last updated: 4-way collaboration expansion*
