@@ -6,7 +6,7 @@ const dbPool = new Pool({
 
 const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000001';
 const DEFAULT_ORG = '00000000-0000-0000-0000-000000000002';
-const SUBJECT_ID = process.argv[2];
+const SUBJECT_ID = process.env.CLERK_ADMIN_USER_ID || process.argv[2];
 
 if (!SUBJECT_ID) {
   console.error("Usage: node seed.js <clerk-user-id>");
