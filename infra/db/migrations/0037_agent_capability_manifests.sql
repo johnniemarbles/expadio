@@ -31,7 +31,7 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT jsonb_typeof(schema_value) = 'object'
-    AND jsonb_object_length(schema_value) = 2
+    AND (SELECT count(*) FROM jsonb_object_keys(schema_value)) = 2
     AND btrim(schema_value ->> 'schemaReference') <> ''
     AND schema_value ->> 'schemaReference' = btrim(schema_value ->> 'schemaReference')
     AND schema_value ->> 'schemaDigest' ~ '^sha256:[0-9a-f]{64}$';
@@ -55,7 +55,7 @@ AS $$
           SELECT 1
             FROM jsonb_array_elements(references_value) AS reference
            WHERE jsonb_typeof(reference) <> 'object'
-              OR jsonb_object_length(reference) <> 2
+              OR (SELECT count(*) FROM jsonb_object_keys(reference)) <> 2
               OR btrim(reference ->> 'key') = ''
               OR reference ->> 'key' <> btrim(reference ->> 'key')
               OR reference ->> 'key' ~ E'[\\r\\n\\t]'
