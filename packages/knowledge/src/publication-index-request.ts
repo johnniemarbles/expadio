@@ -53,13 +53,14 @@ export function prepareCorrectionPublicationIndexRequests(
     );
   }
 
+  const tenantId = publication.scope.tenantId;
   return publication.objects.map((object): KnowledgeIndexRequest => {
     const correction = correctionPayload(object.payload);
     const identity = `${object.kind}:${object.key}@${object.version}`;
     const digest = correction.proposedCorrectionDigest.slice('sha256:'.length);
     return {
       ingestionId: `${input.ingestionIdPrefix}:${identity}`,
-      tenantId: publication.scope.tenantId,
+      tenantId,
       requestedBySubjectId: publication.publishedBySubjectId,
       purpose: 'Index an approved Company Brain correction.',
       collectionReference: input.collectionReference,
