@@ -44,7 +44,16 @@ export async function GET() {
        FROM platform.connectors c
        LEFT JOIN platform.connector_capabilities cc ON cc.connector_id = c.connector_id
        LEFT JOIN platform.capabilities cap ON cap.capability_id = cc.capability_id
-       WHERE c.tenant_id IS NULL OR c.tenant_id = $1::uuid
+       WHERE (c.tenant_id IS NULL OR c.tenant_id = $1::uuid)
+         AND (
+           c.provider_type IN ('email', 'sms', 'whatsapp', 'voice', 'push', 'rcs', 'messaging')
+           OR cap.capability_key ILIKE '%email%'
+           OR cap.capability_key ILIKE '%sms%'
+           OR cap.capability_key ILIKE '%whatsapp%'
+           OR cap.capability_key ILIKE '%voice%'
+           OR cap.capability_key ILIKE '%delivery%'
+           OR cap.capability_key ILIKE '%comm%'
+         )
        GROUP BY c.connector_id
        ORDER BY c.priority, c.connector_key`,
       [effectiveContext.tenantId]
