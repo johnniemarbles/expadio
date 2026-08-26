@@ -28,9 +28,14 @@ async function getBaseUrl() {
     return process.env.NEXT_PUBLIC_APP_URL;
   }
   
+  // Railway specific environment variable
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  }
+  
   try {
     const headersList = await headers();
-    const host = headersList.get('host');
+    const host = headersList.get('x-forwarded-host') || headersList.get('host');
     if (host) {
       const protocol = host.includes('localhost') ? 'http' : 'https';
       return `${protocol}://${host}`;
@@ -44,6 +49,9 @@ async function getBaseUrl() {
 async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
   try {
     const baseUrl = await getBaseUrl();
+    if (!baseUrl && typeof window === 'undefined') {
+      throw new Error(`Cannot perform SSR fetch to relative path ${path}. Base URL is empty.`);
+    }
     const url = `${baseUrl}${path}`;
     
     // Forward headers (specifically cookies) if running on the server
