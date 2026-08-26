@@ -2,7 +2,7 @@
 
 **Purpose:** Enable robust multi-AI collaboration on the EXPADIO / BEMP platform.
 
-This folder is the shared workspace.
+This folder is the shared workspace. **GitHub is the only shared memory** — see `SYNC.md`.
 
 ## Participants
 
@@ -15,40 +15,45 @@ This folder is the shared workspace.
 | Hermes Agent | Executor / Persistent Memory / Automation | `HERMES_COLLABORATION_PROMPT.md` |
 | Human Owner | Final decision maker | — |
 
-## Operating Model
+## Key docs
 
-**See `OPERATING-MODEL.md` for the full continuous collaboration rules.**
+| Doc | Purpose |
+|-----|---------|
+| `OPERATING-MODEL.md` | Primary / Reviewer / Hermes / Human roles |
+| `SYNC.md` | How work stays in sync; session start rules |
+| `CONNECTING-AGENTS.md` | How each agent gets GitHub access |
+| `suggestions/` | Proposals + Accept / Counter / Reject trail |
 
-Short version:
+## Operating Model (short)
 
 - Any of the four reasoning AIs can be the **Primary Worker** on a task.
-- The other three reasoning AIs can **evaluate, raise red flags, applaud, or suggest** at any time.
-- **Hermes Agent** executes scoped tasks, maintains artefacts, and accumulates project memory. It is **not** a fifth peer reviewer.
-- The **human owner is the sole final decision maker**.
+- The other three can **evaluate, raise red flags, applaud, or suggest** at any time.
+- **Hermes** executes scoped tasks, maintains artefacts, runs sync reports. Not a fifth peer reviewer.
+- The **human** is the sole final decision maker.
+- Durable decisions live in suggestion Decision trails and PRs — not only in chat.
 
 ## Goals
 
 - Continuously evaluate code, architecture, migrations, and design decisions.
-- Raise **red flags** early (security, tenancy leaks, provider coupling, vertical pollution of core, missing audit/provenance, etc.).
-- Celebrate high-quality work so good patterns get reinforced.
-- Propose ideas constructively.
-- Maintain a transparent accept / counter / reject trail so decisions are auditable.
-- Give the collaboration durable execution and memory via Hermes.
+- Raise **red flags** early.
+- Celebrate high-quality work.
+- Propose ideas constructively with a transparent decision trail.
+- Keep all agents on the same GitHub state.
 
 ## How to use
 
-1. **Start every session** by loading the relevant prompt for the AI you are talking to.
-2. Load or reference `OPERATING-MODEL.md` so roles and rhythm are clear.
-3. When evaluating work, use the Shared Evaluation Template below.
-4. When proposing an idea, create a file in `suggestions/` following the naming convention.
-5. Architecture source of truth remains `docs/architecture/`.
+1. **Pull latest `main`** before every session (`SYNC.md`).
+2. Load your role prompt + `OPERATING-MODEL.md`.
+3. Evaluate with the Shared Evaluation Template below.
+4. Propose via `suggestions/` using the required structure.
+5. Connect tools per `CONNECTING-AGENTS.md` so you can write Decision trails yourself.
 
 ## Shared Evaluation Template
 
 ```markdown
 ### Evaluation: [short title]
 
-**Context:** [what was reviewed — PR, package, migration, etc.]
+**Context:** [what was reviewed]
 
 **Strengths / Applause:**
 - ...
@@ -60,26 +65,19 @@ Short version:
 - ...
 
 **Alignment with Architecture:**
-- [Does it respect provider neutrality, vertical boundary rule, authorization model, AI governance, etc.?]
+- ...
 
 **Recommendation:** [Approve / Request changes / Block / Discuss]
 ```
 
-## Suggestions Process
-
-See `suggestions/README.md`.
-
 ## Ground Rules
 
-- Be direct and evidence-based. No fluff.
-- Prefer the architecture documents over personal preference.
-- Never suggest violating the non-negotiable engineering rules.
-- When in doubt, raise a red flag rather than silently approving.
-- Celebrate precision, test coverage, clean boundaries, and thoughtful ADRs.
-- Reasoning AIs treat each other as peers. Hermes stays in the Executor/Memory lane.
+- Be direct and evidence-based.
+- Prefer architecture documents over personal preference.
+- Never suggest violating non-negotiable engineering rules.
+- Decision trail in-repo > chat-only replies.
 - Only the human issues binding decisions.
-- Follow `OPERATING-MODEL.md`.
 
 ---
 
-*Last updated: Hermes Agent added as Executor/Memory*
+*Last updated: sync + agent GitHub connection guide*
