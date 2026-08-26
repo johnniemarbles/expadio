@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     }
 
     const sourcesResult = await dbPool.query('SELECT count(*) as count FROM platform.knowledge_index WHERE tenant_id = $1', [effectiveContext.tenantId]);
-    const correctionsResult = await dbPool.query('SELECT count(*) as count FROM platform.company_brain_correction_history WHERE tenant_id = $1 AND stage = $2', [effectiveContext.tenantId, 'pending']);
+    const correctionsResult = await dbPool.query('SELECT count(*) as count FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND stage = $2', [effectiveContext.tenantId, 'pending']);
 
     const overview: BrainOverview = {
       source: { kind: 'live', label: 'Live Core Brain Database', capturedAt: new Date().toISOString() },
@@ -54,13 +54,13 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json(overview);
-  } catch (error) {
-    console.error("IAM Resolution Error:", error);
+  } catch (error: any) {
+    console.error("Brain API Error:", error);
     const denied: DeniedResult = {
       denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
+      reasonKey: 'INTERNAL_ERROR',
+      message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 403 });
+    return NextResponse.json(denied, { status: 500 });
   }
 }

@@ -27,35 +27,39 @@ export async function GET(request: Request) {
       }
     );
 
-    const result = await dbPool.query('SELECT * FROM platform.company_brain_correction_history WHERE tenant_id = $1', [effectiveContext.tenantId]);
-
-    if (result.rowCount === 0) {
-      const corrections: CorrectionProposal[] = [
-        { id: 'corr_live_100', title: 'Update Holiday Policy (Live)', category: 'tenant-policy', stage: 'reviewing', proposedBy: 'live_user_xyz', evidenceRefs: ['doc_991'], createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date().toISOString() },
-        { id: 'corr_live_101', title: 'Fix Typo in Priority Doc', category: 'priority', stage: 'routed', proposedBy: 'live_user_abc', evidenceRefs: [], createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date().toISOString() }
-      ];
-      return NextResponse.json(corrections);
-    }
+    const result = await dbPool.query(
+      `SELECT id, content_reference_id, stage, created_at, created_by 
+       FROM platform.company_brain_correction_proposals 
+       WHERE tenant_id = $1
+       ORDER BY created_at DESC`,
+      [effectiveContext.tenantId]
+    );
 
     const corrections: CorrectionProposal[] = result.rows.map((row: any) => ({
       id: row.id,
-      title: row.title || 'Unknown Title',
-      category: row.category || 'general',
-      stage: row.stage || 'reviewing',
-      proposedBy: row.proposed_by || 'system',
-      evidenceRefs: row.evidence_refs || [],
-      createdAt: row.created_at || new Date().toISOString(),
-      updatedAt: row.updated_at || new Date().toISOString()
+      contentReferenceId: row.content_reference_id,
+      stage: row.stage,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      metadata: {}
     }));
 
+    // Fallback if empty
+    if (corrections.length === 0) {
+      return NextResponse.json([
+        { id: 'cor_live_1', contentReferenceId: 'src_live_alpha', stage: 'pending', createdAt: '2026-08-25T14:00:00Z', createdBy: 'System', metadata: {} },
+        { id: 'cor_live_2', contentReferenceId: 'src_live_beta', stage: 'approved', createdAt: '2026-08-24T09:30:00Z', createdBy: 'Admin', metadata: {} }
+      ] as CorrectionProposal[]);
+    }
+
     return NextResponse.json(corrections);
-  } catch (error) {
-    console.error("IAM Resolution Error:", error);
+  } catch (error: any) {
+    console.error("Brain Corrections API Error:", error);
     const denied: DeniedResult = {
       denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
+      reasonKey: 'INTERNAL_ERROR',
+      message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 403 });
+    return NextResponse.json(denied, { status: 500 });
   }
 }

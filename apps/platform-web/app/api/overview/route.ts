@@ -62,13 +62,13 @@ export async function GET(request: Request) {
     };
     
     return NextResponse.json(overview);
-  } catch (error) {
-    console.error("IAM Resolution Error:", error);
+  } catch (error: any) {
+    console.error("Overview API Error:", error);
     const denied: DeniedResult = {
       denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
+      reasonKey: 'INTERNAL_ERROR',
+      message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 403 });
+    return NextResponse.json(denied, { status: 500 });
   }
 }
