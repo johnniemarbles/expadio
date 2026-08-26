@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
 
 export async function GET(request: Request) {
   const { userId } = await auth();

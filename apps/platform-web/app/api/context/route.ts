@@ -35,8 +35,8 @@ export async function GET(request: Request) {
     const organizations = result.rows.map((row: any) => ({
       id: row.organization_id,
       name: row.name,
-      environment: 'production' as const,
-      level: 'organization' as const,
+      environment: 'production',
+      level: 'platform' as const,
       parentId: null
     }));
 
@@ -45,7 +45,9 @@ export async function GET(request: Request) {
         {
           id: effectiveContext.tenantId,
           name: 'Live Account',
-          type: 'enterprise'
+          role: 'Platform owner',
+          initials: 'LA',
+          allowedOrganizationIds: organizations.map(org => org.id)
         }
       ],
       organizations

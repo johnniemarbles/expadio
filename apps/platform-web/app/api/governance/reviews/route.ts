@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     await dbPool.query(
       `INSERT INTO platform.agent_run_events (tenant_id, event_type, event_reference, actor_subject_id, reason, occurred_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [effectiveContext.tenantId, 'REVIEW_DECISION_SIMULATED', id, userId, \`Simulated \${action} of correction proposal\`]
+      [effectiveContext.tenantId, 'REVIEW_DECISION_SIMULATED', id, userId, `Simulated ${action} of correction proposal`]
     );
 
     return NextResponse.json({ success: true, id, status: action.toUpperCase(), simulated: true });

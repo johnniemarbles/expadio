@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
   );
   try {
-    await resolve();
+    const effectiveContext = await resolve();
     // Query latest AI job execution pipelines
     const result = await dbPool.query(
       `SELECT j.job_id, j.operation, j.purpose, j.created_at,
