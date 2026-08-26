@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureWorkspaceAdapter } from "../lib/fixture-adapter.ts";
-import { brainFixtureAdapter } from "../lib/brain-fixture-adapter.ts";
+import { fixtureWorkspaceAdapter } from "../lib/fixture-adapter";
+import { brainFixtureAdapter } from "../lib/brain-fixture-adapter";
 
 test("fixture accounts expose only declared organization scopes", async () => {
   const context = await fixtureWorkspaceAdapter.loadWorkspaceContext();
