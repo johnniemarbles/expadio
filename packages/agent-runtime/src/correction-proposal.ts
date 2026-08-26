@@ -31,6 +31,17 @@ export interface CompanyBrainCorrectionProposal {
   readonly evidenceRefs: readonly string[];
 }
 
+export interface CompanyBrainCorrectionProposalRepository {
+  record(proposal: CompanyBrainCorrectionProposal): Promise<{
+    readonly recorded: boolean;
+    readonly proposal: CompanyBrainCorrectionProposal;
+  }>;
+  findByReference(
+    tenantId: string,
+    proposalReference: string,
+  ): Promise<CompanyBrainCorrectionProposal | undefined>;
+}
+
 export type CorrectionReviewRoute =
   | 'BUSINESS_CONFIGURATION_REVIEW'
   | 'MECHANICAL_GATE_REVIEW';
