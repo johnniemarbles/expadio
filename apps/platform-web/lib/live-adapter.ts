@@ -103,6 +103,7 @@ export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
     };
   },
   async loadWorkspaceContext() {
+    // TODO: Wire to /api/context when full account + org listing is available
     return { accounts: [], organizations: [] };
   },
   async loadAllowedWorkspaces() {
@@ -114,14 +115,14 @@ export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
     return fetchApi<CapabilitySummary[]>('/api/capabilities');
   },
   async loadReviews(orgId: string) {
-    return []; 
+    return fetchApi<ReviewItem[]>(`/api/governance/reviews?organizationId=${orgId}`);
   },
   async loadActivity(orgId: string) {
-    return []; 
+    return fetchApi<ActivityItem[]>(`/api/activity?organizationId=${orgId}`);
   },
   async loadOrganization(orgId: string) {
-    return { id: orgId, name: 'Live Org', environment: 'production', level: 'platform', parentId: null } as any; 
-  }
+    return fetchApi<PlatformOrganization>(`/api/organizations?id=${orgId}`);
+  },
 };
 
 export const liveBrainAdapter: BrainWorkspaceAdapter = {
@@ -141,9 +142,11 @@ export const liveBrainAdapter: BrainWorkspaceAdapter = {
     return fetchApi<CorrectionProposal[]>('/api/brain/corrections'); 
   },
   async loadPublicationHistory(orgId: string) {
-    return []; 
+    return fetchApi<PublicationEvent[]>(`/api/brain/history?organizationId=${orgId}`);
   },
   async loadProvenance(orgId: string, sourceId?: string) {
-    return []; 
+    const params = new URLSearchParams({ organizationId: orgId });
+    if (sourceId) params.set('sourceId', sourceId);
+    return fetchApi<ProvenanceEntry[]>(`/api/brain/provenance?${params}`);
   }
 };

@@ -46,3 +46,57 @@ test("fixture overview never claims live Company Brain health", async () => {
     assert.doesNotMatch(overview.healthSummary, /healthy/i);
   }
 });
+
+test("workspace fixture adapter implements remaining contract methods", async () => {
+  const reviews = await fixtureWorkspaceAdapter.loadReviews("org_dreamware");
+  assert.equal("denied" in reviews, false);
+  if (!("denied" in reviews)) {
+    assert.ok(Array.isArray(reviews));
+    assert.ok(reviews.length > 0);
+  }
+
+  const activity = await fixtureWorkspaceAdapter.loadActivity("org_dreamware");
+  assert.equal("denied" in activity, false);
+  if (!("denied" in activity)) {
+    assert.ok(Array.isArray(activity));
+    assert.ok(activity.length > 0);
+  }
+
+  const org = await fixtureWorkspaceAdapter.loadOrganization("org_dreamware");
+  assert.equal("denied" in org, false);
+  if (!("denied" in org)) {
+    assert.equal(org.id, "org_dreamware");
+    assert.equal(org.level, "platform");
+  }
+
+  // Denied path for invalid org
+  const deniedOrg = await fixtureWorkspaceAdapter.loadOrganization("invalid_org");
+  assert.equal("denied" in deniedOrg, true);
+});
+
+test("company brain fixture adapter implements all remaining contract methods", async () => {
+  const pubHistory = await brainFixtureAdapter.loadPublicationHistory("org_dreamware");
+  assert.equal("denied" in pubHistory, false);
+  if (!("denied" in pubHistory)) {
+    assert.ok(Array.isArray(pubHistory));
+    assert.ok(pubHistory.length > 0);
+  }
+
+  const provenance = await brainFixtureAdapter.loadProvenance("org_dreamware");
+  assert.equal("denied" in provenance, false);
+  if (!("denied" in provenance)) {
+    assert.ok(Array.isArray(provenance));
+    assert.ok(provenance.length > 0);
+  }
+
+  const filteredProvenance = await brainFixtureAdapter.loadProvenance("org_dreamware", "s1");
+  assert.equal("denied" in filteredProvenance, false);
+  if (!("denied" in filteredProvenance)) {
+    assert.ok(filteredProvenance.every(p => p.sourceId === "s1"));
+  }
+
+  // Denied path for invalid org
+  const deniedHistory = await brainFixtureAdapter.loadPublicationHistory("invalid_org");
+  assert.equal("denied" in deniedHistory, true);
+});
+

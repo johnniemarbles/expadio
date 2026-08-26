@@ -18,7 +18,8 @@ export default async function BrainOverviewPage({ searchParams }: { searchParams
 
   const overview = overviewResult;
   
-  let recentActivity: ProvenanceEntry[] = [];
+  const provenanceResult = await liveBrainAdapter.loadProvenance(orgId);
+  const recentActivity: ProvenanceEntry[] = isDenied(provenanceResult) ? [] : provenanceResult;
 
   return (
     <div className={styles.container}>
