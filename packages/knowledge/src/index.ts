@@ -318,3 +318,5 @@ export * from './ingestion.ts';
 export * from './repository.ts';
 
 export * from './publication-index-request.ts';
+
+export * from './correction-publication-coordinator.ts';
