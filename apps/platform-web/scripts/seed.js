@@ -9,8 +9,8 @@ const DEFAULT_ORG = '00000000-0000-0000-0000-000000000002';
 const SUBJECT_ID = process.env.CLERK_ADMIN_USER_ID || process.argv[2];
 
 if (!SUBJECT_ID) {
-  console.error("Usage: node seed.js <clerk-user-id>");
-  process.exit(1);
+  console.log("No CLERK_ADMIN_USER_ID provided. Skipping membership database seeding.");
+  process.exit(0);
 }
 
 async function seed() {

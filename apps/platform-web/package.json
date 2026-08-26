@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/migrate.js && next start",
+    "start": "node scripts/migrate.js && node scripts/seed.js && next start",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "test": "node --experimental-strip-types --test test/*.test.ts"
