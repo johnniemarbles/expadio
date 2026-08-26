@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
     "noEmit": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -37,7 +38,10 @@
       "@expadio/agent-runtime": ["packages/agent-runtime/src/index.ts"],
       "@expadio/usage-metering": ["packages/usage-metering/src/index.ts"],
       "@expadio/knowledge": ["packages/knowledge/src/index.ts"],
-      "@expadio/storage": ["packages/storage/src/index.ts"]
+      "@expadio/storage": ["packages/storage/src/index.ts"],
+      "@expadio/ui": ["packages/ui/src/index.ts"],
+      "@expadio/ui/tokens": ["packages/ui/src/tokens/index.css"],
+      "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]
     }
   },
   "include": ["packages/*/src/**/*.ts"]

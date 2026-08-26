@@ -1,0 +1,60 @@
+.tableContainer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  background: var(--surface-soft);
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-600);
+  border-bottom: 1px solid var(--line);
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.875rem;
+  color: var(--ink-950);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.precedenceCell {
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.nameCell {
+  font-weight: 500;
+}
+
+.kindCell {
+  color: var(--ink-600);
+}
+
+.digestCell, .dateCell {
+  color: var(--ink-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  padding: 3rem;
+  text-align: center;
+  color: var(--ink-600);
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}

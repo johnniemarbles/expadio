@@ -1,6 +1,11 @@
 import type {
   PlatformOverview,
   PlatformWorkspaceAdapter,
+  WorkspaceSection,
+  CapabilitySummary,
+  ReviewItem,
+  ActivityItem,
+  AdapterResult,
 } from "./contracts";
 
 const fixtureOverview: PlatformOverview = {
@@ -129,12 +134,52 @@ const fixtureOverview: PlatformOverview = {
   ],
 };
 
+const sections: WorkspaceSection[] = [
+  { id: "overview", label: "Overview", short: "OV", href: "/" },
+  { id: "organizations", label: "Organizations", short: "OR", href: "/organizations" },
+  { id: "capabilities", label: "Capabilities", short: "CA", href: "/capabilities" },
+  { id: "brain", label: "Company Brain", short: "CB", href: "/brain" },
+  { id: "governance", label: "Governance", short: "GO", href: "/governance" },
+  { id: "audit", label: "Audit", short: "AU", href: "/audit" },
+];
+
 export const fixtureWorkspaceAdapter: PlatformWorkspaceAdapter = {
   async loadOverview(organizationId) {
     if (organizationId !== fixtureOverview.organization.id) {
       throw new Error("Fixture organization is not available.");
     }
-
     return structuredClone(fixtureOverview);
+  },
+
+  async loadAllowedWorkspaces() {
+    return structuredClone(sections);
+  },
+
+  async loadCapabilities(orgId) {
+    if (orgId !== fixtureOverview.organization.id) {
+      return { denied: true, reasonKey: "NOT_FOUND", message: "Organization not found" };
+    }
+    return structuredClone(fixtureOverview.capabilities);
+  },
+
+  async loadReviews(orgId) {
+    if (orgId !== fixtureOverview.organization.id) {
+      return { denied: true, reasonKey: "NOT_FOUND", message: "Organization not found" };
+    }
+    return structuredClone(fixtureOverview.reviews);
+  },
+
+  async loadActivity(orgId) {
+    if (orgId !== fixtureOverview.organization.id) {
+      return { denied: true, reasonKey: "NOT_FOUND", message: "Organization not found" };
+    }
+    return structuredClone(fixtureOverview.activity);
+  },
+
+  async loadOrganization(orgId) {
+    if (orgId !== fixtureOverview.organization.id) {
+      return { denied: true, reasonKey: "NOT_FOUND", message: "Organization not found" };
+    }
+    return structuredClone(fixtureOverview.organization);
   },
 };

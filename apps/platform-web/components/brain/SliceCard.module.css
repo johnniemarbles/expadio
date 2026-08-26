@@ -1,0 +1,70 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.purpose {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink-950);
+  margin: 0;
+}
+
+.tenantScope {
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: var(--brand);
+  background: var(--brand-soft);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.stats {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink-950);
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--ink-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer {
+  font-size: 0.875rem;
+  color: var(--ink-500);
+}

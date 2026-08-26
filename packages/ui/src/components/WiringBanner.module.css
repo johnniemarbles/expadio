@@ -1,0 +1,64 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-8) var(--space-16);
+  font-size: var(--text-13);
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+}
+
+.text {
+  color: var(--ink-950);
+}
+
+.dismissBtn {
+  background: none;
+  border: none;
+  color: var(--ink-600);
+  font-size: var(--text-17);
+  cursor: pointer;
+  padding: 0 var(--space-4);
+  line-height: var(--leading-none);
+}
+
+.dismissBtn:hover {
+  color: var(--ink-950);
+}
+
+.fixture {
+  background-color: var(--amber-soft);
+  border-bottom: 1px solid var(--amber);
+}
+
+.fixture .dot {
+  background-color: var(--amber);
+}
+
+.partial {
+  background-color: var(--brand-soft);
+  border-bottom: 1px solid var(--brand);
+}
+
+.partial .dot {
+  background-color: var(--brand);
+}
+
+.live {
+  background-color: var(--green-soft);
+  border-bottom: 1px solid var(--green);
+}
+
+.live .dot {
+  background-color: var(--green);
+}

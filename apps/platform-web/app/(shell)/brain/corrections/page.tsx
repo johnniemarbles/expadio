@@ -1,0 +1,37 @@
+import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
+import { WiringBanner, EmptyState, DeniedState } from '@expadio/ui';
+import { isDenied } from '@expadio/ui/contracts';
+import { CorrectionList } from '@/components/brain/CorrectionList';
+
+export default async function BrainCorrectionsPage() {
+  const orgId = 'org_dreamware';
+  const correctionsResult = await brainFixtureAdapter.loadCorrections(orgId);
+  
+  if (isDenied(correctionsResult)) {
+    return <DeniedState result={correctionsResult} />;
+  }
+
+  const isFixture = true;
+  const corrections = correctionsResult;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      
+      <div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink-950)', margin: '0 0 1rem' }}>
+          Correction Proposals
+        </h2>
+        
+        {corrections.length > 0 ? (
+          <CorrectionList corrections={corrections} />
+        ) : (
+          <EmptyState 
+            title="No Corrections Found" 
+            description="There are currently no correction proposals in the system." 
+          />
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,54 @@
+.container {
+  display: flex;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Visually hidden class for the label */
+:global(.sr-only) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.icon {
+  position: absolute;
+  left: var(--space-12);
+  color: var(--ink-500);
+  font-size: var(--text-15);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-8) var(--space-12) var(--space-8) var(--space-36);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-8);
+  font-size: var(--text-15);
+  color: var(--ink-950);
+  background-color: var(--surface);
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.input::placeholder {
+  color: var(--ink-500);
+}

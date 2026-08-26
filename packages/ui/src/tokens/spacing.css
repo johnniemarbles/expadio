@@ -1,0 +1,31 @@
+:root {
+  --space-0: 0px;
+  --space-2: 2px;
+  --space-3: 3px;
+  --space-4: 4px;
+  --space-5: 5px;
+  --space-6: 6px;
+  --space-7: 7px;
+  --space-8: 8px;
+  --space-9: 9px;
+  --space-10: 10px;
+  --space-11: 11px;
+  --space-12: 12px;
+  --space-13: 13px;
+  --space-14: 14px;
+  --space-15: 15px;
+  --space-16: 16px;
+  --space-17: 17px;
+  --space-18: 18px;
+  --space-19: 19px;
+  --space-24: 24px;
+  --space-25: 25px;
+  --space-26: 26px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-34: 34px;
+  --space-36: 36px;
+  --space-45: 45px;
+  --space-48: 48px;
+  --space-60: 60px;
+}

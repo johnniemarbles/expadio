@@ -1,0 +1,49 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  padding: 1.5rem 2rem 0;
+  border-bottom: 1px solid var(--line);
+  background-color: var(--surface);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink-950);
+  margin: 0 0 1rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.navLink {
+  text-decoration: none;
+  color: var(--ink-600);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.navLink:hover {
+  color: var(--ink-950);
+}
+
+.active {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: var(--canvas);
+}

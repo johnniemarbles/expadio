@@ -1,0 +1,47 @@
+import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
+import { WiringBanner, ActivityTimeline, ActivityTimelineItem, EmptyState, DeniedState } from '@expadio/ui';
+import type { PublicationEvent } from '@/lib/brain-contracts';
+import { isDenied } from '@expadio/ui/contracts';
+
+export default async function BrainHistoryPage() {
+  const orgId = 'org_dreamware';
+  const historyResult = await brainFixtureAdapter.loadPublicationHistory(orgId);
+  
+  if (isDenied(historyResult)) {
+    return <DeniedState result={historyResult} />;
+  }
+
+  const isFixture = true;
+  const history: PublicationEvent[] = historyResult;
+
+  const timelineItems: ActivityTimelineItem[] = history.map((event: PublicationEvent) => ({
+    id: event.id,
+    actor: event.performedBy,
+    action: event.action,
+    target: `${event.sourceName} (v${event.version})`,
+    time: new Date(event.timestamp).toLocaleString()
+  }));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      
+      <div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink-950)', margin: '0 0 1rem' }}>
+          Publication History
+        </h2>
+        
+        {timelineItems.length > 0 ? (
+          <div style={{ background: 'var(--surface)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--line)' }}>
+            <ActivityTimeline items={timelineItems} />
+          </div>
+        ) : (
+          <EmptyState 
+            title="No History" 
+            description="No publication events found." 
+          />
+        )}
+      </div>
+    </div>
+  );
+}

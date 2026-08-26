@@ -1,0 +1,47 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-11);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-none);
+  border: 1px solid transparent;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+}
+
+.fixture {
+  background-color: var(--amber-soft);
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.fixture .dot {
+  background-color: var(--amber);
+}
+
+.partial {
+  background-color: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
+.partial .dot {
+  background-color: var(--brand);
+}
+
+.live {
+  background-color: var(--green-soft);
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.live .dot {
+  background-color: var(--green);
+}

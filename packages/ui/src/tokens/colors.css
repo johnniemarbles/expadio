@@ -1,0 +1,38 @@
+:root {
+  --ink-950: #14213d;
+  --ink-800: #273658;
+  --ink-600: #63708b;
+  --ink-500: #7d879d;
+  
+  --line: #e4e8f0;
+  --surface: #ffffff;
+  --surface-soft: #f7f8fc;
+  --canvas: #f1f3f8;
+  
+  --brand: #4f46e5;
+  --brand-dark: #3730a3;
+  --brand-soft: #eeedff;
+  
+  --green: #16815e;
+  --green-soft: #e9f7f1;
+  
+  --amber: #b36512;
+  --amber-soft: #fff5e7;
+  
+  --red: #c44242;
+  --red-soft: #fff0f0;
+
+  /* Sidebar dark theme colors */
+  --sidebar-900: #18233e;
+  --sidebar-800: #384665;
+  --sidebar-brand: #756cff;
+  --sidebar-brand-soft: #dddafe;
+  --sidebar-text: #e8ecf6;
+  --sidebar-text-muted: #9eabc4;
+  --sidebar-text-soft: #8290ab;
+  --sidebar-text-bright: #aeb9ce;
+  --sidebar-icon: #8995ad;
+  --sidebar-icon-bright: #94a0b7;
+  --sidebar-icon-muted: #bdc6d8;
+  --sidebar-brand-muted: #a7a2f3;
+}

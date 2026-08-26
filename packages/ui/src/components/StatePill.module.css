@@ -1,0 +1,26 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-11);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-none);
+  white-space: nowrap;
+}
+
+.published {
+  background-color: var(--green-soft);
+  color: var(--green);
+}
+
+.review {
+  background-color: var(--amber-soft);
+  color: var(--amber);
+}
+
+.draft {
+  background-color: var(--surface-soft);
+  color: var(--ink-600);
+}

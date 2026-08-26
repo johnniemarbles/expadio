@@ -1,0 +1,31 @@
+:root {
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  
+  --text-8: 8px;
+  --text-9: 9px;
+  --text-10: 10px;
+  --text-11: 11px;
+  --text-12: 12px;
+  --text-13: 13px;
+  --text-15: 15px;
+  --text-17: 17px;
+  --text-22: 22px;
+  --text-25: 25px;
+  --text-26: 26px;
+  --text-35: 35px;
+
+  --weight-semibold: 600;
+  --weight-semibold-plus: 650;
+  --weight-bold: 700;
+  --weight-extrabold: 750;
+  --weight-black: 800;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+}

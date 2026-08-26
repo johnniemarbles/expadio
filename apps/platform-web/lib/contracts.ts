@@ -1,3 +1,12 @@
+import type {
+  DeniedResult,
+  DataSource,
+  WiringStatus,
+  AdapterResult,
+} from "@expadio/ui/contracts";
+
+export type { DeniedResult, DataSource, WiringStatus, AdapterResult };
+
 export type HealthTone = "positive" | "attention" | "neutral";
 export type CapabilityState = "Published" | "Review" | "Draft";
 
@@ -52,6 +61,18 @@ export interface PlatformOverview {
   activity: ActivityItem[];
 }
 
+export interface WorkspaceSection {
+  id: string;
+  label: string;
+  short: string;
+  href: string;
+}
+
 export interface PlatformWorkspaceAdapter {
   loadOverview(organizationId: string): Promise<PlatformOverview>;
+  loadAllowedWorkspaces(): Promise<WorkspaceSection[]>;
+  loadCapabilities(orgId: string): Promise<AdapterResult<CapabilitySummary[]>>;
+  loadReviews(orgId: string): Promise<AdapterResult<ReviewItem[]>>;
+  loadActivity(orgId: string): Promise<AdapterResult<ActivityItem[]>>;
+  loadOrganization(orgId: string): Promise<AdapterResult<PlatformOverview["organization"]>>;
 }

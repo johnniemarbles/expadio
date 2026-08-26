@@ -1,0 +1,7 @@
+:root {
+  --state-hover-overlay: rgba(0, 0, 0, 0.04);
+  --state-active-overlay: rgba(0, 0, 0, 0.08);
+  --state-selected: var(--brand-soft);
+  --state-disabled-opacity: 0.5;
+  --ring-focus: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand);
+}
