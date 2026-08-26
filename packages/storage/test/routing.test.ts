@@ -101,11 +101,13 @@ test('routes through a compliant credential-referenced adapter', async () => {
 
 test('fails before invocation without a managed credential reference', async () => {
   let invoked = false;
+  const {
+    credentialRef: omittedCredential,
+    ...connectorWithoutCredential
+  } = connector;
+  void omittedCredential;
   const gateway = new RoutedObjectStorageGateway({
-    connectors: [{
-      ...connector,
-      credentialRef: undefined,
-    }],
+    connectors: [connectorWithoutCredential],
     adapters: new Map([[
       connector.connectorKey,
       {
