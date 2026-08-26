@@ -105,15 +105,15 @@ export async function GET(request: Request) {
     }));
 
     const topReviewsRes = await dbPool.query(
-      `SELECT proposal_id, proposed_by_subject_id, created_at FROM platform.company_brain_correction_proposals 
+      `SELECT proposal_reference, proposer_subject_id, created_at FROM platform.company_brain_correction_proposals 
        WHERE tenant_id = $1 AND status = 'UNREVIEWED' ORDER BY created_at DESC LIMIT 3`,
       [effectiveContext.tenantId]
     );
     const reviews = topReviewsRes.rows.map((row: any) => ({
-      id: row.proposal_id,
+      id: row.proposal_reference,
       title: 'Review Correction Proposal',
       category: 'Company Brain',
-      requestedBy: row.proposed_by_subject_id || 'System',
+      requestedBy: row.proposer_subject_id || 'System',
       age: row.created_at,
       risk: 'Medium'
     }));
