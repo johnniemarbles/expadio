@@ -48,9 +48,11 @@ export class AgentCapabilityResolutionError extends Error {
 }
 
 export class PublishedAgentCapabilityResolver {
-  constructor(
-    private readonly repository: AgentCapabilityManifestRepository,
-  ) {}
+  private readonly repository: AgentCapabilityManifestRepository;
+
+  constructor(repository: AgentCapabilityManifestRepository) {
+    this.repository = repository;
+  }
 
   async resolve(
     query: PublishedAgentCapabilityQuery,
