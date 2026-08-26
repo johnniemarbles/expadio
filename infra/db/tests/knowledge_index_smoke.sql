@@ -12,7 +12,7 @@ INSERT INTO platform.knowledge_documents (
   access_policy_key, access_policy_version,
   retention_policy_key, retention_policy_version,
   retention_expires_at, authorization_decision_id,
-  indexed_at, indexed_by_subject_id, reason,
+  index_reference, indexed_at, indexed_by_subject_id, reason,
   correlation_id, evidence_refs
 ) VALUES
   (
@@ -23,7 +23,8 @@ INSERT INTO platform.knowledge_documents (
     'metadata://policy/a/v1',
     'knowledge-embedding', 2, 'policy-access', 4,
     'policy-retention', 1, '2027-08-25T22:00:00Z',
-    'authorization-a', '2026-08-25T22:00:00Z',
+    'authorization-a', 'index://policy/a/v1',
+    '2026-08-25T22:00:00Z',
     'subject-a', 'Index approved policy.',
     'd0000000-0000-0000-0000-000000000101',
     ARRAY['approval://policy/a/v1']
@@ -36,7 +37,8 @@ INSERT INTO platform.knowledge_documents (
     'metadata://policy/b/v1',
     'knowledge-embedding', 2, 'policy-access', 4,
     'policy-retention', 1, '2027-08-25T22:00:00Z',
-    'authorization-b', '2026-08-25T22:00:00Z',
+    'authorization-b', 'index://policy/b/v1',
+    '2026-08-25T22:00:00Z',
     'subject-b', 'Index approved policy.',
     'd0000000-0000-0000-0000-000000000102',
     ARRAY['approval://policy/b/v1']
