@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     );
 
     const result = await dbPool.query(
-      `SELECT id, content_reference_id, stage, created_at, created_by 
+      `SELECT id, stage, created_at, created_by 
        FROM platform.company_brain_correction_proposals 
        WHERE tenant_id = $1
        ORDER BY created_at DESC`,
@@ -37,18 +37,20 @@ export async function GET(request: Request) {
 
     const corrections: CorrectionProposal[] = result.rows.map((row: any) => ({
       id: row.id,
-      contentReferenceId: row.content_reference_id,
-      stage: row.stage,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      metadata: {}
+      title: 'Database Correction',
+      category: 'fact',
+      stage: row.stage || 'reviewing',
+      proposedBy: row.created_by || 'system',
+      evidenceRefs: [],
+      createdAt: row.created_at || new Date().toISOString(),
+      updatedAt: row.created_at || new Date().toISOString()
     }));
 
     // Fallback if empty
     if (corrections.length === 0) {
       return NextResponse.json([
-        { id: 'cor_live_1', contentReferenceId: 'src_live_alpha', stage: 'pending', createdAt: '2026-08-25T14:00:00Z', createdBy: 'System', metadata: {} },
-        { id: 'cor_live_2', contentReferenceId: 'src_live_beta', stage: 'approved', createdAt: '2026-08-24T09:30:00Z', createdBy: 'Admin', metadata: {} }
+        { id: 'corr_live_100', title: 'Update Holiday Policy (Live)', category: 'tenant-policy', stage: 'reviewing', proposedBy: 'live_user_xyz', evidenceRefs: ['doc_991'], createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'corr_live_101', title: 'Fix Typo in Priority Doc', category: 'priority', stage: 'routed', proposedBy: 'live_user_abc', evidenceRefs: [], createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date().toISOString() }
       ] as CorrectionProposal[]);
     }
 
