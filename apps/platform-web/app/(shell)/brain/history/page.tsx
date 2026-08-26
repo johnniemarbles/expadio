@@ -20,7 +20,8 @@ export default async function BrainHistoryPage({ searchParams }: { searchParams:
     actor: event.performedBy,
     action: event.action,
     target: `${event.sourceName} (v${event.version})`,
-    time: new Date(event.timestamp).toLocaleString()
+    time: event.timestamp,
+    timeLabel: new Date(event.timestamp).toLocaleString()
   }));
 
   return (
