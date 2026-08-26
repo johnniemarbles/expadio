@@ -43,8 +43,8 @@ async function seed() {
     const resMember = await client.query('SELECT membership_id FROM platform.memberships WHERE subject_id = $1 AND tenant_id = $2', [SUBJECT_ID, DEFAULT_TENANT]);
     if (resMember.rowCount === 0) {
       await client.query(
-        `INSERT INTO platform.memberships (tenant_id, organization_id, subject_id, actor_kind, status, workspace_scope_mode, operating_unit_scope_mode)
-         VALUES ($1, $2, $3, 'user', 'ACTIVE', 'ALL', 'ALL')`,
+        `INSERT INTO platform.memberships (tenant_id, organization_id, subject_id, actor_kind, status, issuer, workspace_scope_mode, operating_unit_scope_mode)
+         VALUES ($1, $2, $3, 'user', 'ACTIVE', 'https://clerk.expadio.com', 'ALL', 'ALL')`,
         [DEFAULT_TENANT, DEFAULT_ORG, SUBJECT_ID]
       );
       console.log(`Granted membership to subject: ${SUBJECT_ID}`);
