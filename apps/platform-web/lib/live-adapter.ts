@@ -78,8 +78,8 @@ async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
   }
 }
 
-export const liveWorkspaceSource = { kind: 'live', label: 'Live Database', capturedAt: new Date().toISOString() };
-export const liveBrainSource = { kind: 'live', label: 'Live Knowledge Base', capturedAt: new Date().toISOString() };
+export const liveWorkspaceSource = { kind: 'live' as const, label: 'Live Database', capturedAt: new Date().toISOString() };
+export const liveBrainSource = { kind: 'live' as const, label: 'Live Knowledge Base', capturedAt: new Date().toISOString() };
 
 export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
   async loadOverview(organizationId: string) {
