@@ -91,7 +91,7 @@ export async function GET(request: Request) {
 
     // Fetch top capabilities
     const topCaps = await dbPool.query(
-      `SELECT binding_id, state, updated_at FROM platform.capability_state WHERE tenant_id = $1 ORDER BY resolved_at DESC LIMIT 3`,
+      `SELECT binding_id, state, resolved_at FROM platform.capability_state WHERE tenant_id = $1 ORDER BY resolved_at DESC LIMIT 3`,
       [effectiveContext.tenantId]
     );
     const capabilities = topCaps.rows.map((row: any) => ({
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
       version: '1.0.0',
       state: row.state === 'ACTIVE' ? 'Published' : 'Review',
       scope: 'Global',
-      updated: row.updated_at || new Date().toISOString(),
+      updated: row.resolved_at || new Date().toISOString(),
     }));
 
     const overview = {

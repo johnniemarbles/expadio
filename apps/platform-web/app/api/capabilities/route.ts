@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     );
 
     const result = await dbPool.query(
-      `SELECT binding_id, state, updated_at 
+      `SELECT binding_id, state, resolved_at 
        FROM platform.capability_state 
        WHERE tenant_id = $1 AND state = 'ACTIVE'`,
       [effectiveContext.tenantId]
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       version: '1.0.0',
       state: row.state === 'ACTIVE' ? 'Published' : 'Review',
       scope: 'Global',
-      updated: row.updated_at || new Date().toISOString(),
+      updated: row.resolved_at || new Date().toISOString(),
     }));
 
     // If there are no capabilities in DB yet, fallback to dummy data for development
