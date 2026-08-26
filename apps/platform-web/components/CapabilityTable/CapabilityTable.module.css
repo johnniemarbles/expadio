@@ -1,8 +1,8 @@
 .tableWrap { overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; font-size: 10px; }
-.table th { color: var(--ink-500); background: #fafbfe; text-transform: uppercase; letter-spacing: .07em; font-size: 8px; font-weight: 800; text-align: left; padding: 9px 14px; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-12); }
+.table th { color: var(--ink-500); background: #fafbfe; text-transform: uppercase; letter-spacing: .07em; font-size: var(--text-11); font-weight: 800; text-align: left; padding: 9px 14px; }
 .table td { padding: 12px 14px; border-top: 1px solid #edf0f5; color: var(--ink-800); white-space: nowrap; }
 .table tbody tr:hover { background: #fbfbfe; }
 .capabilityName { font-weight: 750; }
-.version { margin-left: 6px; color: var(--ink-500); font-size: 8px; }
+.version { margin-left: 6px; color: var(--ink-500); font-size: var(--text-11); }
 .muted { color: var(--ink-500); }
