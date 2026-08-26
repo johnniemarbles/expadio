@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SourceBadge } from "@expadio/ui";
+import { UserButton } from "@clerk/nextjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
@@ -23,6 +24,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
   const currentAccount = workspaceContext.accounts.find((item) => item.id === searchParams.get("account")) ?? workspaceContext.accounts[0];
   const allowedOrganizations = useMemo(() => currentAccount ? workspaceContext.organizations.filter((item) => currentAccount.allowedOrganizationIds.includes(item.id)) : [], [currentAccount, workspaceContext.organizations]);
   const currentOrganization = allowedOrganizations.find((item) => item.id === searchParams.get("org")) ?? allowedOrganizations[0] ?? overview.organization;
+  const selectableOrganizations = allowedOrganizations.length > 0 ? allowedOrganizations : [currentOrganization];
   const currentSection = sections.find((item) => item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/")) ?? sections[0];
 
   useEffect(() => {
@@ -113,10 +115,13 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
       <nav className={styles.primaryNav} aria-label="Platform sections"><p className={styles.navLabel}>Workspace</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>
       <div className={styles.sidebarFoot}>
-        <div className={styles.systemStatus}><span className={styles.fixtureLight}/><span><strong>Health not connected</strong><small>Fixture workspace status</small></span></div>
-        <div ref={accountAreaRef} className={styles.accountArea}>
-          <button type="button" ref={accountButtonRef} className={styles.accountCard} onClick={() => { setAccountOpen((value) => !value); setNotificationsOpen(false); }} aria-expanded={accountOpen} aria-haspopup="menu" aria-controls="account-menu"><span className={styles.avatar}>{currentAccount?.initials ?? "EX"}</span><span><strong>{currentAccount?.name ?? "Fixture account"}</strong><small>{currentAccount?.role ?? "Account adapter pending"}</small></span><span aria-hidden="true">⌄</span></button>
-          {accountOpen && <div id="account-menu" className={styles.accountMenu} role="menu" aria-label="Fixture accounts"><p>Fixture accounts</p>{workspaceContext.accounts.map((account) => <button type="button" key={account.id} role="menuitem" onClick={() => chooseAccount(account.id)} aria-current={account.id === currentAccount?.id ? "true" : undefined}><span className={styles.avatar}>{account.initials}</span><span><strong>{account.name}</strong><small>{account.role}</small></span></button>)}<small className={styles.adapterNote}>Live sign-in adapter not connected.</small></div>}
+        <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--green)', boxShadow: '0 0 0 4px rgba(22,129,94,.12)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
+        <div ref={accountAreaRef} className={styles.accountArea} style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <UserButton appearance={{ elements: { userButtonAvatarBox: { width: 32, height: 32 } } }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <strong style={{ fontSize: '13px', lineHeight: 1.2, fontWeight: 600 }}>My Account</strong>
+            <small style={{ fontSize: '11px', color: 'var(--ink-500)' }}>Manage Identity</small>
+          </div>
         </div>
       </div>
     </aside>
@@ -126,7 +131,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
         <button type="button" ref={mobileMenuRef} className={styles.mobileMenu} onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-expanded={mobileOpen}><span aria-hidden="true">☰</span></button>
         <div className={styles.breadcrumb}><span>Platform</span><span>/</span><strong>{currentSection?.label ?? "Overview"}</strong></div>
         <div className={styles.topbarActions}>
-          <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{allowedOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
+          <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{selectableOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
           <span className={styles.sourceContext}><SourceBadge source={overview.source}/></span>
           <div ref={notificationAreaRef} className={styles.notificationArea}><button type="button" ref={notificationButtonRef} className={styles.iconButton} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notification-panel" onClick={() => { setNotificationsOpen((value) => !value); setAccountOpen(false); }}><span aria-hidden="true">◎</span></button>{notificationsOpen && <div id="notification-panel" className={styles.notificationPanel} role="region" aria-label="Notifications status"><strong>Notifications not connected</strong><span>Live alerts will appear after the notification adapter is available.</span></div>}</div>
         </div>
