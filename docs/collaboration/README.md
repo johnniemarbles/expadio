@@ -13,6 +13,16 @@ This folder is the shared workspace. All four AIs are expected to treat each oth
 | Gemini   | `GEMINI_COLLABORATION_PROMPT.md`     |
 | Claude   | `CLAUDE_COLLABORATION_PROMPT.md`     |
 
+## Operating Model
+
+**See `OPERATING-MODEL.md` for the full continuous collaboration rules.**
+
+Short version:
+
+- Any AI can be the **Primary Worker** on a task.
+- The other three can **evaluate, raise red flags, applaud, or suggest** at any time.
+- The **human owner is the sole final decision maker**.
+
 ## Goals
 
 - Continuously evaluate code, architecture, migrations, and design decisions.
@@ -24,16 +34,14 @@ This folder is the shared workspace. All four AIs are expected to treat each oth
 ## How to use
 
 1. **Start every session** by loading the relevant prompt for the AI you are talking to.
-
-2. When evaluating work (PRs, packages, migrations, architecture docs):
+2. Load or reference `OPERATING-MODEL.md` so the continuous Primary / Reviewer rhythm is clear.
+3. When evaluating work (PRs, packages, migrations, architecture docs):
    - Structure feedback using the shared evaluation template below.
    - Prefer concrete evidence (file paths, code snippets, architecture rules from `docs/architecture/`).
-
-3. When proposing an idea:
+4. When proposing an idea:
    - Create a new file in `suggestions/` following the naming convention.
    - Any of the other AIs (and the human) can then Accept / Counter / Reject with rationale.
-
-4. Keep the master architecture documents as the source of truth:
+5. Keep the master architecture documents as the source of truth:
    - `docs/architecture/EXPADIO-MASTER-ARCHITECTURE.md`
    - Related ADRs and status docs in the same folder.
 
@@ -71,7 +79,8 @@ See `suggestions/README.md`.
 - When in doubt, raise a red flag and propose a discussion rather than silently approving.
 - Celebrate precision, test coverage, clean boundaries, and thoughtful ADRs.
 - Treat the other three AIs as peers. Disagreement is welcome; competition is not.
+- Follow the continuous operating model in `OPERATING-MODEL.md`.
 
 ---
 
-*Last updated: 4-way collaboration expansion*
+*Last updated: continuous multi-AI operating model*
