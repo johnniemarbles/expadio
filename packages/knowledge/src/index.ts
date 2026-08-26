@@ -316,3 +316,5 @@ function validInstant(value: string): boolean {
 
 export * from './ingestion.ts';
 export * from './repository.ts';
+
+export * from './publication-index-request.ts';
