@@ -17,11 +17,50 @@ import {
   PublicationEvent, 
   ProvenanceEntry 
 } from './brain-contracts';
+import { headers } from 'next/headers';
 import type { AdapterResult } from '@expadio/ui/contracts';
 
-async function fetchApi<T>(url: string): Promise<AdapterResult<T>> {
+// Helper to construct absolute URLs for Server Components
+async function getBaseUrl() {
+  if (typeof window !== 'undefined') return ''; // Browser uses relative URLs
+  
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
   try {
-    const res = await fetch(url);
+    const headersList = await headers();
+    const host = headersList.get('host');
+    if (host) {
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      return `${protocol}://${host}`;
+    }
+  } catch (e) {
+    // Fallback if headers() fails (e.g., outside request context)
+  }
+  return process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
+}
+
+async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
+  try {
+    const baseUrl = await getBaseUrl();
+    const url = `${baseUrl}${path}`;
+    
+    // Forward headers (specifically cookies) if running on the server
+    const fetchOptions: RequestInit = {};
+    if (typeof window === 'undefined') {
+      try {
+        const headersList = await headers();
+        const cookieHeader = headersList.get('cookie');
+        if (cookieHeader) {
+          fetchOptions.headers = { 'Cookie': cookieHeader };
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    const res = await fetch(url, fetchOptions);
     const data = await res.json();
     if (!res.ok) {
       if (res.status === 401) {
@@ -29,13 +68,12 @@ async function fetchApi<T>(url: string): Promise<AdapterResult<T>> {
       }
       throw new Error(`API error: ${res.status}`);
     }
-    // If the data itself has `denied: true`, it might already be parsed
     if (data && data.denied) {
       return data;
     }
     return data as T;
   } catch (err) {
-    console.error(`Error fetching ${url}:`, err);
+    console.error(`Error fetching ${path}:`, err);
     throw err;
   }
 }
