@@ -110,27 +110,14 @@ export class GovernedSensitiveReadService {
       throw new Error('SENSITIVE_READ_DENIED:' + decision.reasonKey);
     }
 
+    let observation: SensitiveReadObservation;
     try {
-      const observation = await this.#loader.load({
+      observation = await this.#loader.load({
         request,
         authorizationDecisionId: decision.decisionId,
       });
       validateObservation(observation, request);
-      await this.#record({
-        eventId: this.#eventId(),
-        request,
-        authorizationDecisionId: decision.decisionId,
-        authorizationReasonKey: decision.reasonKey,
-        outcome: 'ALLOWED',
-        resultReference: observation.resultReference,
-        classifications: [...observation.classifications],
-        sourceReferences: [...observation.sourceReferences],
-        failureReasonKey: null,
-        recordedAt: this.#clock(),
-      });
-      return observation;
     } catch (error) {
-      if (error instanceof SensitiveReadAuditError) throw error;
       await this.#record({
         eventId: this.#eventId(),
         request,
@@ -145,6 +132,20 @@ export class GovernedSensitiveReadService {
       });
       throw error;
     }
+
+    await this.#record({
+      eventId: this.#eventId(),
+      request,
+      authorizationDecisionId: decision.decisionId,
+      authorizationReasonKey: decision.reasonKey,
+      outcome: 'ALLOWED',
+      resultReference: observation.resultReference,
+      classifications: [...observation.classifications],
+      sourceReferences: [...observation.sourceReferences],
+      failureReasonKey: null,
+      recordedAt: this.#clock(),
+    });
+    return observation;
   }
 
   async #record(event: SensitiveReadAuditEvent): Promise<void> {
