@@ -22,8 +22,8 @@ export async function GET(request: Request) {
       { identityVerifier, membershipRepository },
       {
         credential: userId,
-        tenantId: 'tnt_dreamware',
-        organizationId: 'org_dreamware'
+        tenantId: '00000000-0000-0000-0000-000000000001',
+        organizationId: '00000000-0000-0000-0000-000000000002'
       }
     );
 
