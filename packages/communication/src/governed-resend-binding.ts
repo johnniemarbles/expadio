@@ -1,9 +1,9 @@
-import type { ConnectorDefinition } from '@expadio/provider-registry';
 import type {
+  ConnectorDefinition,
   CredentialLease,
   CredentialLeaseRequest,
   GovernedCredentialLeaseService,
-} from '@expadio/provider-registry/credential-access';
+} from '@expadio/provider-registry';
 import type {
   ConnectorCredentialRepository,
   SecretResolver,
