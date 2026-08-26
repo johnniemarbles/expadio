@@ -4,6 +4,7 @@ import { fetchApi } from '../../../../lib/live-adapter';
 import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { requestedOrganizationId, type RouteSearchParams } from '../../../../lib/request-context';
+import { RotateForm } from './RotateForm';
 
 export default async function CredentialsPage({ searchParams }: { searchParams: RouteSearchParams }) {
   const credentials = await fetchApi<any[]>('/api/configuration/credentials');
@@ -19,6 +20,8 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
           <p>Manage, inject, and audit lifecycle rotations for provider credentials (OpenAI, AWS, DB).</p>
         </div>
       </section>
+
+      <RotateForm />
 
       <section className={styles.panel} aria-labelledby="creds-title">
         <div className={styles.panelHeading}>
