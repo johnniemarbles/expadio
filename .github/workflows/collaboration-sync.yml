@@ -1,0 +1,108 @@
+name: Collaboration Sync
+
+on:
+  pull_request:
+    paths:
+      - 'docs/collaboration/**'
+      - '.github/workflows/collaboration-sync.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/collaboration/**'
+      - '.github/workflows/collaboration-sync.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-collaboration-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify core collaboration files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            docs/collaboration/README.md
+            docs/collaboration/OPERATING-MODEL.md
+            docs/collaboration/SYNC.md
+            docs/collaboration/CONNECTING-AGENTS.md
+            docs/collaboration/GROK_COLLABORATION_PROMPT.md
+            docs/collaboration/CHATGPT_COLLABORATION_PROMPT.md
+            docs/collaboration/GEMINI_COLLABORATION_PROMPT.md
+            docs/collaboration/CLAUDE_COLLABORATION_PROMPT.md
+            docs/collaboration/HERMES_COLLABORATION_PROMPT.md
+            docs/collaboration/suggestions/README.md
+          )
+          for file in "${required[@]}"; do
+            test -s "$file" || { echo "Missing or empty: $file"; exit 1; }
+          done
+
+      - name: Validate suggestion files
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(docs/collaboration/suggestions/*.md)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No suggestion markdown files found."
+            exit 0
+          fi
+
+          status_pattern='^\*\*Status:\*\*[[:space:]]*(Open|Accepted|Countered|Rejected|Implemented)[[:space:]]*$'
+          failed=0
+
+          for file in "${files[@]}"; do
+            base=$(basename "$file")
+            if [ "$base" = "README.md" ]; then
+              continue
+            fi
+
+            echo "Checking $file"
+
+            if [[ ! "$base" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-.+/\.md$ ]] && [[ ! "$base" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-.+\.md$ ]]; then
+              echo "  warn: filename should be YYYY-MM-DD-short-title.md (found $base)"
+            fi
+
+            for heading in \
+              '## Problem / Opportunity' \
+              '## Proposal' \
+              '## Expected benefits' \
+              '## Risks / trade-offs' \
+              '## Decision trail'
+            do
+              if ! grep -qF "$heading" "$file"; then
+                echo "  error: missing section: $heading"
+                failed=1
+              fi
+            done
+
+            if ! grep -qE "$status_pattern" "$file"; then
+              echo "  error: missing or invalid Status line (Open|Accepted|Countered|Rejected|Implemented)"
+              failed=1
+            fi
+
+            if ! grep -qE '^\*\*Proposed by:\*\*' "$file"; then
+              echo "  error: missing Proposed by field"
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "Suggestion validation failed."
+            exit 1
+          fi
+          echo "All suggestion files passed basic validation."
+
+      - name: Reject unresolved merge markers in collaboration docs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' docs/collaboration; then
+            echo 'Unresolved merge-conflict markers found under docs/collaboration.'
+            exit 1
+          fi
