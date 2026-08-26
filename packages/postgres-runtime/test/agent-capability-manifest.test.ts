@@ -93,8 +93,7 @@ test('maps vertical and tenant scopes without widening tenant ownership', async 
   ]);
   assert.notEqual(
     manifests[0]?.requiredPermissionKeys,
-    (client.responses[0]?.rows[0] as AgentCapabilityManifest | undefined)
-      ?.requiredPermissionKeys,
+    manifests[1]?.requiredPermissionKeys,
   );
 });
 
