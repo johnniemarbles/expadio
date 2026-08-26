@@ -137,11 +137,11 @@ export async function POST(request: Request) {
       `INSERT INTO platform.communication_sender_identities
          (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
        VALUES
-         ($1, $2, 'TENANT', 'email', $3, $4, ARRAY['transactional','marketing','system'], $5, 'PENDING', 'ACTIVE')
+         ($1, NULL, 'TENANT', 'email', $2, $3, ARRAY['transactional','marketing','system'], $4, 'PENDING', 'ACTIVE')
        ON CONFLICT (tenant_id, channel, lower(address)) WHERE scope = 'TENANT'
        DO UPDATE SET display_name = EXCLUDED.display_name, updated_at = NOW()
        RETURNING sender_id, verification_status, status, created_at`,
-      [effectiveContext.tenantId, effectiveContext.organizationId, cleanAddress, displayName || 'Platform Sender', Boolean(isDefault)]
+      [effectiveContext.tenantId, cleanAddress, displayName || 'Platform Sender', Boolean(isDefault)]
     );
 
     return NextResponse.json({ success: true, sender: insertResult.rows[0] });

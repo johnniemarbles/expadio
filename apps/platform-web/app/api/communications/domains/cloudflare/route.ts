@@ -26,11 +26,11 @@ export async function POST(request: Request) {
       `INSERT INTO platform.communication_sender_identities
          (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
        VALUES
-         ($1, $2, 'TENANT', 'email', $3, 'EXPADIO Cloudflare Verified', ARRAY['transactional','marketing','system'], true, 'VERIFIED', 'ACTIVE')
+         ($1, NULL, 'TENANT', 'email', $2, 'EXPADIO Cloudflare Verified', ARRAY['transactional','marketing','system'], true, 'VERIFIED', 'ACTIVE')
        ON CONFLICT (tenant_id, channel, lower(address)) WHERE scope = 'TENANT'
        DO UPDATE SET verification_status = 'VERIFIED', status = 'ACTIVE', updated_at = NOW()
        RETURNING sender_id, verification_status, updated_at`,
-      [effectiveContext.tenantId, effectiveContext.organizationId, address]
+      [effectiveContext.tenantId, address]
     );
 
     const configuredRecords = [
