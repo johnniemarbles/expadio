@@ -5,7 +5,8 @@ INSERT INTO platform.tenants (tenant_id, name) VALUES
   ('04d5a6b7-1892-43ca-4b5c-6d7e8f901234', 'Knowledge Tenant B');
 
 INSERT INTO platform.knowledge_documents (
-  tenant_id, collection_reference, document_reference,
+  tenant_id, ingestion_id, purpose, requested_at,
+  collection_reference, document_reference,
   document_version, source_reference, source_digest,
   metadata_reference,
   embedding_configuration_key, embedding_configuration_version,
@@ -17,6 +18,8 @@ INSERT INTO platform.knowledge_documents (
 ) VALUES
   (
     'f3c495a6-0781-42b9-3a4b-5c6d7e8f9012',
+    'ingestion-a', 'Index an approved policy.',
+    '2026-08-25T21:59:00Z',
     'collection://tenant-a/policies', 'document://policy/a',
     1, 'object://tenant-a/policy-a',
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -31,6 +34,8 @@ INSERT INTO platform.knowledge_documents (
   ),
   (
     '04d5a6b7-1892-43ca-4b5c-6d7e8f901234',
+    'ingestion-b', 'Index an approved policy.',
+    '2026-08-25T21:59:00Z',
     'collection://tenant-b/policies', 'document://policy/b',
     1, 'object://tenant-b/policy-b',
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
