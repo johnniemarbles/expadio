@@ -14,14 +14,80 @@ export async function GET(request: Request) {
     );
 
     const result = await dbPool.query(
-      `SELECT binding_id, capability_key, mapped_to_resource, status, created_at
-       FROM platform.tenant_capability_bindings
-       WHERE tenant_id = $1
-       ORDER BY created_at DESC`,
+      `SELECT b.binding_id, c.capability_key, b.mode as mapped_to_resource, COALESCE(s.state, 'NOT_CONFIGURED') as status, b.created_at
+       FROM platform.tenant_capability_bindings b
+       JOIN platform.capabilities c ON b.capability_id = c.capability_id
+       LEFT JOIN platform.capability_state s ON b.binding_id = s.binding_id
+       WHERE b.tenant_id = $1
+       ORDER BY b.created_at DESC`,
       [effectiveContext.tenantId]
     );
     
     return NextResponse.json(result.rows);
+  } catch (err: any) {
+    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
+  
+  try {
+    const effectiveContext = await authenticateAndResolveContext(
+      { identityVerifier, membershipRepository },
+      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
+    );
+    
+    const { capability_key, mode = 'A' } = await request.json();
+    if (!capability_key) return NextResponse.json({ error: 'capability_key required' }, { status: 400 });
+
+    const client = await dbPool.connect();
+    try {
+      await client.query('BEGIN');
+      const capRes = await client.query('SELECT capability_id FROM platform.capabilities WHERE capability_key = $1', [capability_key]);
+      if (capRes.rowCount === 0) throw new Error('Capability not found');
+      
+      const res = await client.query(
+        `INSERT INTO platform.tenant_capability_bindings (tenant_id, capability_id, mode, is_entitled, created_at, updated_at)
+         VALUES ($1, $2, $3, true, NOW(), NOW())
+         RETURNING binding_id`,
+        [effectiveContext.tenantId, capRes.rows[0].capability_id, mode]
+      );
+      
+      await client.query('COMMIT');
+      return NextResponse.json({ success: true, binding_id: res.rows[0].binding_id });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
+  
+  try {
+    const effectiveContext = await authenticateAndResolveContext(
+      { identityVerifier, membershipRepository },
+      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
+    );
+    
+    const url = new URL(request.url);
+    const binding_id = url.searchParams.get('id');
+    if (!binding_id) return NextResponse.json({ error: 'id query param required' }, { status: 400 });
+
+    await dbPool.query(
+      'DELETE FROM platform.tenant_capability_bindings WHERE binding_id = $1 AND tenant_id = $2',
+      [binding_id, effectiveContext.tenantId]
+    );
+
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
   }
