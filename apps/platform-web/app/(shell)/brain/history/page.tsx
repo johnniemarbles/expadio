@@ -2,6 +2,7 @@ import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
 import { WiringBanner, ActivityTimeline, ActivityTimelineItem, EmptyState, DeniedState } from '@expadio/ui';
 import type { PublicationEvent } from '@/lib/brain-contracts';
 import { isDenied } from '@expadio/ui/contracts';
+import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
 export default async function BrainHistoryPage() {
   const orgId = 'org_dreamware';
@@ -11,7 +12,6 @@ export default async function BrainHistoryPage() {
     return <DeniedState result={historyResult} />;
   }
 
-  const isFixture = true;
   const history: PublicationEvent[] = historyResult;
 
   const timelineItems: ActivityTimelineItem[] = history.map((event: PublicationEvent) => ({
@@ -24,7 +24,7 @@ export default async function BrainHistoryPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      <WiringBanner source={brainFixtureSource} />
       
       <div>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink-950)', margin: '0 0 1rem' }}>

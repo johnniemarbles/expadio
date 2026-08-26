@@ -2,6 +2,7 @@ import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
 import { WiringBanner, EmptyState, DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { CorrectionList } from '@/components/brain/CorrectionList';
+import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
 export default async function BrainReviewQueuePage() {
   const orgId = 'org_dreamware';
@@ -11,12 +12,11 @@ export default async function BrainReviewQueuePage() {
     return <DeniedState result={reviewQueueResult} />;
   }
 
-  const isFixture = true;
   const queue = reviewQueueResult;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      <WiringBanner source={brainFixtureSource} />
       
       <div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--brand)', margin: '0 0 1.5rem' }}>

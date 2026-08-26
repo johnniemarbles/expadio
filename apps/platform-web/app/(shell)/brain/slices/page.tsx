@@ -2,6 +2,7 @@ import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
 import { WiringBanner, EmptyState, DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { SliceCard } from '@/components/brain/SliceCard';
+import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
 export default async function BrainSlicesPage() {
   const orgId = 'org_dreamware';
@@ -11,12 +12,11 @@ export default async function BrainSlicesPage() {
     return <DeniedState result={slicesResult} />;
   }
 
-  const isFixture = true;
   const slices = slicesResult;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      <WiringBanner source={brainFixtureSource} />
       
       <div>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink-950)', margin: '0 0 1rem' }}>

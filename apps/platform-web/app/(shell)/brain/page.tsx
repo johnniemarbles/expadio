@@ -5,6 +5,7 @@ import styles from './page.module.css';
 import { BrainHeroCard } from '@/components/brain/BrainHeroCard';
 import { ProvenanceTimeline } from '@/components/brain/ProvenanceTimeline';
 import { ProvenanceEntry } from '@/lib/brain-contracts';
+import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
 export default async function BrainOverviewPage() {
   const orgId = 'org_dreamware';
@@ -15,7 +16,6 @@ export default async function BrainOverviewPage() {
     return <DeniedState result={overviewResult} />;
   }
 
-  const isFixture = true;
   const overview = overviewResult;
   
   let recentActivity: ProvenanceEntry[] = [];
@@ -25,7 +25,7 @@ export default async function BrainOverviewPage() {
 
   return (
     <div className={styles.container}>
-      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      <WiringBanner source={brainFixtureSource} />
       
       <BrainHeroCard overview={overview} />
       

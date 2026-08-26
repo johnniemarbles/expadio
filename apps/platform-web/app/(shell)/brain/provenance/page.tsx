@@ -2,6 +2,7 @@ import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
 import { WiringBanner, EmptyState, DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { ProvenanceTimeline } from '@/components/brain/ProvenanceTimeline';
+import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
 export default async function BrainProvenancePage() {
   const orgId = 'org_dreamware';
@@ -11,12 +12,11 @@ export default async function BrainProvenancePage() {
     return <DeniedState result={provenanceResult} />;
   }
 
-  const isFixture = true;
   const provenance = provenanceResult;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {isFixture && <WiringBanner source={{ kind: "fixture", label: "Fixture data", capturedAt: "" }} />}
+      <WiringBanner source={brainFixtureSource} />
       
       <div>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink-950)', margin: '0 0 1rem' }}>

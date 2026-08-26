@@ -13,10 +13,10 @@ const orgIdMatches = (orgId: string) => orgId === 'org_dreamware';
 
 import type { DataSource } from '@expadio/ui/contracts';
 
-const fixtureSource: DataSource = { kind: 'fixture', label: 'Fixture data', capturedAt: new Date().toISOString() };
+export const brainFixtureSource: DataSource = { kind: 'fixture', label: 'Fixture data', capturedAt: new Date().toISOString() };
 
 const brainOverview: BrainOverview = {
-  source: fixtureSource,
+  source: brainFixtureSource,
   indexedSources: 42,
   pendingCorrections: 4,
   freshnessTargetHours: 24,
