@@ -94,11 +94,13 @@ export const liveBrainSource = { kind: 'live' as const, label: 'Live Knowledge B
 
 export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
   async loadOverview(organizationId: string) {
+    const result = await fetchApi<PlatformOverview>(`/api/overview?organizationId=${organizationId}`);
+    if (result && 'denied' in (result as any)) return result as any;
+    const overview = result as PlatformOverview;
     return {
-      organization: { id: organizationId, name: 'Live Org', environment: 'production', level: 'platform', parentId: null },
-      source: liveWorkspaceSource as any,
-      metrics: [], capabilities: [], reviews: [], activity: []
-    } as any; 
+      ...overview,
+      source: liveWorkspaceSource as any
+    };
   },
   async loadWorkspaceContext() {
     return { accounts: [], organizations: [] };

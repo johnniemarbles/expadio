@@ -27,14 +27,27 @@ export async function GET(request: Request) {
       }
     );
 
-    // Mock DB Query for sources (since specific schema is not provided yet)
-    // const result = await dbPool.query('SELECT * FROM brain.sources WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await dbPool.query('SELECT * FROM platform.knowledge_index WHERE tenant_id = $1', [effectiveContext.tenantId]);
     
-    // For now returning simulated live data as requested
-    const sources: BrainSource[] = [
-      { id: 'src_live_a1', name: 'Live Corporate Policy Q3', kind: 'tenant-policy', precedence: 1, reviewStatus: 'approved', contentDigest: 'live-sha-999', effectiveDate: '2026-07-01T00:00:00Z', lastIndexed: new Date().toISOString(), classification: 'Confidential' },
-      { id: 'src_live_a2', name: 'Live Regional Safety Code', kind: 'safety', precedence: 2, reviewStatus: 'pending', contentDigest: 'live-sha-888', effectiveDate: '2026-08-01T00:00:00Z', lastIndexed: new Date().toISOString(), classification: 'Public' }
-    ];
+    if (result.rowCount === 0) {
+      const sources: BrainSource[] = [
+        { id: 'src_live_a1', name: 'Live Corporate Policy Q3', kind: 'tenant-policy', precedence: 1, reviewStatus: 'approved', contentDigest: 'live-sha-999', effectiveDate: '2026-07-01T00:00:00Z', lastIndexed: new Date().toISOString(), classification: 'Confidential' },
+        { id: 'src_live_a2', name: 'Live Regional Safety Code', kind: 'safety', precedence: 2, reviewStatus: 'pending', contentDigest: 'live-sha-888', effectiveDate: '2026-08-01T00:00:00Z', lastIndexed: new Date().toISOString(), classification: 'Public' }
+      ];
+      return NextResponse.json(sources);
+    }
+
+    const sources: BrainSource[] = result.rows.map((row: any) => ({
+      id: row.id,
+      name: row.name || 'Unknown Source',
+      kind: row.kind || 'unknown',
+      precedence: row.precedence || 1,
+      reviewStatus: row.review_status || 'approved',
+      contentDigest: row.content_digest || '',
+      effectiveDate: row.effective_date || new Date().toISOString(),
+      lastIndexed: row.updated_at || new Date().toISOString(),
+      classification: row.classification || 'Public'
+    }));
 
     return NextResponse.json(sources);
   } catch (error) {

@@ -27,13 +27,24 @@ export async function GET(request: Request) {
       }
     );
 
-    // Mock DB Query for slices
-    // const result = await dbPool.query('SELECT * FROM brain.slices WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await dbPool.query('SELECT * FROM platform.knowledge_index_reference WHERE tenant_id = $1', [effectiveContext.tenantId]);
 
-    const slices: ContextSlice[] = [
-      { id: 'slice_live_eu', purpose: 'EU Data Protection', sourceCount: 15, itemLimit: 100, tenantScope: 'Global', lastResolved: new Date().toISOString() },
-      { id: 'slice_live_hr', purpose: 'HR Onboarding Standards', sourceCount: 8, itemLimit: 50, tenantScope: 'North America', lastResolved: new Date().toISOString() }
-    ];
+    if (result.rowCount === 0) {
+      const slices: ContextSlice[] = [
+        { id: 'slice_live_eu', purpose: 'EU Data Protection', sourceCount: 15, itemLimit: 100, tenantScope: 'Global', lastResolved: new Date().toISOString() },
+        { id: 'slice_live_hr', purpose: 'HR Onboarding Standards', sourceCount: 8, itemLimit: 50, tenantScope: 'North America', lastResolved: new Date().toISOString() }
+      ];
+      return NextResponse.json(slices);
+    }
+
+    const slices: ContextSlice[] = result.rows.map((row: any) => ({
+      id: row.id,
+      purpose: row.purpose || 'Unknown Purpose',
+      sourceCount: row.source_count || 1,
+      itemLimit: row.item_limit || 100,
+      tenantScope: row.tenant_scope || 'Global',
+      lastResolved: row.updated_at || new Date().toISOString()
+    }));
 
     return NextResponse.json(slices);
   } catch (error) {

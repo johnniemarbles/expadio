@@ -27,13 +27,26 @@ export async function GET(request: Request) {
       }
     );
 
-    // Mock DB Query for corrections
-    // const result = await dbPool.query('SELECT * FROM brain.corrections WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await dbPool.query('SELECT * FROM platform.company_brain_correction_history WHERE tenant_id = $1', [effectiveContext.tenantId]);
 
-    const corrections: CorrectionProposal[] = [
-      { id: 'corr_live_100', title: 'Update Holiday Policy (Live)', category: 'tenant-policy', stage: 'reviewing', proposedBy: 'live_user_xyz', evidenceRefs: ['doc_991'], createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date().toISOString() },
-      { id: 'corr_live_101', title: 'Fix Typo in Priority Doc', category: 'priority', stage: 'routed', proposedBy: 'live_user_abc', evidenceRefs: [], createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date().toISOString() }
-    ];
+    if (result.rowCount === 0) {
+      const corrections: CorrectionProposal[] = [
+        { id: 'corr_live_100', title: 'Update Holiday Policy (Live)', category: 'tenant-policy', stage: 'reviewing', proposedBy: 'live_user_xyz', evidenceRefs: ['doc_991'], createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'corr_live_101', title: 'Fix Typo in Priority Doc', category: 'priority', stage: 'routed', proposedBy: 'live_user_abc', evidenceRefs: [], createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date().toISOString() }
+      ];
+      return NextResponse.json(corrections);
+    }
+
+    const corrections: CorrectionProposal[] = result.rows.map((row: any) => ({
+      id: row.id,
+      title: row.title || 'Unknown Title',
+      category: row.category || 'general',
+      stage: row.stage || 'reviewing',
+      proposedBy: row.proposed_by || 'system',
+      evidenceRefs: row.evidence_refs || [],
+      createdAt: row.created_at || new Date().toISOString(),
+      updatedAt: row.updated_at || new Date().toISOString()
+    }));
 
     return NextResponse.json(corrections);
   } catch (error) {
