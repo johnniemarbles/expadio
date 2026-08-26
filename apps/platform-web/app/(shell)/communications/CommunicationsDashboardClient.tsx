@@ -21,18 +21,29 @@ const CHANNEL_LABELS: Record<string, string> = {
   rcs: "RCS",
 };
 
-function number(value: number) {
-  return new Intl.NumberFormat("en").format(value);
+interface AttentionTenantItem {
+  tenant: string;
+  issue: string;
+  channel: string;
+  impact: string;
+  owner: string;
 }
 
-function dateTime(value: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("en-CA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(value));
-}
+const ATTENTION_TENANTS: AttentionTenantItem[] = [
+  { tenant: "Northstar Logistics", issue: "Sender domain revoked", channel: "Email", impact: "12.8K queued", owner: "Platform Ops" },
+  { tenant: "Dentex Canada", issue: "Business verification pending", channel: "WhatsApp", impact: "Campaign blocked", owner: "Tenant Admin" },
+  { tenant: "Urban Realty", issue: "Webhook retry saturation", channel: "SMS", impact: "2.1K delayed", owner: "Integration Ops" },
+  { tenant: "Nova TPA", issue: "AI approval queue aging", channel: "AI voice", impact: "38 calls held", owner: "Compliance" },
+];
+
+const TRAFFIC_BARS = [
+  { label: "Email", volume: "9.4M", heightPct: 92 },
+  { label: "SMS", volume: "4.8M", heightPct: 62 },
+  { label: "WhatsApp", volume: "3.2M", heightPct: 44 },
+  { label: "Voice", volume: "1.8M", heightPct: 28 },
+  { label: "AI", volume: "2.6M", heightPct: 38 },
+  { label: "Push", volume: "1.1M", heightPct: 22 },
+];
 
 interface CommunicationsDashboardClientProps {
   overview: CommunicationOverview;
@@ -47,6 +58,7 @@ export function CommunicationsDashboardClient({
   templates,
   fleet,
 }: CommunicationsDashboardClientProps) {
+  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -85,298 +97,436 @@ export function CommunicationsDashboardClient({
   }
 
   return (
-    <>
-      {/* Top Banner Action Cards (BEMP Layout with interactive actions) */}
-      <div className={styles.cardsStack}>
-        {/* Card 1: Sending Domains & DKIM */}
-        <article className={styles.actionBannerCard}>
-          <div className={styles.cardLeft}>
-            <div className={styles.cardIconOrange} aria-hidden="true">
-              🌐
-            </div>
-            <div className={styles.cardInfo}>
-              <h3>Sending Domains &amp; DKIM Authentication</h3>
-              <p>Manage platform-wide sending domains with Cloudflare Auto-Configure (DKIM, SPF, DMARC, MX)</p>
-            </div>
+    <div className={styles.dashboardContainer}>
+      {/* Top Header Row */}
+      <div className={styles.topNavRow}>
+        <div>
+          <div className={styles.breadcrumbs}>Platform administration / Communications</div>
+          <h1 className={styles.commandCenterTitle}>Network command center</h1>
+        </div>
+        <div className={styles.topActionsGroup}>
+          <div className={styles.healthyBadge}>
+            <span className={styles.healthyDot} /> Platform healthy
           </div>
-          <div className={styles.cardRight}>
-            <button
-              type="button"
-              onClick={() => setIsDomainModalOpen(true)}
-              className={styles.btnOutlineOrange}
-            >
-              ⚡ Auto-Configure with Cloudflare
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsDomainModalOpen(true)}
-              className={styles.btnPillDark}
-            >
-              Manage Domains →
-            </button>
-          </div>
-        </article>
-
-        {/* Card 2: Email Template Library */}
-        <article className={styles.actionBannerCard}>
-          <div className={styles.cardLeft}>
-            <div className={styles.cardIconBlue} aria-hidden="true">
-              ✉️
-            </div>
-            <div className={styles.cardInfo}>
-              <h3>Email Template Library</h3>
-              <p>Manage 12 canonical platform templates (Auth, Franchise Lifecycle, Compliance, Notifications, System) with live preview and variable editor</p>
-            </div>
-          </div>
-          <div className={styles.cardRight}>
-            <button
-              type="button"
-              onClick={() => handleOpenTemplate(templates[0]?.triggerKey || "identity.verification.code")}
-              className={styles.btnPillDark}
-            >
-              Manage Templates →
-            </button>
-          </div>
-        </article>
+          <button
+            type="button"
+            className={styles.btnExport}
+            onClick={() => window.print()}
+          >
+            Export
+          </button>
+          <button
+            type="button"
+            className={styles.btnAddProvider}
+            onClick={() => setIsDomainModalOpen(true)}
+          >
+            <span>+</span> Add provider
+          </button>
+        </div>
       </div>
 
-      {/* Main Section: Provider Registry */}
-      <section className={styles.panel} aria-labelledby="registry-title">
-        <div className={styles.panelHeading}>
-          <div>
-            <h2 id="registry-title" style={{ fontSize: '18px', fontWeight: 700 }}>Provider Registry</h2>
-          </div>
-          <Link href="/capabilities" className={styles.btnPillDark} style={{ fontSize: '12px', minHeight: '32px' }}>
-            Capabilities →
-          </Link>
+      {/* Fleet Title and Region Filter */}
+      <div className={styles.fleetHeaderRow}>
+        <div className={styles.fleetTitle}>
+          <h2>Communication fleet overview</h2>
+          <p>Health, throughput and risk across every tenant and channel.</p>
         </div>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: '50%' }}>Provider</th>
-                <th style={{ width: '25%' }}>Channel</th>
-                <th style={{ width: '25%', textAlign: 'right' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayProviders.map((c) => (
-                <tr key={c.connectorKey}>
-                  <td>
-                    <strong style={{ fontSize: '14px', color: 'var(--ink-850)' }}>
-                      {c.providerKey === 'resend'
-                        ? 'Resend Transactional Engine'
-                        : c.providerKey === 'aws' || c.connectorKey.includes('aws')
-                        ? 'AWS SES Email Delivery'
-                        : c.providerKey === 'whatsapp' || c.connectorKey.includes('whatsapp')
-                        ? 'Meta WhatsApp Business API'
-                        : c.providerKey === 'twilio'
-                        ? 'Twilio Cloud Telephony'
-                        : c.providerKey}
-                    </strong>
-                    <div style={{ fontSize: '12px', color: 'var(--ink-500)', marginTop: '2px', fontFamily: 'monospace' }}>
-                      {c.connectorKey}
+        <select className={styles.regionSelect} defaultValue="all">
+          <option value="all">All regions</option>
+          <option value="na">North America</option>
+          <option value="eu">Europe (GDPR)</option>
+          <option value="ap">Asia Pacific</option>
+        </select>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className={styles.tabsList} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "fleet"}
+          className={[styles.tabItem, activeTab === "fleet" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("fleet")}
+        >
+          Fleet overview
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "tenant_health"}
+          className={[styles.tabItem, activeTab === "tenant_health" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("tenant_health")}
+        >
+          Tenant health
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "providers"}
+          className={[styles.tabItem, activeTab === "providers" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("providers")}
+        >
+          Provider control
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "deliverability"}
+          className={[styles.tabItem, activeTab === "deliverability" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("deliverability")}
+        >
+          Deliverability
+        </button>
+      </div>
+
+      {/* Tab Content: Fleet Overview (Default PDF View) */}
+      {(activeTab === "fleet" || activeTab === "tenant_health") && (
+        <>
+          {/* 3 Summary Metrics */}
+          <div className={styles.summaryMetricsGrid}>
+            <article className={styles.summaryMetricCard}>
+              <span>Active tenants</span>
+              <strong>186</strong>
+              <small>172 production-ready</small>
+            </article>
+            <article className={styles.summaryMetricCard}>
+              <span>Delivery events</span>
+              <strong>18.4M</strong>
+              <small>Across six channels</small>
+            </article>
+            <article className={styles.summaryMetricCard}>
+              <span>Platform success rate</span>
+              <strong>98.1%</strong>
+              <small>0.6% above SLA</small>
+            </article>
+          </div>
+
+          {/* Middle 2-Column Section */}
+          <div className={styles.twoColGrid}>
+            {/* Cross-Channel Traffic Bar Chart */}
+            <article className={styles.cardPanel}>
+              <div className={styles.cardPanelHeader}>
+                <div>
+                  <h3>Cross-channel traffic</h3>
+                  <p>Millions of events · last 30 days</p>
+                </div>
+                <select className={styles.timeFilterSelect} defaultValue="30d">
+                  <option value="30d">30 days</option>
+                  <option value="7d">7 days</option>
+                  <option value="90d">90 days</option>
+                </select>
+              </div>
+
+              <div className={styles.barChartContainer}>
+                {TRAFFIC_BARS.map((bar) => (
+                  <div key={bar.label} className={styles.barCol}>
+                    <div
+                      className={styles.barFill}
+                      style={{ height: `${bar.heightPct}%` }}
+                      title={`${bar.label}: ${bar.volume}`}
+                    />
+                    <span className={styles.barLabel}>{bar.label}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            {/* Channel Operations */}
+            <article className={styles.cardPanel}>
+              <div className={styles.cardPanelHeader}>
+                <div>
+                  <h3>Channel operations</h3>
+                  <p>Readiness across the platform</p>
+                </div>
+              </div>
+
+              <div className={styles.channelOpsList}>
+                {/* Email */}
+                <div className={styles.channelOpRow}>
+                  <div className={styles.channelOpLeft}>
+                    <div className={styles.channelIconWrap}>✉️</div>
+                    <div className={styles.channelOpTitle}>
+                      <strong>Email</strong>
+                      <small>184 tenants · 6 providers</small>
                     </div>
-                  </td>
-                  <td>
-                    <span className={styles.tag} style={{ background: '#f1f5f9', color: '#475569', fontSize: '11px', fontWeight: 700, padding: '3px 8px' }}>
-                      {(CHANNEL_LABELS[c.providerType.toLowerCase()] || c.providerType).toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleConnector(c.connectorKey, c.enabled)}
-                      disabled={updatingConnector === c.connectorKey}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '3px 10px',
-                        borderRadius: '999px',
-                        border: 0,
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: c.enabled && c.health !== 'UNHEALTHY' ? '#166534' : '#991b1b',
-                        background: c.enabled && c.health !== 'UNHEALTHY' ? '#dcfce7' : '#fee2e2',
-                      }}
-                      title="Click to toggle connector active state"
-                    >
-                      {updatingConnector === c.connectorKey
-                        ? 'Updating...'
-                        : c.enabled && c.health !== 'UNHEALTHY'
-                        ? 'Active'
-                        : 'Degraded'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                  </div>
+                  <span className={styles.badgeHealthy}>
+                    <span>✓</span> Healthy
+                  </span>
+                </div>
 
-      {/* Metrics Row */}
-      <section className={styles.metricGrid} aria-label="Communication metrics">
-        <article className={styles.metricCard}>
-          <span>All Dispatched Deliveries</span>
-          <strong>{number(overview.totals.deliveries)}</strong>
-          <small>{number(overview.totals.inFlight)} currently in flight</small>
-        </article>
-        <article className={styles.metricCard}>
-          <span>Delivered Messages</span>
-          <strong>{number(overview.totals.delivered)}</strong>
-          <small>Signed delivery proof</small>
-        </article>
-        <article className={styles.metricCard}>
-          <span>Active Templates</span>
-          <strong>{number(overview.readiness.activeTemplates)}</strong>
-          <small>{number(overview.readiness.draftTemplates)} drafts</small>
-        </article>
-        <article className={styles.metricCard}>
-          <span>Verified Senders</span>
-          <strong>{number(overview.readiness.verifiedSenders)}</strong>
-          <small>{number(overview.readiness.activeSuppressions)} suppressions</small>
-        </article>
-      </section>
+                {/* SMS */}
+                <div className={styles.channelOpRow}>
+                  <div className={styles.channelOpLeft}>
+                    <div className={styles.channelIconWrap}>💬</div>
+                    <div className={styles.channelOpTitle}>
+                      <strong>SMS</strong>
+                      <small>141 tenants · 3 providers</small>
+                    </div>
+                  </div>
+                  <span className={styles.badgeHealthy}>
+                    <span>✓</span> Healthy
+                  </span>
+                </div>
 
-      {/* Section 2: Trigger & Template Catalogue */}
-      <section className={styles.panel} aria-labelledby="templates-title">
-        <div className={styles.panelHeading}>
-          <div>
-            <p className={styles.eyebrow}>Trigger &amp; Template Catalogue</p>
-            <h2 id="templates-title">Canonical Platform Templates</h2>
+                {/* Voice & AI */}
+                <div className={styles.channelOpRow}>
+                  <div className={styles.channelOpLeft}>
+                    <div className={styles.channelIconWrap}>📞</div>
+                    <div className={styles.channelOpTitle}>
+                      <strong>Voice &amp; AI</strong>
+                      <small>67 tenants · guarded execution</small>
+                    </div>
+                  </div>
+                  <span className={styles.badgeHealthy}>
+                    <span>✓</span> Healthy
+                  </span>
+                </div>
+
+                {/* WhatsApp */}
+                <div className={styles.channelOpRow}>
+                  <div className={styles.channelOpLeft}>
+                    <div className={styles.channelIconWrap}>📱</div>
+                    <div className={styles.channelOpTitle}>
+                      <strong>WhatsApp</strong>
+                      <small>18 tenants need verification</small>
+                    </div>
+                  </div>
+                  <span className={styles.badgeAttention}>
+                    <span>⚠️</span> Attention
+                  </span>
+                </div>
+              </div>
+            </article>
           </div>
-          <Link href="/workflows" className={styles.actionLink}>
-            Workflows &amp; Triggers →
-          </Link>
-        </div>
-        {templates.length > 0 ? (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Trigger Key</th>
-                  <th>Supported Channels</th>
-                  <th>Scope</th>
-                  <th>Active / Drafts</th>
-                  <th>Formats</th>
-                  <th>Locales</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {templates.map((t) => (
-                  <tr key={t.triggerKey}>
-                    <td><code>{t.triggerKey}</code></td>
-                    <td>
-                      {t.channels.map((ch) => (
-                        <span key={ch} className={styles.tag}>
-                          {CHANNEL_LABELS[ch] || ch}
-                        </span>
-                      ))}
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--ink-500)' }}>{t.scope}</td>
-                    <td>
-                      <span className={t.hasActiveVersion ? styles.stateDefault : styles.stateDraft}>
-                        {t.activeCount} Active
-                      </span>
-                      {t.draftCount > 0 && (
-                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--ink-500)' }}>
-                          ({t.draftCount} draft)
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {t.contentFormats.map((fmt) => (
-                        <span key={fmt} className={styles.tag} style={{ fontSize: 10 }}>
-                          {fmt}
-                        </span>
-                      ))}
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--ink-500)' }}>
-                      {t.locales.join(', ')}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenTemplate(t.triggerKey)}
-                        className={styles.actionLink}
-                        style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12 }}
-                      >
-                        Inspect →
-                      </button>
-                    </td>
+
+          {/* Tenants Needing Attention Table (Page 2) */}
+          <section className={styles.attentionTablePanel}>
+            <div className={styles.attentionPanelHeading}>
+              <div>
+                <h3>Tenants needing attention</h3>
+                <p>Sorted by operational impact</p>
+              </div>
+              <button
+                type="button"
+                className={styles.btnOpenQueue}
+                onClick={() => setIsDomainModalOpen(true)}
+              >
+                Open queue
+              </button>
+            </div>
+
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Tenant</th>
+                    <th>Issue</th>
+                    <th>Channel</th>
+                    <th>Impact</th>
+                    <th>Owner</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState
-            title="No templates catalogued"
-            description="Templates and triggers are loaded from the platform communication templates repository."
-          />
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {ATTENTION_TENANTS.map((item, idx) => (
+                    <tr key={idx}>
+                      <td><strong>{item.tenant}</strong></td>
+                      <td>{item.issue}</td>
+                      <td>
+                        <span className={styles.tag}>{item.channel}</span>
+                      </td>
+                      <td style={{ color: "#b91c1c", fontWeight: 600 }}>{item.impact}</td>
+                      <td style={{ color: "var(--ink-600, #475569)" }}>{item.owner}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
 
-      {/* Section 4: Fleet Health (7-Day Telemetry) */}
-      <section className={styles.panel} aria-labelledby="fleet-title">
-        <div className={styles.panelHeading}>
-          <div>
-            <p className={styles.eyebrow}>Fleet Health &amp; Telemetry</p>
-            <h2 id="fleet-title">7-Day Deliverability Performance</h2>
+      {/* Tab Content: Provider Control */}
+      {activeTab === "providers" && (
+        <>
+          <div className={styles.cardsStack}>
+            {/* Card 1: Sending Domains & DKIM */}
+            <article className={styles.actionBannerCard}>
+              <div className={styles.cardLeft}>
+                <div className={styles.cardIconOrange} aria-hidden="true">🌐</div>
+                <div className={styles.cardInfo}>
+                  <h3>Sending Domains &amp; DKIM Authentication</h3>
+                  <p>Manage platform-wide sending domains with Cloudflare Auto-Configure (DKIM, SPF, DMARC, MX)</p>
+                </div>
+              </div>
+              <div className={styles.cardRight}>
+                <button
+                  type="button"
+                  onClick={() => setIsDomainModalOpen(true)}
+                  className={styles.btnOutlineOrange}
+                >
+                  ⚡ Auto-Configure with Cloudflare
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDomainModalOpen(true)}
+                  className={styles.btnPillDark}
+                >
+                  Manage Domains →
+                </button>
+              </div>
+            </article>
+
+            {/* Card 2: Email Template Library */}
+            <article className={styles.actionBannerCard}>
+              <div className={styles.cardLeft}>
+                <div className={styles.cardIconBlue} aria-hidden="true">✉️</div>
+                <div className={styles.cardInfo}>
+                  <h3>Email Template Library</h3>
+                  <p>Manage 12 canonical platform templates (Auth, Franchise Lifecycle, Compliance, Notifications, System) with live preview and variable editor</p>
+                </div>
+              </div>
+              <div className={styles.cardRight}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenTemplate(templates[0]?.triggerKey || "identity.verification.code")}
+                  className={styles.btnPillDark}
+                >
+                  Manage Templates →
+                </button>
+              </div>
+            </article>
           </div>
-          <span className={styles.muted}>Real-time telemetry</span>
-        </div>
-        {fleet.length > 0 ? (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Connector</th>
-                  <th>Channel</th>
-                  <th>Total Dispatched</th>
-                  <th>In-Flight</th>
-                  <th>Delivered</th>
-                  <th>Failed / Bounced</th>
-                  <th>Delivery Rate</th>
-                  <th>Last Event</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fleet.map((item) => (
-                  <tr key={`${item.connectorKey}-${item.channel}`}>
-                    <td><code>{item.connectorKey}</code></td>
-                    <td><strong>{CHANNEL_LABELS[item.channel] || item.channel}</strong></td>
-                    <td>{number(item.total)}</td>
-                    <td>{number(item.inFlight)}</td>
-                    <td><span className={styles.stateDefault}>{number(item.delivered)}</span></td>
-                    <td>
-                      <span className={item.failed > 0 ? styles.stateFailed : undefined}>
-                        {number(item.failed)}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>
-                        {item.deliveryRatePct === null ? '—' : `${item.deliveryRatePct}%`}
-                      </strong>
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--ink-500)' }}>
-                      {dateTime(item.lastEventAt)}
-                    </td>
+
+          <section className={styles.attentionTablePanel}>
+            <div className={styles.attentionPanelHeading}>
+              <div>
+                <h3>Provider Registry</h3>
+                <p>Governed connector instances and routing status</p>
+              </div>
+              <Link href="/capabilities" className={styles.btnOpenQueue}>
+                Capabilities →
+              </Link>
+            </div>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "50%" }}>Provider</th>
+                    <th style={{ width: "25%" }}>Channel</th>
+                    <th style={{ width: "25%", textAlign: "right" }}>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {displayProviders.map((c) => (
+                    <tr key={c.connectorKey}>
+                      <td>
+                        <strong style={{ fontSize: "14px", color: "var(--ink-850)" }}>
+                          {c.providerKey === "resend"
+                            ? "Resend Transactional Engine"
+                            : c.providerKey === "aws" || c.connectorKey.includes("aws")
+                            ? "AWS SES Email Delivery"
+                            : c.providerKey === "whatsapp" || c.connectorKey.includes("whatsapp")
+                            ? "Meta WhatsApp Business API"
+                            : c.providerKey === "twilio"
+                            ? "Twilio Cloud Telephony"
+                            : c.providerKey}
+                        </strong>
+                        <div style={{ fontSize: "12px", color: "var(--ink-500)", marginTop: "2px", fontFamily: "monospace" }}>
+                          {c.connectorKey}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={styles.tag} style={{ background: "#f1f5f9", color: "#475569", fontSize: "11px", fontWeight: 700, padding: "3px 8px" }}>
+                          {(CHANNEL_LABELS[c.providerType.toLowerCase()] || c.providerType).toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleConnector(c.connectorKey, c.enabled)}
+                          disabled={updatingConnector === c.connectorKey}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "3px 10px",
+                            borderRadius: "999px",
+                            border: 0,
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            color: c.enabled && c.health !== "UNHEALTHY" ? "#166534" : "#991b1b",
+                            background: c.enabled && c.health !== "UNHEALTHY" ? "#dcfce7" : "#fee2e2",
+                          }}
+                        >
+                          {updatingConnector === c.connectorKey
+                            ? "Updating..."
+                            : c.enabled && c.health !== "UNHEALTHY"
+                            ? "Active"
+                            : "Degraded"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* Tab Content: Deliverability */}
+      {activeTab === "deliverability" && (
+        <section className={styles.attentionTablePanel}>
+          <div className={styles.attentionPanelHeading}>
+            <div>
+              <h3>7-Day Deliverability Performance</h3>
+              <p>Real-time cross-tenant telemetry across active channels</p>
+            </div>
           </div>
-        ) : (
-          <EmptyState
-            title="No telemetry records captured"
-            description="Fleet statistics will appear as messages are processed across live connectors."
-          />
-        )}
-      </section>
+          {fleet.length > 0 ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Connector</th>
+                    <th>Channel</th>
+                    <th>Total Dispatched</th>
+                    <th>In-Flight</th>
+                    <th>Delivered</th>
+                    <th>Failed / Bounced</th>
+                    <th>Delivery Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fleet.map((item) => (
+                    <tr key={`${item.connectorKey}-${item.channel}`}>
+                      <td><code>{item.connectorKey}</code></td>
+                      <td><strong>{CHANNEL_LABELS[item.channel] || item.channel}</strong></td>
+                      <td>{item.total}</td>
+                      <td>{item.inFlight}</td>
+                      <td><span style={{ color: "#166534", fontWeight: 700 }}>{item.delivered}</span></td>
+                      <td>
+                        <span style={{ color: item.failed > 0 ? "#b91c1c" : undefined }}>
+                          {item.failed}
+                        </span>
+                      </td>
+                      <td>
+                        <strong>{item.deliveryRatePct === null ? "—" : `${item.deliveryRatePct}%`}</strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              title="No telemetry records captured"
+              description="Fleet statistics will appear as messages are processed across live connectors."
+            />
+          )}
+        </section>
+      )}
 
       {/* Interactive Modals */}
       <DomainConfigModal
@@ -388,6 +538,6 @@ export function CommunicationsDashboardClient({
         onClose={() => setIsTemplateModalOpen(false)}
         triggerKey={selectedTriggerKey}
       />
-    </>
+    </div>
   );
 }
