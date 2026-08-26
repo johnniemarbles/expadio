@@ -5,19 +5,25 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/migrate.js && next start",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "test": "node --experimental-strip-types --test test/*.test.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.8.2",
+    "@expadio/iam": "workspace:*",
+    "@expadio/postgres-runtime": "workspace:*",
+    "@expadio/tenancy": "workspace:*",
     "@expadio/ui": "workspace:*",
     "next": "16.3.3",
+    "pg": "^8.23.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "^5.8.3"
