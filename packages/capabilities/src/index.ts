@@ -179,3 +179,4 @@ function blocked(
 }
 
 export * from './agent-capability-manifest.ts';
+export * from './agent-capability-resolution.ts';
