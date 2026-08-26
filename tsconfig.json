@@ -35,7 +35,8 @@
       "@expadio/data-orchestrator": ["packages/data-orchestrator/src/index.ts"],
       "@expadio/context-engine": ["packages/context-engine/src/index.ts"],
       "@expadio/agent-runtime": ["packages/agent-runtime/src/index.ts"],
-      "@expadio/usage-metering": ["packages/usage-metering/src/index.ts"]
+      "@expadio/usage-metering": ["packages/usage-metering/src/index.ts"],
+      "@expadio/knowledge": ["packages/knowledge/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*.ts"]
