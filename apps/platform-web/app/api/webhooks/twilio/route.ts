@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestCommunicationProviderWebhook } from '@expadio/communication/webhook-ingestion';
-import { TwilioWebhookNormalizer } from '@expadio/communication/twilio-webhook-normalizer';
+import { ingestCommunicationProviderWebhook } from '@expadio/communication';
+import { TwilioWebhookNormalizer } from '@expadio/communication';
 import { PostgresCommunicationDeliveryRepository } from '@expadio/postgres-runtime';
 import { dbPool } from '../../../../lib/iam-adapter';
 

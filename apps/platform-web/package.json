@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.2",
+    "@expadio/communication": "workspace:*",
     "@expadio/iam": "workspace:*",
     "@expadio/postgres-runtime": "workspace:*",
     "@expadio/tenancy": "workspace:*",
