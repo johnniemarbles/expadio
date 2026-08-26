@@ -1,40 +1,26 @@
 name: Platform Web
-
 on:
   pull_request:
-    paths:
-      - 'apps/platform-web/**'
-      - '.github/workflows/platform-web.yml'
+    paths: ['apps/platform-web/**', 'packages/ui/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.json', '.github/workflows/platform-web.yml']
   push:
-    branches:
-      - main
-    paths:
-      - 'apps/platform-web/**'
-      - '.github/workflows/platform-web.yml'
-
+    branches: [main]
+    paths: ['apps/platform-web/**', 'packages/ui/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.json', '.github/workflows/platform-web.yml']
 concurrency:
   group: platform-web-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22.16.0'
-      - name: Enable pnpm
-        shell: bash
-        run: |
+          package-manager-cache: false
+      - run: |
           corepack enable
           corepack prepare pnpm@10.15.0 --activate
-      - name: Install platform dependencies
-        run: pnpm install --no-frozen-lockfile
-      - name: Typecheck and build platform
-        run: pnpm --filter @expadio/platform-web check
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @expadio/platform-web check

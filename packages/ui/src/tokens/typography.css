@@ -1,12 +1,12 @@
 :root {
   --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   
-  --text-8: 8px;
-  --text-9: 9px;
-  --text-10: 10px;
-  --text-11: 11px;
-  --text-12: 12px;
-  --text-13: 13px;
+  --text-8: 11px;
+  --text-9: 11px;
+  --text-10: 12px;
+  --text-11: 12px;
+  --text-12: 13px;
+  --text-13: 14px;
   --text-15: 15px;
   --text-17: 17px;
   --text-22: 22px;

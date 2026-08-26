@@ -1,5 +1,5 @@
 import type { AdapterResult } from '@expadio/ui/contracts';
-import {
+import type {
   BrainWorkspaceAdapter,
   BrainOverview,
   BrainSource,
@@ -7,43 +7,44 @@ import {
   CorrectionProposal,
   PublicationEvent,
   ProvenanceEntry
-} from './brain-contracts';
+} from './brain-contracts.ts';
 
-const orgIdMatches = (orgId: string) => orgId === 'org_dreamware';
+const allowedOrganizationIds = new Set(['org_dreamware', 'org_dreamware_canada', 'org_dreamware_ontario', 'org_dreamware_toronto']);
+const orgIdMatches = (orgId: string) => allowedOrganizationIds.has(orgId);
 
 import type { DataSource } from '@expadio/ui/contracts';
 
-export const brainFixtureSource: DataSource = { kind: 'fixture', label: 'Fixture data', capturedAt: new Date().toISOString() };
+export const brainFixtureSource: DataSource = { kind: 'fixture', label: 'Fixture data', capturedAt: '2026-08-26T08:05:00.000Z' };
 
 const brainOverview: BrainOverview = {
   source: brainFixtureSource,
   indexedSources: 42,
   pendingCorrections: 4,
   freshnessTargetHours: 24,
-  lastIndexedAt: new Date().toISOString(),
+  lastIndexedAt: '2026-08-26T08:05:00.000Z',
   healthSummary: 'Healthy - 98% sources fresh'
 };
 
 const brainSources: BrainSource[] = [
-  { id: 's1', name: 'Global Safety Protocol v4', kind: 'safety', precedence: 1, reviewStatus: 'approved', contentDigest: 'sha256:d3b07384', effectiveDate: '2025-01-01', lastIndexed: new Date().toISOString() },
-  { id: 's2', name: 'EU Data Privacy Addendum', kind: 'jurisdiction-policy', precedence: 2, reviewStatus: 'approved', contentDigest: 'sha256:a4c01289', effectiveDate: '2025-02-15', lastIndexed: new Date().toISOString() },
-  { id: 's3', name: 'Dreamware Security Policy', kind: 'tenant-policy', precedence: 3, reviewStatus: 'approved', contentDigest: 'sha256:f129a031', effectiveDate: '2026-01-10', lastIndexed: new Date().toISOString() },
-  { id: 's4', name: 'ADR-42: Move to Next.js 16', kind: 'decision', precedence: 4, reviewStatus: 'approved', contentDigest: 'sha256:8b9a102c', effectiveDate: '2026-03-20', lastIndexed: new Date().toISOString() },
-  { id: 's5', name: 'Q3 Product Priorities', kind: 'priority', precedence: 5, reviewStatus: 'approved', contentDigest: 'sha256:e10b1009', effectiveDate: '2026-07-01', lastIndexed: new Date().toISOString() },
-  { id: 's6', name: 'Supported Browser List 2026', kind: 'fact', precedence: 6, reviewStatus: 'approved', contentDigest: 'sha256:0f9c2a11', effectiveDate: '2026-01-01', lastIndexed: new Date().toISOString() },
-  { id: 's7', name: 'AI Generation Capability', kind: 'capability', precedence: 7, reviewStatus: 'approved', contentDigest: 'sha256:b1d9a200', effectiveDate: '2026-05-15', lastIndexed: new Date().toISOString() },
-  { id: 's8', name: 'Update to Component Library', kind: 'proposal', precedence: 8, reviewStatus: 'pending', contentDigest: 'sha256:a2b8c9d0', effectiveDate: '2026-08-25', lastIndexed: new Date().toISOString() },
+  { id: 's1', name: 'Global Safety Protocol v4', kind: 'safety', precedence: 1, reviewStatus: 'approved', contentDigest: 'sha256:d3b07384d3b07384d3b07384d3b07384d3b07384d3b07384d3b07384d3b07384', effectiveDate: '2025-01-01', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's2', name: 'EU Data Privacy Addendum', kind: 'jurisdiction-policy', precedence: 2, reviewStatus: 'approved', contentDigest: 'sha256:a4c01289a4c01289a4c01289a4c01289a4c01289a4c01289a4c01289a4c01289', effectiveDate: '2025-02-15', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's3', name: 'Dreamware Security Policy', kind: 'tenant-policy', precedence: 3, reviewStatus: 'approved', contentDigest: 'sha256:f129a031f129a031f129a031f129a031f129a031f129a031f129a031f129a031', effectiveDate: '2026-01-10', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's4', name: 'ADR-42: Move to Next.js 16', kind: 'decision', precedence: 4, reviewStatus: 'approved', contentDigest: 'sha256:8b9a102c8b9a102c8b9a102c8b9a102c8b9a102c8b9a102c8b9a102c8b9a102c', effectiveDate: '2026-03-20', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's5', name: 'Q3 Product Priorities', kind: 'priority', precedence: 5, reviewStatus: 'approved', contentDigest: 'sha256:e10b1009e10b1009e10b1009e10b1009e10b1009e10b1009e10b1009e10b1009', effectiveDate: '2026-07-01', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's6', name: 'Supported Browser List 2026', kind: 'fact', precedence: 6, reviewStatus: 'approved', contentDigest: 'sha256:0f9c2a110f9c2a110f9c2a110f9c2a110f9c2a110f9c2a110f9c2a110f9c2a11', effectiveDate: '2026-01-01', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's7', name: 'AI Generation Capability', kind: 'capability', precedence: 7, reviewStatus: 'approved', contentDigest: 'sha256:b1d9a200b1d9a200b1d9a200b1d9a200b1d9a200b1d9a200b1d9a200b1d9a200', effectiveDate: '2026-05-15', lastIndexed: '2026-08-26T08:05:00.000Z' },
+  { id: 's8', name: 'Update to Component Library', kind: 'proposal', precedence: 8, reviewStatus: 'pending', contentDigest: 'sha256:a2b8c9d0a2b8c9d0a2b8c9d0a2b8c9d0a2b8c9d0a2b8c9d0a2b8c9d0a2b8c9d0', effectiveDate: '2026-08-25', lastIndexed: '2026-08-26T08:05:00.000Z' },
 ];
 
 const contextSlices: ContextSlice[] = [
-  { id: 'cs1', purpose: 'UI Development', sourceCount: 15, itemLimit: 50, tenantScope: 'org_dreamware', lastResolved: new Date().toISOString() },
-  { id: 'cs2', purpose: 'Backend API Design', sourceCount: 12, itemLimit: 40, tenantScope: 'org_dreamware', lastResolved: new Date().toISOString() },
-  { id: 'cs3', purpose: 'Marketing Campaigns', sourceCount: 8, itemLimit: 30, tenantScope: 'org_dreamware', lastResolved: new Date().toISOString() },
+  { id: 'cs1', purpose: 'UI Development', sourceCount: 15, itemLimit: 50, tenantScope: 'org_dreamware', lastResolved: '2026-08-26T08:05:00.000Z' },
+  { id: 'cs2', purpose: 'Backend API Design', sourceCount: 12, itemLimit: 40, tenantScope: 'org_dreamware', lastResolved: '2026-08-26T08:05:00.000Z' },
+  { id: 'cs3', purpose: 'Marketing Campaigns', sourceCount: 8, itemLimit: 30, tenantScope: 'org_dreamware', lastResolved: '2026-08-26T08:05:00.000Z' },
 ];
 
 const corrections: CorrectionProposal[] = [
   { id: 'cp1', title: 'Update button component colors', category: 'proposal', stage: 'reviewing', proposedBy: 'alice@dreamware.com', evidenceRefs: ['doc-123'], createdAt: '2026-08-20T10:00:00Z', updatedAt: '2026-08-21T14:00:00Z' },
-  { id: 'cp2', title: 'Refactor auth middleware', category: 'proposal', stage: 'routed', proposedBy: 'bob@dreamware.com', evidenceRefs: [], createdAt: '2026-08-22T09:00:00Z', updatedAt: '2026-08-22T09:30:00Z' },
+  { id: 'cp2', title: 'Refactor auth middleware', category: 'proposal', stage: 'routed', proposedBy: 'bob@dreamware.com', evidenceRefs: ['evidence://auth-middleware/1'], createdAt: '2026-08-22T09:00:00Z', updatedAt: '2026-08-22T09:30:00Z' },
   { id: 'cp3', title: 'Fix typo in README', category: 'proposal', stage: 'captured', proposedBy: 'charlie@dreamware.com', evidenceRefs: ['doc-456'], createdAt: '2026-08-25T11:00:00Z', updatedAt: '2026-08-25T11:00:00Z' },
   { id: 'cp4', title: 'Add dark mode support', category: 'proposal', stage: 'accepted', proposedBy: 'dana@dreamware.com', evidenceRefs: ['figma-890'], createdAt: '2026-08-15T16:00:00Z', updatedAt: '2026-08-18T10:00:00Z' }
 ];
@@ -68,7 +69,7 @@ const provenanceEntries: ProvenanceEntry[] = [
 export const brainFixtureAdapter: BrainWorkspaceAdapter = {
   async loadOverview(orgId) {
     if (!orgIdMatches(orgId)) return { denied: true as const, reasonKey: 'ORG_FORBIDDEN', message: 'Not authorized for this organization', correlationId: 'brain-overview' };
-    return brainOverview;
+    return structuredClone(brainOverview);
   },
   async loadSources(orgId) {
     if (!orgIdMatches(orgId)) return { denied: true as const, reasonKey: 'ORG_FORBIDDEN', message: 'Not authorized for this organization', correlationId: 'brain-sources' };

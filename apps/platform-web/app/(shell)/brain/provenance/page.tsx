@@ -1,11 +1,12 @@
+import { requestedOrganizationId, type RouteSearchParams } from '@/lib/request-context';
 import { brainFixtureAdapter } from '@/lib/brain-fixture-adapter';
 import { WiringBanner, EmptyState, DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { ProvenanceTimeline } from '@/components/brain/ProvenanceTimeline';
 import { brainFixtureSource } from '@/lib/brain-fixture-adapter';
 
-export default async function BrainProvenancePage() {
-  const orgId = 'org_dreamware';
+export default async function BrainProvenancePage({ searchParams }: { searchParams: RouteSearchParams }) {
+  const orgId = await requestedOrganizationId(searchParams);
   const provenanceResult = await brainFixtureAdapter.loadProvenance(orgId);
   
   if (isDenied(provenanceResult)) {
