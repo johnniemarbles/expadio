@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 
+if (!process.env.DATABASE_URL) { console.error("FATAL ERROR: DATABASE_URL is not set in environment variables! Railway cannot connect to PostgreSQL."); process.exit(1); }
 const dbPool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
