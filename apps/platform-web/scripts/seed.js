@@ -49,7 +49,8 @@ async function seed() {
       );
       console.log(`Granted membership to subject: ${SUBJECT_ID}`);
     } else {
-      console.log(`Subject ${SUBJECT_ID} already has membership.`);
+      await client.query("UPDATE platform.memberships SET issuer = 'https://clerk.expadio.com' WHERE subject_id = $1", [SUBJECT_ID]);
+      console.log(`Subject ${SUBJECT_ID} already has membership. Updated issuer.`);
     }
 
     await client.query('COMMIT');
