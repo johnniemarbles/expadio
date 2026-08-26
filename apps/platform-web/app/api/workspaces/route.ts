@@ -52,9 +52,9 @@ export async function GET(request: Request) {
     }
 
     const workspaces: WorkspaceSection[] = [
-      { id: 'ws_live_platform', label: `Platform Operations (${effectiveContext.subjectId.slice(-4)})`, short: 'Platform', href: '/' },
-      { id: 'ws_live_brain', label: 'Knowledge Brain', short: 'Brain', href: '/brain' },
-      { id: 'ws_live_governance', label: 'Governance Center', short: 'Governance', href: '/governance' }
+      { id: 'ws_live_platform', label: `Platform Operations (${effectiveContext.subjectId.slice(-4)})`, short: 'PL', href: '/' },
+      { id: 'ws_live_brain', label: 'Knowledge Brain', short: 'KB', href: '/brain' },
+      { id: 'ws_live_governance', label: 'Governance Center', short: 'GC', href: '/governance' }
     ];
     return NextResponse.json(workspaces);
   } catch (error) {
