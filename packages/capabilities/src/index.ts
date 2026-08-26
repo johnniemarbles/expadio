@@ -177,3 +177,5 @@ function blocked(
     ifYouDoNothing: [consequence],
   };
 }
+
+export * from './agent-capability-manifest.ts';
