@@ -4,7 +4,9 @@ import type {
   CommunicationChannel,
   CommunicationOverview,
 } from "../../../lib/communication-contracts";
+import type { ConnectorListItem } from "../../api/communications/providers/route";
 import { fetchApi } from "../../../lib/live-adapter";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 const CHANNEL_LABELS: Record<CommunicationChannel, string> = {
@@ -32,7 +34,10 @@ function dateTime(value: string) {
 }
 
 export default async function CommunicationsPage() {
-  const overview = await fetchApi<CommunicationOverview>("/api/communications/overview");
+  const [overview, providers] = await Promise.all([
+    fetchApi<CommunicationOverview>("/api/communications/overview"),
+    fetchApi<ConnectorListItem[]>("/api/communications/providers"),
+  ]);
   if (isDenied(overview)) return <DeniedState result={overview} />;
 
   const readyToSend =
@@ -129,6 +134,74 @@ export default async function CommunicationsPage() {
           </ul>
         </section>
       </div>
+
+      <section className={styles.panel} aria-labelledby="registry-title">
+        <div className={styles.panelHeading}>
+          <div>
+            <p className={styles.eyebrow}>Infrastructure</p>
+            <h2 id="registry-title">Provider Registry</h2>
+          </div>
+          <Link href="/capabilities" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--brand)', textDecoration: 'none' }}>
+            Capabilities →
+          </Link>
+        </div>
+        {!isDenied(providers) && providers.length > 0 ? (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Channel</th>
+                  <th>Connector Key</th>
+                  <th>Scope</th>
+                  <th>Credential</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {providers.map((c) => (
+                  <tr key={c.connectorKey}>
+                    <td>
+                      <strong style={{ textTransform: 'capitalize' }}>{c.providerKey}</strong>
+                      <div style={{ fontSize: '11px', color: 'var(--ink-500)', marginTop: 2 }}>{c.providerType}</div>
+                    </td>
+                    <td>
+                      {c.capabilityKeys.map((k) => (
+                        <span key={k} style={{ display: 'inline-block', marginRight: 4, padding: '2px 7px', borderRadius: 4, background: 'var(--canvas)', color: 'var(--ink-600)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>
+                          {k.replace('-delivery', '').replace('-', ' ')}
+                        </span>
+                      ))}
+                    </td>
+                    <td><code>{c.connectorKey}</code></td>
+                    <td style={{ fontSize: 12, color: 'var(--ink-500)' }}>{c.ownershipScope}</td>
+                    <td>
+                      <span style={{
+                        display: 'inline-flex', padding: '3px 8px', borderRadius: 6,
+                        fontSize: 11, fontWeight: 800,
+                        color: c.hasCredential ? '#0d6b46' : '#925b0b',
+                        background: c.hasCredential ? '#e8f7f0' : '#fff4dc'
+                      }}>
+                        {c.hasCredential ? 'Configured' : 'Not configured'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={c.enabled && c.health === 'HEALTHY' ? styles.stateDefault : c.health === 'UNHEALTHY' ? styles.stateFailed : styles.stateDefault}
+                        style={c.enabled && c.health !== 'HEALTHY' ? { color: '#925b0b', background: '#fff4dc' } : undefined}>
+                        {c.enabled ? c.health : 'Disabled'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState
+            title="No providers registered"
+            description="Register Twilio, Resend or other connectors via the Capabilities section to enable governed communication dispatch."
+          />
+        )}
+      </section>
 
       <section className={styles.panel} aria-labelledby="delivery-title">
         <div className={styles.panelHeading}>
