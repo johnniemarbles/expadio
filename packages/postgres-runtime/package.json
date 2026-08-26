@@ -33,7 +33,8 @@
     "./storage-operation": "./src/storage-operation.ts",
     "./credential-lease-event": "./src/credential-lease-event.ts",
     "./credential-rotation": "./src/credential-rotation.ts",
-    "./sensitive-read-event": "./src/sensitive-read-event.ts"
+    "./sensitive-read-event": "./src/sensitive-read-event.ts",
+    "./company-brain-correction": "./src/company-brain-correction.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
