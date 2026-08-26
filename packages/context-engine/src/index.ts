@@ -8,6 +8,8 @@ export const CONTEXT_KINDS = [
   'CRM_RECORD',
   'CASE',
   'WORKFLOW_STATE',
+  'DECISION',
+  'CAPABILITY',
   'ENTITLEMENT',
   'POLICY',
   'KNOWLEDGE',
@@ -325,3 +327,5 @@ function nonBlank(value: string): boolean {
 function validInstant(value: string): boolean {
   return nonBlank(value) && Number.isFinite(Date.parse(value));
 }
+
+export * from './brain-context.ts';
