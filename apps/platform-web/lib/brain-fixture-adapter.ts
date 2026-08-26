@@ -1,5 +1,5 @@
 import type { AdapterResult } from '@expadio/ui/contracts';
-import {
+import type {
   BrainWorkspaceAdapter,
   BrainOverview,
   BrainSource,
@@ -7,7 +7,7 @@ import {
   CorrectionProposal,
   PublicationEvent,
   ProvenanceEntry
-} from './brain-contracts';
+} from './brain-contracts.ts';
 
 const allowedOrganizationIds = new Set(['org_dreamware', 'org_dreamware_canada', 'org_dreamware_ontario', 'org_dreamware_toronto']);
 const orgIdMatches = (orgId: string) => allowedOrganizationIds.has(orgId);
