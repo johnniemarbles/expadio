@@ -74,6 +74,9 @@ async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
       if (res.status === 401) {
         return { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
       }
+      if (res.status === 403 && data && data.denied) {
+        return data as AdapterResult<T>; // Return the DeniedResult gracefully to the UI
+      }
       throw new Error(`API error: ${res.status}`);
     }
     if (data && data.denied) {
