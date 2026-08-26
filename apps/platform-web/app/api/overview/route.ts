@@ -104,12 +104,41 @@ export async function GET(request: Request) {
       updated: row.resolved_at || new Date().toISOString(),
     }));
 
+    const topReviewsRes = await dbPool.query(
+      `SELECT proposal_id, proposed_by_subject_id, created_at FROM platform.company_brain_correction_proposals 
+       WHERE tenant_id = $1 AND status = 'UNREVIEWED' ORDER BY created_at DESC LIMIT 3`,
+      [effectiveContext.tenantId]
+    );
+    const reviews = topReviewsRes.rows.map((row: any) => ({
+      id: row.proposal_id,
+      title: 'Review Correction Proposal',
+      category: 'Company Brain',
+      requestedBy: row.proposed_by_subject_id || 'System',
+      age: row.created_at,
+      risk: 'Medium'
+    }));
+
+    const topActivityRes = await dbPool.query(
+      `SELECT event_id, event_type, event_reference, occurred_at, actor_subject_id, reason
+       FROM platform.agent_run_events 
+       WHERE tenant_id = $1 ORDER BY occurred_at DESC LIMIT 3`,
+      [effectiveContext.tenantId]
+    );
+    const activity = topActivityRes.rows.map((row: any) => ({
+      id: row.event_id,
+      actor: row.actor_subject_id || 'System',
+      action: (row.event_type || 'performed action').toLowerCase().replace(/_/g, ' '),
+      target: row.event_reference || 'Resource',
+      time: row.occurred_at || new Date().toISOString(),
+      timeLabel: 'recently'
+    }));
+
     const overview = {
       organization: { id: orgId, name: orgName, environment: 'production', level: 'platform', parentId: null },
       metrics,
       capabilities,
-      reviews: [],
-      activity: []
+      reviews,
+      activity
     };
     
     return NextResponse.json(overview);

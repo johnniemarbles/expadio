@@ -38,15 +38,15 @@ export async function GET(request: Request) {
     }
 
     const sources: BrainSource[] = result.rows.map((row: any) => ({
-      id: row.id,
-      name: row.title || 'Unknown Source',
-      kind: 'tenant-policy',
+      id: row.document_reference,
+      name: row.source_reference ? row.source_reference.split('/').pop() : 'Unknown Source',
+      kind: row.collection_reference || 'tenant-policy',
       precedence: 1,
       reviewStatus: 'approved',
-      contentDigest: row.content_hash || '',
-      effectiveDate: row.created_at || new Date().toISOString(),
-      lastIndexed: row.updated_at || new Date().toISOString(),
-      classification: row.security_level || 'Public'
+      contentDigest: row.source_digest || '',
+      effectiveDate: row.indexed_at || new Date().toISOString(),
+      lastIndexed: row.indexed_at || new Date().toISOString(),
+      classification: row.access_policy_key === 'default-read' ? 'Internal' : 'Confidential'
     }));
 
     return NextResponse.json(sources);

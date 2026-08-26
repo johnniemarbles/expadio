@@ -103,8 +103,9 @@ export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
     };
   },
   async loadWorkspaceContext() {
-    // TODO: Wire to /api/context when full account + org listing is available
-    return { accounts: [], organizations: [] };
+    const result = await fetchApi<PlatformWorkspaceContext>('/api/context');
+    if ('denied' in (result as any)) return { accounts: [], organizations: [] };
+    return result as PlatformWorkspaceContext;
   },
   async loadAllowedWorkspaces() {
     const result = await fetchApi<WorkspaceSection[]>('/api/workspaces');

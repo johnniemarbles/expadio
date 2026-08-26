@@ -27,7 +27,13 @@ export async function GET(request: Request) {
       }
     );
 
-    const result = await dbPool.query('SELECT * FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await dbPool.query(
+      `SELECT collection_reference as purpose, count(*)::int as count, max(indexed_at) as last_resolved
+       FROM platform.knowledge_documents 
+       WHERE tenant_id = $1
+       GROUP BY collection_reference`, 
+      [effectiveContext.tenantId]
+    );
 
     if (result.rowCount === 0) {
       const slices: ContextSlice[] = [
@@ -38,12 +44,12 @@ export async function GET(request: Request) {
     }
 
     const slices: ContextSlice[] = result.rows.map((row: any) => ({
-      id: row.id,
-      purpose: row.title || 'Unknown Purpose',
-      sourceCount: 1,
+      id: 'slice_' + row.purpose,
+      purpose: row.purpose || 'Unknown Purpose',
+      sourceCount: row.count || 1,
       itemLimit: 100,
       tenantScope: 'Global',
-      lastResolved: row.updated_at || new Date().toISOString()
+      lastResolved: row.last_resolved || new Date().toISOString()
     }));
 
     return NextResponse.json(slices);
