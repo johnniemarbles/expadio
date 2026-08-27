@@ -1,83 +1,47 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import {
+  resolveRequestContext,
+  requireStepUp,
+  withTenantClient,
+  deniedResponse,
+} from '../../../../lib/request-context';
+
+/**
+ * Design spec §0.2 — fixes G4 and G5.
+ *
+ * G4: this route previously hardcoded ownership_scope = 'PLATFORM' and
+ *     tenant_id = NULL, so a tenant could not own a connector through the API
+ *     even though ConnectorOwnership already models 'TENANT'.
+ * G5: it hardcoded the demo tenant UUID, making tenant isolation untestable.
+ *
+ * The response type below has no field capable of holding a secret. That is a
+ * contract, not an implementation detail (§8).
+ */
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export interface ConnectorListItem {
   connectorKey: string;
   providerType: string;
   providerKey: string;
-  ownershipScope: string;
+  ownershipScope: 'PLATFORM' | 'TENANT';
+  custodyMode: 'PLATFORM_MANAGED' | 'DELEGATED' | 'CUSTOMER_REFERENCED' | 'CUSTOMER_EGRESS';
+  /** §2.3 — HMAC-derived. Confirms identity, discloses nothing. Never a mask. */
+  fingerprint: string | null;
+  credentialState: string | null;
+  probeStatus: string | null;
+  probeCheckedAt: string | null;
+  probeError: string | null;
+  probeWarnings: unknown[];
+  failurePolicy: string | null;
   health: string;
   enabled: boolean;
+  region: string | null;
   capabilityKeys: string[];
   hasCredential: boolean;
 }
-
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'Not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
-  try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
-
-    const result = await dbPool.query(
-      `SELECT
-         c.connector_key,
-         c.provider_type,
-         c.provider_key,
-         c.ownership_scope,
-         c.health,
-         c.enabled,
-         COALESCE(ARRAY_AGG(DISTINCT cap.capability_key) FILTER (WHERE cap.capability_key IS NOT NULL), '{}') AS capability_keys,
-         EXISTS(
-           SELECT 1 FROM platform.connector_credentials cred
-           WHERE cred.connector_id = c.connector_id
-         ) AS has_credential
-       FROM platform.connectors c
-       LEFT JOIN platform.connector_capabilities cc ON cc.connector_id = c.connector_id
-       LEFT JOIN platform.capabilities cap ON cap.capability_id = cc.capability_id
-       WHERE (c.tenant_id IS NULL OR c.tenant_id = $1::uuid)
-         AND (
-           c.provider_type IN ('email', 'sms', 'whatsapp', 'voice', 'push', 'rcs', 'messaging')
-           OR cap.capability_key ILIKE '%email%'
-           OR cap.capability_key ILIKE '%sms%'
-           OR cap.capability_key ILIKE '%whatsapp%'
-           OR cap.capability_key ILIKE '%voice%'
-           OR cap.capability_key ILIKE '%delivery%'
-           OR cap.capability_key ILIKE '%comm%'
-         )
-       GROUP BY c.connector_id
-       ORDER BY c.priority, c.connector_key`,
-      [effectiveContext.tenantId]
-    );
-
-    const connectors: ConnectorListItem[] = result.rows.map((row: any) => ({
-      connectorKey: row.connector_key,
-      providerType: row.provider_type,
-      providerKey: row.provider_key,
-      ownershipScope: row.ownership_scope,
-      health: row.health,
-      enabled: row.enabled,
-      capabilityKeys: row.capability_keys,
-      hasCredential: row.has_credential,
-    }));
-
-    return NextResponse.json(connectors);
-  } catch (err: any) {
-    console.error('Communications providers API error:', err);
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message };
-    return NextResponse.json(denied, { status: 500 });
-  }
-}
-
 
 const SUPPORTED_PROVIDER_KEYS = new Set([
   'ses', 'sendgrid', 'resend', 'postmark', 'mailgun', 'smtp',
@@ -86,82 +50,210 @@ const SUPPORTED_PROVIDER_KEYS = new Set([
   'firebase', 'apns', 'web-push',
 ]);
 
+const CHANNELS = new Set(['email', 'sms', 'whatsapp', 'voice', 'push', 'rcs']);
+
 function isSecretReference(value: unknown): value is string {
-  return Boolean(typeof value === 'string' && /^(kms|vault|secret|provider-secret):\/\/[^\s]+$/.test(value));
+  return typeof value === 'string'
+    && /^(kms|vault|secret|provider-secret):\/\/[^\s]+$/.test(value)
+    && value.length < 512;
+}
+
+export async function GET() {
+  try {
+    const context = await resolveRequestContext();
+
+    const connectors = await withTenantClient(context, async (client) => {
+      const result = await client.query(
+        `SELECT
+           c.connector_key, c.provider_type, c.provider_key, c.ownership_scope,
+           c.health, c.enabled, c.region,
+           COALESCE(ARRAY_AGG(DISTINCT cap.capability_key)
+             FILTER (WHERE cap.capability_key IS NOT NULL), '{}') AS capability_keys,
+           cred.custody_mode, cred.fingerprint, cred.state AS credential_state,
+           cred.probe_status, cred.probe_checked_at, cred.probe_error,
+           cred.probe_warnings, cred.failure_policy,
+           (cred.credential_id IS NOT NULL) AS has_credential
+         FROM platform.connectors c
+         LEFT JOIN platform.connector_capabilities cc ON cc.connector_id = c.connector_id
+         LEFT JOIN platform.capabilities cap ON cap.capability_id = cc.capability_id
+         LEFT JOIN LATERAL (
+           SELECT * FROM platform.connector_credentials cr
+            WHERE cr.connector_id = c.connector_id
+              AND cr.state <> 'SUPERSEDED'
+            ORDER BY cr.created_at DESC LIMIT 1
+         ) cred ON true
+         WHERE (c.tenant_id IS NULL OR c.tenant_id = $1::uuid)
+           AND c.provider_type IN ('email','sms','whatsapp','voice','push','rcs')
+         GROUP BY c.connector_id, cred.credential_id, cred.custody_mode, cred.fingerprint,
+                  cred.state, cred.probe_status, cred.probe_checked_at, cred.probe_error,
+                  cred.probe_warnings, cred.failure_policy
+         ORDER BY c.priority, c.connector_key`,
+        [context.tenantId],
+      );
+
+      return result.rows.map((row): ConnectorListItem => ({
+        connectorKey: row.connector_key,
+        providerType: row.provider_type,
+        providerKey: row.provider_key,
+        ownershipScope: row.ownership_scope,
+        custodyMode: row.custody_mode ?? 'PLATFORM_MANAGED',
+        fingerprint: row.fingerprint ?? null,
+        credentialState: row.credential_state ?? null,
+        probeStatus: row.probe_status ?? null,
+        probeCheckedAt: row.probe_checked_at?.toISOString?.() ?? null,
+        probeError: row.probe_error ?? null,
+        probeWarnings: row.probe_warnings ?? [],
+        failurePolicy: row.failure_policy ?? null,
+        health: row.health,
+        enabled: row.enabled,
+        region: row.region ?? null,
+        capabilityKeys: row.capability_keys,
+        hasCredential: row.has_credential === true,
+      }));
+    });
+
+    return NextResponse.json(connectors);
+  } catch (error) {
+    const { body, status } = deniedResponse(error);
+    return NextResponse.json(body, { status });
+  }
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED', message: 'Not authenticated' }, { status: 401 });
-
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const context = await resolveRequestContext();
+    await requireStepUp();
+
     const body = await request.json();
+
     const providerKey = typeof body.providerKey === 'string' ? body.providerKey.trim().toLowerCase() : '';
     const providerType = typeof body.providerType === 'string' ? body.providerType.trim().toLowerCase() : '';
-    const connectorKey = typeof body.connectorKey === 'string' && body.connectorKey.trim()
+    const credentialRef = body.credentialRef;
+    const fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.trim() : null;
+
+    // G4 — a tenant may now own a connector. PLATFORM ownership additionally
+    // requires platform scope, so a tenant admin cannot create a shared connector.
+    const ownershipScope: 'PLATFORM' | 'TENANT' =
+      body.ownershipScope === 'PLATFORM' && context.platformScope ? 'PLATFORM' : 'TENANT';
+
+    const custodyMode = typeof body.custodyMode === 'string' ? body.custodyMode : 'DELEGATED';
+    const failurePolicy = typeof body.failurePolicy === 'string' ? body.failurePolicy : 'HOLD_AND_RETRY';
+
+    const connectorKey = typeof body.connectorKey === 'string' && body.connectorKey.trim() !== ''
       ? body.connectorKey.trim()
       : `comm-${providerKey}-${crypto.randomUUID()}`;
-    const region = typeof body.region === 'string' && body.region.trim() ? body.region.trim() : null;
+
+    const region = typeof body.region === 'string' && body.region.trim() !== '' ? body.region.trim() : null;
     const priority = Number.isInteger(body.priority) && body.priority >= 0 ? body.priority : 100;
-    const capabilityKeys = Array.isArray(body.capabilityKeys)
-      ? body.capabilityKeys.filter((key: unknown): key is string => typeof key === 'string' && Boolean(key.trim())).map((key: string) => key.trim())
+
+    const capabilityKeys: string[] = Array.isArray(body.capabilityKeys)
+      ? body.capabilityKeys.filter((k: unknown): k is string => typeof k === 'string' && k.trim() !== '')
       : [];
-    const credentialRef = body.credentialRef;
 
     if (!SUPPORTED_PROVIDER_KEYS.has(providerKey)) {
-      return NextResponse.json({ error: 'Unsupported communication provider.' }, { status: 400 });
+      return NextResponse.json({ error: 'That communication provider is not supported.' }, { status: 400 });
     }
-    if (!['email', 'sms', 'whatsapp', 'voice', 'push', 'rcs'].includes(providerType)) {
-      return NextResponse.json({ error: 'Unsupported communication channel.' }, { status: 400 });
+    if (!CHANNELS.has(providerType)) {
+      return NextResponse.json({ error: 'That communication channel is not supported.' }, { status: 400 });
     }
-    if (!isSecretReference(credentialRef)) {
-      return NextResponse.json({ error: 'credentialRef must be an external secret reference (kms://, vault://, secret:// or provider-secret://).' }, { status: 400 });
+    if (!['PLATFORM_MANAGED', 'DELEGATED', 'CUSTOMER_REFERENCED', 'CUSTOMER_EGRESS'].includes(custodyMode)) {
+      return NextResponse.json({ error: 'Unknown custody mode.' }, { status: 400 });
+    }
+    if (!['HOLD_AND_RETRY', 'FALLBACK_TRANSACTIONAL', 'REFUSE_IMMEDIATELY'].includes(failurePolicy)) {
+      return NextResponse.json({ error: 'Unknown failure policy.' }, { status: 400 });
+    }
+    if (custodyMode !== 'CUSTOMER_EGRESS' && !isSecretReference(credentialRef)) {
+      return NextResponse.json(
+        {
+          error:
+            'credentialRef must be an external secret reference (kms://, vault://, secret:// or provider-secret://). Use POST /custody/credentials to obtain one.',
+        },
+        { status: 400 },
+      );
     }
     if (capabilityKeys.length === 0) {
       return NextResponse.json({ error: 'At least one capability is required.' }, { status: 400 });
     }
 
-    const client = await dbPool.connect();
-    try {
+    const created = await withTenantClient(context, async (client) => {
       await client.query('BEGIN');
-      const connector = await client.query(
-        `INSERT INTO platform.connectors
-          (connector_key, provider_type, provider_key, ownership_scope, tenant_id, region, priority, enabled, fallback_enabled)
-         VALUES ($1, $2, $3, 'PLATFORM', NULL, $4, $5, false, false)
-         RETURNING connector_id, connector_key, provider_type, provider_key, ownership_scope, region, priority, enabled, fallback_enabled, health, created_at`,
-        [connectorKey, providerType, providerKey, region, priority],
-      );
-      const connectorId = connector.rows[0].connector_id;
-      for (const capabilityKey of capabilityKeys) {
-        const capability = await client.query(
-          `SELECT capability_id FROM platform.capabilities WHERE capability_key = $1 AND enabled = true`,
-          [capabilityKey],
+      try {
+        const connector = await client.query(
+          `INSERT INTO platform.connectors
+             (connector_key, provider_type, provider_key, ownership_scope, tenant_id,
+              region, priority, enabled, fallback_enabled)
+           VALUES ($1, $2, $3, $4, $5::uuid, $6, $7, false, false)
+           RETURNING connector_id, connector_key, provider_type, provider_key,
+                     ownership_scope, region, priority, enabled, health, created_at`,
+          [
+            connectorKey,
+            providerType,
+            providerKey,
+            ownershipScope,
+            ownershipScope === 'TENANT' ? context.tenantId : null,
+            region,
+            priority,
+          ],
         );
-        if (capability.rows.length === 0) throw new Error(`Unknown or disabled capability: ${capabilityKey}`);
-        await client.query(
-          `INSERT INTO platform.connector_capabilities (connector_id, capability_id) VALUES ($1, $2)`,
-          [connectorId, capability.rows[0].capability_id],
-        );
+
+        const connectorId = connector.rows[0].connector_id;
+
+        for (const capabilityKey of capabilityKeys) {
+          const capability = await client.query(
+            `SELECT capability_id FROM platform.capabilities
+              WHERE capability_key = $1 AND enabled = true`,
+            [capabilityKey],
+          );
+          if (capability.rows.length === 0) {
+            throw new Error(`Unknown or disabled capability: ${capabilityKey}`);
+          }
+          await client.query(
+            `INSERT INTO platform.connector_capabilities (connector_id, capability_id)
+             VALUES ($1, $2)`,
+            [connectorId, capability.rows[0].capability_id],
+          );
+        }
+
+        if (custodyMode !== 'CUSTOMER_EGRESS') {
+          await client.query(
+            `INSERT INTO platform.connector_credentials
+               (connector_id, credential_ref, key_version, custody_mode, fingerprint,
+                state, probe_status, probe_checked_at, probe_warnings,
+                detected_capabilities, failure_policy, hold_window_seconds,
+                external_secret_arn, external_assume_role_arn, rotated_at)
+             VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 'VALID', now(), $6::jsonb,
+                     $7::text[], $8, $9, $10, $11, now())`,
+            [
+              connectorId,
+              credentialRef,
+              typeof body.keyVersion === 'string' ? body.keyVersion.trim() || null : null,
+              custodyMode,
+              fingerprint,
+              JSON.stringify(Array.isArray(body.probeWarnings) ? body.probeWarnings : []),
+              Array.isArray(body.detectedCapabilities) ? body.detectedCapabilities : [],
+              failurePolicy,
+              Number.isInteger(body.holdWindowSeconds) ? body.holdWindowSeconds : 900,
+              custodyMode === 'CUSTOMER_REFERENCED' ? body.externalSecretArn ?? null : null,
+              custodyMode === 'CUSTOMER_REFERENCED' ? body.externalAssumeRoleArn ?? null : null,
+            ],
+          );
+        }
+
+        await client.query('COMMIT');
+        return connector.rows[0];
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
       }
-      await client.query(
-        `INSERT INTO platform.connector_credentials (connector_id, credential_ref, key_version, rotated_at)
-         VALUES ($1, $2, $3, now())`,
-        [connectorId, credentialRef, typeof body.keyVersion === 'string' ? body.keyVersion.trim() || null : null],
-      );
-      await client.query('COMMIT');
-      return NextResponse.json({ success: true, connector: connector.rows[0] }, { status: 201 });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+    });
+
+    return NextResponse.json({ success: true, connector: created }, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unknown or disabled capability')) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
-  } catch (err: any) {
-    console.error('Communication provider registration error:', err);
-    return NextResponse.json({ error: err.message || 'Provider registration failed.' }, { status: 500 });
+    const { body, status } = deniedResponse(error);
+    const denied = body as DeniedResult;
+    return NextResponse.json(denied, { status });
   }
 }
