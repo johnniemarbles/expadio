@@ -69,6 +69,28 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
     }
   }
 
+  async function cloneToBrand() {
+    if (!template) return;
+    setWorking(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const res = await fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}/clone${window.location.search}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: template.channel, locale: template.locale }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not clone this template."));
+      setActionNotice("Cloned into a brand draft. Find it in the catalogue as a TENANT template, then edit and publish.");
+      onChanged?.();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Could not clone this template.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function publishVersion() {
     if (!template) return;
     setWorking(true);
@@ -295,6 +317,16 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, #4f46e5)", background: "transparent", color: "var(--brand, #4f46e5)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       {working ? "Working…" : "Create new draft version"}
+                    </button>
+                  )}
+                  {template.scope === "PLATFORM" && template.status === "ACTIVE" && (
+                    <button
+                      type="button"
+                      onClick={cloneToBrand}
+                      disabled={working}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--line, #cbd5e1)", background: "transparent", color: "var(--ink-700, #334155)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                    >
+                      {working ? "Working…" : "Clone to brand draft"}
                     </button>
                   )}
                   {actionError && <div role="alert" style={{ fontSize: "11px", color: "#b91c1c" }}>⚠️ {actionError}</div>}

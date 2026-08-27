@@ -98,11 +98,17 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
     await ensureGlobalBootstrap(this.pool);
     const client = await this.pool.connect();
     try {
+      // Grant both the platform-admin role (platform-scoped governance: template
+      // authoring/publication) and the tenant-owner role (tenant-scoped actions
+      // such as cloning a platform template into a brand draft).
       await client.query(
         `INSERT INTO platform.authorization_assignments (tenant_id, organization_id, subject_id, role_id, status)
          SELECT $1::uuid, $2::uuid, $3, r.role_id, 'ACTIVE'
            FROM platform.authorization_roles r
-          WHERE r.role_key = 'PLATFORM_SUPER_ADMIN' AND r.tenant_id IS NULL
+          WHERE (
+                  (r.role_key = 'PLATFORM_SUPER_ADMIN' AND r.tenant_id IS NULL)
+                  OR (r.role_key = 'TENANT_OWNER' AND r.tenant_id = $1::uuid)
+                )
             AND NOT EXISTS (
               SELECT 1 FROM platform.authorization_assignments a
                WHERE a.subject_id = $3 AND a.role_id = r.role_id AND a.tenant_id = $1::uuid
@@ -144,6 +150,12 @@ function ensureGlobalBootstrap(pool: pg.Pool): Promise<void> {
           `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
            VALUES ('PLATFORM_SUPER_ADMIN', 'Platform Super Admin', 'PLATFORM', NULL, 'ACTIVE')
            ON CONFLICT (role_key) WHERE tenant_id IS NULL DO NOTHING`,
+        );
+        await client.query(
+          `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
+           VALUES ('TENANT_OWNER', 'Tenant Owner', 'TENANT', $1::uuid, 'ACTIVE')
+           ON CONFLICT (tenant_id, role_key) WHERE tenant_id IS NOT NULL DO NOTHING`,
+          [DEMO_TENANT_ID],
         );
         for (const capability of COMMUNICATION_CAPABILITIES) {
           await client.query(
