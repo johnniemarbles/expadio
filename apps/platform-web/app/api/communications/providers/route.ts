@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     const region = typeof body.region === 'string' && body.region.trim() ? body.region.trim() : null;
     const priority = Number.isInteger(body.priority) && body.priority >= 0 ? body.priority : 100;
     const capabilityKeys = Array.isArray(body.capabilityKeys)
-      ? body.capabilityKeys.filter((key: unknown): key is string => typeof key === 'string' && key.trim()).map((key: string) => key.trim())
+      ? body.capabilityKeys.filter((key: unknown): key is string => typeof key === 'string' && Boolean(key.trim())).map((key: string) => key.trim())
       : [];
     const credentialRef = body.credentialRef;
 
