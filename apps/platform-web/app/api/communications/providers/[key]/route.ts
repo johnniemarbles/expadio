@@ -39,18 +39,42 @@ export async function PATCH(
     );
 
     if (result.rows.length === 0) {
-      return NextResponse.json({
-        success: true,
-        connectorKey,
-        enabled: enabled ?? true,
-        health: health ?? 'HEALTHY',
-        message: 'Mock connector status updated successfully.',
-      });
+      return NextResponse.json({ error: 'Communication provider connector was not found.' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, connector: result.rows[0] });
   } catch (err: any) {
     console.error('Connector status update error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ key: string }> },
+) {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED', message: 'Not authenticated' }, { status: 401 });
+  const connectorKey = decodeURIComponent((await params).key);
+  try {
+    const effectiveContext = await authenticateAndResolveContext(
+      { identityVerifier, membershipRepository },
+      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' },
+    );
+    const result = await dbPool.query(
+      `UPDATE platform.connectors
+          SET enabled = false, health = 'DEGRADED', updated_at = NOW()
+        WHERE connector_key = $1
+          AND ownership_scope = 'PLATFORM'
+          AND tenant_id IS NULL
+        RETURNING connector_key, enabled, health, updated_at`,
+      [connectorKey],
+    );
+    if (result.rows.length === 0) return NextResponse.json({ error: 'Communication provider connector was not found.' }, { status: 404 });
+    return NextResponse.json({ success: true, connector: result.rows[0] });
+  } catch (err: any) {
+    console.error('Connector retirement error:', err);
+    return NextResponse.json({ error: err.message || 'Provider retirement failed.' }, { status: 500 });
   }
 }
