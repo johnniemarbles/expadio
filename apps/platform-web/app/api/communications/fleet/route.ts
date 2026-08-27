@@ -50,33 +50,6 @@ export async function GET() {
       [effectiveContext.tenantId]
     );
 
-    if (result.rows.length === 0) {
-      // Seed operational sample rows for the platform overview
-      const fallback: FleetHealthItem[] = [
-        {
-          connectorKey: 'conn-resend',
-          channel: 'email',
-          total: 0,
-          delivered: 0,
-          failed: 0,
-          inFlight: 0,
-          deliveryRatePct: null,
-          lastEventAt: null,
-        },
-        {
-          connectorKey: 'conn-twilio-sms',
-          channel: 'sms',
-          total: 0,
-          delivered: 0,
-          failed: 0,
-          inFlight: 0,
-          deliveryRatePct: null,
-          lastEventAt: null,
-        },
-      ];
-      return NextResponse.json(fallback);
-    }
-
     const items: FleetHealthItem[] = result.rows.map((row: any) => ({
       connectorKey: row.connector_key,
       channel: row.channel,
