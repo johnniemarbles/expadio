@@ -57,33 +57,7 @@ export async function GET() {
       [effectiveContext.tenantId]
     );
 
-    if (result.rows.length === 0) {
-      // Fallback domain item for platform administration
-      const defaultDomain = 'expadio.com';
-      const fallback: DomainRecord[] = [
-        {
-          senderId: '00000000-0000-0000-0000-000000000001',
-          domain: defaultDomain,
-          address: `notifications@${defaultDomain}`,
-          displayName: 'EXPADIO Platform',
-          channel: 'email',
-          scope: 'PLATFORM',
-          purposes: ['transactional', 'system'],
-          isDefault: true,
-          verificationStatus: 'VERIFIED',
-          status: 'ACTIVE',
-          dnsRecords: [
-            { type: 'TXT', name: `resend._domainkey.${defaultDomain}`, value: 'p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3', status: 'VERIFIED' },
-            { type: 'TXT', name: defaultDomain, value: 'v=spf1 include:amazonses.com include:_spf.resend.com ~all', status: 'VERIFIED' },
-            { type: 'TXT', name: `_dmarc.${defaultDomain}`, value: 'v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@expadio.com', status: 'VERIFIED' },
-            { type: 'MX', name: `mail.${defaultDomain}`, value: 'feedback-smtp.us-east-1.amazonses.com', status: 'VERIFIED' },
-          ],
-          createdAt: new Date().toISOString(),
-        }
-      ];
-      return NextResponse.json(fallback);
-    }
-
+    if (result.rows.length === 0) return NextResponse.json([]);
     const domains: DomainRecord[] = result.rows.map((row: any) => {
       const emailDomain = row.address.includes('@') ? row.address.split('@')[1] : row.address;
       const isVerified = row.verification_status === 'VERIFIED';
