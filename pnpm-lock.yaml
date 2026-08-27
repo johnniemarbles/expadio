@@ -142,6 +142,12 @@ importers:
         specifier: workspace:*
         version: link:../business-config
 
+  packages/credential-custody:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
   packages/data-orchestrator: {}
 
   packages/iam:
@@ -212,6 +218,12 @@ importers:
       '@expadio/workflow':
         specifier: workspace:*
         version: link:../workflow
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.0
 
   packages/provider-registry: {}
 

@@ -39,21 +39,23 @@
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
+    "@expadio/agent-runtime": "workspace:*",
     "@expadio/ai-gateway": "workspace:*",
+    "@expadio/audit": "workspace:*",
     "@expadio/authorization": "workspace:*",
     "@expadio/authorization-persistence": "workspace:*",
+    "@expadio/business-config": "workspace:*",
     "@expadio/capabilities": "workspace:*",
     "@expadio/capability-persistence": "workspace:*",
     "@expadio/communication": "workspace:*",
+    "@expadio/knowledge": "workspace:*",
     "@expadio/provider-registry": "workspace:*",
+    "@expadio/storage": "workspace:*",
     "@expadio/tenancy": "workspace:*",
     "@expadio/tenancy-persistence": "workspace:*",
-    "@expadio/workflow": "workspace:*",
-    "@expadio/business-config": "workspace:*",
-    "@expadio/agent-runtime": "workspace:*",
     "@expadio/usage-metering": "workspace:*",
-    "@expadio/knowledge": "workspace:*",
-    "@expadio/storage": "workspace:*",
-    "@expadio/audit": "workspace:*"
+    "@expadio/workflow": "workspace:*",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0"
   }
 }
