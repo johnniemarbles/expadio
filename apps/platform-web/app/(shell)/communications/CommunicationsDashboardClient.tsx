@@ -267,7 +267,7 @@ export function CommunicationsDashboardClient({
             </article>
           </div>
 
-          {/* Tenants Needing Attention Table (Page 2) */}
+          {/* Live operational attention */}
           <section className={styles.attentionTablePanel}>
             <div className={styles.attentionPanelHeading}>
               <div>
@@ -308,7 +308,6 @@ export function CommunicationsDashboardClient({
                 description="Operational incidents will appear here from the live delivery lifecycle."
               />
             )}
-            </div>
           </section>
         </>
       )}
