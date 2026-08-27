@@ -25,9 +25,9 @@ const providersRoute = readFileSync(
 );
 
 test("communications dashboard is backed by live APIs", () => {
-  assert.match(page, /fetchApi<CommunicationOverview>\("\/api\/communications\/overview"\)/);
-  assert.match(page, /fetchApi<ConnectorListItem\[]>\("\/api\/communications\/providers"\)/);
-  assert.match(page, /fetchApi<FleetHealthItem\[]>\("\/api\/communications\/fleet"\)/);
+  assert.match(page, /fetchApi<CommunicationOverview>\(`\/api\/communications\/overview\$\{q\}`\)/);
+  assert.match(page, /fetchApi<ConnectorListItem\[]>\(`\/api\/communications\/providers\$\{q\}`\)/);
+  assert.match(page, /fetchApi<FleetHealthItem\[]>\(`\/api\/communications\/fleet\$\{q\}`\)/);
   assert.match(dashboard, /overview\.totals\.deliveries/);
   assert.match(dashboard, /overview\.channels\.map/);
 });
@@ -61,7 +61,7 @@ test("provider registration is a real API-backed flow", () => {
   assert.match(providerRoute, /credentialRef must be an external secret reference/);
   assert.match(providerDetailRoute, /export async function DELETE/);
   assert.doesNotMatch(providerDetailRoute, /Mock connector status updated/);
-  assert.match(providerModal, /fetch\("\/api\/communications\/providers"/);
+  assert.match(providerModal, /fetch\(`\/api\/communications\/providers\$\{window\.location\.search\}`/);
   assert.match(dashboard, /<ProviderModal/);
   assert.match(dashboard, /setIsProviderModalOpen\(true\)/);
 });
