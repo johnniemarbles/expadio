@@ -1,77 +1,63 @@
 import { NextResponse } from "next/server";
 import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../../lib/request-context";
 import { expectedDnsRecords } from "../../../../../lib/dns-records";
+import { findZone, upsertRecord, CloudflareError } from "../../../../../lib/cloudflare";
 
 /**
- * Sending-domain preflight (design: no fabricated VERIFIED).
+ * Sending-domain auto-configuration (design: no fabricated VERIFIED).
  *
- * Registers the sender identity as PENDING and produces the exact DNS records
- * the domain needs. If a Cloudflare API token and zone are configured
- * (CLOUDFLARE_API_TOKEN + CLOUDFLARE_ZONE_ID), it creates the records in that
- * zone and reports per-record results. Without them it returns the records for
- * the operator to add manually — it never claims to have provisioned DNS it
- * did not touch. Either way the domain becomes VERIFIED only after the
- * verify route resolves the records against live DNS.
+ * Authenticates with Cloudflare using a token supplied by the operator or the
+ * deployment env, discovers the zone that owns the domain, and idempotently
+ * creates/updates the required SPF, DMARC and return-path MX records. DKIM is
+ * left to the sending provider. The sender identity is registered as PENDING;
+ * it becomes VERIFIED only once the verify route resolves the records against
+ * live DNS. Without a token it returns the records to add manually — it never
+ * claims to have provisioned DNS it did not touch. The token is used
+ * transiently and never persisted or logged.
  */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const CF_API = "https://api.cloudflare.com/client/v4";
-
-async function createInCloudflare(
-  token: string,
-  zoneId: string,
-  records: ReturnType<typeof expectedDnsRecords>,
-): Promise<{ provisioned: number; results: { name: string; ok: boolean; detail: string }[] }> {
-  const results: { name: string; ok: boolean; detail: string }[] = [];
-  let provisioned = 0;
-  for (const record of records) {
-    if (!record.verifiable) continue; // DKIM key is provider-issued; skip.
-    try {
-      const res = await fetch(`${CF_API}/zones/${zoneId}/dns_records`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: record.type,
-          name: record.name,
-          content: record.value,
-          ...(record.priority !== undefined ? { priority: record.priority } : {}),
-          ttl: 300,
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      const ok = res.ok && body?.success !== false;
-      if (ok) provisioned += 1;
-      results.push({
-        name: record.name,
-        ok,
-        detail: ok ? "created" : (body?.errors?.[0]?.message ?? `Cloudflare HTTP ${res.status}`),
-      });
-    } catch (error) {
-      results.push({ name: record.name, ok: false, detail: (error as Error).message });
-    }
-  }
-  return { provisioned, results };
-}
+const DOMAIN_PATTERN = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
     const body = await request.json().catch(() => ({}));
-    const domain: string = (typeof body.domain === "string" && body.domain.trim()) || "expadio.com";
-    const address = `notifications@${domain}`;
-    const records = expectedDnsRecords(domain);
-
-    const token = process.env.CLOUDFLARE_API_TOKEN;
-    const zoneId = process.env.CLOUDFLARE_ZONE_ID;
-    const canProvision = Boolean(token && zoneId);
-
-    let provisionSummary: { provisioned: number; results: { name: string; ok: boolean; detail: string }[] } | null = null;
-    if (canProvision) {
-      provisionSummary = await createInCloudflare(token!, zoneId!, records);
+    const domain = typeof body.domain === "string" ? body.domain.trim().toLowerCase() : "";
+    if (!DOMAIN_PATTERN.test(domain)) {
+      return NextResponse.json({ error: "Enter a valid domain such as mail.example.com." }, { status: 400 });
     }
 
+    const address = `notifications@${domain}`;
+    const records = expectedDnsRecords(domain);
+    const token = (typeof body.apiToken === "string" && body.apiToken.trim()) || process.env.CLOUDFLARE_API_TOKEN || "";
+
+    let provisioned = false;
+    let zoneName: string | null = null;
+    let results: { name: string; ok: boolean; action?: string; detail: string }[] | null = null;
+
+    if (token) {
+      try {
+        const zone = await findZone(token, domain);
+        zoneName = zone.name;
+        results = [];
+        for (const record of records) {
+          if (!record.verifiable) continue; // DKIM is provider-issued.
+          const r = await upsertRecord(token, zone.id, { type: record.type, name: record.name, value: record.value, priority: record.priority });
+          results.push(r);
+        }
+        provisioned = true;
+      } catch (error) {
+        if (error instanceof CloudflareError) {
+          return NextResponse.json({ error: error.message, reasonKey: "CLOUDFLARE_ERROR" }, { status: error.status });
+        }
+        throw error;
+      }
+    }
+
+    // Register (or refresh) the sender identity as PENDING regardless of path.
     const sender = await withTenantClient(context, async (client) => {
       const result = await client.query(
         `INSERT INTO platform.communication_sender_identities
@@ -85,18 +71,19 @@ export async function POST(request: Request) {
       return result.rows[0];
     });
 
-    const message = canProvision
-      ? `Created ${provisionSummary?.provisioned ?? 0} DNS records in Cloudflare for ${domain}. Verify to confirm propagation.`
-      : `Generated ${records.length} DNS records for ${domain}. Add them to your DNS provider, then Verify. (Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ZONE_ID to auto-provision.)`;
+    const message = provisioned
+      ? `Configured ${results?.length ?? 0} DNS records in Cloudflare zone ${zoneName}. Give DNS a moment to propagate, then Verify.`
+      : `Generated ${records.length} DNS records for ${domain}. Paste a Cloudflare API token to auto-configure, or add them to your DNS and Verify.`;
 
     return NextResponse.json({
       success: true,
       domain,
-      provisioned: canProvision,
-      manual: !canProvision,
+      provisioned,
+      manual: !provisioned,
+      zone: zoneName,
       verificationStatus: "PENDING",
       records,
-      cloudflare: provisionSummary,
+      cloudflare: results,
       message,
       sender,
     });
