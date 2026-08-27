@@ -75,7 +75,7 @@ export async function GET(
       return NextResponse.json(template);
     });
   } catch (err: any) {
-    if (err.denied) return deniedResponse(err);
+    if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
     console.error('Template detail error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

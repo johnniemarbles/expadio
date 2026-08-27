@@ -54,7 +54,7 @@ export async function GET() {
       return NextResponse.json(items);
     });
   } catch (err: any) {
-    if (err.denied) return deniedResponse(err);
+    if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
     console.error('Communications template catalogue API error:', err);
     return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
   }
