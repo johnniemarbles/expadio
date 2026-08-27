@@ -4,7 +4,6 @@ import { authenticateAndResolveContext } from '@expadio/iam';
 import { identityVerifier, membershipRepository, dbPool } from '../../../../../../lib/iam-adapter';
 
 const BRAND_TEMPLATE_ROLES = ['TENANT_OWNER', 'TENANT_ADMIN'];
-const DUPLICATE_TEMPLATE_CONSTRAINT = 'communication_templates_tenant_non_archived_uq';
 
 export async function POST(
   request: Request,
@@ -57,6 +56,13 @@ export async function POST(
       }
       const sourceRow = source.rows[0];
 
+      // Serialize clones for the same tenant/template key so two concurrent requests
+      // cannot both pass the duplicate check and create duplicate drafts.
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+        [`${context.tenantId}:${triggerKey}:${channel}:${locale.toLowerCase()}`],
+      );
+
       const existing = await client.query(
         `SELECT 1 FROM platform.communication_templates
           WHERE scope = 'TENANT' AND tenant_id = $1::uuid AND trigger_key = $2
@@ -68,30 +74,22 @@ export async function POST(
         return NextResponse.json({ error: 'A brand template already exists for this trigger, channel and locale.' }, { status: 409 });
       }
 
-      try {
-        const cloned = await client.query(
-          `INSERT INTO platform.communication_templates
-            (scope, tenant_id, organization_id, trigger_key, channel, locale, content_format,
-             subject, title, body, required_variables, default_variables, status,
-             cloned_source_template_id, cloned_source_version, platform_update_available)
-           VALUES ('TENANT', $1::uuid, NULL, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb,
-                   'DRAFT', $11::uuid, $12, false)
-           RETURNING template_id, version, trigger_key, channel, locale, status,
-                     cloned_source_template_id, cloned_source_version, platform_update_available`,
-          [context.tenantId, sourceRow.trigger_key, sourceRow.channel, sourceRow.locale,
-           sourceRow.content_format, sourceRow.subject, sourceRow.title, sourceRow.body,
-           JSON.stringify(sourceRow.required_variables), JSON.stringify(sourceRow.default_variables),
-           sourceRow.template_id, sourceRow.version],
-        );
-        await client.query('COMMIT');
-        return NextResponse.json({ success: true, template: cloned.rows[0] }, { status: 201 });
-      } catch (error: any) {
-        if (error?.code === '23505' && error?.constraint === DUPLICATE_TEMPLATE_CONSTRAINT) {
-          await client.query('ROLLBACK');
-          return NextResponse.json({ error: 'A brand template already exists for this trigger, channel and locale.' }, { status: 409 });
-        }
-        throw error;
-      }
+      const cloned = await client.query(
+        `INSERT INTO platform.communication_templates
+          (scope, tenant_id, organization_id, trigger_key, channel, locale, content_format,
+           subject, title, body, required_variables, default_variables, status,
+           cloned_source_template_id, cloned_source_version, platform_update_available)
+         VALUES ('TENANT', $1::uuid, NULL, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb,
+                 'DRAFT', $11::uuid, $12, false)
+         RETURNING template_id, version, trigger_key, channel, locale, status,
+                   cloned_source_template_id, cloned_source_version, platform_update_available`,
+        [context.tenantId, sourceRow.trigger_key, sourceRow.channel, sourceRow.locale,
+         sourceRow.content_format, sourceRow.subject, sourceRow.title, sourceRow.body,
+         JSON.stringify(sourceRow.required_variables), JSON.stringify(sourceRow.default_variables),
+         sourceRow.template_id, sourceRow.version],
+      );
+      await client.query('COMMIT');
+      return NextResponse.json({ success: true, template: cloned.rows[0] }, { status: 201 });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
