@@ -46,57 +46,7 @@ export async function GET() {
       [effectiveContext.tenantId]
     );
 
-    if (result.rows.length === 0) {
-      // Fallback catalogue items per spec to provide platform admin clarity
-      const fallback: TemplateCatalogueItem[] = [
-        {
-          triggerKey: 'identity.verification.code',
-          channels: ['email', 'sms', 'whatsapp'],
-          scope: 'PLATFORM',
-          activeCount: 1,
-          draftCount: 0,
-          totalVersions: 1,
-          contentFormats: ['TEXT', 'HTML'],
-          hasActiveVersion: true,
-          locales: ['en', 'es'],
-        },
-        {
-          triggerKey: 'auth.magic_link.requested',
-          channels: ['email'],
-          scope: 'PLATFORM',
-          activeCount: 1,
-          draftCount: 0,
-          totalVersions: 1,
-          contentFormats: ['HTML'],
-          hasActiveVersion: true,
-          locales: ['en'],
-        },
-        {
-          triggerKey: 'account.security.password_changed',
-          channels: ['email', 'sms'],
-          scope: 'PLATFORM',
-          activeCount: 1,
-          draftCount: 1,
-          totalVersions: 2,
-          contentFormats: ['TEXT', 'HTML'],
-          hasActiveVersion: true,
-          locales: ['en'],
-        },
-        {
-          triggerKey: 'document.access.request_notification',
-          channels: ['email', 'in_app'],
-          scope: 'PLATFORM',
-          activeCount: 0,
-          draftCount: 1,
-          totalVersions: 1,
-          contentFormats: ['MARKDOWN', 'TEXT'],
-          hasActiveVersion: false,
-          locales: ['en'],
-        },
-      ];
-      return NextResponse.json(fallback);
-    }
-
+    if (result.rows.length === 0) return NextResponse.json([]);
     const items: TemplateCatalogueItem[] = result.rows.map((row: any) => ({
       triggerKey: row.trigger_key,
       channels: row.channels,
