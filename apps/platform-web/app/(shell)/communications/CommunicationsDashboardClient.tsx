@@ -21,29 +21,19 @@ const CHANNEL_LABELS: Record<string, string> = {
   rcs: "RCS",
 };
 
-interface AttentionTenantItem {
-  tenant: string;
-  issue: string;
-  channel: string;
-  impact: string;
-  owner: string;
+const CHANNEL_ICONS: Record<string, string> = {
+  email: "✉️",
+  sms: "💬",
+  whatsapp: "📱",
+  voice: "📞",
+  in_app: "🔔",
+  push: "📣",
+  rcs: "💬",
+};
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat("en", { notation: value >= 10_000 ? "compact" : "standard" }).format(value);
 }
-
-const ATTENTION_TENANTS: AttentionTenantItem[] = [
-  { tenant: "Northstar Logistics", issue: "Sender domain revoked", channel: "Email", impact: "12.8K queued", owner: "Platform Ops" },
-  { tenant: "Dentex Canada", issue: "Business verification pending", channel: "WhatsApp", impact: "Campaign blocked", owner: "Tenant Admin" },
-  { tenant: "Urban Realty", issue: "Webhook retry saturation", channel: "SMS", impact: "2.1K delayed", owner: "Integration Ops" },
-  { tenant: "Nova TPA", issue: "AI approval queue aging", channel: "AI voice", impact: "38 calls held", owner: "Compliance" },
-];
-
-const TRAFFIC_BARS = [
-  { label: "Email", volume: "9.4M", heightPct: 92 },
-  { label: "SMS", volume: "4.8M", heightPct: 62 },
-  { label: "WhatsApp", volume: "3.2M", heightPct: 44 },
-  { label: "Voice", volume: "1.8M", heightPct: 28 },
-  { label: "AI", volume: "2.6M", heightPct: 38 },
-  { label: "Push", volume: "1.1M", heightPct: 22 },
-];
 
 interface CommunicationsDashboardClientProps {
   overview: CommunicationOverview;
@@ -65,11 +55,24 @@ export function CommunicationsDashboardClient({
   const [selectedTriggerKey, setSelectedTriggerKey] = useState<string>("identity.verification.code");
   const [updatingConnector, setUpdatingConnector] = useState<string | null>(null);
 
-  const displayProviders = providers.length > 0 ? providers : [
-    { connectorKey: 'conn-aws-ses', providerType: 'EMAIL', providerKey: 'AWS SES Email Delivery', ownershipScope: 'PLATFORM', health: 'HEALTHY', enabled: true, capabilityKeys: ['email-delivery'], hasCredential: true },
-    { connectorKey: 'conn-resend', providerType: 'EMAIL', providerKey: 'Resend Transactional Engine', ownershipScope: 'PLATFORM', health: 'HEALTHY', enabled: true, capabilityKeys: ['email-delivery'], hasCredential: true },
-    { connectorKey: 'conn-whatsapp', providerType: 'WHATSAPP', providerKey: 'Meta WhatsApp Business API', ownershipScope: 'PLATFORM', health: 'HEALTHY', enabled: true, capabilityKeys: ['whatsapp-delivery'], hasCredential: true },
-  ];
+  const successRate = overview.totals.deliveries === 0
+    ? null
+    : Math.round((overview.totals.delivered / overview.totals.deliveries) * 1000) / 10;
+  const maximumChannelVolume = Math.max(0, ...overview.channels.map((channel) => channel.total));
+  const trafficBars = overview.channels.map((channel) => ({
+    label: CHANNEL_LABELS[channel.channel] || channel.channel,
+    volume: formatCount(channel.total),
+    heightPct: maximumChannelVolume === 0 ? 0 : Math.max(6, (channel.total / maximumChannelVolume) * 100),
+  }));
+  const operationalAlerts = overview.recentDeliveries.filter((delivery) =>
+    ["FAILED", "BOUNCED", "COMPLAINED", "CANCELLED"].includes(delivery.state)
+  );
+  const degradedProviders = providers.filter((provider) =>
+    !provider.enabled || provider.health === "UNHEALTHY"
+  );
+  const platformStatus = degradedProviders.length > 0 || overview.totals.failed > 0
+    ? "Attention required"
+    : "Operational data live";
 
   async function handleToggleConnector(connectorKey: string, currentEnabled: boolean) {
     setUpdatingConnector(connectorKey);
@@ -106,7 +109,7 @@ export function CommunicationsDashboardClient({
         </div>
         <div className={styles.topActionsGroup}>
           <div className={styles.healthyBadge}>
-            <span className={styles.healthyDot} /> Platform healthy
+            <span className={styles.healthyDot} /> {platformStatus}
           </div>
           <button
             type="button"
@@ -131,12 +134,9 @@ export function CommunicationsDashboardClient({
           <h2>Communication fleet overview</h2>
           <p>Health, throughput and risk across every tenant and channel.</p>
         </div>
-        <select className={styles.regionSelect} defaultValue="all">
-          <option value="all">All regions</option>
-          <option value="na">North America</option>
-          <option value="eu">Europe (GDPR)</option>
-          <option value="ap">Asia Pacific</option>
-        </select>
+        <span className={styles.dataTimestamp}>
+          Live snapshot · {new Date(overview.capturedAt).toLocaleString()}
+        </span>
       </div>
 
       {/* Navigation Tabs */}
@@ -185,19 +185,19 @@ export function CommunicationsDashboardClient({
           {/* 3 Summary Metrics */}
           <div className={styles.summaryMetricsGrid}>
             <article className={styles.summaryMetricCard}>
-              <span>Active tenants</span>
-              <strong>186</strong>
-              <small>172 production-ready</small>
+              <span>Configured providers</span>
+              <strong>{formatCount(providers.length)}</strong>
+              <small>{providers.filter((provider) => provider.enabled).length} enabled</small>
             </article>
             <article className={styles.summaryMetricCard}>
               <span>Delivery events</span>
-              <strong>18.4M</strong>
-              <small>Across six channels</small>
+              <strong>{formatCount(overview.totals.deliveries)}</strong>
+              <small>{overview.channels.filter((channel) => channel.total > 0).length} active channels</small>
             </article>
             <article className={styles.summaryMetricCard}>
-              <span>Platform success rate</span>
-              <strong>98.1%</strong>
-              <small>0.6% above SLA</small>
+              <span>Delivery success rate</span>
+              <strong>{successRate === null ? "—" : `${successRate}%`}</strong>
+              <small>{overview.totals.failed} failed · {overview.totals.inFlight} in flight</small>
             </article>
           </div>
 
@@ -208,17 +208,12 @@ export function CommunicationsDashboardClient({
               <div className={styles.cardPanelHeader}>
                 <div>
                   <h3>Cross-channel traffic</h3>
-                  <p>Millions of events · last 30 days</p>
+                  <p>Live retained delivery totals by channel</p>
                 </div>
-                <select className={styles.timeFilterSelect} defaultValue="30d">
-                  <option value="30d">30 days</option>
-                  <option value="7d">7 days</option>
-                  <option value="90d">90 days</option>
-                </select>
               </div>
 
               <div className={styles.barChartContainer}>
-                {TRAFFIC_BARS.map((bar) => (
+                {trafficBars.map((bar) => (
                   <div key={bar.label} className={styles.barCol}>
                     <div
                       className={styles.barFill}
@@ -241,61 +236,33 @@ export function CommunicationsDashboardClient({
               </div>
 
               <div className={styles.channelOpsList}>
-                {/* Email */}
-                <div className={styles.channelOpRow}>
-                  <div className={styles.channelOpLeft}>
-                    <div className={styles.channelIconWrap}>✉️</div>
-                    <div className={styles.channelOpTitle}>
-                      <strong>Email</strong>
-                      <small>184 tenants · 6 providers</small>
+                {overview.channels.map((channel) => {
+                  const channelProviders = providers.filter(
+                    (provider) => provider.providerType.toLowerCase() === channel.channel
+                  );
+                  const needsAttention = channel.failed > 0 || channelProviders.some(
+                    (provider) => !provider.enabled || provider.health === "UNHEALTHY"
+                  );
+                  return (
+                    <div key={channel.channel} className={styles.channelOpRow}>
+                      <div className={styles.channelOpLeft}>
+                        <div className={styles.channelIconWrap}>{CHANNEL_ICONS[channel.channel] || "•"}</div>
+                        <div className={styles.channelOpTitle}>
+                          <strong>{CHANNEL_LABELS[channel.channel] || channel.channel}</strong>
+                          <small>{formatCount(channel.total)} events · {channelProviders.length} providers</small>
+                        </div>
+                      </div>
+                      <span className={needsAttention ? styles.badgeAttention : styles.badgeHealthy}>
+                        <span>{needsAttention ? "⚠" : "✓"}</span>
+                        {channel.total === 0 && channelProviders.length === 0
+                          ? "Not configured"
+                          : needsAttention
+                          ? "Attention"
+                          : "Healthy"}
+                      </span>
                     </div>
-                  </div>
-                  <span className={styles.badgeHealthy}>
-                    <span>✓</span> Healthy
-                  </span>
-                </div>
-
-                {/* SMS */}
-                <div className={styles.channelOpRow}>
-                  <div className={styles.channelOpLeft}>
-                    <div className={styles.channelIconWrap}>💬</div>
-                    <div className={styles.channelOpTitle}>
-                      <strong>SMS</strong>
-                      <small>141 tenants · 3 providers</small>
-                    </div>
-                  </div>
-                  <span className={styles.badgeHealthy}>
-                    <span>✓</span> Healthy
-                  </span>
-                </div>
-
-                {/* Voice & AI */}
-                <div className={styles.channelOpRow}>
-                  <div className={styles.channelOpLeft}>
-                    <div className={styles.channelIconWrap}>📞</div>
-                    <div className={styles.channelOpTitle}>
-                      <strong>Voice &amp; AI</strong>
-                      <small>67 tenants · guarded execution</small>
-                    </div>
-                  </div>
-                  <span className={styles.badgeHealthy}>
-                    <span>✓</span> Healthy
-                  </span>
-                </div>
-
-                {/* WhatsApp */}
-                <div className={styles.channelOpRow}>
-                  <div className={styles.channelOpLeft}>
-                    <div className={styles.channelIconWrap}>📱</div>
-                    <div className={styles.channelOpTitle}>
-                      <strong>WhatsApp</strong>
-                      <small>18 tenants need verification</small>
-                    </div>
-                  </div>
-                  <span className={styles.badgeAttention}>
-                    <span>⚠️</span> Attention
-                  </span>
-                </div>
+                  );
+                })}
               </div>
             </article>
           </div>
@@ -304,43 +271,43 @@ export function CommunicationsDashboardClient({
           <section className={styles.attentionTablePanel}>
             <div className={styles.attentionPanelHeading}>
               <div>
-                <h3>Tenants needing attention</h3>
-                <p>Sorted by operational impact</p>
+                <h3>Operational attention</h3>
+                <p>Recent failed, bounced, complained or cancelled deliveries</p>
               </div>
-              <button
-                type="button"
-                className={styles.btnOpenQueue}
-                onClick={() => setIsDomainModalOpen(true)}
-              >
-                Open queue
-              </button>
+              <span className={styles.tag}>{operationalAlerts.length} records</span>
             </div>
 
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Tenant</th>
-                    <th>Issue</th>
-                    <th>Channel</th>
-                    <th>Impact</th>
-                    <th>Owner</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ATTENTION_TENANTS.map((item, idx) => (
-                    <tr key={idx}>
-                      <td><strong>{item.tenant}</strong></td>
-                      <td>{item.issue}</td>
-                      <td>
-                        <span className={styles.tag}>{item.channel}</span>
-                      </td>
-                      <td style={{ color: "#b91c1c", fontWeight: 600 }}>{item.impact}</td>
-                      <td style={{ color: "var(--ink-600, #475569)" }}>{item.owner}</td>
+            {operationalAlerts.length > 0 ? (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Delivery</th>
+                      <th>Connector</th>
+                      <th>Channel</th>
+                      <th>State</th>
+                      <th>Reason</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {operationalAlerts.map((item) => (
+                      <tr key={item.id}>
+                        <td><code>{item.id}</code></td>
+                        <td><code>{item.connectorKey}</code></td>
+                        <td><span className={styles.tag}>{item.channel}</span></td>
+                        <td style={{ color: "#b91c1c", fontWeight: 700 }}>{item.state}</td>
+                        <td>{item.reasonCode || "No provider reason supplied"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState
+                title="No recent delivery failures"
+                description="Operational incidents will appear here from the live delivery lifecycle."
+              />
+            )}
             </div>
           </section>
         </>
@@ -383,13 +350,14 @@ export function CommunicationsDashboardClient({
                 <div className={styles.cardIconBlue} aria-hidden="true">✉️</div>
                 <div className={styles.cardInfo}>
                   <h3>Email Template Library</h3>
-                  <p>Manage 12 canonical platform templates (Auth, Franchise Lifecycle, Compliance, Notifications, System) with live preview and variable editor</p>
+                  <p>Manage {templates.length} live platform templates with preview and variable substitution.</p>
                 </div>
               </div>
               <div className={styles.cardRight}>
                 <button
                   type="button"
-                  onClick={() => handleOpenTemplate(templates[0]?.triggerKey || "identity.verification.code")}
+                  onClick={() => templates[0] && handleOpenTemplate(templates[0].triggerKey)}
+                  disabled={templates.length === 0}
                   className={styles.btnPillDark}
                 >
                   Manage Templates →
@@ -408,7 +376,8 @@ export function CommunicationsDashboardClient({
                 Capabilities →
               </Link>
             </div>
-            <div className={styles.tableWrap}>
+            {providers.length > 0 ? (
+              <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -418,7 +387,7 @@ export function CommunicationsDashboardClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {displayProviders.map((c) => (
+                  {providers.map((c) => (
                     <tr key={c.connectorKey}>
                       <td>
                         <strong style={{ fontSize: "14px", color: "var(--ink-850)" }}>
@@ -470,7 +439,13 @@ export function CommunicationsDashboardClient({
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+            ) : (
+              <EmptyState
+                title="No communication providers configured"
+                description="Register a governed connector to make it available for routing."
+              />
+            )}
           </section>
         </>
       )}
