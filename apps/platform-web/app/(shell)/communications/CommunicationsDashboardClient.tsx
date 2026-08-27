@@ -41,6 +41,11 @@ interface CommunicationsDashboardClientProps {
   initialProviders: ConnectorListItem[];
   templates: TemplateCatalogueItem[];
   fleet: FleetHealthItem[];
+  quota?: any;
+  spend?: any;
+  planes?: any;
+  setupState?: any;
+  traces?: any;
   queryString?: string;
 }
 
@@ -49,9 +54,14 @@ export function CommunicationsDashboardClient({
   initialProviders,
   templates,
   fleet,
+  quota,
+  spend,
+  planes,
+  setupState,
+  traces,
   queryString = "",
 }: CommunicationsDashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability">("fleet");
+  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability" | "advanced_setup">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [isProviderModalOpen, setIsProviderModalOpen] = useState(false);
@@ -210,6 +220,15 @@ export function CommunicationsDashboardClient({
           onClick={() => setActiveTab("providers")}
         >
           Provider control
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "advanced_setup"}
+          className={[styles.tabItem, activeTab === "advanced_setup" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("advanced_setup")}
+        >
+          Advanced Setup
         </button>
         <button
           type="button"
@@ -551,6 +570,95 @@ export function CommunicationsDashboardClient({
             />
           )}
         </section>
+      )}
+
+      
+      {/* Tab Content: Advanced Setup */}
+      {activeTab === "advanced_setup" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+            <article className={styles.cardPanel}>
+              <div className={styles.cardPanelHeader}>
+                <div><h3>Spend Control</h3><p>Current period spend metrics</p></div>
+              </div>
+              <div style={{ padding: "16px" }}>
+                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(spend, null, 2)}</pre>
+              </div>
+            </article>
+
+            <article className={styles.cardPanel}>
+              <div className={styles.cardPanelHeader}>
+                <div><h3>Quota Enforcement</h3><p>Live burst limits</p></div>
+              </div>
+              <div style={{ padding: "16px" }}>
+                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(quota, null, 2)}</pre>
+              </div>
+            </article>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+            <article className={styles.cardPanel}>
+              <div className={styles.cardPanelHeader}>
+                <div><h3>Planes</h3><p>Data Plane & Control Plane Segregation</p></div>
+              </div>
+              <div style={{ padding: "16px" }}>
+                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(planes, null, 2)}</pre>
+              </div>
+            </article>
+
+            <article className={styles.cardPanel}>
+              <div className={styles.cardPanelHeader}>
+                <div><h3>Setup State</h3><p>Internal infrastructure status</p></div>
+              </div>
+              <div style={{ padding: "16px" }}>
+                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(setupState, null, 2)}</pre>
+              </div>
+            </article>
+          </div>
+
+          <article className={styles.cardPanel}>
+            <div className={styles.cardPanelHeader}>
+              <div><h3>Enforcement Traces</h3><p>Recent platform-level authorization decisions</p></div>
+            </div>
+            {traces && traces.length > 0 ? (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Trace ID</th>
+                      <th>Policy</th>
+                      <th>Decision</th>
+                      <th>Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {traces.map((t: any) => (
+                      <tr key={t.traceId || Math.random()}>
+                        <td><code>{t.traceId || t.id}</code></td>
+                        <td>{t.policyKey || t.policy}</td>
+                        <td>
+                          <span style={{ 
+                            color: t.decision === "ALLOW" ? "#166534" : "#991b1b",
+                            fontWeight: 700 
+                          }}>
+                            {t.decision}
+                          </span>
+                        </td>
+                        <td>{t.timestamp || t.createdAt}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: "16px" }}>
+                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(traces, null, 2)}</pre>
+              </div>
+            )}
+          </article>
+
+        </div>
       )}
 
       {/* Interactive Modals */}
