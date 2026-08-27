@@ -16,6 +16,8 @@ export interface TemplateCatalogueItem {
   locales: string[];
 }
 
+const PLATFORM_TEMPLATE_ROLES = ['PLATFORM_SUPER_ADMIN', 'PLATFORM_ADMIN'];
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) {
@@ -31,9 +33,30 @@ export async function GET() {
 
     const client = await dbPool.connect();
     try {
-      // The catalogue query is protected by tenant/platform RLS, so establish
-      // the same request-local tenant context used by the other communications APIs.
-      await client.query('SELECT set_config(\'app.tenant_id\', $1, true)', [effectiveContext.tenantId]);
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [effectiveContext.tenantId]);
+
+      // Platform-scoped template rows are protected by the platform-admin RLS policy.
+      // The library lives in Platform administration, so verify that authority before
+      // enabling the request-local policy context.
+      const role = await client.query(
+        `SELECT 1
+           FROM platform.authorization_assignments assignment
+           JOIN platform.authorization_roles role ON role.role_id = assignment.role_id
+          WHERE assignment.subject_id = $1
+            AND assignment.status = 'ACTIVE'
+            AND role.status = 'ACTIVE'
+            AND role.ownership_scope = 'PLATFORM'
+            AND role.role_key = ANY($2::text[])
+            AND (assignment.valid_until IS NULL OR assignment.valid_until > now())
+          LIMIT 1`,
+        [userId, PLATFORM_TEMPLATE_ROLES],
+      );
+      if (role.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Platform template administration is required.' }, { status: 403 });
+      }
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
 
       const result = await client.query(
         `SELECT
@@ -63,8 +86,11 @@ export async function GET() {
         hasActiveVersion: row.active_count > 0,
         locales: row.locales,
       }));
-
+      await client.query('COMMIT');
       return NextResponse.json(items);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
     } finally {
       client.release();
     }
@@ -74,8 +100,6 @@ export async function GET() {
     return NextResponse.json(denied, { status: 500 });
   }
 }
-
-const PLATFORM_TEMPLATE_ROLES = ['PLATFORM_SUPER_ADMIN', 'PLATFORM_ADMIN'];
 
 export async function POST(request: Request) {
   const { userId } = await auth();
