@@ -230,3 +230,4 @@ export async function withEffectiveContextTransaction<Result>(
 }
 export * from './delivery.ts';
 export * from './communication-throttle.js';
+export * from './decision-trace.js';
