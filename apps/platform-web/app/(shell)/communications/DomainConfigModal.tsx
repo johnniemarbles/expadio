@@ -21,7 +21,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
   useEffect(() => {
     if (!isOpen) return;
     setFetching(true);
-    fetch("/api/communications/domains")
+    fetch(`/api/communications/domains${window.location.search}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setDomains(data);
@@ -36,7 +36,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/communications/domains/cloudflare", {
+      const res = await fetch(`/api/communications/domains/cloudflare${window.location.search}`,  {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain }),
@@ -45,7 +45,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       if (!res.ok) throw new Error(data.error || "Failed to configure DNS records");
       setLastProvisionResult(data);
       // Reload domains
-      const domainsRes = await fetch("/api/communications/domains");
+      const domainsRes = await fetch(`/api/communications/domains${window.location.search}`);
       const domainsData = await domainsRes.json();
       if (Array.isArray(domainsData)) setDomains(domainsData);
     } catch (err: any) {

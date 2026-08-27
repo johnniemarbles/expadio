@@ -41,6 +41,7 @@ interface CommunicationsDashboardClientProps {
   initialProviders: ConnectorListItem[];
   templates: TemplateCatalogueItem[];
   fleet: FleetHealthItem[];
+  queryString?: string;
 }
 
 export function CommunicationsDashboardClient({
@@ -48,6 +49,7 @@ export function CommunicationsDashboardClient({
   initialProviders,
   templates,
   fleet,
+  queryString = "",
 }: CommunicationsDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
@@ -76,8 +78,40 @@ export function CommunicationsDashboardClient({
     ? "Attention required"
     : "Operational data live";
 
+  
+  async function handleAnalyzeImpact(connectorKey: string) {
+    try {
+      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}/blast-radius${queryString}`);
+      const data = await res.json();
+      alert("Blast Radius Analysis:\n\n" + JSON.stringify(data, null, 2));
+    } catch (e) {
+      alert("Error calculating impact");
+    }
+  }
+
+  async function handleRevoke(connectorKey: string) {
+    if (!confirm("Are you sure you want to permanently revoke this connector?")) return;
+    setUpdatingConnector(connectorKey);
+    try {
+      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}${queryString}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Attestation:\n" + JSON.stringify(data.attestation, null, 2));
+        reloadProviders();
+      } else {
+        alert("Revoke failed: " + data.message);
+      }
+    } catch (e) {
+      alert("Error revoking connector");
+    } finally {
+      setUpdatingConnector(null);
+    }
+  }
+
   async function reloadProviders() {
-    const response = await fetch("/api/communications/providers");
+    const response = await fetch(`/api/communications/providers${queryString}`);
     if (!response.ok) return;
     const next = await response.json();
     if (Array.isArray(next)) setProviders(next);
@@ -86,7 +120,7 @@ export function CommunicationsDashboardClient({
   async function handleToggleConnector(connectorKey: string, currentEnabled: boolean) {
     setUpdatingConnector(connectorKey);
     try {
-      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}`, {
+      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}${queryString}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !currentEnabled }),
@@ -389,9 +423,10 @@ export function CommunicationsDashboardClient({
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th style={{ width: "50%" }}>Provider</th>
-                    <th style={{ width: "25%" }}>Channel</th>
-                    <th style={{ width: "25%", textAlign: "right" }}>Status</th>
+                    <th style={{ width: "40%" }}>Provider</th>
+                    <th style={{ width: "20%" }}>Channel</th>
+                    <th style={{ width: "20%" }}>Actions</th>
+                    <th style={{ width: "20%", textAlign: "right" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -417,6 +452,13 @@ export function CommunicationsDashboardClient({
                         <span className={styles.tag} style={{ background: "#f1f5f9", color: "#475569", fontSize: "11px", fontWeight: 700, padding: "3px 8px" }}>
                           {(CHANNEL_LABELS[c.providerType.toLowerCase()] || c.providerType).toUpperCase()}
                         </span>
+                      </td>
+                      
+                      <td>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button type="button" onClick={() => handleAnalyzeImpact(c.connectorKey)} style={{ fontSize: "11px", padding: "2px 6px", cursor: "pointer" }}>Impact</button>
+                          <button type="button" onClick={() => handleRevoke(c.connectorKey)} style={{ fontSize: "11px", padding: "2px 6px", cursor: "pointer", color: "red" }}>Revoke</button>
+                        </div>
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <button

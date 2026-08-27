@@ -39,7 +39,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/communications/providers", {
+      const response = await fetch(`/api/communications/providers${window.location.search}`,  {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

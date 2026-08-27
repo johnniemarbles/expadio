@@ -18,7 +18,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey }: TemplatePr
   useEffect(() => {
     if (!isOpen || !triggerKey) return;
     setLoading(true);
-    fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}`)
+    fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}${window.location.search}`)
       .then((res) => res.json())
       .then((data) => {
         setTemplate(data);
