@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync(new URL("../app/(shell)/communications/page.tsx", import.meta.url), "utf8");
+const providerRoute = readFileSync(new URL("../app/api/communications/providers/route.ts", import.meta.url), "utf8");
+const providerDetailRoute = readFileSync(new URL("../app/api/communications/providers/[key]/route.ts", import.meta.url), "utf8");
+const providerModal = readFileSync(new URL("../app/(shell)/communications/ProviderModal.tsx", import.meta.url), "utf8");
 const dashboard = readFileSync(
   new URL("../app/(shell)/communications/CommunicationsDashboardClient.tsx", import.meta.url),
   "utf8",
@@ -35,7 +38,7 @@ test("communications overview remains tenant-scoped and does not expose recipien
 });
 
 test("dashboard and APIs do not fabricate operational records", () => {
-  const sources = [dashboard, fleetRoute, providersRoute].join("\n");
+  const sources = [dashboard, fleetRoute].join("\n");
   assert.doesNotMatch(sources, /fallback/i);
   assert.doesNotMatch(sources, /Northstar Logistics|Dentex Canada|Urban Realty|Nova TPA/);
   assert.doesNotMatch(sources, /18\.4M|98\.1%|172 production-ready/);
@@ -47,4 +50,17 @@ test("dashboard and APIs do not fabricate operational records", () => {
 test("provider mutations remain limited to governed connector controls", () => {
   assert.match(dashboard, /\/api\/communications\/providers\/\$\{encodeURIComponent\(connectorKey\)\}/);
   assert.doesNotMatch(dashboard, /Send now|Send test/);
+});
+
+
+test("provider registration is a real API-backed flow", () => {
+  assert.match(providerRoute, /export async function POST/);
+  assert.match(providerRoute, /INSERT INTO platform\.connectors/);
+  assert.match(providerRoute, /INSERT INTO platform\.connector_credentials/);
+  assert.match(providerRoute, /credentialRef must be an external secret reference/);
+  assert.match(providerDetailRoute, /export async function DELETE/);
+  assert.doesNotMatch(providerDetailRoute, /Mock connector status updated/);
+  assert.match(providerModal, /fetch\("\/api\/communications\/providers"/);
+  assert.match(dashboard, /<ProviderModal/);
+  assert.match(dashboard, /setIsProviderModalOpen\(true\)/);
 });

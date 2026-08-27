@@ -5,6 +5,7 @@ import Link from "next/link";
 import styles from "./page.module.css";
 import { DomainConfigModal } from "./DomainConfigModal";
 import { TemplatePreviewModal } from "./TemplatePreviewModal";
+import { ProviderModal } from "./ProviderModal";
 import type { ConnectorListItem } from "../../api/communications/providers/route";
 import type { TemplateCatalogueItem } from "../../api/communications/templates/route";
 import type { FleetHealthItem } from "../../api/communications/fleet/route";
@@ -51,6 +52,7 @@ export function CommunicationsDashboardClient({
   const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
+  const [isProviderModalOpen, setIsProviderModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [selectedTriggerKey, setSelectedTriggerKey] = useState<string>("identity.verification.code");
   const [updatingConnector, setUpdatingConnector] = useState<string | null>(null);
@@ -73,6 +75,13 @@ export function CommunicationsDashboardClient({
   const platformStatus = degradedProviders.length > 0 || overview.totals.failed > 0
     ? "Attention required"
     : "Operational data live";
+
+  async function reloadProviders() {
+    const response = await fetch("/api/communications/providers");
+    if (!response.ok) return;
+    const next = await response.json();
+    if (Array.isArray(next)) setProviders(next);
+  }
 
   async function handleToggleConnector(connectorKey: string, currentEnabled: boolean) {
     setUpdatingConnector(connectorKey);
@@ -121,7 +130,7 @@ export function CommunicationsDashboardClient({
           <button
             type="button"
             className={styles.btnAddProvider}
-            onClick={() => setIsDomainModalOpen(true)}
+            onClick={() => setIsProviderModalOpen(true)}
           >
             <span>+</span> Add provider
           </button>
@@ -503,6 +512,11 @@ export function CommunicationsDashboardClient({
       )}
 
       {/* Interactive Modals */}
+      <ProviderModal
+        isOpen={isProviderModalOpen}
+        onClose={() => setIsProviderModalOpen(false)}
+        onCreated={reloadProviders}
+      />
       <DomainConfigModal
         isOpen={isDomainModalOpen}
         onClose={() => setIsDomainModalOpen(false)}
