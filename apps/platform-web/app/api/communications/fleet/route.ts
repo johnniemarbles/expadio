@@ -1,8 +1,6 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextResponse } from "next/server";
+import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../lib/request-context";
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
 
 export interface FleetHealthItem {
   connectorKey: string;
@@ -15,20 +13,14 @@ export interface FleetHealthItem {
   lastEventAt: string | null;
 }
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'Not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
+export async function GET(request: Request) {
+  
 
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
+    return await withTenantClient(effectiveContext, async (client) => {
 
-    const result = await dbPool.query(
+    const result = await client.query(
       `SELECT
          connector_key,
          channel,
@@ -62,7 +54,10 @@ export async function GET() {
     }));
 
     return NextResponse.json(items);
+    });
   } catch (err: any) {
+    if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
+
     console.error('Communications fleet health API error:', err);
     const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message };
     return NextResponse.json(denied, { status: 500 });

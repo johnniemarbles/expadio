@@ -18,9 +18,9 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const spend = new PostgresCommunicationSpendRepository(dbPool);
     const evaluation = await spend.read(context.tenantId);
     return NextResponse.json(evaluation);
@@ -32,7 +32,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const body = await request.json();
     const cap = body.dailyCapMinorUnits;
 

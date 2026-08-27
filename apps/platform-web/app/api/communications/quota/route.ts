@@ -26,9 +26,9 @@ export const dynamic = 'force-dynamic';
 const PLATFORM_MAX_PER_MINUTE = 10_000;
 const PLATFORM_MAX_PER_DAY = 500_000;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const throttle = new PostgresCommunicationThrottleRepository(dbPool);
 
     const [transactional, bulk] = await Promise.all([
@@ -65,7 +65,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const body = await request.json();
 
     const connectorId = typeof body.connectorId === 'string' ? body.connectorId : null;

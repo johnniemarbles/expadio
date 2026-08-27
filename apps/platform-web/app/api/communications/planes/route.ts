@@ -20,9 +20,9 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const throttle = new PostgresCommunicationThrottleRepository(dbPool);
 
     const [transactional, bulk] = await Promise.all([

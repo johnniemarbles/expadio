@@ -54,15 +54,23 @@ export class ContextDenied extends Error {
  * active workspace; membership is then verified against the IAM spine, so a
  * forged header resolves to a denial rather than to another tenant's data.
  */
-export async function resolveRequestContext(): Promise<ResolvedRequestContext> {
+export async function resolveRequestContext(request?: Request): Promise<ResolvedRequestContext> {
   const { userId } = await auth();
   if (userId === null || userId === undefined) {
     throw new ContextDenied('UNAUTHENTICATED', 'Sign in to continue.', 401);
   }
 
   const headerList = await headers();
-  const requestedTenant = headerList.get('x-expadio-tenant-id') || DEMO_TENANT;
-  const requestedOrganization = headerList.get('x-expadio-organization-id') || '00000000-0000-0000-0000-000000000002';
+  let requestedTenant = headerList.get('x-expadio-tenant-id');
+  let requestedOrganization = headerList.get('x-expadio-organization-id');
+  if (request) {
+    const url = new URL(request.url);
+    if (url.searchParams.has('account')) requestedTenant = url.searchParams.get('account');
+    if (url.searchParams.has('org')) requestedOrganization = url.searchParams.get('org');
+  }
+  requestedTenant = requestedTenant || DEMO_TENANT;
+  requestedOrganization = requestedOrganization || '00000000-0000-0000-0000-000000000002';
+  
 
   let effective;
   try {

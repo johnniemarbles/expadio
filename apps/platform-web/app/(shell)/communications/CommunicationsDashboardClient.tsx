@@ -555,7 +555,7 @@ export function CommunicationsDashboardClient({
         </section>
       )}
 
-      {/* Tab Content: Capacity & spend */}
+      {/* Tab Content: Capacity & spend (rendered — supersedes the raw-JSON Advanced Setup tab) */}
       {activeTab === "capacity" && <CapacityPanel queryString={queryString} />}
 
       {/* Tab Content: Decision traces */}

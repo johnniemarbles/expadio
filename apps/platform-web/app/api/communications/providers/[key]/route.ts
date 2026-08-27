@@ -11,11 +11,12 @@ import {
  * PATCH and DELETE previously hardcoded the demo tenant and resolved context
  * with `auth()` directly, so a mutation always ran against tenant
  * 00000000-…-0001 regardless of the caller's workspace. They now resolve the
- * real tenant through `resolveRequestContext`, exactly like GET/POST on the
- * collection route, so RLS applies and tenant isolation is testable through
- * the HTTP surface.
+ * real tenant through `resolveRequestContext(request)` — which reads the
+ * `?account/org` selection (proxy also injects it as headers) — exactly like
+ * GET/POST on the collection route, so RLS applies and tenant isolation is
+ * testable through the HTTP surface.
  *
- * DELETE here is the soft retirement (disable + mark UNHEALTHY). The provable,
+ * DELETE here is the soft retirement (disable + mark DEGRADED). The provable,
  * attesting destruction of a credential lives at `[key]/revoke`.
  */
 
@@ -27,7 +28,7 @@ export async function PATCH(
   { params }: { params: Promise<{ key: string }> },
 ) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const connectorKey = decodeURIComponent((await params).key);
 
     const body = await request.json();
@@ -64,11 +65,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ key: string }> },
 ) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const connectorKey = decodeURIComponent((await params).key);
 
     const connector = await withTenantClient(context, async (client) => {
