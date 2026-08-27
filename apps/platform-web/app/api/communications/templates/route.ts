@@ -29,44 +29,51 @@ export async function GET() {
       { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
     );
 
-    const result = await dbPool.query(
-      `SELECT
-         trigger_key,
-         scope,
-         COALESCE(ARRAY_AGG(DISTINCT channel ORDER BY channel), '{}') AS channels,
-         COALESCE(ARRAY_AGG(DISTINCT content_format ORDER BY content_format), '{}') AS content_formats,
-         COALESCE(ARRAY_AGG(DISTINCT locale ORDER BY locale), '{}') AS locales,
-         COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active_count,
-         COUNT(*) FILTER (WHERE status = 'DRAFT')::int AS draft_count,
-         COUNT(*)::int AS total_versions
-       FROM platform.communication_templates
-       WHERE scope = 'PLATFORM' OR tenant_id = $1::uuid
-       GROUP BY trigger_key, scope
-       ORDER BY trigger_key, scope`,
-      [effectiveContext.tenantId]
-    );
+    const client = await dbPool.connect();
+    try {
+      // The catalogue query is protected by tenant/platform RLS, so establish
+      // the same request-local tenant context used by the other communications APIs.
+      await client.query('SELECT set_config(\'app.tenant_id\', $1, true)', [effectiveContext.tenantId]);
 
-    if (result.rows.length === 0) return NextResponse.json([]);
-    const items: TemplateCatalogueItem[] = result.rows.map((row: any) => ({
-      triggerKey: row.trigger_key,
-      channels: row.channels,
-      scope: row.scope,
-      activeCount: row.active_count,
-      draftCount: row.draft_count,
-      totalVersions: row.total_versions,
-      contentFormats: row.content_formats,
-      hasActiveVersion: row.active_count > 0,
-      locales: row.locales,
-    }));
+      const result = await client.query(
+        `SELECT
+           trigger_key,
+           scope,
+           COALESCE(ARRAY_AGG(DISTINCT channel ORDER BY channel), '{}') AS channels,
+           COALESCE(ARRAY_AGG(DISTINCT content_format ORDER BY content_format), '{}') AS content_formats,
+           COALESCE(ARRAY_AGG(DISTINCT locale ORDER BY locale), '{}') AS locales,
+           COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active_count,
+           COUNT(*) FILTER (WHERE status = 'DRAFT')::int AS draft_count,
+           COUNT(*)::int AS total_versions
+         FROM platform.communication_templates
+         WHERE scope = 'PLATFORM' OR tenant_id = $1::uuid
+         GROUP BY trigger_key, scope
+         ORDER BY trigger_key, scope`,
+        [effectiveContext.tenantId]
+      );
 
-    return NextResponse.json(items);
+      const items: TemplateCatalogueItem[] = result.rows.map((row: any) => ({
+        triggerKey: row.trigger_key,
+        channels: row.channels,
+        scope: row.scope,
+        activeCount: row.active_count,
+        draftCount: row.draft_count,
+        totalVersions: row.total_versions,
+        contentFormats: row.content_formats,
+        hasActiveVersion: row.active_count > 0,
+        locales: row.locales,
+      }));
+
+      return NextResponse.json(items);
+    } finally {
+      client.release();
+    }
   } catch (err: any) {
     console.error('Communications template catalogue API error:', err);
     const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message };
     return NextResponse.json(denied, { status: 500 });
   }
 }
-
 
 const PLATFORM_TEMPLATE_ROLES = ['PLATFORM_SUPER_ADMIN', 'PLATFORM_ADMIN'];
 
@@ -95,37 +102,26 @@ export async function POST(request: Request) {
       ? body.defaultVariables
       : {};
 
-    if (!triggerKey || !templateBody) {
-      return NextResponse.json({ error: 'triggerKey and body are required.' }, { status: 400 });
-    }
-    if (!['email', 'sms', 'whatsapp', 'voice', 'in_app', 'push', 'rcs'].includes(channel)) {
-      return NextResponse.json({ error: 'Unsupported template channel.' }, { status: 400 });
-    }
-    if (!['TEXT', 'HTML', 'MARKDOWN'].includes(contentFormat)) {
-      return NextResponse.json({ error: 'Unsupported content format.' }, { status: 400 });
-    }
+    if (!triggerKey || !templateBody) return NextResponse.json({ error: 'triggerKey and body are required.' }, { status: 400 });
+    if (!['email', 'sms', 'whatsapp', 'voice', 'in_app', 'push', 'rcs'].includes(channel)) return NextResponse.json({ error: 'Unsupported template channel.' }, { status: 400 });
+    if (!['TEXT', 'HTML', 'MARKDOWN'].includes(contentFormat)) return NextResponse.json({ error: 'Unsupported content format.' }, { status: 400 });
 
     const client = await dbPool.connect();
     try {
       await client.query('BEGIN');
       const role = await client.query(
-        `SELECT 1
-           FROM platform.authorization_assignments assignment
+        `SELECT 1 FROM platform.authorization_assignments assignment
            JOIN platform.authorization_roles role ON role.role_id = assignment.role_id
-          WHERE assignment.subject_id = $1
-            AND assignment.status = 'ACTIVE'
-            AND role.status = 'ACTIVE'
-            AND role.ownership_scope = 'PLATFORM'
+          WHERE assignment.subject_id = $1 AND assignment.status = 'ACTIVE'
+            AND role.status = 'ACTIVE' AND role.ownership_scope = 'PLATFORM'
             AND role.role_key = ANY($2::text[])
-            AND (assignment.valid_until IS NULL OR assignment.valid_until > now())
-          LIMIT 1`,
+            AND (assignment.valid_until IS NULL OR assignment.valid_until > now()) LIMIT 1`,
         [userId, PLATFORM_TEMPLATE_ROLES],
       );
       if (role.rows.length === 0) {
         await client.query('ROLLBACK');
         return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Platform template administration is required.' }, { status: 403 });
       }
-
       await client.query(`SELECT set_config('app.platform_admin', 'true', true)`);
       const inserted = await client.query(
         `INSERT INTO platform.communication_templates
