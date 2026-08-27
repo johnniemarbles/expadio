@@ -229,5 +229,5 @@ export async function withEffectiveContextTransaction<Result>(
   }
 }
 export * from './delivery.ts';
-export * from './communication-throttle.js';
-export * from './decision-trace.js';
+export * from './communication-throttle.ts';
+export * from './decision-trace.ts';

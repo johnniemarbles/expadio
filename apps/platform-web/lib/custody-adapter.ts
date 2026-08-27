@@ -78,27 +78,29 @@ class VaultSecretStore implements SecretVault {
 }
 
 /**
- * Development-only, in-process store. Refuses to load in production, because
+ * Development-only, in-process store. Refuses to run in production, because
  * a fallback that silently degrades custody is worse than an outage: the
  * outage is visible.
  */
 class DevelopmentSecretStore implements SecretVault {
   private readonly versions = new Map<string, number>();
 
-  constructor() {
+  async nextVersion(tenantId: string, connectorKey: string): Promise<string> {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(
         'DevelopmentSecretStore must never run in production. Configure VAULT_ADDR and VAULT_TOKEN.',
       );
     }
-  }
-
-  async nextVersion(tenantId: string, connectorKey: string): Promise<string> {
     const key = `${tenantId}/${connectorKey}`;
     return `v${(this.versions.get(key) ?? 0) + 1}`;
   }
 
   async write(request: SecretWriteRequest): Promise<SecretWriteResult> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'DevelopmentSecretStore must never run in production. Configure VAULT_ADDR and VAULT_TOKEN.',
+      );
+    }
     const key = `${request.tenantId}/${request.connectorKey}`;
     const next = (this.versions.get(key) ?? 0) + 1;
     this.versions.set(key, next);
@@ -112,23 +114,38 @@ class DevelopmentSecretStore implements SecretVault {
   }
 }
 
-function buildVault(): SecretVault {
-  const address = process.env.VAULT_ADDR;
-  const token = process.env.VAULT_TOKEN;
-  if (address !== undefined && token !== undefined) {
-    return new VaultSecretStore(address, token, process.env.VAULT_MOUNT ?? 'expadio');
+class LazySecretVault implements SecretVault {
+  private delegate: SecretVault | null = null;
+
+  private getDelegate(): SecretVault {
+    if (this.delegate) return this.delegate;
+    const address = process.env.VAULT_ADDR;
+    const token = process.env.VAULT_TOKEN;
+    if (address !== undefined && token !== undefined) {
+      this.delegate = new VaultSecretStore(address, token, process.env.VAULT_MOUNT ?? 'expadio');
+      return this.delegate;
+    }
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('VAULT_ADDR and VAULT_TOKEN are required in production.');
+    }
+    this.delegate = new DevelopmentSecretStore();
+    return this.delegate;
   }
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('VAULT_ADDR and VAULT_TOKEN are required in production.');
+
+  async nextVersion(tenantId: string, connectorKey: string): Promise<string> {
+    return this.getDelegate().nextVersion(tenantId, connectorKey);
   }
-  return new DevelopmentSecretStore();
+
+  async write(request: SecretWriteRequest): Promise<SecretWriteResult> {
+    return this.getDelegate().write(request);
+  }
 }
 
 declare global {
   var _expadioSecretVault: SecretVault | undefined;
 }
 
-export const secretVault: SecretVault = globalThis._expadioSecretVault ?? buildVault();
+export const secretVault: SecretVault = globalThis._expadioSecretVault ?? new LazySecretVault();
 if (process.env.NODE_ENV !== 'production') {
   globalThis._expadioSecretVault = secretVault;
 }

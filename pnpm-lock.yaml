@@ -23,6 +23,9 @@ importers:
       '@expadio/communication':
         specifier: workspace:*
         version: link:../../packages/communication
+      '@expadio/credential-custody':
+        specifier: workspace:*
+        version: link:../../packages/credential-custody
       '@expadio/iam':
         specifier: workspace:*
         version: link:../../packages/iam

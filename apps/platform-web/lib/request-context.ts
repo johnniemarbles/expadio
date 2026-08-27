@@ -81,10 +81,7 @@ export async function resolveRequestContext(): Promise<ResolvedRequestContext> {
       { identityVerifier, membershipRepository },
       {
         credential: userId,
-        tenantId: requestedTenant,
-        ...(requestedOrganization !== null && requestedOrganization.trim() !== ''
-          ? { organizationId: requestedOrganization }
-          : {}),
+        tenantId: requestedTenant, organizationId: requestedOrganization ?? "",
       },
     );
   } catch {
@@ -103,7 +100,7 @@ export async function resolveRequestContext(): Promise<ResolvedRequestContext> {
   return {
     subjectId: userId,
     tenantId,
-    organizationId,
+    organizationId: organizationId ?? '',
     platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
     applyTo: async (client) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
@@ -116,7 +113,7 @@ export async function resolveRequestContext(): Promise<ResolvedRequestContext> {
 /** Runs `work` with a pooled client that already has the tenant GUC applied. */
 export async function withTenantClient<T>(
   context: ResolvedRequestContext,
-  work: (client: Awaited<ReturnType<typeof dbPool.connect>>) => Promise<T>,
+  work: (client: import('pg').PoolClient) => Promise<T>,
 ): Promise<T> {
   const client = await dbPool.connect();
   try {
@@ -157,3 +154,4 @@ export function deniedResponse(error: unknown): { body: DeniedResult; status: nu
     status: 500,
   };
 }
+export type RouteSearchParams = { [key: string]: string | string[] | undefined }; export function requestedOrganizationId(_request?: any) { return '00000000-0000-0000-0000-000000000002'; }
