@@ -18,6 +18,7 @@ const fleetRoute = readFileSync(
   new URL("../app/api/communications/fleet/route.ts", import.meta.url),
   "utf8",
 );
+const templatesRoute = readFileSync(new URL("../app/api/communications/templates/route.ts", import.meta.url), "utf8");
 const providersRoute = readFileSync(
   new URL("../app/api/communications/providers/route.ts", import.meta.url),
   "utf8",
@@ -63,4 +64,14 @@ test("provider registration is a real API-backed flow", () => {
   assert.match(providerModal, /fetch\("\/api\/communications\/providers"/);
   assert.match(dashboard, /<ProviderModal/);
   assert.match(dashboard, /setIsProviderModalOpen\(true\)/);
+});
+
+
+test("platform template creation requires governed platform authority", () => {
+  assert.match(templatesRoute, /export async function POST/);
+  assert.match(templatesRoute, /PLATFORM_SUPER_ADMIN/);
+  assert.match(templatesRoute, /role\.ownership_scope = 'PLATFORM'/);
+  assert.match(templatesRoute, /set_config\('app\.platform_admin', 'true', true\)/);
+  assert.match(templatesRoute, /INSERT INTO platform\.communication_templates/);
+  assert.match(templatesRoute, /status\)\s*VALUES \('PLATFORM'/s);
 });

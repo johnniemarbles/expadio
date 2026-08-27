@@ -66,3 +66,84 @@ export async function GET() {
     return NextResponse.json(denied, { status: 500 });
   }
 }
+
+
+const PLATFORM_TEMPLATE_ROLES = ['PLATFORM_SUPER_ADMIN', 'PLATFORM_ADMIN'];
+
+export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED', message: 'Not authenticated' }, { status: 401 });
+  }
+
+  try {
+    await authenticateAndResolveContext(
+      { identityVerifier, membershipRepository },
+      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
+    );
+
+    const body = await request.json();
+    const triggerKey = typeof body.triggerKey === 'string' ? body.triggerKey.trim() : '';
+    const channel = typeof body.channel === 'string' ? body.channel.trim().toLowerCase() : '';
+    const locale = typeof body.locale === 'string' && body.locale.trim() ? body.locale.trim() : 'en';
+    const contentFormat = typeof body.contentFormat === 'string' ? body.contentFormat.trim().toUpperCase() : '';
+    const templateBody = typeof body.body === 'string' ? body.body.trim() : '';
+    const subject = typeof body.subject === 'string' && body.subject.trim() ? body.subject.trim() : null;
+    const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null;
+    const requiredVariables = Array.isArray(body.requiredVariables) ? body.requiredVariables : [];
+    const defaultVariables = body.defaultVariables && typeof body.defaultVariables === 'object' && !Array.isArray(body.defaultVariables)
+      ? body.defaultVariables
+      : {};
+
+    if (!triggerKey || !templateBody) {
+      return NextResponse.json({ error: 'triggerKey and body are required.' }, { status: 400 });
+    }
+    if (!['email', 'sms', 'whatsapp', 'voice', 'in_app', 'push', 'rcs'].includes(channel)) {
+      return NextResponse.json({ error: 'Unsupported template channel.' }, { status: 400 });
+    }
+    if (!['TEXT', 'HTML', 'MARKDOWN'].includes(contentFormat)) {
+      return NextResponse.json({ error: 'Unsupported content format.' }, { status: 400 });
+    }
+
+    const client = await dbPool.connect();
+    try {
+      await client.query('BEGIN');
+      const role = await client.query(
+        `SELECT 1
+           FROM platform.authorization_assignments assignment
+           JOIN platform.authorization_roles role ON role.role_id = assignment.role_id
+          WHERE assignment.subject_id = $1
+            AND assignment.status = 'ACTIVE'
+            AND role.status = 'ACTIVE'
+            AND role.ownership_scope = 'PLATFORM'
+            AND role.role_key = ANY($2::text[])
+            AND (assignment.valid_until IS NULL OR assignment.valid_until > now())
+          LIMIT 1`,
+        [userId, PLATFORM_TEMPLATE_ROLES],
+      );
+      if (role.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Platform template administration is required.' }, { status: 403 });
+      }
+
+      await client.query(`SELECT set_config('app.platform_admin', 'true', true)`);
+      const inserted = await client.query(
+        `INSERT INTO platform.communication_templates
+          (scope, tenant_id, organization_id, trigger_key, channel, locale, content_format, subject, title, body, required_variables, default_variables, status)
+         VALUES ('PLATFORM', NULL, NULL, $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, 'DRAFT')
+         RETURNING template_id, version, trigger_key, channel, locale, content_format, subject, title, status, created_at`,
+        [triggerKey, channel, locale, contentFormat, subject, title, templateBody, JSON.stringify(requiredVariables), JSON.stringify(defaultVariables)],
+      );
+      await client.query('COMMIT');
+      return NextResponse.json({ success: true, template: inserted.rows[0] }, { status: 201 });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    console.error('Create platform communication template error:', err);
+    return NextResponse.json({ error: err.message || 'Template creation failed.' }, { status: 500 });
+  }
+}
