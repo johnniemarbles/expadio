@@ -42,9 +42,9 @@ export interface SetupState {
   readonly degradedReasons: readonly string[];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
 
     const facts = await withTenantClient(context, async (client) => {
       const connectors = await client.query(

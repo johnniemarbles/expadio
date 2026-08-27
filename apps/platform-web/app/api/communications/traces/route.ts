@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
     const url = new URL(request.url);
 
     const repository = new PostgresDecisionTraceRepository(dbPool);
