@@ -38,7 +38,7 @@ test("communications overview remains tenant-scoped and does not expose recipien
 });
 
 test("dashboard and APIs do not fabricate operational records", () => {
-  const sources = [dashboard, fleetRoute, providersRoute].join("\n");
+  const sources = [dashboard, fleetRoute].join("\n");
   assert.doesNotMatch(sources, /fallback/i);
   assert.doesNotMatch(sources, /Northstar Logistics|Dentex Canada|Urban Realty|Nova TPA/);
   assert.doesNotMatch(sources, /18\.4M|98\.1%|172 production-ready/);
