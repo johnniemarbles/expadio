@@ -1,0 +1,300 @@
+/*
+ * Design spec §9.1 — extend the existing token system; do not introduce a
+ * second aesthetic. Every value below resolves to a variable already declared
+ * in packages/ui/src/tokens/. No new hues.
+ *
+ * §9.3 — the quality floor is a per-PR checklist item, not a polish pass:
+ * visible focus, reduced motion respected, three ADR-002 breakpoints.
+ */
+
+.page {
+  max-width: 780px;
+  padding: 24px 28px 72px;
+}
+
+.head { margin-bottom: 24px; }
+
+.crumb {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  margin-bottom: 6px;
+}
+
+.title {
+  font-size: 25px;
+  font-weight: 660;
+  letter-spacing: -0.022em;
+  color: var(--ink-950);
+}
+
+.lede {
+  margin-top: 7px;
+  color: var(--ink-600);
+  font-size: 13.5px;
+  max-width: 56ch;
+}
+
+/* ── progress rail (§6) ───────────────────────────────────────────────── */
+.rail {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.railStep {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 13px;
+  align-items: start;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.railStep:last-child { border-bottom: 0; }
+
+.railNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--ink-500);
+}
+
+.railDone .railNum {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.railNow .railNum {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.railBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.railTitle { font-size: 13.5px; font-weight: 570; color: var(--ink-950); }
+.railDesc { font-size: 12.5px; color: var(--ink-500); }
+.railDone .railTitle { color: var(--ink-600); }
+
+.railBlocked .railTitle { color: var(--ink-500); }
+/* Locked, with a reason. Never hidden, never greyed with no explanation. */
+.railReason { font-size: 12.5px; color: var(--amber); }
+
+/* ── cards ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+
+.cardOk { border-color: #cfe9de; background: var(--green-soft); }
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  color: var(--ink-950);
+}
+
+.cardNote {
+  font-size: 12.5px;
+  color: var(--ink-600);
+  margin-top: 4px;
+  max-width: 58ch;
+}
+
+/* ── choice list: custody modes and failure policies ──────────────────── */
+.modes { display: grid; gap: 10px; margin: 14px 0 18px; }
+
+.mode {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.13s, background 0.13s;
+}
+
+.mode:hover:not(:disabled) { border-color: #ccd2df; background: var(--surface-soft); }
+.mode[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+.mode:disabled { opacity: 0.62; cursor: not-allowed; }
+.mode:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #c2c9d8;
+  margin-top: 2px;
+  flex: none;
+}
+.mode[aria-pressed="true"] .radio { border-color: var(--brand); border-width: 5px; }
+
+.modeTitle { display: block; font-size: 13.5px; font-weight: 620; margin-bottom: 3px; }
+.modeBody { display: block; font-size: 12.5px; color: var(--ink-600); line-height: 1.5; }
+.modeWho { display: block; font-size: 12px; color: var(--ink-500); font-style: italic; margin-top: 5px; }
+
+/* ── form ─────────────────────────────────────────────────────────────── */
+.field { margin-bottom: 14px; max-width: 460px; }
+
+.field label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--ink-800);
+}
+
+.hint { font-size: 12px; color: var(--ink-500); margin-bottom: 6px; line-height: 1.45; }
+
+.input,
+.select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--surface);
+  color: var(--ink-950);
+}
+
+.select { font-family: inherit; }
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -1px;
+  border-color: var(--brand);
+}
+
+.primary {
+  display: inline-block;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--brand);
+  background: var(--brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.13s;
+}
+.primary:hover:not(:disabled) { background: var(--brand-dark); }
+.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.primary:focus-visible { outline: 2px solid var(--ink-950); outline-offset: 2px; }
+
+/* ── probe feedback ───────────────────────────────────────────────────── */
+.probe { margin-top: 15px; border-radius: 9px; padding: 14px 16px; font-size: 12.5px; }
+.probeRunning { background: var(--brand-soft); color: var(--brand-dark); }
+.probeTitle { display: flex; align-items: center; gap: 9px; font-weight: 640; margin-bottom: 8px; }
+.probe ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
+
+.spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(79, 70, 229, 0.25);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex: none;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── findings and fingerprint ─────────────────────────────────────────── */
+.findings { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 9px; }
+.findings li { display: grid; grid-template-columns: 18px 1fr; gap: 9px; font-size: 12.5px; line-height: 1.5; }
+.findings code { font-size: 11.5px; background: rgba(0, 0, 0, 0.045); padding: 1px 5px; border-radius: 4px; }
+.tick { color: var(--green); font-weight: 700; }
+.warn { color: var(--amber); font-weight: 700; }
+
+.fingerprint {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 15px;
+  padding: 12px 15px;
+  background: var(--surface);
+  border: 1px solid #cfe9de;
+  border-radius: 8px;
+}
+
+.fpLabel {
+  font-size: 10.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  font-weight: 600;
+}
+
+.fpValue {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  color: var(--ink-950);
+  margin-top: 2px;
+}
+
+.fpNote { font-size: 12px; color: var(--ink-600); line-height: 1.45; flex: 1; min-width: 220px; }
+.fpNote code { font-size: 11.5px; }
+
+/* ── messages ─────────────────────────────────────────────────────────── */
+.note {
+  font-size: 12px;
+  color: var(--ink-600);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 16px;
+  line-height: 1.6;
+}
+
+.error {
+  background: var(--red-soft);
+  border: 1px solid #e8b9b9;
+  border-left-width: 3px;
+  color: var(--red);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ── ADR-002 breakpoints ──────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .page { padding: 16px; }
+  .field { max-width: none; }
+  .fingerprint { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; border-top-color: var(--brand); }
+  .mode, .primary, .input { transition: none; }
+}
