@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
 import type { DomainRecord } from "../../api/communications/domains/route";
+import { apiError } from "../../../lib/api-error";
 
 interface DomainConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialDomain?: string;
 }
+
+interface VerifyCheck { purpose: string; type: string; name: string; ok: boolean; detail: string }
 
 export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.com" }: DomainConfigModalProps) {
   const [domain, setDomain] = useState(initialDomain);
@@ -17,18 +20,20 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
   const [domains, setDomains] = useState<DomainRecord[]>([]);
   const [lastProvisionResult, setLastProvisionResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [verifyResults, setVerifyResults] = useState<Record<string, VerifyCheck[]>>({});
+
+  const reload = useCallback(async () => {
+    const res = await fetch(`/api/communications/domains${window.location.search}`);
+    const data = await res.json();
+    if (Array.isArray(data)) setDomains(data);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
     setFetching(true);
-    fetch(`/api/communications/domains${window.location.search}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setDomains(data);
-      })
-      .catch((err) => console.error("Error loading domains:", err))
-      .finally(() => setFetching(false));
-  }, [isOpen]);
+    reload().catch((err) => console.error("Error loading domains:", err)).finally(() => setFetching(false));
+  }, [isOpen, reload]);
 
   if (!isOpen) return null;
 
@@ -36,22 +41,55 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/communications/domains/cloudflare${window.location.search}`,  {
+      const res = await fetch(`/api/communications/domains/cloudflare${window.location.search}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to configure DNS records");
+      if (!res.ok) throw new Error(apiError(data, "Failed to configure DNS records"));
       setLastProvisionResult(data);
-      // Reload domains
-      const domainsRes = await fetch(`/api/communications/domains${window.location.search}`);
-      const domainsData = await domainsRes.json();
-      if (Array.isArray(domainsData)) setDomains(domainsData);
+      await reload();
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleVerify(senderId: string) {
+    setBusyId(senderId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/communications/domains/${encodeURIComponent(senderId)}/verify${window.location.search}`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Verification failed"));
+      setVerifyResults((prev) => ({ ...prev, [senderId]: data.checks ?? [] }));
+      await reload();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRemove(senderId: string, domainName: string) {
+    if (!confirm(`Retire the sending domain ${domainName}? It will stop being usable for dispatch.`)) return;
+    setBusyId(senderId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/communications/domains/${encodeURIComponent(senderId)}${window.location.search}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not retire the domain"));
+      await reload();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -197,19 +235,47 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                     <strong style={{ fontSize: "14px" }}>{d.domain}</strong>
                     <div style={{ fontSize: "12px", color: "var(--ink-500, #64748b)" }}>{d.address}</div>
                   </div>
-                  <span
-                    style={{
-                      padding: "3px 10px",
-                      borderRadius: "999px",
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: d.verificationStatus === "VERIFIED" ? "#166534" : "#925b0b",
-                      background: d.verificationStatus === "VERIFIED" ? "#dcfce7" : "#fef3c7",
-                    }}
-                  >
-                    {d.verificationStatus}
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        color: d.verificationStatus === "VERIFIED" ? "#166534" : d.verificationStatus === "REVOKED" ? "#991b1b" : "#925b0b",
+                        background: d.verificationStatus === "VERIFIED" ? "#dcfce7" : d.verificationStatus === "REVOKED" ? "#fee2e2" : "#fef3c7",
+                      }}
+                    >
+                      {d.verificationStatus}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleVerify(d.senderId)}
+                      disabled={busyId === d.senderId}
+                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      {busyId === d.senderId ? "…" : "Verify"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(d.senderId, d.domain)}
+                      disabled={busyId === d.senderId}
+                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid #fecaca", background: "transparent", color: "#b91c1c", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
+
+                {verifyResults[d.senderId] && (
+                  <div style={{ marginBottom: "12px", display: "grid", gap: "4px" }}>
+                    {verifyResults[d.senderId].map((c, i) => (
+                      <div key={i} style={{ fontSize: "11px", color: c.ok ? "#166534" : "#b91c1c" }}>
+                        {c.ok ? "✅" : "⚠️"} <strong>{c.purpose}</strong> — {c.detail}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>

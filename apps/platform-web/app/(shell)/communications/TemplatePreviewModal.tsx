@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { TemplateDetailRecord } from "../../api/communications/templates/[key]/route";
+import { apiError } from "../../../lib/api-error";
 
 interface TemplatePreviewModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
         body: JSON.stringify({ templateId: template.templateId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Could not create a draft version.");
+      if (!res.ok) throw new Error(apiError(data, "Could not create a draft version."));
       setActionNotice(`Draft v${data.template?.version ?? ""} created. Edit it in the composer, then publish.`);
       loadTemplate();
       onChanged?.();
@@ -80,7 +81,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
         body: JSON.stringify({ templateId: template.templateId, version: template.version }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Could not publish this version.");
+      if (!res.ok) throw new Error(apiError(data, "Could not publish this version."));
       setActionNotice(`Version ${template.version} is now ACTIVE.`);
       loadTemplate();
       onChanged?.();

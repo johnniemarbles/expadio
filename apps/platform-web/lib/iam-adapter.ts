@@ -45,7 +45,14 @@ export interface MembershipRepository {
   listActiveMemberships(identity: IdentityContext): Promise<readonly MembershipContext[]>;
 }
 
+const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000002';
+
 export class AutoProvisioningMembershipRepository implements MembershipRepository {
+  // Subjects whose platform-admin grant has already been ensured this process
+  // lifetime, so the idempotent grant runs at most once per subject per pod.
+  private readonly grantedSubjects = new Set<string>();
+
   constructor(private readonly inner: MembershipRepository, private readonly pool: pg.Pool) {}
 
   async listActiveMemberships(identity: IdentityContext): Promise<readonly MembershipContext[]> {
@@ -68,8 +75,94 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
         console.error('Error auto-provisioning membership:', err);
       }
     }
+
+    // Demo bootstrap (mirrors the membership auto-provision above): this app IS
+    // the platform-administration console, so a provisioned operator is granted
+    // the PLATFORM_SUPER_ADMIN role that governed flows — platform template
+    // authoring, publication — require. In production this is replaced by real
+    // role assignment; here it keeps the console usable end to end. Idempotent
+    // and cached per process so it costs one grant per operator per pod.
+    if (identity.subjectId && list.length > 0 && !this.grantedSubjects.has(identity.subjectId)) {
+      try {
+        await this.ensurePlatformAdmin(identity.subjectId);
+        this.grantedSubjects.add(identity.subjectId);
+      } catch (err) {
+        console.error('Error ensuring platform-admin role:', err);
+      }
+    }
+
     return list;
   }
+
+  private async ensurePlatformAdmin(subjectId: string): Promise<void> {
+    await ensureGlobalBootstrap(this.pool);
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        `INSERT INTO platform.authorization_assignments (tenant_id, organization_id, subject_id, role_id, status)
+         SELECT $1::uuid, $2::uuid, $3, r.role_id, 'ACTIVE'
+           FROM platform.authorization_roles r
+          WHERE r.role_key = 'PLATFORM_SUPER_ADMIN' AND r.tenant_id IS NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM platform.authorization_assignments a
+               WHERE a.subject_id = $3 AND a.role_id = r.role_id AND a.tenant_id = $1::uuid
+            )`,
+        [DEMO_TENANT_ID, DEMO_ORG_ID, subjectId],
+      );
+    } finally {
+      client.release();
+    }
+  }
+}
+
+// Canonical communication capabilities the provider-registration flow references.
+// The register step validates connector capability keys against this table, so
+// without these rows no communication connector can be created. Seeded here (and
+// in scripts/seed.cjs) so the live console works without a manual re-seed.
+export const COMMUNICATION_CAPABILITIES: readonly { key: string; name: string }[] = [
+  { key: 'communication.email.send', name: 'Email — Send' },
+  { key: 'communication.sms.send', name: 'SMS — Send' },
+  { key: 'communication.whatsapp.send', name: 'WhatsApp — Send' },
+  { key: 'communication.voice.dial', name: 'Voice — Dial' },
+  { key: 'communication.push.send', name: 'Push — Send' },
+  { key: 'communication.rcs.send', name: 'RCS — Send' },
+];
+
+let globalBootstrapPromise: Promise<void> | undefined;
+
+/**
+ * One-time, idempotent process bootstrap of the platform-scoped rows the
+ * console depends on: the PLATFORM_SUPER_ADMIN role and the communication
+ * capability registry. Runs once per pod; safe to call concurrently.
+ */
+function ensureGlobalBootstrap(pool: pg.Pool): Promise<void> {
+  if (globalBootstrapPromise === undefined) {
+    globalBootstrapPromise = (async () => {
+      const client = await pool.connect();
+      try {
+        await client.query(
+          `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
+           VALUES ('PLATFORM_SUPER_ADMIN', 'Platform Super Admin', 'PLATFORM', NULL, 'ACTIVE')
+           ON CONFLICT (role_key) WHERE tenant_id IS NULL DO NOTHING`,
+        );
+        for (const capability of COMMUNICATION_CAPABILITIES) {
+          await client.query(
+            `INSERT INTO platform.capabilities (capability_key, display_name, permitted_modes, enabled)
+             VALUES ($1, $2, ARRAY['A']::text[], true)
+             ON CONFLICT (capability_key) DO NOTHING`,
+            [capability.key, capability.name],
+          );
+        }
+      } finally {
+        client.release();
+      }
+    })().catch((err) => {
+      // Reset so a transient failure can be retried on the next request.
+      globalBootstrapPromise = undefined;
+      throw err;
+    });
+  }
+  return globalBootstrapPromise;
 }
 
 export const membershipRepository = new AutoProvisioningMembershipRepository(
