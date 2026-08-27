@@ -18,16 +18,14 @@ export default async function CommunicationsPage({
   if (typeof params.org === 'string') qs.set('org', params.org);
   const q = qs.toString() ? `?${qs.toString()}` : '';
 
-  const [overview, providers, templates, fleet, quota, spend, planes, setupState, traces] = await Promise.all([
+  // Capacity/spend and decision-trace data are fetched client-side by their
+  // own panels (CapacityPanel, TracesPanel), so the page only prefetches the
+  // four datasets the default views render.
+  const [overview, providers, templates, fleet] = await Promise.all([
     fetchApi<CommunicationOverview>(`/api/communications/overview${q}`),
     fetchApi<ConnectorListItem[]>(`/api/communications/providers${q}`),
     fetchApi<TemplateCatalogueItem[]>(`/api/communications/templates${q}`),
     fetchApi<FleetHealthItem[]>(`/api/communications/fleet${q}`),
-    fetchApi<any>(`/api/communications/quota${q}`),
-    fetchApi<any>(`/api/communications/spend${q}`),
-    fetchApi<any>(`/api/communications/planes${q}`),
-    fetchApi<any>(`/api/communications/setup/state${q}`),
-    fetchApi<any>(`/api/communications/traces${q}`),
   ]);
 
   if (isDenied(overview)) return <DeniedState result={overview} />;
@@ -38,11 +36,6 @@ export default async function CommunicationsPage({
       initialProviders={isDenied(providers) ? [] : providers}
       templates={isDenied(templates) ? [] : templates}
       fleet={isDenied(fleet) ? [] : fleet}
-      quota={isDenied(quota) ? null : quota}
-      spend={isDenied(spend) ? null : spend}
-      planes={isDenied(planes) ? null : planes}
-      setupState={isDenied(setupState) ? null : setupState}
-      traces={isDenied(traces) ? [] : traces}
       queryString={q}
     />
   );
