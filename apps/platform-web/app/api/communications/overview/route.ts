@@ -1,5 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
-import { authenticateAndResolveContext } from "@expadio/iam";
+import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../lib/request-context";
 import type { DeniedResult } from "@expadio/ui/contracts";
 import { NextResponse } from "next/server";
 import {
@@ -8,14 +7,8 @@ import {
   type CommunicationDeliveryState,
   type CommunicationOverview,
 } from "../../../../lib/communication-contracts";
-import {
-  dbPool,
-  identityVerifier,
-  membershipRepository,
-} from "../../../../lib/iam-adapter";
 
-const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
-const DEFAULT_ORGANIZATION_ID = "00000000-0000-0000-0000-000000000002";
+
 
 interface ChannelRow {
   channel: CommunicationChannel;
@@ -39,30 +32,13 @@ interface DeliveryRow {
   updated_at: Date | string;
 }
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: "UNAUTHENTICATED",
-      message: "User is not authenticated",
-    };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
+export async function GET(request: Request) {
   try {
-    const context = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: DEFAULT_TENANT_ID,
-        organizationId: DEFAULT_ORGANIZATION_ID,
-      },
-    );
-
-    const [channelResult, templateResult, senderResult, suppressionResult, deliveryResult] =
-      await Promise.all([
-        dbPool.query<ChannelRow>(
+    const context = await resolveRequestContext(request);
+    return await withTenantClient(context, async (client) => {
+      const [channelResult, templateResult, senderResult, suppressionResult, deliveryResult] =
+        await Promise.all([
+          client.query<ChannelRow>(
           `SELECT channel,
                   COUNT(*)::int AS total,
                   COUNT(*) FILTER (WHERE state = 'DELIVERED')::int AS delivered,
@@ -72,7 +48,7 @@ export async function GET() {
             GROUP BY channel`,
           [context.tenantId],
         ),
-        dbPool.query<{ status: "ACTIVE" | "DRAFT"; count: number }>(
+        client.query<{ status: "ACTIVE" | "DRAFT"; count: number }>(
           `SELECT status, COUNT(*)::int AS count
              FROM platform.communication_templates
             WHERE (scope = 'PLATFORM' OR tenant_id = $1)
@@ -80,7 +56,7 @@ export async function GET() {
             GROUP BY status`,
           [context.tenantId],
         ),
-        dbPool.query<{ verification_status: "VERIFIED" | "PENDING"; count: number }>(
+        client.query<{ verification_status: "VERIFIED" | "PENDING"; count: number }>(
           `SELECT verification_status, COUNT(*)::int AS count
              FROM platform.communication_sender_identities
             WHERE (scope = 'PLATFORM' OR tenant_id = $1)
@@ -89,7 +65,7 @@ export async function GET() {
             GROUP BY verification_status`,
           [context.tenantId],
         ),
-        dbPool.query<CountRow>(
+        client.query<CountRow>(
           `SELECT COUNT(*)::int AS count
              FROM platform.communication_suppressions
             WHERE tenant_id = $1
@@ -97,7 +73,7 @@ export async function GET() {
               AND (valid_until IS NULL OR valid_until > now())`,
           [context.tenantId],
         ),
-        dbPool.query<DeliveryRow>(
+        client.query<DeliveryRow>(
           `SELECT delivery_id, channel, state, connector_key, attempt_count,
                   last_reason_code, requested_at, updated_at
              FROM platform.communication_deliveries
@@ -159,14 +135,18 @@ export async function GET() {
       })),
     };
 
-    return NextResponse.json(overview);
-  } catch (error) {
+      return NextResponse.json(overview);
+    });
+  } catch (error: any) {
+    if (error.denied) {
+      const { body, status } = deniedResponse(error);
+      return NextResponse.json(body, { status });
+    }
     console.error("Communications overview API error:", error);
-    const denied: DeniedResult = {
+    return NextResponse.json({
       denied: true,
       reasonKey: "INTERNAL_ERROR",
       message: "Communications data could not be loaded.",
-    };
-    return NextResponse.json(denied, { status: 500 });
+    }, { status: 500 });
   }
 }

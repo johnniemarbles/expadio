@@ -1,28 +1,20 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextResponse } from "next/server";
+import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../../lib/request-context";
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../../lib/iam-adapter';
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'Not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
+  
 
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
+    return await withTenantClient(effectiveContext, async (client) => {
 
     const body = await request.json().catch(() => ({}));
     const domain = body.domain || 'expadio.com';
     const address = `notifications@${domain}`;
 
     // Upsert the domain sender identity and mark as VERIFIED via Cloudflare DNS configuration
-    const result = await dbPool.query(
+    const result = await client.query(
       `INSERT INTO platform.communication_sender_identities
          (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
        VALUES
@@ -77,7 +69,10 @@ export async function POST(request: Request) {
       message: `Cloudflare DNS successfully provisioned 4 authentication records for ${domain}.`,
       sender: result.rows[0],
     });
+    });
   } catch (err: any) {
+    if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
+
     console.error('Cloudflare auto-configure error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
