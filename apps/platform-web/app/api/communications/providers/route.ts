@@ -87,7 +87,7 @@ const SUPPORTED_PROVIDER_KEYS = new Set([
 ]);
 
 function isSecretReference(value: unknown): value is string {
-  return typeof value === 'string' && /^(kms|vault|secret|provider-secret):\\/\\/[^\\s]+$/.test(value);
+  return typeof value === 'string' && /^(kms|vault|secret|provider-secret):\/\/[^\s]+$/.test(value);
 }
 
 export async function POST(request: Request) {
