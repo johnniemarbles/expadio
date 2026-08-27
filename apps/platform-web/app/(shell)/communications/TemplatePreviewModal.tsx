@@ -1,28 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { TemplateDetailRecord } from "../../api/communications/templates/[key]/route";
 
 interface TemplatePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   triggerKey: string;
+  onChanged?: () => void;
 }
 
-export function TemplatePreviewModal({ isOpen, onClose, triggerKey }: TemplatePreviewModalProps) {
+export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }: TemplatePreviewModalProps) {
   const [template, setTemplate] = useState<TemplateDetailRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [variables, setVariables] = useState<Record<string, string>>({});
   const [previewMode, setPreviewMode] = useState<"rendered" | "source">("rendered");
+  const [working, setWorking] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen || !triggerKey) return;
+  const loadTemplate = useCallback(() => {
+    if (!triggerKey) return;
     setLoading(true);
+    setActionError(null);
+    setActionNotice(null);
     fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}${window.location.search}`)
       .then((res) => res.json())
       .then((data) => {
-        setTemplate(data);
-        if (data.defaultVariables) {
+        setTemplate(data && data.templateId ? data : null);
+        if (data && data.defaultVariables) {
           const vars: Record<string, string> = {};
           Object.entries(data.defaultVariables).forEach(([k, v]) => {
             vars[k] = String(v);
@@ -32,7 +38,58 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey }: TemplatePr
       })
       .catch((err) => console.error("Error loading template details:", err))
       .finally(() => setLoading(false));
-  }, [isOpen, triggerKey]);
+  }, [triggerKey]);
+
+  useEffect(() => {
+    if (!isOpen || !triggerKey) return;
+    loadTemplate();
+  }, [isOpen, triggerKey, loadTemplate]);
+
+  async function createDraftVersion() {
+    if (!template) return;
+    setWorking(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const res = await fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}/versions${window.location.search}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: template.templateId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || "Could not create a draft version.");
+      setActionNotice(`Draft v${data.template?.version ?? ""} created. Edit it in the composer, then publish.`);
+      loadTemplate();
+      onChanged?.();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Could not create a draft version.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function publishVersion() {
+    if (!template) return;
+    setWorking(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const res = await fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}/publish${window.location.search}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: template.templateId, version: template.version }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || "Could not publish this version.");
+      setActionNotice(`Version ${template.version} is now ACTIVE.`);
+      loadTemplate();
+      onChanged?.();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Could not publish this version.");
+    } finally {
+      setWorking(false);
+    }
+  }
 
   if (!isOpen) return null;
 
@@ -214,7 +271,34 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey }: TemplatePr
               <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--line, #e2e8f0)" }}>
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)" }}>Format: <strong>{template.contentFormat}</strong></div>
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Channel: <strong>{template.channel}</strong></div>
-                <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Status: <strong style={{ color: "#16a34a" }}>{template.status}</strong></div>
+                <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Version: <strong>v{template.version}</strong></div>
+                <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>
+                  Status: <strong style={{ color: template.status === "ACTIVE" ? "#16a34a" : template.status === "DRAFT" ? "#925b0b" : "#64748b" }}>{template.status}</strong>
+                </div>
+
+                <div style={{ marginTop: "16px", display: "grid", gap: "8px" }}>
+                  {template.status === "DRAFT" ? (
+                    <button
+                      type="button"
+                      onClick={publishVersion}
+                      disabled={working}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: 0, background: "#16a34a", color: "white", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                    >
+                      {working ? "Working…" : `Publish v${template.version}`}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={createDraftVersion}
+                      disabled={working}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, #4f46e5)", background: "transparent", color: "var(--brand, #4f46e5)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                    >
+                      {working ? "Working…" : "Create new draft version"}
+                    </button>
+                  )}
+                  {actionError && <div role="alert" style={{ fontSize: "11px", color: "#b91c1c" }}>⚠️ {actionError}</div>}
+                  {actionNotice && <div style={{ fontSize: "11px", color: "#15803d" }}>✅ {actionNotice}</div>}
+                </div>
               </div>
             </div>
           </div>
