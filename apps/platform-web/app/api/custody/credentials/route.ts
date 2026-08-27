@@ -37,7 +37,7 @@ const SUPPORTED_PROVIDERS = new Set([
 // Anything not on this list is dropped rather than forwarded, so a caller
 // cannot smuggle a second secret through `parameters`.
 const ALLOWED_PARAMETERS = new Set([
-  'accountSid', 'region', 'apiKey', 'domain', 'sessionToken', 'fromAddress', 'fromNumber',
+  'accountSid', 'region', 'apiKey', 'accessKeyId', 'domain', 'sessionToken', 'fromAddress', 'fromNumber',
 ]);
 
 interface IntakeBody {
