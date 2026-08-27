@@ -22,8 +22,8 @@ const providers = [
 ] as const;
 
 export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps) {
-  const [providerKey, setProviderKey] = useState(providers[0][0]);
-  const [providerType, setProviderType] = useState(providers[0][1]);
+  const [providerKey, setProviderKey] = useState<string>(providers[0][0]);
+  const [providerType, setProviderType] = useState<string>(providers[0][1]);
   const [connectorKey, setConnectorKey] = useState("");
   const [region, setRegion] = useState("");
   const [priority, setPriority] = useState("100");
