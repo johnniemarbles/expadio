@@ -5,7 +5,11 @@ import Link from "next/link";
 import styles from "./page.module.css";
 import { DomainConfigModal } from "./DomainConfigModal";
 import { TemplatePreviewModal } from "./TemplatePreviewModal";
+import { TemplateComposerModal } from "./TemplateComposerModal";
 import { ProviderModal } from "./ProviderModal";
+import { ConnectorActionsModal } from "./ConnectorActionsModal";
+import { CapacityPanel } from "./CapacityPanel";
+import { TracesPanel } from "./TracesPanel";
 import type { ConnectorListItem } from "../../api/communications/providers/route";
 import type { TemplateCatalogueItem } from "../../api/communications/templates/route";
 import type { FleetHealthItem } from "../../api/communications/fleet/route";
@@ -41,11 +45,6 @@ interface CommunicationsDashboardClientProps {
   initialProviders: ConnectorListItem[];
   templates: TemplateCatalogueItem[];
   fleet: FleetHealthItem[];
-  quota?: any;
-  spend?: any;
-  planes?: any;
-  setupState?: any;
-  traces?: any;
   queryString?: string;
 }
 
@@ -54,20 +53,17 @@ export function CommunicationsDashboardClient({
   initialProviders,
   templates,
   fleet,
-  quota,
-  spend,
-  planes,
-  setupState,
-  traces,
   queryString = "",
 }: CommunicationsDashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability" | "advanced_setup">("fleet");
+  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability" | "capacity" | "traces">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [isProviderModalOpen, setIsProviderModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isTemplateComposerOpen, setIsTemplateComposerOpen] = useState(false);
   const [selectedTriggerKey, setSelectedTriggerKey] = useState<string>("identity.verification.code");
   const [updatingConnector, setUpdatingConnector] = useState<string | null>(null);
+  const [activeConnector, setActiveConnector] = useState<ConnectorListItem | null>(null);
 
   const successRate = overview.totals.deliveries === 0
     ? null
@@ -87,38 +83,6 @@ export function CommunicationsDashboardClient({
   const platformStatus = degradedProviders.length > 0 || overview.totals.failed > 0
     ? "Attention required"
     : "Operational data live";
-
-  
-  async function handleAnalyzeImpact(connectorKey: string) {
-    try {
-      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}/blast-radius${queryString}`);
-      const data = await res.json();
-      alert("Blast Radius Analysis:\n\n" + JSON.stringify(data, null, 2));
-    } catch (e) {
-      alert("Error calculating impact");
-    }
-  }
-
-  async function handleRevoke(connectorKey: string) {
-    if (!confirm("Are you sure you want to permanently revoke this connector?")) return;
-    setUpdatingConnector(connectorKey);
-    try {
-      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}${queryString}`, {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert("Attestation:\n" + JSON.stringify(data.attestation, null, 2));
-        reloadProviders();
-      } else {
-        alert("Revoke failed: " + data.message);
-      }
-    } catch (e) {
-      alert("Error revoking connector");
-    } finally {
-      setUpdatingConnector(null);
-    }
-  }
 
   async function reloadProviders() {
     const response = await fetch(`/api/communications/providers${queryString}`);
@@ -224,20 +188,29 @@ export function CommunicationsDashboardClient({
         <button
           type="button"
           role="tab"
-          aria-selected={activeTab === "advanced_setup"}
-          className={[styles.tabItem, activeTab === "advanced_setup" ? styles.tabItemActive : ""].join(" ")}
-          onClick={() => setActiveTab("advanced_setup")}
-        >
-          Advanced Setup
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={activeTab === "deliverability"}
           className={[styles.tabItem, activeTab === "deliverability" ? styles.tabItemActive : ""].join(" ")}
           onClick={() => setActiveTab("deliverability")}
         >
           Deliverability
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "capacity"}
+          className={[styles.tabItem, activeTab === "capacity" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("capacity")}
+        >
+          Capacity &amp; spend
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "traces"}
+          className={[styles.tabItem, activeTab === "traces" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("traces")}
+        >
+          Decision traces
         </button>
       </div>
 
@@ -417,6 +390,13 @@ export function CommunicationsDashboardClient({
               <div className={styles.cardRight}>
                 <button
                   type="button"
+                  onClick={() => setIsTemplateComposerOpen(true)}
+                  className={styles.btnOutlineOrange}
+                >
+                  + New template
+                </button>
+                <button
+                  type="button"
                   onClick={() => templates[0] && handleOpenTemplate(templates[0].triggerKey)}
                   disabled={templates.length === 0}
                   className={styles.btnPillDark}
@@ -474,10 +454,13 @@ export function CommunicationsDashboardClient({
                       </td>
                       
                       <td>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button type="button" onClick={() => handleAnalyzeImpact(c.connectorKey)} style={{ fontSize: "11px", padding: "2px 6px", cursor: "pointer" }}>Impact</button>
-                          <button type="button" onClick={() => handleRevoke(c.connectorKey)} style={{ fontSize: "11px", padding: "2px 6px", cursor: "pointer", color: "red" }}>Revoke</button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveConnector(c)}
+                          style={{ fontSize: "11px", padding: "3px 10px", cursor: "pointer", borderRadius: "6px", border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700 }}
+                        >
+                          Manage
+                        </button>
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <button
@@ -572,94 +555,11 @@ export function CommunicationsDashboardClient({
         </section>
       )}
 
-      
-      {/* Tab Content: Advanced Setup */}
-      {activeTab === "advanced_setup" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <article className={styles.cardPanel}>
-              <div className={styles.cardPanelHeader}>
-                <div><h3>Spend Control</h3><p>Current period spend metrics</p></div>
-              </div>
-              <div style={{ padding: "16px" }}>
-                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(spend, null, 2)}</pre>
-              </div>
-            </article>
+      {/* Tab Content: Capacity & spend (rendered — supersedes the raw-JSON Advanced Setup tab) */}
+      {activeTab === "capacity" && <CapacityPanel queryString={queryString} />}
 
-            <article className={styles.cardPanel}>
-              <div className={styles.cardPanelHeader}>
-                <div><h3>Quota Enforcement</h3><p>Live burst limits</p></div>
-              </div>
-              <div style={{ padding: "16px" }}>
-                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(quota, null, 2)}</pre>
-              </div>
-            </article>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <article className={styles.cardPanel}>
-              <div className={styles.cardPanelHeader}>
-                <div><h3>Planes</h3><p>Data Plane & Control Plane Segregation</p></div>
-              </div>
-              <div style={{ padding: "16px" }}>
-                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(planes, null, 2)}</pre>
-              </div>
-            </article>
-
-            <article className={styles.cardPanel}>
-              <div className={styles.cardPanelHeader}>
-                <div><h3>Setup State</h3><p>Internal infrastructure status</p></div>
-              </div>
-              <div style={{ padding: "16px" }}>
-                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(setupState, null, 2)}</pre>
-              </div>
-            </article>
-          </div>
-
-          <article className={styles.cardPanel}>
-            <div className={styles.cardPanelHeader}>
-              <div><h3>Enforcement Traces</h3><p>Recent platform-level authorization decisions</p></div>
-            </div>
-            {traces && traces.length > 0 ? (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Trace ID</th>
-                      <th>Policy</th>
-                      <th>Decision</th>
-                      <th>Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {traces.map((t: any) => (
-                      <tr key={t.traceId || Math.random()}>
-                        <td><code>{t.traceId || t.id}</code></td>
-                        <td>{t.policyKey || t.policy}</td>
-                        <td>
-                          <span style={{ 
-                            color: t.decision === "ALLOW" ? "#166534" : "#991b1b",
-                            fontWeight: 700 
-                          }}>
-                            {t.decision}
-                          </span>
-                        </td>
-                        <td>{t.timestamp || t.createdAt}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div style={{ padding: "16px" }}>
-                <pre style={{ fontSize: "11px", overflow: "auto" }}>{JSON.stringify(traces, null, 2)}</pre>
-              </div>
-            )}
-          </article>
-
-        </div>
-      )}
+      {/* Tab Content: Decision traces */}
+      {activeTab === "traces" && <TracesPanel queryString={queryString} />}
 
       {/* Interactive Modals */}
       <ProviderModal
@@ -675,6 +575,20 @@ export function CommunicationsDashboardClient({
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         triggerKey={selectedTriggerKey}
+      />
+      <TemplateComposerModal
+        isOpen={isTemplateComposerOpen}
+        onClose={() => setIsTemplateComposerOpen(false)}
+        onCreated={() => window.location.reload()}
+        queryString={queryString}
+      />
+      <ConnectorActionsModal
+        isOpen={activeConnector !== null}
+        onClose={() => setActiveConnector(null)}
+        connectorKey={activeConnector?.connectorKey ?? ""}
+        ownershipScope={activeConnector?.ownershipScope ?? "TENANT"}
+        queryString={queryString}
+        onChanged={reloadProviders}
       />
     </div>
   );

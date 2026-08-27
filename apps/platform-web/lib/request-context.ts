@@ -7,16 +7,21 @@ import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
 /**
  * Design spec §0.2 G5 — un-scaffolding.
  *
- * Every communications API route currently hardcodes
+ * Communications API routes used to hardcode
  *   tenantId: '00000000-0000-0000-0000-000000000001'
  *   organizationId: '00000000-0000-0000-0000-000000000002'
  *
- * That is scaffolding presenting as wiring. It descends from BEMP's
- * `withFallback()` helper, which retried with demo tenant headers on a 403 —
- * a demo affordance that became production scaffolding by being copied.
+ * That was scaffolding presenting as wiring. Tenant selection now arrives on
+ * the `x-expadio-tenant-id` / `x-expadio-organization-id` request headers,
+ * which `proxy.ts` injects from the shell's active workspace
+ * (`?account=<tenantId>&org=<organizationId>`, with a cookie fallback).
+ * Membership is verified below, so the header is a *request* for a tenant, not
+ * proof of access.
  *
- * While those constants remain, no tenant-isolation claim is testable through
- * the HTTP surface, which is why P1 lands before anything else.
+ * The demo UUID survives only as a bootstrap default: a cold request that
+ * carries no selection at all (first load before the shell threads a
+ * workspace) resolves to it. Any real selection overrides it, and any
+ * selection the caller is not a member of is denied.
  */
 
 const DEMO_TENANT = '00000000-0000-0000-0000-000000000001';
