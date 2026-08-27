@@ -29,14 +29,17 @@ test('brand template clone route preserves source lineage and creates a draft', 
   assert.match(source, /sourceRow\.version/);
 });
 
-test('brand template clone route serializes concurrent clones and maps duplicate races to 409', async () => {
+test('brand template clone route serializes concurrent clones for the same tenant/template key', async () => {
   const source = await import('node:fs/promises').then((fs) =>
     fs.readFile(new URL(routePath, import.meta.url), 'utf8'),
   );
 
   assert.match(source, /pg_advisory_xact_lock/);
-  assert.match(source, /23505/);
-  assert.match(source, /DUPLICATE_TEMPLATE_CONSTRAINT/);
+  assert.match(source, /hashtextextended/);
+  assert.match(source, /context\.tenantId/);
+  assert.match(source, /triggerKey/);
+  assert.match(source, /channel/);
+  assert.match(source, /locale\.toLowerCase\(\)/);
 });
 
 test('brand template clone route sets tenant RLS context before database access', async () => {
