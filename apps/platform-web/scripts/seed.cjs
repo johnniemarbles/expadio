@@ -166,7 +166,22 @@ async function seed() {
       console.log(`Seeded ${proposals.length} correction proposals.`);
     }
 
-    await client.query('COMMIT');
+    
+    // 8. Seed communication templates
+    const ctRes = await client.query("SELECT template_id FROM platform.communication_templates WHERE trigger_key = 'identity.verification.code' LIMIT 1");
+    if (ctRes.rowCount === 0) {
+      await client.query(`
+        INSERT INTO platform.communication_templates 
+        (scope, tenant_id, organization_id, trigger_key, channel, locale, content_format, subject, title, body, required_variables, default_variables, status) 
+        VALUES 
+        ('PLATFORM', NULL, NULL, 'identity.verification.code', 'email', 'en', 'HTML', 'Your Verification Code', 'Sign in to Expadio', 
+        '<p>Hello!</p><p>Your verification code is <strong>{{code}}</strong>.</p><p>It will expire in 10 minutes.</p>', 
+        '["code"]', '{"code": "123456"}', 'ACTIVE')
+      `);
+      console.log('Seeded platform communication templates.');
+    }
+
+    await client.query("COMMIT");
     console.log("Database seeded successfully.");
 
   } catch (err) {
