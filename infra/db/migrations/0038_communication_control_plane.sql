@@ -38,9 +38,14 @@ create unique index if not exists communication_default_assignments_active
  where is_active;
 
 alter table platform.communication_templates
-  add column if not exists cloned_source_template_id uuid references platform.communication_templates(template_id),
+  add column if not exists cloned_source_template_id uuid,
   add column if not exists cloned_source_version integer,
   add column if not exists platform_update_available boolean not null default false;
+
+alter table platform.communication_templates
+  add constraint fk_cloned_source_template 
+  foreign key (cloned_source_template_id, cloned_source_version) 
+  references platform.communication_templates(template_id, version) on delete set null;
 
 alter table platform.communication_sending_domains enable row level security;
 alter table platform.communication_sending_domains force row level security;
