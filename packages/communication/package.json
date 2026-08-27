@@ -33,6 +33,7 @@
     "./twilio-voice-adapter": "./src/twilio-voice-adapter.ts"
   },
   "dependencies": {
-    "@expadio/provider-registry": "workspace:*"
+    "@expadio/provider-registry": "workspace:*",
+    "@expadio/credential-custody": "workspace:*"
   }
 }
