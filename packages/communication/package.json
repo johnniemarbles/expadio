@@ -35,5 +35,8 @@
   "dependencies": {
     "@expadio/provider-registry": "workspace:*",
     "@expadio/credential-custody": "workspace:*"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts"
   }
 }
