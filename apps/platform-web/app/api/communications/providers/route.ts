@@ -59,17 +59,6 @@ export async function GET() {
       [effectiveContext.tenantId]
     );
 
-    if (result.rows.length === 0) {
-      // Return seed fallback providers when no connectors have been registered yet
-      const fallback: ConnectorListItem[] = [
-        { connectorKey: 'conn-resend', providerType: 'email', providerKey: 'resend', ownershipScope: 'PLATFORM', health: 'UNKNOWN', enabled: false, capabilityKeys: ['email-delivery'], hasCredential: false },
-        { connectorKey: 'conn-twilio-sms', providerType: 'sms', providerKey: 'twilio', ownershipScope: 'PLATFORM', health: 'UNKNOWN', enabled: false, capabilityKeys: ['sms-delivery'], hasCredential: false },
-        { connectorKey: 'conn-twilio-whatsapp', providerType: 'whatsapp', providerKey: 'twilio', ownershipScope: 'PLATFORM', health: 'UNKNOWN', enabled: false, capabilityKeys: ['whatsapp-delivery'], hasCredential: false },
-        { connectorKey: 'conn-twilio-voice', providerType: 'voice', providerKey: 'twilio', ownershipScope: 'PLATFORM', health: 'UNKNOWN', enabled: false, capabilityKeys: ['voice-delivery'], hasCredential: false },
-      ];
-      return NextResponse.json(fallback);
-    }
-
     const connectors: ConnectorListItem[] = result.rows.map((row: any) => ({
       connectorKey: row.connector_key,
       providerType: row.provider_type,
