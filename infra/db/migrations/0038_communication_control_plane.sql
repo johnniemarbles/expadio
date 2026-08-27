@@ -20,8 +20,8 @@ create unique index if not exists communication_sending_domains_scope_domain
 create table if not exists platform.communication_default_assignments (
   id uuid primary key default gen_random_uuid(),
   scope text not null check (scope in ('PLATFORM','TENANT','ORGANIZATION')),
-  tenant_id uuid references platform.tenants(id),
-  organization_id uuid references platform.organizations(id),
+  tenant_id uuid references platform.tenants(tenant_id),
+  organization_id uuid,
   channel text not null check (channel in ('EMAIL','SMS','WHATSAPP','VOICE','PUSH')),
   connector_id uuid references platform.connectors(connector_id),
   sending_domain_id uuid references platform.communication_sending_domains(id),
