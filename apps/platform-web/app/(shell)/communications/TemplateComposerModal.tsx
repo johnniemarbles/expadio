@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiError } from "../../../lib/api-error";
 
 /**
  * Governed platform template creation (design §6, restored POST /templates).
@@ -53,10 +54,7 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        if (data.reasonKey === "FORBIDDEN") throw new Error("Platform template administration is required to author templates.");
-        throw new Error(data.error || data.message || "Template creation failed.");
-      }
+      if (!res.ok) throw new Error(apiError(data, "Template creation failed."));
       onCreated();
       onClose();
     } catch (cause) {
