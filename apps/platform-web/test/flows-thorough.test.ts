@@ -51,6 +51,19 @@ test("domain auto-configure is honest — PENDING, real records, no fabricated s
   assert.doesNotMatch(cloudflareRoute, /successfully provisioned/);
 });
 
+test("auto-configure really talks to Cloudflare: token, zone discovery, idempotent upsert", () => {
+  const cf = read("../lib/cloudflare.ts");
+  // Token accepted from the UI as well as the deployment env.
+  assert.match(cloudflareRoute, /body\.apiToken/);
+  assert.match(cloudflareRoute, /findZone/);
+  assert.match(cloudflareRoute, /upsertRecord/);
+  // Zone is discovered from the domain, and records are upserted (create OR update).
+  assert.match(cf, /\/zones\?name=/);
+  assert.match(cf, /method: "PUT"/);
+  assert.match(cf, /method: "POST"/);
+  assert.match(cf, /api\.cloudflare\.com/);
+});
+
 test("domain verification resolves real DNS and retirement is soft", () => {
   assert.match(verifyRoute, /node:dns/);
   assert.match(verifyRoute, /resolveTxt|resolveMx/);

@@ -22,6 +22,11 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [verifyResults, setVerifyResults] = useState<Record<string, VerifyCheck[]>>({});
+  const [apiToken, setApiToken] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+  const domainValid = DOMAIN_RE.test(domain.trim().toLowerCase());
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/communications/domains${window.location.search}`);
@@ -38,13 +43,14 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
   if (!isOpen) return null;
 
   async function handleAutoConfigure() {
+    if (!domainValid) { setError("Enter a valid domain such as mail.example.com."); return; }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/communications/domains/cloudflare${window.location.search}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain }),
+        body: JSON.stringify({ domain: domain.trim().toLowerCase(), apiToken: apiToken.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Failed to configure DNS records"));
@@ -54,6 +60,27 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAddManual() {
+    if (!domainValid) { setError("Enter a valid domain such as mail.example.com."); return; }
+    setAdding(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/communications/domains${window.location.search}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: domain.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not add the domain"));
+      setLastProvisionResult({ message: `Added ${domain.trim().toLowerCase()} as PENDING. Add the DNS records below, then Verify.` });
+      await reload();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -166,34 +193,49 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
             gap: "14px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            <label style={{ fontSize: "13px", fontWeight: 700, color: "#9a3412" }}>
-              Domain Name:
+          <div style={{ display: "grid", gap: "10px" }}>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "#9a3412", display: "grid", gap: "4px" }}>
+              Sending domain
+              <input
+                type="text"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="e.g. mail.yourbrand.com"
+                style={{ padding: "8px 12px", border: `1px solid ${domain && !domainValid ? "#f87171" : "#fdba74"}`, borderRadius: "8px", fontSize: "13px", outline: "none", background: "white" }}
+              />
+              {domain && !domainValid && <span style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 500 }}>Enter a valid domain such as mail.example.com.</span>}
             </label>
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="e.g. yourbrand.com"
-              style={{
-                flex: "1 1 200px",
-                padding: "8px 12px",
-                border: "1px solid #fdba74",
-                borderRadius: "8px",
-                fontSize: "13px",
-                outline: "none",
-                background: "white",
-              }}
-            />
-            <button
-              type="button"
-              onClick={handleAutoConfigure}
-              disabled={loading}
-              className={styles.btnOutlineOrange}
-              style={{ padding: "8px 18px", cursor: loading ? "not-allowed" : "pointer" }}
-            >
-              {loading ? "Provisioning DNS..." : "⚡ Auto-Configure with Cloudflare"}
-            </button>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "#9a3412", display: "grid", gap: "4px" }}>
+              Cloudflare API token <span style={{ fontWeight: 500, color: "#9a3412aa" }}>(optional if the deployment has one)</span>
+              <input
+                type="password"
+                value={apiToken}
+                onChange={(e) => setApiToken(e.target.value)}
+                placeholder="Token with Zone · DNS · Edit for this domain"
+                autoComplete="off"
+                style={{ padding: "8px 12px", border: "1px solid #fdba74", borderRadius: "8px", fontSize: "13px", outline: "none", background: "white" }}
+              />
+              <span style={{ fontSize: "11px", color: "#9a3412aa", fontWeight: 500 }}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
+            </label>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={handleAutoConfigure}
+                disabled={loading || adding || !domainValid}
+                className={styles.btnOutlineOrange}
+                style={{ padding: "8px 18px", cursor: loading || !domainValid ? "not-allowed" : "pointer" }}
+              >
+                {loading ? "Provisioning DNS…" : "⚡ Auto-Configure with Cloudflare"}
+              </button>
+              <button
+                type="button"
+                onClick={handleAddManual}
+                disabled={loading || adding || !domainValid}
+                style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid #cbd5e1", background: "white", cursor: adding || !domainValid ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 700 }}
+              >
+                {adding ? "Adding…" : "Add without Cloudflare"}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -205,6 +247,15 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           {lastProvisionResult && (
             <div style={{ fontSize: "13px", color: "#15803d", background: "#f0fdf4", padding: "10px", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
               ✅ {lastProvisionResult.message}
+              {Array.isArray(lastProvisionResult.cloudflare) && lastProvisionResult.cloudflare.length > 0 && (
+                <div style={{ marginTop: "6px", display: "grid", gap: "2px" }}>
+                  {lastProvisionResult.cloudflare.map((r: any, i: number) => (
+                    <div key={i} style={{ fontSize: "11px", color: r.ok ? "#15803d" : "#b91c1c", fontFamily: "monospace" }}>
+                      {r.ok ? "✓" : "✗"} {r.name} — {r.action ?? r.detail}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
