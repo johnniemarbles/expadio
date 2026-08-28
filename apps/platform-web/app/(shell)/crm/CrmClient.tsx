@@ -4,11 +4,21 @@ import { useState } from "react";
 import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
 import type { CrmCase, CaseStatus } from "@expadio/case";
+import type { CrmAgreement, AgreementStatus } from "@expadio/agreement";
 import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
 type LeadRow = CrmLead & { accountName: string | null };
 type CaseRow = CrmCase & { accountName: string | null };
+type AgreementRow = CrmAgreement & { accountName: string | null };
+
+const AGREEMENT_STATUSES: AgreementStatus[] = ["DRAFT", "ACTIVE", "EXPIRED", "CANCELLED"];
+const AGREEMENT_TONE: Record<string, { fg: string; bg: string }> = {
+  DRAFT: { fg: "#475569", bg: "#f1f5f9" },
+  ACTIVE: { fg: "#166534", bg: "#dcfce7" },
+  EXPIRED: { fg: "#925b0b", bg: "#fef3c7" },
+  CANCELLED: { fg: "#991b1b", bg: "#fee2e2" },
+};
 
 const CASE_STATUSES: CaseStatus[] = ["OPEN", "PENDING", "RESOLVED", "CLOSED"];
 const CASE_PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
@@ -48,6 +58,7 @@ interface CrmClientProps {
   initialContacts: ContactRow[];
   initialLeads: LeadRow[];
   initialCases: CaseRow[];
+  initialAgreements: AgreementRow[];
   queryString?: string;
 }
 
@@ -55,20 +66,24 @@ const inp: React.CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
 };
 
-export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, queryString = "" }: CrmClientProps) {
-  const [tab, setTab] = useState<"accounts" | "contacts" | "leads" | "cases">("accounts");
+export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, queryString = "" }: CrmClientProps) {
+  const [tab, setTab] = useState<"accounts" | "contacts" | "leads" | "cases" | "agreements">("accounts");
   const [accounts, setAccounts] = useState<CrmAccount[]>(initialAccounts);
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
   const [leads, setLeads] = useState<LeadRow[]>(initialLeads);
   const [cases, setCases] = useState<CaseRow[]>(initialCases);
+  const [agreements, setAgreements] = useState<AgreementRow[]>(initialAgreements);
   const [showAccount, setShowAccount] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showLead, setShowLead] = useState(false);
   const [showCase, setShowCase] = useState(false);
+  const [showAgreement, setShowAgreement] = useState(false);
   const [leadError, setLeadError] = useState<string | null>(null);
   const [movingLead, setMovingLead] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [movingCase, setMovingCase] = useState<string | null>(null);
+  const [agreementError, setAgreementError] = useState<string | null>(null);
+  const [movingAgreement, setMovingAgreement] = useState<string | null>(null);
   const [convertTarget, setConvertTarget] = useState<LeadRow | null>(null);
 
   async function reloadAccounts() {
@@ -111,6 +126,26 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
     reloadAccounts(); reloadLeads(); reloadCases();
     setTab(openedCase ? "cases" : "accounts");
   }
+
+  async function reloadAgreements() {
+    const res = await fetch(`/api/crm/agreements${queryString}`);
+    if (res.ok) { const d = await res.json(); if (Array.isArray(d)) setAgreements(d); }
+  }
+  async function moveAgreement(agreementId: string, status: AgreementStatus) {
+    setMovingAgreement(agreementId); setAgreementError(null);
+    try {
+      const res = await fetch(`/api/crm/agreements/${encodeURIComponent(agreementId)}${queryString}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not update the agreement."));
+      setAgreements((prev) => prev.map((g) => (g.agreementId === agreementId ? { ...g, status } : g)));
+    } catch (cause) {
+      setAgreementError(cause instanceof Error ? cause.message : "Could not update the agreement.");
+    } finally {
+      setMovingAgreement(null);
+    }
+  }
   async function moveCase(caseId: string, status: CaseStatus) {
     setMovingCase(caseId); setCaseError(null);
     try {
@@ -130,7 +165,8 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const openCases = cases.filter((c) => c.status === "OPEN" || c.status === "PENDING").length;
   const openPipelineMinor = leads.filter((l) => l.stage !== "WON" && l.stage !== "LOST").reduce((s, l) => s + (l.amountMinorUnits ?? 0), 0);
   const wonMinor = leads.filter((l) => l.stage === "WON").reduce((s, l) => s + (l.amountMinorUnits ?? 0), 0);
-  const pipeCurrency = leads[0]?.currency ?? "USD";
+  const pipeCurrency = leads[0]?.currency ?? agreements[0]?.currency ?? "USD";
+  const activeContractMinor = agreements.filter((g) => g.status === "ACTIVE").reduce((s, g) => s + (g.valueMinorUnits ?? 0), 0);
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -145,20 +181,22 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New contact</button>
           <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New lead</button>
           <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New case</button>
+          <button type="button" onClick={() => setShowAgreement(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New agreement</button>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
         <Stat label="Accounts" value={accounts.length} />
         <Stat label="Open pipeline" value={money(openPipelineMinor, pipeCurrency)} />
         <Stat label="Won" value={money(wonMinor, pipeCurrency)} />
         <Stat label="Open cases" value={openCases} />
+        <Stat label="Active contracts" value={money(activeContractMinor, pipeCurrency)} />
       </div>
 
       <div style={{ display: "flex", gap: 6, borderBottom: "1px solid var(--line, #e2e8f0)" }}>
-        {(["accounts", "contacts", "leads", "cases"] as const).map((t) => (
+        {(["accounts", "contacts", "leads", "cases", "agreements"] as const).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} style={{ padding: "8px 14px", border: 0, background: "transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: tab === t ? "var(--brand, #4f46e5)" : "var(--ink-500, #64748b)", borderBottom: tab === t ? "2px solid var(--brand, #4f46e5)" : "2px solid transparent" }}>
-            {t === "accounts" ? "Accounts" : t === "contacts" ? "Contacts" : t === "leads" ? "Leads" : "Cases"}
+            {t === "accounts" ? "Accounts" : t === "contacts" ? "Contacts" : t === "leads" ? "Leads" : t === "cases" ? "Cases" : "Agreements"}
           </button>
         ))}
       </div>
@@ -247,7 +285,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
             <Empty title="No leads yet" desc="Create a lead to start tracking the pipeline. Move it through stages as it progresses." />
           )}
         </Panel>
-      ) : (
+      ) : tab === "cases" ? (
         <Panel>
           {caseError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
           {cases.length > 0 ? (
@@ -278,6 +316,40 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
             </Table>
           ) : (
             <Empty title="No cases yet" desc="Open a case to track a unit of work. Link it to the workflow blueprint that will govern it." />
+          )}
+        </Panel>
+      ) : (
+        <Panel>
+          {agreementError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {agreementError}</div>}
+          {agreements.length > 0 ? (
+            <Table head={["Agreement", "Account", "Value", "Term", "Status", ""]}>
+              {agreements.map((g) => {
+                const tone = AGREEMENT_TONE[g.status] ?? AGREEMENT_TONE.DRAFT;
+                const term = g.startsOn || g.endsOn ? `${g.startsOn ?? "…"} → ${g.endsOn ?? "…"}` : "—";
+                return (
+                  <tr key={g.agreementId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                    <td style={td}><strong>{g.title}</strong></td>
+                    <td style={td}>{g.accountName ?? "—"}</td>
+                    <td style={td}>{money(g.valueMinorUnits, g.currency)}</td>
+                    <td style={td}>{term}</td>
+                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{g.status}</span></td>
+                    <td style={{ ...td, textAlign: "right" }}>
+                      <select
+                        value={g.status}
+                        disabled={movingAgreement === g.agreementId}
+                        onChange={(e) => moveAgreement(g.agreementId, e.target.value as AgreementStatus)}
+                        aria-label={`Update ${g.title}`}
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)" }}
+                      >
+                        {AGREEMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </Table>
+          ) : (
+            <Empty title="No agreements yet" desc="Sign a customer to a contract or subscription. Convert a won lead, or add one directly against an account." />
           )}
         </Panel>
       )}
@@ -319,6 +391,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           queryString={queryString}
           onClose={() => setConvertTarget(null)}
           onConverted={onConverted}
+        />
+      )}
+      {showAgreement && (
+        <AgreementModal
+          accounts={accounts}
+          queryString={queryString}
+          onClose={() => setShowAgreement(false)}
+          onCreated={() => { setShowAgreement(false); reloadAgreements(); }}
         />
       )}
     </div>
@@ -505,6 +585,65 @@ function LeadModal({ accounts, queryString, onClose, onCreated }: { accounts: Cr
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create lead"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function AgreementModal({ accounts, queryString, onClose, onCreated }: { accounts: CrmAccount[]; queryString: string; onClose: () => void; onCreated: () => void }) {
+  const [accountId, setAccountId] = useState("");
+  const [title, setTitle] = useState("");
+  const [value, setValue] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [status, setStatus] = useState<string>("DRAFT");
+  const [startsOn, setStartsOn] = useState("");
+  const [endsOn, setEndsOn] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true); setError(null);
+    try {
+      if (!accountId) throw new Error("Choose the customer account this agreement is with.");
+      const trimmed = value.trim();
+      const valueMinorUnits = trimmed === "" ? undefined : Math.round(Number(trimmed) * 100);
+      if (valueMinorUnits !== undefined && (!Number.isInteger(valueMinorUnits) || valueMinorUnits < 0)) {
+        throw new Error("Enter a non-negative value, or leave it blank.");
+      }
+      const res = await fetch(`/api/crm/agreements${queryString}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId, title, valueMinorUnits, currency, status, startsOn: startsOn || undefined, endsOn: endsOn || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not create the agreement."));
+      onCreated();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not create the agreement.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="New agreement" onClose={onClose}>
+      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account<select required value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— choose a customer —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Title<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Annual subscription" style={inp} /></label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr", gap: 10 }}>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Value<input value={value} onChange={(e) => setValue(e.target.value)} placeholder="120000" inputMode="decimal" style={inp} /></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Currency<input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} style={inp} /></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Status<select value={status} onChange={(e) => setStatus(e.target.value)} style={inp}>{AGREEMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Starts<input type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} style={inp} /></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Ends<input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} style={inp} /></label>
+        </div>
+        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create agreement"}</button>
         </div>
       </form>
     </Modal>

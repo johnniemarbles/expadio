@@ -42,6 +42,7 @@
       "@expadio/party": ["packages/party/src/index.ts"],
       "@expadio/lead": ["packages/lead/src/index.ts"],
       "@expadio/case": ["packages/case/src/index.ts"],
+      "@expadio/agreement": ["packages/agreement/src/index.ts"],
       "@expadio/ui": ["packages/ui/src/index.ts"],
       "@expadio/ui/tokens": ["packages/ui/src/tokens/index.css"],
       "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]

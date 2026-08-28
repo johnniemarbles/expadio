@@ -25,7 +25,8 @@
     "@expadio/credential-custody": "workspace:*",
     "@expadio/party": "workspace:*",
     "@expadio/lead": "workspace:*",
-    "@expadio/case": "workspace:*"
+    "@expadio/case": "workspace:*",
+    "@expadio/agreement": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
