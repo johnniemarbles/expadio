@@ -65,6 +65,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   const [secret, setSecret] = useState("");
   const [accountSid, setAccountSid] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [accessKeyId, setAccessKeyId] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [fromNumber, setFromNumber] = useState("");
 
@@ -82,7 +83,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   if (!isOpen) return null;
 
   function reset() {
-    setSecret(""); setAccountSid(""); setApiKey(""); setFromAddress(""); setFromNumber("");
+    setSecret(""); setAccountSid(""); setApiKey(""); setAccessKeyId(""); setFromAddress(""); setFromNumber("");
     setStatus(null); setError(null); setWarnings([]);
   }
 
@@ -121,6 +122,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     const parameters: Record<string, string> = {};
     if (accountSid.trim()) parameters.accountSid = accountSid.trim();
     if (apiKey.trim()) parameters.apiKey = apiKey.trim();
+    if (accessKeyId.trim()) parameters.accessKeyId = accessKeyId.trim();
     if (region.trim()) parameters.region = region.trim();
     if (fromAddress.trim()) parameters.fromAddress = fromAddress.trim();
     if (fromNumber.trim()) parameters.fromNumber = fromNumber.trim();
@@ -228,8 +230,13 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
                 <input value={accountSid} onChange={(e) => setAccountSid(e.target.value)} placeholder="ACxxxxxxxx" style={field} />
               </label>
             )}
-            {(custodyBase === "ses" || custodyBase === "mailgun" || custodyBase === "sendgrid") && (
-              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>API key / access key id
+            {custodyBase === "ses" && (
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Access key ID
+                <input value={accessKeyId} onChange={(e) => setAccessKeyId(e.target.value)} placeholder="AKIA…" style={field} />
+              </label>
+            )}
+            {custodyBase === "vonage" && (
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>API key
                 <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={field} />
               </label>
             )}
