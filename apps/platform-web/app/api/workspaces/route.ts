@@ -66,6 +66,7 @@ export async function GET(request: Request) {
       { id: 'ws_live_vendors', label: 'Vendor Onboarding', short: 'VO', href: '/vendors' },
       { id: 'ws_live_expenses', label: 'Expense Reimbursement', short: 'EX', href: '/expenses' },
       { id: 'ws_live_authority', label: 'Approval Authority', short: 'AA', href: '/authority' },
+      { id: 'ws_live_gov_decisions', label: 'Governed Decisions', short: 'GD', href: '/governance/decisions' },
       { id: 'ws_live_auth_inspector', label: 'Auth Inspector', short: 'AI', href: '/governance/authorization' },
       { id: 'ws_live_config_manager', label: 'Config Manager', short: 'CM', href: '/configuration' },
       { id: 'ws_live_credentials', label: 'Credentials & Secrets', short: 'CS', href: '/configuration/credentials' },
