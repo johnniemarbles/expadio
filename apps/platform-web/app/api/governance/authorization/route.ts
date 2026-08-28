@@ -25,21 +25,28 @@ export async function GET(request: Request) {
 
     const hasAssignments = assignments.rows.length > 0;
     const hasRestrictions = restrictions.rows.length > 0;
-    const clearances = hasAssignments ? assignments.rows[0].clearances : [];
+    // clearances is a nullable text[] column; guard against null and treat all
+    // active assignment rows, not just the first (a role may grant clearance on
+    // any of them).
+    const clearances: string[] = assignments.rows.flatMap((r) => (Array.isArray(r.clearances) ? r.clearances : []));
 
+    const stages = [
+      { name: 'TENANT', status: 'PASS', detail: 'Resource belongs to effective tenant' },
+      { name: 'CAPABILITY', status: hasAssignments ? 'PASS' : 'FAIL', detail: hasAssignments ? `Actor has active role assignments (${assignments.rows.length})` : 'No active assignments' },
+      { name: 'ENTITLEMENT', status: 'PASS', detail: 'Required entitlement flags are active' },
+      { name: 'SCOPE', status: 'PASS', detail: 'In-scope for organization and operating unit' },
+      { name: 'RESOURCE_STATE', status: 'PASS', detail: 'Resource is in allowed state' },
+      { name: 'CLASSIFICATION', status: clearances.includes('sensitive') ? 'PASS' : 'FAIL', detail: `Actor clearances: [${clearances.join(', ')}] vs Data classification: sensitive` },
+      { name: 'RELATIONSHIP', status: 'SKIPPED', detail: 'No relationship markers required' },
+      { name: 'RESTRICTION', status: hasRestrictions ? 'FAIL' : 'PASS', detail: hasRestrictions ? `Subject has active restrictions (${restrictions.rows[0].reason})` : 'No active restrictions' },
+      { name: 'SOD', status: 'SKIPPED', detail: 'Segregation of Duties not evaluated' }
+    ];
+
+    // Access is granted only when no evaluated gate fails; the summary decision
+    // must never contradict the stages it is derived from.
     const dynamicTrace = {
-      decision: hasAssignments && !hasRestrictions ? 'GRANTED' : 'DENIED',
-      stages: [
-        { name: 'TENANT', status: 'PASS', detail: 'Resource belongs to effective tenant' },
-        { name: 'CAPABILITY', status: hasAssignments ? 'PASS' : 'FAIL', detail: hasAssignments ? `Actor has active role assignments (${assignments.rows.length})` : 'No active assignments' },
-        { name: 'ENTITLEMENT', status: 'PASS', detail: 'Required entitlement flags are active' },
-        { name: 'SCOPE', status: 'PASS', detail: 'In-scope for organization and operating unit' },
-        { name: 'RESOURCE_STATE', status: 'PASS', detail: 'Resource is in allowed state' },
-        { name: 'CLASSIFICATION', status: clearances.includes('sensitive') ? 'PASS' : 'FAIL', detail: `Actor clearances: [${clearances.join(', ')}] vs Data classification: sensitive` },
-        { name: 'RELATIONSHIP', status: 'SKIPPED', detail: 'No relationship markers required' },
-        { name: 'RESTRICTION', status: hasRestrictions ? 'FAIL' : 'PASS', detail: hasRestrictions ? `Subject has active restrictions (${restrictions.rows[0].reason})` : 'No active restrictions' },
-        { name: 'SOD', status: 'SKIPPED', detail: 'Segregation of Duties not evaluated' }
-      ]
+      decision: stages.some((s) => s.status === 'FAIL') ? 'DENIED' : 'GRANTED',
+      stages,
     };
     return NextResponse.json(dynamicTrace);
   } catch (error: any) {
