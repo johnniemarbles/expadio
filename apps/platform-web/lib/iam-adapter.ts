@@ -2,6 +2,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 import type { IdentityVerifier, VerifiedIdentity, IdentityVerificationRequest } from '@expadio/iam';
 import pg from 'pg';
 import { PostgresMembershipRepository } from '@expadio/postgres-runtime';
+import { shouldGrantPlatformAdmin } from './admin-grant.ts';
 
 export class ClerkIdentityVerifier implements IdentityVerifier {
   async verify(request: IdentityVerificationRequest): Promise<VerifiedIdentity> {
@@ -76,18 +77,22 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
       }
     }
 
-    // Demo bootstrap (mirrors the membership auto-provision above): this app IS
-    // the platform-administration console, so a provisioned operator is granted
-    // the PLATFORM_SUPER_ADMIN role that governed flows — platform template
-    // authoring, publication — require. In production this is replaced by real
-    // role assignment; here it keeps the console usable end to end. Idempotent
-    // and cached per process so it costs one grant per operator per pod.
+    // Admin role grant, now gated rather than unconditional (was: every logged-in
+    // operator silently became PLATFORM_SUPER_ADMIN). Governance:
+    //   - PLATFORM_ADMIN_SUBJECTS: an explicit allowlist of subject ids that get
+    //     the platform-admin + tenant-owner grant. This is the production path.
+    //   - DEMO_OPEN_ADMIN (default "true"): when true, any provisioned operator
+    //     is granted, keeping the single-tenant demo console usable end to end.
+    //     Set DEMO_OPEN_ADMIN=false in production to require the allowlist.
+    // Idempotent and cached per process so the decision runs once per operator.
     if (identity.subjectId && list.length > 0 && !this.grantedSubjects.has(identity.subjectId)) {
-      try {
-        await this.ensurePlatformAdmin(identity.subjectId);
-        this.grantedSubjects.add(identity.subjectId);
-      } catch (err) {
-        console.error('Error ensuring platform-admin role:', err);
+      this.grantedSubjects.add(identity.subjectId);
+      if (shouldGrantPlatformAdmin(identity.subjectId)) {
+        try {
+          await this.ensurePlatformAdmin(identity.subjectId);
+        } catch (err) {
+          console.error('Error ensuring platform-admin role:', err);
+        }
       }
     }
 
