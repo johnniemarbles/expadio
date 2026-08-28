@@ -562,7 +562,7 @@ function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide, onTra
           disabled={busy}
           onChange={(e) => { if (e.target.value) onDecide(e.target.value); }}
           aria-label={`Record decision for ${c.subject}`}
-          title="This stage is gated — record a decision to unlock advancing"
+          title="This stage is gated — record a decision to unlock advancing. Four-eyes: whoever advanced the case into this stage cannot approve it."
           style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #c2410c", color: "#c2410c", fontWeight: 700 }}
         >
           <option value="">Decide…</option>

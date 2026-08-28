@@ -8,12 +8,13 @@ import {
   commitWorkflowStageTransition,
   WorkflowTransitionError,
   WorkflowStageDecisionGateEvaluator,
+  AuthorityGatedWorkflowDecisionCaptureService,
   type WorkflowInstance,
   type WorkflowTransitionIntent,
   type InstantiatedWorkflowBlueprint,
   type WorkflowGateBlocker,
-  type WorkflowStageDecisionCommitResult,
 } from '@expadio/workflow';
+import { SeparationOfDutiesAuthorityProvider } from './workflow-authority';
 
 /**
  * The Decision Fabric transition runtime, wired for application routes.
@@ -226,12 +227,31 @@ export async function loadCaseWorkflowHistory(
 
 export type RecordDecisionResult =
   | { readonly ok: true; readonly status: 'COMMITTED' | 'ALREADY_RECORDED'; readonly outcome: string }
-  | { readonly ok: false; readonly reason: 'CONFLICT'; readonly existingOutcome: string };
+  | { readonly ok: false; readonly reason: 'CONFLICT'; readonly existingOutcome: string }
+  | { readonly ok: false; readonly reason: 'AUTHORITY_DENIED'; readonly code: string; readonly message: string };
+
+/** The subject who advanced the instance into a given stage (its maker), if any. */
+export async function makerForStage(
+  client: PoolClient,
+  input: { readonly tenantId: string; readonly instanceId: string; readonly stageKey: string },
+): Promise<string | null> {
+  const result = await client.query(
+    `SELECT transitioned_by_subject_id
+       FROM platform.workflow_instance_transitions
+      WHERE tenant_id = $1::uuid AND instance_id = $2::uuid AND to_stage_key = $3
+      ORDER BY revision DESC
+      LIMIT 1`,
+    [input.tenantId, input.instanceId, input.stageKey],
+  );
+  return result.rows[0]?.transitioned_by_subject_id ?? null;
+}
 
 /**
- * Record an immutable decision against a workflow stage. One decision per
- * tenant/instance/stage; an exact retry is idempotent, a different decision for
- * the same stage is a conflict (never an overwrite — the table is append-only).
+ * Record an immutable decision against a workflow stage, through the authority
+ * gate. Separation of duties is enforced first: the approver must not be the
+ * maker who advanced the case into the stage. A denied approval never reaches
+ * the immutable table. One decision per stage; an exact retry is idempotent, a
+ * different decision is a conflict (never an overwrite).
  */
 export async function recordCaseDecision(
   client: PoolClient,
@@ -241,22 +261,32 @@ export async function recordCaseDecision(
     readonly workTypeKey: string;
     readonly stageKey: string;
     readonly outcome: string;
-    readonly decidedBySubjectId: string;
+    readonly approverSubjectId: string;
+    readonly makerSubjectId: string | null;
   },
 ): Promise<RecordDecisionResult> {
-  const repo = new PostgresWorkflowStageDecisionRepository(client);
-  const result: WorkflowStageDecisionCommitResult = await repo.record({
+  const service = new AuthorityGatedWorkflowDecisionCaptureService(
+    new SeparationOfDutiesAuthorityProvider(),
+    new PostgresWorkflowStageDecisionRepository(client),
+  );
+  const result = await service.capture({
     tenantId: input.tenantId,
     instanceId: input.instanceId,
     workTypeKey: input.workTypeKey,
     stageKey: input.stageKey,
     decisionId: randomUUID(),
     outcome: input.outcome,
-    decidedBySubjectId: input.decidedBySubjectId,
+    requestedBySubjectId: input.makerSubjectId ?? '',
+    approverSubjectId: input.approverSubjectId,
+    authorityRequirements: [],
     decidedAt: new Date().toISOString(),
     code: 'crm.case.decision',
     evidenceRefs: [],
   });
+
+  if (result.status === 'AUTHORITY_DENIED') {
+    return { ok: false, reason: 'AUTHORITY_DENIED', code: result.code, message: result.reason };
+  }
   if (result.status === 'CONFLICT') {
     return { ok: false, reason: 'CONFLICT', existingOutcome: result.existing.outcome ?? '' };
   }
