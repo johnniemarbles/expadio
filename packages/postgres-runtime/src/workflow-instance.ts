@@ -34,6 +34,17 @@ const SELECT_COLUMNS = `instance_id, tenant_id, work_type_key, subject_type, sub
   revision, created_at, started_at, completed_at, updated_at`;
 
 /**
+ * The same columns qualified with the UPDATE alias, whitespace-normalized.
+ * SELECT_COLUMNS spans lines (its separators are ",\n  ", not ", "), so a naive
+ * `replaceAll(', ', ', wi.')` leaves the first column of each wrapped line
+ * unqualified — which makes `revision` ambiguous against current_row.revision in
+ * the commit CTE. Split on commas and qualify every column instead.
+ */
+const WI_QUALIFIED_COLUMNS = SELECT_COLUMNS.split(',')
+  .map((column) => `wi.${column.trim()}`)
+  .join(', ');
+
+/**
  * PostgreSQL implementation of the neutral workflow-instance persistence port.
  * The supplied client must already be operating with the effective tenant RLS
  * context bound for the current request/work unit.
@@ -109,7 +120,7 @@ export class PostgresWorkflowInstanceRepository implements WorkflowInstanceRepos
           WHERE wi.instance_id = current_row.instance_id
             AND wi.tenant_id = current_row.tenant_id
             AND current_row.revision = $3
-         RETURNING wi.${SELECT_COLUMNS.replaceAll(', ', ', wi.')}
+         RETURNING ${WI_QUALIFIED_COLUMNS}
        ), appended AS (
          INSERT INTO platform.workflow_instance_transitions (
            instance_id, tenant_id, from_stage_key, to_stage_key,
