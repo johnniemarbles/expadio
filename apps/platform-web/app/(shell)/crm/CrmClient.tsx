@@ -177,6 +177,20 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       setMovingAgreement(null);
     }
   }
+  async function linkCaseAccount(caseId: string, accountId: string) {
+    setCaseError(null);
+    try {
+      const res = await fetch(`/api/crm/cases/${encodeURIComponent(caseId)}${queryString}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not link the account."));
+      const name = accounts.find((a) => a.accountId === accountId)?.name ?? null;
+      setCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, accountId, accountName: name } : c)));
+    } catch (cause) {
+      setCaseError(cause instanceof Error ? cause.message : "Could not link the account.");
+    }
+  }
   async function moveCase(caseId: string, status: CaseStatus) {
     setMovingCase(caseId); setCaseError(null);
     try {
@@ -416,7 +430,20 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                 return (
                   <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
                     <td style={td}><strong>{c.subject}</strong></td>
-                    <td style={td}>{c.accountName ?? "—"}</td>
+                    <td style={td}>
+                      {c.accountName ? c.accountName : (
+                        <select
+                          value=""
+                          onChange={(e) => { if (e.target.value) linkCaseAccount(c.caseId, e.target.value); }}
+                          aria-label={`Link an account to ${c.subject}`}
+                          title="Link this case to an account (required before it can be resolved)"
+                          style={{ fontSize: 12, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)", color: "var(--ink-500, #64748b)" }}
+                        >
+                          <option value="">Link account…</option>
+                          {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}
+                        </select>
+                      )}
+                    </td>
                     <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
                     <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onAssign={(stageKey, pk) => assignMe(c.caseId, stageKey, pk)} onTrace={() => setTraceCase(c)} /></td>

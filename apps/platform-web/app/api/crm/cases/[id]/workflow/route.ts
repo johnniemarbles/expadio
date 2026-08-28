@@ -227,13 +227,21 @@ export async function PATCH(
     }
     if ('gateBlocked' in result) {
       const blockers = result.blockers ?? [];
+      const condition = blockers.find((b) => b.kind === 'ENTRY_CONDITION' || b.kind === 'EXIT_CONDITION');
       const participant = blockers.find((b) => b.kind === 'PARTICIPANT' || b.kind === 'ASSIGNMENT');
       const needsDecision = blockers.some((b) => b.code === 'WORKFLOW_DECISION_REQUIRED');
-      const error = participant
-        ? `This stage needs its "${participant.key ?? 'required'}" participant assigned before it can be entered.`
-        : needsDecision
-          ? 'This stage requires a recorded decision before it can advance.'
-          : 'A workflow gate is blocking this transition.';
+      const conditionMessages: Record<string, string> = {
+        CASE_ACCOUNT_MISSING: 'Link the case to an account before it can be resolved.',
+        CASE_DESCRIPTION_MISSING: 'Add a description to the case before it can leave this stage.',
+        WORKFLOW_CONDITION_UNKNOWN: 'A blueprint condition on this stage could not be evaluated.',
+      };
+      const error = condition
+        ? (conditionMessages[condition.code] ?? `A "${condition.key ?? 'stage'}" condition is not met.`)
+        : participant
+          ? `This stage needs its "${participant.key ?? 'required'}" participant assigned before it can be entered.`
+          : needsDecision
+            ? 'This stage requires a recorded decision before it can advance.'
+            : 'A workflow gate is blocking this transition.';
       return NextResponse.json({ error, code: blockers[0]?.code, blockers }, { status: 422 });
     }
     if ('failed' in result) {

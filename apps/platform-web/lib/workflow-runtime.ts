@@ -18,6 +18,7 @@ import {
 import { RoleAndSeparationOfDutiesAuthorityProvider } from './workflow-authority';
 import { resolveGoverningRole } from './crm-authz';
 import { PostgresParticipantAssignmentProvider, listAssignments, type AssignmentSummary } from './workflow-participants';
+import { CrmCaseConditionEvaluator } from './workflow-conditions';
 
 /**
  * The Decision Fabric transition runtime, wired for application routes.
@@ -367,6 +368,28 @@ export async function transitionWorkflow(
     ? undefined
     : instantiated.stages.find((stage) => stage.stageKey === instance.currentStageKey);
   if (toStage !== undefined) {
+    // Condition gate first (domain order: exit conditions of the current stage,
+    // then entry conditions of the target). Fails closed on unknown conditions.
+    const conditionEvaluator = new CrmCaseConditionEvaluator(client);
+    const conditionBlockers: WorkflowGateBlocker[] = [];
+    for (const condition of fromStage?.exitConditions ?? []) {
+      const r = await conditionEvaluator.evaluate({
+        condition,
+        context: { tenantId: input.tenantId, instanceId: input.instanceId, workTypeKey: instance.workTypeKey, stageKey: fromStage!.stageKey, phase: 'EXIT' },
+      });
+      if (!r.satisfied) conditionBlockers.push({ kind: 'EXIT_CONDITION', code: r.code, key: condition.type });
+    }
+    for (const condition of toStage.entryConditions) {
+      const r = await conditionEvaluator.evaluate({
+        condition,
+        context: { tenantId: input.tenantId, instanceId: input.instanceId, workTypeKey: instance.workTypeKey, stageKey: toStage.stageKey, phase: 'ENTRY' },
+      });
+      if (!r.satisfied) conditionBlockers.push({ kind: 'ENTRY_CONDITION', code: r.code, key: condition.type });
+    }
+    if (conditionBlockers.length > 0) {
+      return { ok: false, reason: 'GATE_BLOCKED', blockers: conditionBlockers };
+    }
+
     const decisionGate = new WorkflowStageDecisionGateEvaluator(new PostgresWorkflowStageDecisionRepository(client));
     const decisionResult = await decisionGate.evaluate({ instance, blueprint: instantiated, intent, fromStage, toStage });
     if (!decisionResult.allowed) {
