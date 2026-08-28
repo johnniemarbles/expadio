@@ -77,3 +77,21 @@ test("domain verification resolves real DNS and retirement is soft", () => {
 test("template authoring surfaces the real API reason", () => {
   assert.match(templatePreview, /apiError/);
 });
+
+test("dashboard controls are truthful: real export, surfaced toggle errors, distinct tabs, real library", () => {
+  const dash = read("../app/(shell)/communications/CommunicationsDashboardClient.tsx");
+  const library = read("../app/(shell)/communications/TemplateLibraryModal.tsx");
+  // Export is a real CSV download, not window.print().
+  assert.doesNotMatch(dash, /window\.print\(\)/);
+  assert.match(dash, /text\/csv/);
+  // Enable/disable failures are surfaced, not swallowed.
+  assert.match(dash, /setToggleError/);
+  assert.match(dash, /toggleError/);
+  // Tenant health is its own view, not sharing the fleet condition.
+  assert.doesNotMatch(dash, /activeTab === "fleet" \|\| activeTab === "tenant_health"/);
+  // Manage Templates opens the real library, not templates[0].
+  assert.doesNotMatch(dash, /handleOpenTemplate\(templates\[0\]/);
+  assert.match(dash, /<TemplateLibraryModal/);
+  assert.match(library, /filtered/);
+  assert.match(library, /onOpenTemplate/);
+});
