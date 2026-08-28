@@ -25,7 +25,17 @@
   - `comms_trigger_catalogue`: Registered triggers, locales, formats, and active/draft template counts (`platform.communication_templates`).
   - `comms_compliance_packs`: Central governance compliance packs and consent/suppression bounds (`platform.compliance_packs` / governance).
   - `comms_metrics`: 7-day cross-tenant deliverability aggregates, bounce/complaint rates, and connector performance (`platform.communication_deliveries`).
-- **Mutation Boundary:** Read-only dashboard. Deep links to `/capabilities`, `/configuration/credentials`, `/workflows`, and `/governance`.
+- **Mutation Boundary:** Composed control plane (no longer read-only). Performs governed mutations: provider registration via browser-side custody intake, connector enable/disable and provable revocation, template create/edit/version/publish/clone, sending-domain auto-configuration (Cloudflare) and DNS verification, and quota/spend-cap edits. All mutations resolve the request context, are authorization-gated, and are step-up-guarded where destructive. Also deep-links to `/capabilities`, `/configuration/credentials`, `/workflows`, and `/governance`.
+
+### 1b. `/crm` — Customer Relationships (Business Engine)
+- **Route:** `/crm`
+- **Page Kind:** `HAND_BUILT` (Composed view)
+- **Owner:** `experience-layer`
+- **Promoted Rail Entry (N5):** `true`
+- **Reads From:**
+  - `crm_accounts`: Tenant customer organizations (`platform.crm_accounts`, RLS-forced).
+  - `crm_contacts`: People, optionally attached to an account (`platform.crm_contacts`, RLS-forced).
+- **Mutation Boundary:** Creates accounts and contacts. Reads require workspace membership; writes require a tenant admin / owner (or platform admin) role. Tenant isolation is enforced at the data layer via `platform.current_tenant_id()`.
 
 ### 2. `/overview` — Command Center Overview
 - **Route:** `/overview`
