@@ -49,6 +49,7 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
   const [taxId, setTaxId] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authHint, setAuthHint] = useState(false);
   const [wf, setWf] = useState<Record<string, WfState>>({});
   const [trace, setTrace] = useState<VendorRow | null>(null);
 
@@ -126,12 +127,16 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
 
   /** Record an immutable decision (APPROVE/REJECT) against the current stage. */
   async function decide(vendorId: string, outcome: 'APPROVE' | 'REJECT'): Promise<boolean> {
+    setAuthHint(false);
     const res = await fetch(`/api/vendors/${encodeURIComponent(vendorId)}/workflow/decision${queryString}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ outcome }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(apiError(data, 'Could not record the decision.'));
+    if (!res.ok) {
+      if (typeof data?.code === 'string' && data.code.startsWith('WORKFLOW_AUTHORITY')) setAuthHint(true);
+      throw new Error(apiError(data, 'Could not record the decision.'));
+    }
     return true;
   }
 
@@ -173,7 +178,12 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
         </div>
       </div>
 
-      {error && <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
+      {error && (
+        <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>
+          {error}
+          {authHint && <> · <a href={`/authority${queryString}`} style={{ color: '#0f766e', fontWeight: 600 }}>Grant approval authority →</a></>}
+        </p>
+      )}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
