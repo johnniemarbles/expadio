@@ -10,9 +10,12 @@ import {
   WorkflowStageDecisionGateEvaluator,
   WorkflowParticipantAssignmentGateEvaluator,
   AuthorityGatedWorkflowDecisionCaptureService,
+  RepositoryWorkflowBlueprintResolver,
+  WorkflowBlueprintResolutionError,
   type WorkflowInstance,
   type WorkflowTransitionIntent,
   type InstantiatedWorkflowBlueprint,
+  type WorkflowBlueprintDefinition,
   type WorkflowGateBlocker,
 } from '@expadio/workflow';
 import { RoleAndSeparationOfDutiesAuthorityProvider } from './workflow-authority';
@@ -61,8 +64,12 @@ export type StartWorkflowResult =
 
 /**
  * Start a governed workflow instance for a subject (e.g. a CRM case) against the
- * newest ACTIVE platform blueprint for a blueprint key. The instance opens in
- * RUNNING state at the blueprint's first stage.
+ * ACTIVE blueprint for its work type. The blueprint resolver prefers this
+ * tenant's ACTIVE customization over the platform default, so a tenant that has
+ * authored and published its own blueprint runs cases on its own lifecycle; a
+ * tenant that has not falls back to the platform default. The instance opens in
+ * RUNNING state at the blueprint's first stage and pins the resolved blueprint's
+ * scope, so every later read resolves the exact same definition.
  */
 export async function startWorkflow(
   client: PoolClient,
@@ -74,12 +81,19 @@ export async function startWorkflow(
   },
 ): Promise<StartWorkflowResult> {
   const blueprints = new PostgresWorkflowBlueprintRepository(client);
-  const versions = await blueprints.listVersions({
-    scope: { type: 'PLATFORM' },
-    blueprintKey: input.blueprintKey,
-  });
-  const definition = versions.find((candidate) => candidate.state === 'ACTIVE');
-  if (definition === undefined) return { ok: false, reason: 'NO_ACTIVE_BLUEPRINT' };
+  const resolver = new RepositoryWorkflowBlueprintResolver(blueprints);
+  let definition: WorkflowBlueprintDefinition;
+  try {
+    ({ blueprint: definition } = await resolver.resolve({
+      tenantId: input.tenantId,
+      workTypeKey: input.blueprintKey,
+    }));
+  } catch (error) {
+    if (error instanceof WorkflowBlueprintResolutionError && error.code === 'WORKFLOW_BLUEPRINT_ACTIVE_NOT_FOUND') {
+      return { ok: false, reason: 'NO_ACTIVE_BLUEPRINT' };
+    }
+    throw error;
+  }
 
   const instantiated = instantiateWorkflowBlueprint({ blueprint: definition });
   const firstStage = instantiated.stages[0]?.stageKey;
