@@ -69,6 +69,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const [movingLead, setMovingLead] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [movingCase, setMovingCase] = useState<string | null>(null);
+  const [convertTarget, setConvertTarget] = useState<LeadRow | null>(null);
 
   async function reloadAccounts() {
     const res = await fetch(`/api/crm/accounts${queryString}`);
@@ -102,6 +103,13 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   async function reloadCases() {
     const res = await fetch(`/api/crm/cases${queryString}`);
     if (res.ok) { const d = await res.json(); if (Array.isArray(d)) setCases(d); }
+  }
+  // Conversion touches all three entities (lead → account (+case)); refresh them
+  // together and drop the user on the tab that shows the new customer's work.
+  function onConverted(openedCase: boolean) {
+    setConvertTarget(null);
+    reloadAccounts(); reloadLeads(); reloadCases();
+    setTab(openedCase ? "cases" : "accounts");
   }
   async function moveCase(caseId: string, status: CaseStatus) {
     setMovingCase(caseId); setCaseError(null);
@@ -209,15 +217,27 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}>{l.source ?? "—"}</td>
                     <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{l.stage}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
-                      <select
-                        value={l.stage}
-                        disabled={movingLead === l.leadId}
-                        onChange={(e) => moveLead(l.leadId, e.target.value as LeadStage)}
-                        aria-label={`Move ${l.title}`}
-                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)" }}
-                      >
-                        {LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                        {l.stage !== "WON" && l.stage !== "LOST" && (
+                          <button
+                            type="button"
+                            onClick={() => setConvertTarget(l)}
+                            title="Close-won this lead and turn it into a customer account"
+                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "#166534", color: "white", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Convert →
+                          </button>
+                        )}
+                        <select
+                          value={l.stage}
+                          disabled={movingLead === l.leadId}
+                          onChange={(e) => moveLead(l.leadId, e.target.value as LeadStage)}
+                          aria-label={`Move ${l.title}`}
+                          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)" }}
+                        >
+                          {LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -291,6 +311,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           queryString={queryString}
           onClose={() => setShowCase(false)}
           onCreated={() => { setShowCase(false); reloadCases(); }}
+        />
+      )}
+      {convertTarget && (
+        <ConvertModal
+          lead={convertTarget}
+          queryString={queryString}
+          onClose={() => setConvertTarget(null)}
+          onConverted={onConverted}
         />
       )}
     </div>
@@ -477,6 +505,54 @@ function LeadModal({ accounts, queryString, onClose, onCreated }: { accounts: Cr
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create lead"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ConvertModal({ lead, queryString, onClose, onConverted }: { lead: LeadRow; queryString: string; onClose: () => void; onConverted: (openedCase: boolean) => void }) {
+  const [openCase, setOpenCase] = useState(true);
+  const [caseSubject, setCaseSubject] = useState(`Onboarding — ${lead.accountName ?? lead.title}`);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch(`/api/crm/leads/${encodeURIComponent(lead.leadId)}/convert${queryString}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ openCase, caseSubject: openCase ? caseSubject.trim() || undefined : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not convert the lead."));
+      onConverted(openCase);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not convert the lead.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Convert to customer" onClose={onClose}>
+      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-600, #475569)" }}>
+          Closes <strong>{lead.title}</strong> as won and {lead.accountId ? "promotes its account to " : "creates a new customer account at the "}
+          <span style={{ fontWeight: 700, color: "#166534" }}>CUSTOMER</span> stage.
+        </p>
+        <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+          <input type="checkbox" checked={openCase} onChange={(e) => setOpenCase(e.target.checked)} />
+          Open an onboarding case for the new customer
+        </label>
+        {openCase && (
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Case subject<input value={caseSubject} onChange={(e) => setCaseSubject(e.target.value)} style={inp} /></label>
+        )}
+        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "#166534", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
         </div>
       </form>
     </Modal>
