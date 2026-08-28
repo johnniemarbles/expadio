@@ -29,6 +29,9 @@ importers:
       '@expadio/iam':
         specifier: workspace:*
         version: link:../../packages/iam
+      '@expadio/lead':
+        specifier: workspace:*
+        version: link:../../packages/lead
       '@expadio/party':
         specifier: workspace:*
         version: link:../../packages/party
@@ -173,6 +176,8 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
+
+  packages/lead: {}
 
   packages/party: {}
 
