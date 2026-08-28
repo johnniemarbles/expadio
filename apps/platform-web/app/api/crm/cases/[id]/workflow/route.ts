@@ -54,6 +54,7 @@ export async function GET(
       instance: result.described.instance,
       stages: result.described.stages,
       currentDecision: result.described.currentDecision,
+      assignments: result.described.assignments,
       blueprintKey: result.blueprintKey,
     });
   } catch (error) {
@@ -226,14 +227,14 @@ export async function PATCH(
     }
     if ('gateBlocked' in result) {
       const blockers = result.blockers ?? [];
+      const participant = blockers.find((b) => b.kind === 'PARTICIPANT' || b.kind === 'ASSIGNMENT');
       const needsDecision = blockers.some((b) => b.code === 'WORKFLOW_DECISION_REQUIRED');
-      return NextResponse.json({
-        error: needsDecision
+      const error = participant
+        ? `This stage needs its "${participant.key ?? 'required'}" participant assigned before it can be entered.`
+        : needsDecision
           ? 'This stage requires a recorded decision before it can advance.'
-          : 'A workflow gate is blocking this transition.',
-        code: blockers[0]?.code,
-        blockers,
-      }, { status: 422 });
+          : 'A workflow gate is blocking this transition.';
+      return NextResponse.json({ error, code: blockers[0]?.code, blockers }, { status: 422 });
     }
     if ('failed' in result) {
       if (result.failed === 'REVISION_CONFLICT') {

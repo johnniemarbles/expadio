@@ -8,6 +8,7 @@ import {
   commitWorkflowStageTransition,
   WorkflowTransitionError,
   WorkflowStageDecisionGateEvaluator,
+  WorkflowParticipantAssignmentGateEvaluator,
   AuthorityGatedWorkflowDecisionCaptureService,
   type WorkflowInstance,
   type WorkflowTransitionIntent,
@@ -15,6 +16,7 @@ import {
   type WorkflowGateBlocker,
 } from '@expadio/workflow';
 import { SeparationOfDutiesAuthorityProvider } from './workflow-authority';
+import { PostgresParticipantAssignmentProvider, listAssignments, type AssignmentSummary } from './workflow-participants';
 
 /**
  * The Decision Fabric transition runtime, wired for application routes.
@@ -36,6 +38,7 @@ export interface WorkflowStageSummary {
   readonly sequence: number;
   readonly decisionRequired: boolean;
   readonly decisionOutcomes: readonly string[];
+  readonly requiredParticipantKeys: readonly string[];
 }
 
 function stagesOf(instantiated: InstantiatedWorkflowBlueprint): WorkflowStageSummary[] {
@@ -45,6 +48,7 @@ function stagesOf(instantiated: InstantiatedWorkflowBlueprint): WorkflowStageSum
     sequence: stage.sequence,
     decisionRequired: stage.decisionRequired,
     decisionOutcomes: stage.decisionOutcomes,
+    requiredParticipantKeys: stage.requiredParticipantKeys,
   }));
 }
 
@@ -119,12 +123,14 @@ export async function describeWorkflow(
   readonly instance: WorkflowInstance;
   readonly stages: WorkflowStageSummary[];
   readonly currentDecision: CurrentDecision | null;
+  readonly assignments: AssignmentSummary[];
 } | null> {
   const instance = await new PostgresWorkflowInstanceRepository(client).findById({
     tenantId: input.tenantId,
     instanceId: input.instanceId,
   });
   if (instance === null) return null;
+  const assignments = await listAssignments(client, { tenantId: input.tenantId, instanceId: input.instanceId });
   const definition = await new PostgresWorkflowBlueprintRepository(client).findByIdentity({
     scope: instance.blueprint.scope === 'TENANT'
       ? { type: 'TENANT', tenantId: input.tenantId }
@@ -150,7 +156,7 @@ export async function describeWorkflow(
       };
     }
   }
-  return { instance, stages, currentDecision };
+  return { instance, stages, currentDecision, assignments };
 }
 
 export interface WorkflowHistoryTransition {
@@ -358,10 +364,18 @@ export async function transitionWorkflow(
     ? undefined
     : instantiated.stages.find((stage) => stage.stageKey === instance.currentStageKey);
   if (toStage !== undefined) {
-    const gate = new WorkflowStageDecisionGateEvaluator(new PostgresWorkflowStageDecisionRepository(client));
-    const gateDecision = await gate.evaluate({ instance, blueprint: instantiated, intent, fromStage, toStage });
-    if (!gateDecision.allowed) {
-      return { ok: false, reason: 'GATE_BLOCKED', blockers: gateDecision.blockers };
+    const decisionGate = new WorkflowStageDecisionGateEvaluator(new PostgresWorkflowStageDecisionRepository(client));
+    const decisionResult = await decisionGate.evaluate({ instance, blueprint: instantiated, intent, fromStage, toStage });
+    if (!decisionResult.allowed) {
+      return { ok: false, reason: 'GATE_BLOCKED', blockers: decisionResult.blockers };
+    }
+
+    // Participant gate: entering a stage requires its named participant slots to
+    // be filled. Missing/ineligible/unavailable slots block the move.
+    const participantGate = new WorkflowParticipantAssignmentGateEvaluator(new PostgresParticipantAssignmentProvider(client));
+    const participantResult = await participantGate.evaluate({ instance, blueprint: instantiated, intent, fromStage, toStage });
+    if (!participantResult.allowed) {
+      return { ok: false, reason: 'GATE_BLOCKED', blockers: participantResult.blockers };
     }
   }
 
