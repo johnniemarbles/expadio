@@ -29,6 +29,9 @@ importers:
       '@expadio/iam':
         specifier: workspace:*
         version: link:../../packages/iam
+      '@expadio/party':
+        specifier: workspace:*
+        version: link:../../packages/party
       '@expadio/postgres-runtime':
         specifier: workspace:*
         version: link:../../packages/postgres-runtime
@@ -170,6 +173,8 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
+
+  packages/party: {}
 
   packages/postgres-runtime:
     dependencies:
