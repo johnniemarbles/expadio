@@ -8,6 +8,7 @@ const migration = read("../../../infra/db/migrations/0052_workflow_authority_gra
 const grants = read("../lib/workflow-authority-grants.ts");
 const authority = read("../lib/workflow-authority.ts");
 const runtime = read("../lib/workflow-runtime.ts");
+const derivation = read("../lib/workflow-authority-derivation.ts");
 const route = read("../app/api/authority/grants/route.ts");
 
 test("authority grants are RLS-forced and carry scope/delegation", () => {
@@ -35,10 +36,20 @@ test("the authority provider enforces the monetary threshold with scope + delega
   assert.match(authority, /WORKFLOW_AUTHORITY_REQUIREMENT_UNKNOWN/);
 });
 
-test("the decision derives its monetary requirement from the case's agreements", () => {
+test("authority derivation is a work-type registry, not a CRM special case", () => {
+  // The generic decision path dispatches by work type; it no longer names CRM.
   assert.match(runtime, /deriveAuthorityRequirements/);
-  assert.match(runtime, /crm_agreements/);
+  assert.match(runtime, /workTypeKey: input\.workTypeKey/);
+  assert.doesNotMatch(runtime, /crm_agreements/);
   assert.match(runtime, /resolveAuthorityGrants/);
+});
+
+test("crm.case registers a deriver that reads the account's agreements", () => {
+  assert.match(derivation, /registerAuthorityDeriver\('crm\.case'/);
+  assert.match(derivation, /crm_agreements/);
+  assert.match(derivation, /monetary\.approval/);
+  // An unregistered work type falls through to no requirement.
+  assert.match(derivation, /if \(deriver === undefined\) return \[\]/);
 });
 
 test("the authority grants route is governed and tenant-scoped", () => {
