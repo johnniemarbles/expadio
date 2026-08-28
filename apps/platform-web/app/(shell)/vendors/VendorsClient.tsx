@@ -122,6 +122,44 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
     finally { setBusy(null); }
   }
 
+  /** Record an immutable decision (APPROVE/REJECT) against the current stage. */
+  async function decide(vendorId: string, outcome: 'APPROVE' | 'REJECT'): Promise<boolean> {
+    const res = await fetch(`/api/vendors/${encodeURIComponent(vendorId)}/workflow/decision${queryString}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ outcome }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(apiError(data, 'Could not record the decision.'));
+    return true;
+  }
+
+  /** The compliance approval: record APPROVE, then let the vendor go ACTIVE. */
+  async function approveAndActivate(vendorId: string) {
+    const state = wf[vendorId] ?? await loadWorkflow(vendorId);
+    if (!state) return;
+    setBusy(vendorId); setError(null);
+    try {
+      await decide(vendorId, 'APPROVE');
+      const res = await fetch(`/api/vendors/${encodeURIComponent(vendorId)}/workflow${queryString}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toStageKey: 'ACTIVE', expectedRevision: state.revision }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not activate the vendor.'));
+      await loadWorkflow(vendorId); await reload();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not approve the vendor.'); }
+    finally { setBusy(null); }
+  }
+
+  async function reject(vendorId: string) {
+    setBusy(vendorId); setError(null);
+    try {
+      await decide(vendorId, 'REJECT');
+      await loadWorkflow(vendorId); await reload();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not reject the vendor.'); }
+    finally { setBusy(null); }
+  }
+
   return (
     <section className={styles.panel} aria-labelledby="vendors-title">
       <div className={styles.panelHeading}>
@@ -155,7 +193,12 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
                         <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'SCREENING')}>Advance to screening</button>
                       </span>
                     ) : stage === 'SCREENING' ? (
-                      <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'ACTIVE')}>Activate</button>
+                      <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'APPROVAL')}>Advance to approval</button>
+                    ) : stage === 'APPROVAL' ? (
+                      <span style={{ display: 'inline-flex', gap: 8 }}>
+                        <button style={btn} disabled={busy !== null} onClick={() => approveAndActivate(v.vendorId)}>Approve &amp; activate</button>
+                        <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(v.vendorId)}>Reject</button>
+                      </span>
                     ) : (
                       <span className={styles.muted}>Onboarded</span>
                     )}

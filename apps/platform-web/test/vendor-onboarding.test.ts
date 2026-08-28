@@ -7,7 +7,9 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const vendorsRoute = read('../app/api/vendors/route.ts');
 const workflowRoute = read('../app/api/vendors/[id]/workflow/route.ts');
 const participantsRoute = read('../app/api/vendors/[id]/workflow/participants/route.ts');
+const decisionRoute = read('../app/api/vendors/[id]/workflow/decision/route.ts');
 const migration = read('../../../infra/db/migrations/0053_vendor_onboarding.sql');
+const approvalMigration = read('../../../infra/db/migrations/0054_vendor_onboarding_approval.sql');
 const client = read('../app/(shell)/vendors/VendorsClient.tsx');
 const nav = read('../app/api/workspaces/route.ts');
 
@@ -47,10 +49,25 @@ test('a platform vendor.onboarding blueprint is seeded and active', () => {
   assert.match(migration, /"screener"/);
 });
 
-test('the Vendors surface can register, start, screen and activate', () => {
+test('the Vendors surface can register, start, screen, approve and activate', () => {
   assert.match(client, /Register vendor/);
   assert.match(client, /Start onboarding/);
   assert.match(client, /Assign screener/);
-  assert.match(client, /Activate/);
+  assert.match(client, /Advance to approval/);
+  assert.match(client, /Approve &amp; activate/);
+  assert.match(client, /approveAndActivate/);
   assert.match(nav, /href: '\/vendors'/);
+});
+
+test('v2 adds a governed decision stage and the vendor decision route captures it', () => {
+  // The blueprint gains a decision-required APPROVAL stage; v1 is superseded.
+  assert.match(approvalMigration, /'vendor\.onboarding', 2/);
+  assert.match(approvalMigration, /"stageKey": "APPROVAL"/);
+  assert.match(approvalMigration, /"decisionRequired": true/);
+  assert.match(approvalMigration, /SET state = 'SUPERSEDED'/);
+  // The route records the decision through the same governed capture as a case.
+  assert.match(decisionRoute, /recordCaseDecision/);
+  assert.match(decisionRoute, /makerForStage/);
+  assert.match(decisionRoute, /platform\.vendors/);
+  assert.match(decisionRoute, /hasCrmWriteRole/);
 });
