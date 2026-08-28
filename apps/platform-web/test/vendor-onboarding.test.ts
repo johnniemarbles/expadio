@@ -71,3 +71,11 @@ test('v2 adds a governed decision stage and the vendor decision route captures i
   assert.match(decisionRoute, /platform\.vendors/);
   assert.match(decisionRoute, /hasCrmWriteRole/);
 });
+
+test('the vendor workflow exposes its governed trace', () => {
+  const historyRoute = read('../app/api/vendors/[id]/workflow/history/route.ts');
+  assert.match(historyRoute, /loadCaseWorkflowHistory/);
+  assert.match(historyRoute, /platform\.vendors/);
+  assert.match(client, /WorkflowTraceModal/);
+  assert.match(client, /workflow\/history/);
+});

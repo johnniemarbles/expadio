@@ -51,3 +51,11 @@ test('the Expenses surface can file, review, approve and pay', () => {
   assert.match(client, /approveAndPay/);
   assert.match(nav, /href: '\/expenses'/);
 });
+
+test('the expense workflow exposes its governed trace', () => {
+  const historyRoute = read('../app/api/expenses/[id]/workflow/history/route.ts');
+  assert.match(historyRoute, /loadCaseWorkflowHistory/);
+  assert.match(historyRoute, /platform\.expense_reports/);
+  assert.match(client, /WorkflowTraceModal/);
+  assert.match(client, /workflow\/history/);
+});

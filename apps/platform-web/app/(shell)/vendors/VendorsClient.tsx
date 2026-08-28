@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import styles from '../workflows/page.module.css';
+import { WorkflowTraceModal } from '../WorkflowTraceModal';
 
 /**
  * Vendor onboarding surface — the second Decision Fabric vertical. Register a
@@ -49,6 +50,7 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wf, setWf] = useState<Record<string, WfState>>({});
+  const [trace, setTrace] = useState<VendorRow | null>(null);
 
   async function reload() {
     const res = await fetch(`/api/vendors${queryString}`);
@@ -185,23 +187,28 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
                   <td><span style={badge(v.status)}>{v.status}</span></td>
                   <td>{stage ?? <span className={styles.muted}>—</span>}</td>
                   <td>
-                    {v.workflowInstanceId === null ? (
-                      <button style={btn} disabled={busy !== null} onClick={() => start(v.vendorId)}>Start onboarding</button>
-                    ) : stage === 'SUBMITTED' ? (
-                      <span style={{ display: 'inline-flex', gap: 8 }}>
-                        <button style={{ ...btn, background: '#334155' }} disabled={busy !== null} onClick={() => assignScreener(v.vendorId)}>Assign screener</button>
-                        <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'SCREENING')}>Advance to screening</button>
-                      </span>
-                    ) : stage === 'SCREENING' ? (
-                      <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'APPROVAL')}>Advance to approval</button>
-                    ) : stage === 'APPROVAL' ? (
-                      <span style={{ display: 'inline-flex', gap: 8 }}>
-                        <button style={btn} disabled={busy !== null} onClick={() => approveAndActivate(v.vendorId)}>Approve &amp; activate</button>
-                        <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(v.vendorId)}>Reject</button>
-                      </span>
-                    ) : (
-                      <span className={styles.muted}>Onboarded</span>
-                    )}
+                    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                      {v.workflowInstanceId === null ? (
+                        <button style={btn} disabled={busy !== null} onClick={() => start(v.vendorId)}>Start onboarding</button>
+                      ) : stage === 'SUBMITTED' ? (
+                        <>
+                          <button style={{ ...btn, background: '#334155' }} disabled={busy !== null} onClick={() => assignScreener(v.vendorId)}>Assign screener</button>
+                          <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'SCREENING')}>Advance to screening</button>
+                        </>
+                      ) : stage === 'SCREENING' ? (
+                        <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'APPROVAL')}>Advance to approval</button>
+                      ) : stage === 'APPROVAL' ? (
+                        <>
+                          <button style={btn} disabled={busy !== null} onClick={() => approveAndActivate(v.vendorId)}>Approve &amp; activate</button>
+                          <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(v.vendorId)}>Reject</button>
+                        </>
+                      ) : (
+                        <span className={styles.muted}>Onboarded</span>
+                      )}
+                      {v.workflowInstanceId !== null && (
+                        <button type="button" style={{ ...btn, background: 'transparent', color: 'var(--ink-600, #475569)', border: '1px solid var(--line, #cbd5e1)' }} onClick={() => setTrace(v)}>Trace</button>
+                      )}
+                    </span>
                   </td>
                 </tr>
               );
@@ -210,6 +217,14 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
         </table>
         {vendors.length === 0 && <p className={styles.muted} style={{ padding: 16 }}>No vendors yet. Register one to begin onboarding.</p>}
       </div>
+
+      {trace && (
+        <WorkflowTraceModal
+          title={`Workflow trace — ${trace.legalName}`}
+          historyUrl={`/api/vendors/${encodeURIComponent(trace.vendorId)}/workflow/history${queryString}`}
+          onClose={() => setTrace(null)}
+        />
+      )}
     </section>
   );
 }
