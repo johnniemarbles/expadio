@@ -19,6 +19,9 @@ import pg from 'pg';
  */
 
 const APP_ROLE = 'expadio_rls_tester';
+// A fixed password so the role authenticates under scram-sha-256 (CI's pg_hba),
+// not only under trust (local). Value is irrelevant beyond matching both ends.
+const APP_ROLE_PASSWORD = 'rls_isolation_test';
 
 function connectInfo() {
   return {
@@ -34,7 +37,7 @@ function superuserPool(): pg.Pool {
 
 /** A pool that authenticates as the least-privilege application role. */
 function appRolePool(): pg.Pool {
-  return new pg.Pool({ ...connectInfo(), user: APP_ROLE, max: 1 });
+  return new pg.Pool({ ...connectInfo(), user: APP_ROLE, password: APP_ROLE_PASSWORD, max: 1 });
 }
 
 async function ensureAppRole(su: pg.PoolClient): Promise<void> {
@@ -44,6 +47,9 @@ async function ensureAppRole(su: pg.PoolClient): Promise<void> {
       CREATE ROLE ${APP_ROLE} LOGIN NOSUPERUSER NOBYPASSRLS;
     END IF;
   END $$;`);
+  // Set the password unconditionally so a role left over from an earlier run
+  // (created before this line existed) still authenticates under scram.
+  await su.query(`ALTER ROLE ${APP_ROLE} WITH LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '${APP_ROLE_PASSWORD}'`);
   await su.query(`GRANT USAGE ON SCHEMA platform TO ${APP_ROLE}`);
   await su.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO ${APP_ROLE}`);
   await su.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA platform TO ${APP_ROLE}`);
