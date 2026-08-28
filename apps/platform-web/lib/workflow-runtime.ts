@@ -15,7 +15,8 @@ import {
   type InstantiatedWorkflowBlueprint,
   type WorkflowGateBlocker,
 } from '@expadio/workflow';
-import { SeparationOfDutiesAuthorityProvider } from './workflow-authority';
+import { RoleAndSeparationOfDutiesAuthorityProvider } from './workflow-authority';
+import { resolveGoverningRole } from './crm-authz';
 import { PostgresParticipantAssignmentProvider, listAssignments, type AssignmentSummary } from './workflow-participants';
 
 /**
@@ -176,6 +177,7 @@ export interface WorkflowHistoryDecision {
   readonly outcome: string;
   readonly bySubjectId: string;
   readonly code: string;
+  readonly evidenceRefs: readonly string[];
 }
 
 export type WorkflowHistoryEntry = WorkflowHistoryTransition | WorkflowHistoryDecision;
@@ -198,7 +200,7 @@ export async function loadCaseWorkflowHistory(
       [input.tenantId, input.instanceId],
     ),
     client.query(
-      `SELECT decided_at, stage_key, outcome, decided_by_subject_id, code
+      `SELECT decided_at, stage_key, outcome, decided_by_subject_id, code, evidence_refs
          FROM platform.workflow_stage_decisions
         WHERE tenant_id = $1::uuid AND instance_id = $2::uuid
         ORDER BY decided_at ASC`,
@@ -223,6 +225,7 @@ export async function loadCaseWorkflowHistory(
       outcome: row.outcome,
       bySubjectId: row.decided_by_subject_id,
       code: row.code,
+      evidenceRefs: Array.isArray(row.evidence_refs) ? row.evidence_refs : [],
     })),
   ];
   // Chronological; a decision and the transition it unlocks can share a moment,
@@ -272,7 +275,7 @@ export async function recordCaseDecision(
   },
 ): Promise<RecordDecisionResult> {
   const service = new AuthorityGatedWorkflowDecisionCaptureService(
-    new SeparationOfDutiesAuthorityProvider(),
+    new RoleAndSeparationOfDutiesAuthorityProvider((subjectId) => resolveGoverningRole(client, subjectId)),
     new PostgresWorkflowStageDecisionRepository(client),
   );
   const result = await service.capture({
