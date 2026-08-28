@@ -373,5 +373,36 @@ export async function transitionWorkflow(
   if (!result.committed) {
     return { ok: false, reason: result.reason === 'INSTANCE_NOT_FOUND' ? 'INSTANCE_NOT_FOUND' : 'REVISION_CONFLICT' };
   }
+
+  // Auto-complete: landing on the blueprint's terminal stage ends the instance.
+  // The pure transition domain only moves stages (it never sets COMPLETED), so
+  // completion is a governed lifecycle event recorded as its own append-only
+  // transition (RUNNING → COMPLETED, same stage) rather than a silent update.
+  const terminalStageKey = instantiated.stages[instantiated.stages.length - 1]?.stageKey;
+  const moved = result.instance;
+  if (terminalStageKey !== undefined && moved.currentStageKey === terminalStageKey && moved.state === 'RUNNING') {
+    const now = new Date().toISOString();
+    const completed: WorkflowInstance = { ...moved, state: 'COMPLETED', revision: moved.revision + 1, completedAt: now, updatedAt: now };
+    const completion = await instanceRepo.commitTransition({
+      expectedRevision: moved.revision,
+      instance: completed,
+      transition: {
+        instanceId: moved.instanceId,
+        ...(moved.currentStageKey === undefined ? {} : { fromStageKey: moved.currentStageKey }),
+        toStageKey: terminalStageKey,
+        fromState: 'RUNNING',
+        toState: 'COMPLETED',
+        revision: moved.revision + 1,
+        transitionedBySubjectId: input.requestedBySubjectId,
+        transitionedAt: now,
+        reason: 'auto-complete: terminal stage',
+      },
+    });
+    if (completion.committed) {
+      return { ok: true, instance: completion.instance, stages: stagesOf(instantiated) };
+    }
+    // A concurrent write beat the completion; the stage move still stands.
+  }
+
   return { ok: true, instance: result.instance, stages: stagesOf(instantiated) };
 }
