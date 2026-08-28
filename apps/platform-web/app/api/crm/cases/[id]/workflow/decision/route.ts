@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { PostgresWorkflowInstanceRepository } from '@expadio/postgres-runtime/workflow-instance';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../../../../lib/crm-authz';
-import { recordCaseDecision } from '../../../../../../../lib/workflow-runtime';
+import { recordCaseDecision, makerForStage } from '../../../../../../../lib/workflow-runtime';
 
 /**
  * Record an immutable decision against a case's current workflow stage.
@@ -50,13 +50,19 @@ export async function POST(
         return { noStage: true } as const;
       }
 
+      const maker = await makerForStage(client, {
+        tenantId: context.tenantId,
+        instanceId,
+        stageKey: instance.currentStageKey,
+      });
       const recorded = await recordCaseDecision(client, {
         tenantId: context.tenantId,
         instanceId,
         workTypeKey: instance.workTypeKey,
         stageKey: instance.currentStageKey,
         outcome,
-        decidedBySubjectId: context.subjectId,
+        approverSubjectId: context.subjectId,
+        makerSubjectId: maker,
       });
       return { recorded, stageKey: instance.currentStageKey } as const;
     });
@@ -71,6 +77,9 @@ export async function POST(
       return NextResponse.json({ error: 'Start a workflow for this case first.' }, { status: 409 });
     }
     if (!result.recorded.ok) {
+      if (result.recorded.reason === 'AUTHORITY_DENIED') {
+        return NextResponse.json({ error: result.recorded.message, code: result.recorded.code }, { status: 403 });
+      }
       return NextResponse.json(
         { error: `This stage already has a different decision recorded (${result.recorded.existingOutcome}). Decisions are immutable.` },
         { status: 409 },

@@ -19,7 +19,7 @@ test("transitions are gated by the blueprint decision guard", () => {
 
 test("decision capture writes an immutable stage decision", () => {
   assert.match(runtime, /recordCaseDecision/);
-  assert.match(runtime, /\.record\(/);
+  assert.match(runtime, /AuthorityGatedWorkflowDecisionCaptureService/);
   assert.match(runtime, /CONFLICT/);
 });
 
