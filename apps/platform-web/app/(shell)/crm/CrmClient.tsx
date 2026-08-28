@@ -88,6 +88,10 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const [movingLead, setMovingLead] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [movingCase, setMovingCase] = useState<string | null>(null);
+  type WorkflowState = { instanceId: string; currentStageKey: string | null; revision: number; stages: { stageKey: string; label: string; sequence: number }[] };
+  const [workflows, setWorkflows] = useState<Record<string, WorkflowState>>({});
+  const [wfBusy, setWfBusy] = useState<string | null>(null);
+  const [wfError, setWfError] = useState<string | null>(null);
   const [agreementError, setAgreementError] = useState<string | null>(null);
   const [movingAgreement, setMovingAgreement] = useState<string | null>(null);
   const [convertTarget, setConvertTarget] = useState<LeadRow | null>(null);
@@ -184,6 +188,47 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
     } finally {
       setMovingCase(null);
     }
+  }
+
+  const wfUrl = (caseId: string) => `/api/crm/cases/${encodeURIComponent(caseId)}/workflow${queryString}`;
+  async function startCaseWorkflow(caseId: string) {
+    setWfBusy(caseId); setWfError(null);
+    try {
+      const res = await fetch(wfUrl(caseId), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not start the workflow."));
+      setWorkflows((prev) => ({ ...prev, [caseId]: { instanceId: data.instance.instanceId, currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision, stages: data.stages ?? [] } }));
+      setCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, workflowInstanceId: data.instance.instanceId, stageKey: data.instance.currentStageKey ?? null } : c)));
+    } catch (cause) {
+      setWfError(cause instanceof Error ? cause.message : "Could not start the workflow.");
+    } finally { setWfBusy(null); }
+  }
+  async function loadCaseWorkflow(caseId: string) {
+    setWfBusy(caseId); setWfError(null);
+    try {
+      const res = await fetch(wfUrl(caseId));
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not load the workflow."));
+      if (data.instance) {
+        setWorkflows((prev) => ({ ...prev, [caseId]: { instanceId: data.instance.instanceId, currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision, stages: data.stages ?? [] } }));
+      }
+    } catch (cause) {
+      setWfError(cause instanceof Error ? cause.message : "Could not load the workflow.");
+    } finally { setWfBusy(null); }
+  }
+  async function advanceCase(caseId: string, toStageKey: string) {
+    const wf = workflows[caseId];
+    if (!wf) return;
+    setWfBusy(caseId); setWfError(null);
+    try {
+      const res = await fetch(wfUrl(caseId), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toStageKey, expectedRevision: wf.revision }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not advance the workflow."));
+      setWorkflows((prev) => ({ ...prev, [caseId]: { ...prev[caseId], currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision } }));
+      setCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, stageKey: data.instance.currentStageKey ?? null } : c)));
+    } catch (cause) {
+      setWfError(cause instanceof Error ? cause.message : "Could not advance the workflow.");
+    } finally { setWfBusy(null); }
   }
 
   const openCases = cases.filter((c) => c.status === "OPEN" || c.status === "PENDING").length;
@@ -328,8 +373,9 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       ) : tab === "cases" ? (
         <Panel>
           {caseError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
+          {wfError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {wfError}</div>}
           {cases.length > 0 ? (
-            <Table head={[vocab.case.singular, vocab.account.singular, "Priority", "Blueprint", "Status", ""]}>
+            <Table head={[vocab.case.singular, vocab.account.singular, "Priority", "Blueprint", "Workflow", "Status", ""]}>
               {cases.map((c) => {
                 const tone = CASE_STATUS_TONE[c.status] ?? CASE_STATUS_TONE.OPEN;
                 return (
@@ -338,6 +384,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}>{c.accountName ?? "—"}</td>
                     <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
+                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} /></td>
                     <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <select
@@ -447,6 +494,46 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           onCreated={() => { setShowAgreement(false); reloadAgreements(); }}
         />
       )}
+    </div>
+  );
+}
+
+function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance }: {
+  c: CaseRow;
+  wf?: { instanceId: string; currentStageKey: string | null; revision: number; stages: { stageKey: string; label: string; sequence: number }[] };
+  busy: boolean;
+  onStart: () => void;
+  onLoad: () => void;
+  onAdvance: (stageKey: string) => void;
+}) {
+  const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
+  if (!c.workflowInstanceId) {
+    if (c.blueprintKey) {
+      return <button type="button" disabled={busy} onClick={onStart} style={btn} title="Start a governed Decision Fabric workflow for this case">{busy ? "Starting…" : "Start workflow"}</button>;
+    }
+    return <span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}>Set a blueprint</span>;
+  }
+  const stage = wf?.currentStageKey ?? c.stageKey ?? "—";
+  if (!wf) {
+    return (
+      <button type="button" disabled={busy} onClick={onLoad} style={{ ...btn, background: "transparent", color: "var(--brand, #4f46e5)", border: "1px solid var(--line, #cbd5e1)" }} title="Load the workflow's stages">
+        {busy ? "Loading…" : `Stage: ${stage} ▾`}
+      </button>
+    );
+  }
+  return (
+    <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+      <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#3730a3", background: "#e0e7ff" }} title={`revision ${wf.revision}`}>{stage}</span>
+      <select
+        value=""
+        disabled={busy}
+        onChange={(e) => { if (e.target.value) onAdvance(e.target.value); }}
+        aria-label={`Advance ${c.subject}`}
+        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)" }}
+      >
+        <option value="">Advance to…</option>
+        {wf.stages.filter((s) => s.stageKey !== wf.currentStageKey).map((s) => <option key={s.stageKey} value={s.stageKey}>{s.label}</option>)}
+      </select>
     </div>
   );
 }

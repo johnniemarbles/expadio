@@ -140,12 +140,18 @@ DECLARE
   platform_count integer;
   tenant_count integer;
 BEGIN
-  SELECT count(*) INTO visible_count FROM platform.workflow_blueprints;
+  -- Scope the counts to this test's own fixture work type so the isolation
+  -- assertion stays exact even when the platform seeds its own blueprints
+  -- (e.g. the crm.case lifecycle) for other work types.
+  SELECT count(*) INTO visible_count
+    FROM platform.workflow_blueprints WHERE work_type_key = 'partner-onboarding';
   SELECT count(*) INTO platform_count
-    FROM platform.workflow_blueprints WHERE tenant_id IS NULL;
+    FROM platform.workflow_blueprints
+    WHERE tenant_id IS NULL AND work_type_key = 'partner-onboarding';
   SELECT count(*) INTO tenant_count
     FROM platform.workflow_blueprints
-    WHERE tenant_id = '92929292-9292-9292-9292-929292929292';
+    WHERE tenant_id = '92929292-9292-9292-9292-929292929292'
+      AND work_type_key = 'partner-onboarding';
 
   IF visible_count <> 3 THEN
     RAISE EXCEPTION 'tenant A expected platform + own active + own draft blueprint, got %', visible_count;

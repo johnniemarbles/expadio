@@ -28,6 +28,8 @@
       "@expadio/postgres-runtime/authorization": ["packages/postgres-runtime/src/authorization.ts"],
       "@expadio/postgres-runtime/access-runtime": ["packages/postgres-runtime/src/access-runtime.ts"],
       "@expadio/postgres-runtime/conversation": ["packages/postgres-runtime/src/conversation.ts"],
+      "@expadio/postgres-runtime/workflow": ["packages/postgres-runtime/src/workflow.ts"],
+      "@expadio/postgres-runtime/workflow-instance": ["packages/postgres-runtime/src/workflow-instance.ts"],
       "@expadio/access-control": ["packages/access-control/src/index.ts"],
       "@expadio/access-runtime": ["packages/access-runtime/src/index.ts"],
       "@expadio/communication": ["packages/communication/src/index.ts"],
@@ -45,6 +47,7 @@
       "@expadio/agreement": ["packages/agreement/src/index.ts"],
       "@expadio/business-config": ["packages/business-config/src/index.ts"],
       "@expadio/industry-packs": ["packages/industry-packs/src/index.ts"],
+      "@expadio/workflow": ["packages/workflow/src/index.ts"],
       "@expadio/ui": ["packages/ui/src/index.ts"],
       "@expadio/ui/tokens": ["packages/ui/src/tokens/index.css"],
       "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]
