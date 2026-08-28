@@ -88,8 +88,9 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const [movingLead, setMovingLead] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [movingCase, setMovingCase] = useState<string | null>(null);
-  type WfStage = { stageKey: string; label: string; sequence: number; decisionRequired: boolean; decisionOutcomes: string[] };
-  type WorkflowState = { instanceId: string; currentStageKey: string | null; revision: number; state: string; stages: WfStage[]; currentDecision: { outcome: string } | null };
+  type WfStage = { stageKey: string; label: string; sequence: number; decisionRequired: boolean; decisionOutcomes: string[]; requiredParticipantKeys: string[] };
+  type WfAssignment = { stageKey: string; participantKey: string; status: string };
+  type WorkflowState = { instanceId: string; currentStageKey: string | null; revision: number; state: string; stages: WfStage[]; currentDecision: { outcome: string } | null; assignments: WfAssignment[] };
   const [workflows, setWorkflows] = useState<Record<string, WorkflowState>>({});
   const [wfBusy, setWfBusy] = useState<string | null>(null);
   const [wfError, setWfError] = useState<string | null>(null);
@@ -199,7 +200,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       const res = await fetch(wfUrl(caseId), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Could not start the workflow."));
-      setWorkflows((prev) => ({ ...prev, [caseId]: { instanceId: data.instance.instanceId, currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision, state: data.instance.state, stages: data.stages ?? [], currentDecision: null } }));
+      setWorkflows((prev) => ({ ...prev, [caseId]: { instanceId: data.instance.instanceId, currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision, state: data.instance.state, stages: data.stages ?? [], currentDecision: null, assignments: [] } }));
       setCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, workflowInstanceId: data.instance.instanceId, stageKey: data.instance.currentStageKey ?? null } : c)));
     } catch (cause) {
       setWfError(cause instanceof Error ? cause.message : "Could not start the workflow.");
@@ -212,7 +213,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Could not load the workflow."));
       if (data.instance) {
-        setWorkflows((prev) => ({ ...prev, [caseId]: { instanceId: data.instance.instanceId, currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision, state: data.instance.state, stages: data.stages ?? [], currentDecision: data.currentDecision ? { outcome: data.currentDecision.outcome } : null } }));
+        setWorkflows((prev) => ({ ...prev, [caseId]: { instanceId: data.instance.instanceId, currentStageKey: data.instance.currentStageKey ?? null, revision: data.instance.revision, state: data.instance.state, stages: data.stages ?? [], currentDecision: data.currentDecision ? { outcome: data.currentDecision.outcome } : null, assignments: data.assignments ?? [] } }));
       }
     } catch (cause) {
       setWfError(cause instanceof Error ? cause.message : "Could not load the workflow.");
@@ -231,6 +232,24 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       setCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, stageKey: data.instance.currentStageKey ?? null } : c)));
     } catch (cause) {
       setWfError(cause instanceof Error ? cause.message : "Could not advance the workflow.");
+    } finally { setWfBusy(null); }
+  }
+  async function assignMe(caseId: string, stageKey: string, participantKey: string) {
+    setWfBusy(caseId); setWfError(null);
+    try {
+      const res = await fetch(`/api/crm/cases/${encodeURIComponent(caseId)}/workflow/participants${queryString}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stageKey, participantKey, targetKind: "USER" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not assign the participant."));
+      setWorkflows((prev) => {
+        const wf = prev[caseId];
+        if (!wf) return prev;
+        const rest = wf.assignments.filter((a) => !(a.stageKey === stageKey && a.participantKey === participantKey));
+        return { ...prev, [caseId]: { ...wf, assignments: [...rest, { stageKey, participantKey, status: "ASSIGNED" }] } };
+      });
+    } catch (cause) {
+      setWfError(cause instanceof Error ? cause.message : "Could not assign the participant.");
     } finally { setWfBusy(null); }
   }
   async function decideCase(caseId: string, outcome: string) {
@@ -400,7 +419,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}>{c.accountName ?? "—"}</td>
                     <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
-                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onTrace={() => setTraceCase(c)} /></td>
+                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onAssign={(stageKey, pk) => assignMe(c.caseId, stageKey, pk)} onTrace={() => setTraceCase(c)} /></td>
                     <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <select
@@ -517,14 +536,15 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   );
 }
 
-function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide, onTrace }: {
+function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide, onAssign, onTrace }: {
   c: CaseRow;
-  wf?: { instanceId: string; currentStageKey: string | null; revision: number; state: string; stages: { stageKey: string; label: string; sequence: number; decisionRequired: boolean; decisionOutcomes: string[] }[]; currentDecision: { outcome: string } | null };
+  wf?: { instanceId: string; currentStageKey: string | null; revision: number; state: string; stages: { stageKey: string; label: string; sequence: number; decisionRequired: boolean; decisionOutcomes: string[]; requiredParticipantKeys: string[] }[]; currentDecision: { outcome: string } | null; assignments: { stageKey: string; participantKey: string; status: string }[] };
   busy: boolean;
   onStart: () => void;
   onLoad: () => void;
   onAdvance: (stageKey: string) => void;
   onDecide: (outcome: string) => void;
+  onAssign: (stageKey: string, participantKey: string) => void;
   onTrace: () => void;
 }) {
   const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
@@ -558,9 +578,24 @@ function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide, onTra
   }
   const cur = wf.stages.find((s) => s.stageKey === wf.currentStageKey);
   const gated = cur?.decisionRequired === true && wf.currentDecision === null;
+  const isAssigned = (stageKey: string, pk: string) => wf.assignments.some((a) => a.stageKey === stageKey && a.participantKey === pk && a.status === "ASSIGNED");
+  const unmet = wf.stages.flatMap((s) => s.requiredParticipantKeys.filter((pk) => !isAssigned(s.stageKey, pk)).map((pk) => ({ stageKey: s.stageKey, label: s.label, participantKey: pk })));
   return (
-    <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+    <div style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
       <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#3730a3", background: "#e0e7ff" }} title={`revision ${wf.revision}`}>{stage}</span>
+      {unmet.length > 0 && (
+        <select
+          value=""
+          disabled={busy}
+          onChange={(e) => { const v = e.target.value; if (v) { const [sk, pk] = v.split("::"); onAssign(sk, pk); } }}
+          aria-label="Assign a required participant"
+          title="A stage requires a participant before it can be entered. Assign yourself to a slot."
+          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #c2410c", color: "#c2410c", fontWeight: 700 }}
+        >
+          <option value="">Assign…</option>
+          {unmet.map((u) => <option key={`${u.stageKey}::${u.participantKey}`} value={`${u.stageKey}::${u.participantKey}`}>Me → {u.label}: {u.participantKey}</option>)}
+        </select>
+      )}
       {wf.currentDecision && (
         <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#166534", background: "#dcfce7" }} title="Recorded decision (immutable)">✓ {wf.currentDecision.outcome}</span>
       )}

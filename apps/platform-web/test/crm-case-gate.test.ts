@@ -13,7 +13,7 @@ test("transitions are gated by the blueprint decision guard", () => {
   assert.match(runtime, /WorkflowStageDecisionGateEvaluator/);
   assert.match(runtime, /PostgresWorkflowStageDecisionRepository/);
   // The gate is evaluated before the instance commit and can block it.
-  assert.match(runtime, /gateDecision\.allowed/);
+  assert.match(runtime, /decisionResult\.allowed/);
   assert.match(runtime, /reason: 'GATE_BLOCKED'/);
 });
 
