@@ -33,8 +33,8 @@ test("agreements table is RLS-forced and tied to a customer account with lead pr
 });
 
 test("CRM client surfaces agreements with status moves and contract value", () => {
-  assert.match(client, /Agreements/);
+  assert.match(client, /reloadAgreements/);
   assert.match(client, /moveAgreement/);
-  assert.match(client, /Active contracts/);
+  assert.match(client, /activeContractMinor/);
   assert.match(client, /AgreementModal/);
 });

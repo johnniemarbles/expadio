@@ -35,8 +35,8 @@ test("cases table is RLS-forced and carries the Decision Fabric seam", () => {
 });
 
 test("CRM client surfaces cases with status moves and blueprint linkage", () => {
-  assert.match(client, /Cases/);
+  assert.match(client, /reloadCases/);
   assert.match(client, /moveCase/);
-  assert.match(client, /Open cases/);
+  assert.match(client, /openCases/);
   assert.match(client, /Workflow blueprint/);
 });

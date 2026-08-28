@@ -26,7 +26,9 @@
     "@expadio/party": "workspace:*",
     "@expadio/lead": "workspace:*",
     "@expadio/case": "workspace:*",
-    "@expadio/agreement": "workspace:*"
+    "@expadio/agreement": "workspace:*",
+    "@expadio/business-config": "workspace:*",
+    "@expadio/industry-packs": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
