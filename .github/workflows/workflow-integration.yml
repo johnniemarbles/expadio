@@ -1,0 +1,88 @@
+name: Workflow Integration
+
+# DB-backed integration harness for the Decision Fabric case runtime. Unlike the
+# strip-types contract tests (which check source shape) and the SQL smoke checks
+# (which assert schema/trigger behaviour in isolation), this stands up a real
+# Postgres, applies every migration, and drives the app's workflow runtime +
+# Postgres adapters through each governance gate — the layer that caught the two
+# latent bugs (ambiguous `revision` in commitTransition; a uuid/text org-scope
+# mismatch) by hand this cycle.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform-web/**'
+      - 'packages/**'
+      - 'infra/db/**'
+      - '.github/workflows/workflow-integration.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/platform-web/**'
+      - 'packages/**'
+      - 'infra/db/**'
+      - '.github/workflows/workflow-integration.yml'
+
+concurrency:
+  group: workflow-integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: expadio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d expadio_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: expadio_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+          pnpm --version
+
+      - name: Install workspace dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Apply core migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in infra/db/migrations/*.sql; do
+            echo "Applying ${file}"
+            psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" \
+              -v ON_ERROR_STOP=1 -f "${file}"
+          done
+
+      - name: Run workflow integration harness
+        working-directory: apps/platform-web
+        run: pnpm test:integration

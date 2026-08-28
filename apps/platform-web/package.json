@@ -9,7 +9,8 @@
     "start": "node scripts/migrate.mjs && node scripts/seed.cjs && next start",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm test && pnpm build",
-    "test": "node --experimental-strip-types --test test/*.test.ts"
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test:integration": "node --experimental-strip-types --import ./test-integration/register.mjs --test test-integration/*.itest.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.2",
