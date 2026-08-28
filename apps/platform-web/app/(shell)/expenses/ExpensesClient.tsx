@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import styles from '../workflows/page.module.css';
+import { WorkflowTraceModal } from '../WorkflowTraceModal';
 
 /**
  * Expense reimbursement surface — the third Decision Fabric vertical. File an
@@ -57,6 +58,7 @@ export function ExpensesClient({ initialExpenses, queryString = '' }: { initialE
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wf, setWf] = useState<Record<string, WfState>>({});
+  const [trace, setTrace] = useState<ExpenseRow | null>(null);
 
   async function reload() {
     const res = await fetch(`/api/expenses${queryString}`);
@@ -193,21 +195,26 @@ export function ExpensesClient({ initialExpenses, queryString = '' }: { initialE
                   <td><span style={badge(e.status)}>{e.status}</span></td>
                   <td>{stage ?? <span className={styles.muted}>—</span>}</td>
                   <td>
-                    {e.workflowInstanceId === null ? (
-                      <button style={btn} disabled={busy !== null} onClick={() => start(e.expenseId)}>Start review</button>
-                    ) : stage === 'SUBMITTED' ? (
-                      <span style={{ display: 'inline-flex', gap: 8 }}>
-                        <button style={{ ...btn, background: '#334155' }} disabled={busy !== null} onClick={() => assignManager(e.expenseId)}>Assign manager</button>
-                        <button style={btn} disabled={busy !== null} onClick={() => advance(e.expenseId, 'MANAGER_REVIEW')}>Send to review</button>
-                      </span>
-                    ) : stage === 'MANAGER_REVIEW' ? (
-                      <span style={{ display: 'inline-flex', gap: 8 }}>
-                        <button style={btn} disabled={busy !== null} onClick={() => approveAndPay(e.expenseId)}>Approve &amp; pay</button>
-                        <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(e.expenseId)}>Reject</button>
-                      </span>
-                    ) : (
-                      <span className={styles.muted}>Reimbursed</span>
-                    )}
+                    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                      {e.workflowInstanceId === null ? (
+                        <button style={btn} disabled={busy !== null} onClick={() => start(e.expenseId)}>Start review</button>
+                      ) : stage === 'SUBMITTED' ? (
+                        <>
+                          <button style={{ ...btn, background: '#334155' }} disabled={busy !== null} onClick={() => assignManager(e.expenseId)}>Assign manager</button>
+                          <button style={btn} disabled={busy !== null} onClick={() => advance(e.expenseId, 'MANAGER_REVIEW')}>Send to review</button>
+                        </>
+                      ) : stage === 'MANAGER_REVIEW' ? (
+                        <>
+                          <button style={btn} disabled={busy !== null} onClick={() => approveAndPay(e.expenseId)}>Approve &amp; pay</button>
+                          <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(e.expenseId)}>Reject</button>
+                        </>
+                      ) : (
+                        <span className={styles.muted}>Reimbursed</span>
+                      )}
+                      {e.workflowInstanceId !== null && (
+                        <button type="button" style={{ ...btn, background: 'transparent', color: 'var(--ink-600, #475569)', border: '1px solid var(--line, #cbd5e1)' }} onClick={() => setTrace(e)}>Trace</button>
+                      )}
+                    </span>
                   </td>
                 </tr>
               );
@@ -216,6 +223,14 @@ export function ExpensesClient({ initialExpenses, queryString = '' }: { initialE
         </table>
         {expenses.length === 0 && <p className={styles.muted} style={{ padding: 16 }}>No expenses yet. File one to begin.</p>}
       </div>
+
+      {trace && (
+        <WorkflowTraceModal
+          title={`Workflow trace — ${trace.purpose}`}
+          historyUrl={`/api/expenses/${encodeURIComponent(trace.expenseId)}/workflow/history${queryString}`}
+          onClose={() => setTrace(null)}
+        />
+      )}
     </section>
   );
 }
