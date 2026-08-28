@@ -30,7 +30,8 @@ test('the Approval Authority surface can grant and inspect authority', () => {
 test('a workflow authority denial links to the Approval Authority page', () => {
   const expenses = read('../app/(shell)/expenses/ExpensesClient.tsx');
   const vendors = read('../app/(shell)/vendors/VendorsClient.tsx');
-  for (const client of [expenses, vendors]) {
+  const crm = read('../app/(shell)/crm/CrmClient.tsx');
+  for (const client of [expenses, vendors, crm]) {
     assert.match(client, /WORKFLOW_AUTHORITY/);
     assert.match(client, /Grant approval authority/);
     assert.match(client, /href=\{`\/authority/);
