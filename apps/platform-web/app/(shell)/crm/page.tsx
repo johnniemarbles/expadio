@@ -4,6 +4,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead } from "@expadio/lead";
 import type { CrmCase } from "@expadio/case";
 import type { CrmAgreement } from "@expadio/agreement";
+import { findIndustryPack, resolveCrmVocabulary, listIndustryPackChoices } from "@expadio/industry-packs";
 import { fetchApi } from "../../../lib/live-adapter";
 import { CrmClient } from "./CrmClient";
 
@@ -18,15 +19,25 @@ export default async function CrmPage({
   if (typeof params.org === "string") qs.set("org", params.org);
   const q = qs.toString() ? `?${qs.toString()}` : "";
 
-  const [accounts, contacts, leads, cases, agreements] = await Promise.all([
+  const [accounts, contacts, leads, cases, agreements, vertical] = await Promise.all([
     fetchApi<CrmAccount[]>(`/api/crm/accounts${q}`),
     fetchApi<(CrmContact & { accountName: string | null })[]>(`/api/crm/contacts${q}`),
     fetchApi<(CrmLead & { accountName: string | null })[]>(`/api/crm/leads${q}`),
     fetchApi<(CrmCase & { accountName: string | null })[]>(`/api/crm/cases${q}`),
     fetchApi<(CrmAgreement & { accountName: string | null })[]>(`/api/crm/agreements${q}`),
+    fetchApi<{ verticalKey: string | null; choices: { verticalKey: string; label: string }[] }>(`/api/tenancy/vertical${q}`),
   ]);
 
   if (isDenied(accounts)) return <DeniedState result={accounts} />;
+
+  // An explicit ?vertical= previews a pack; otherwise the tenant's saved binding
+  // decides. No pack → the neutral engine's own words.
+  const boundVertical = isDenied(vertical) ? null : vertical.verticalKey;
+  const previewVertical = typeof params.vertical === "string" ? params.vertical : null;
+  const activeVertical = previewVertical ?? boundVertical;
+  const pack = findIndustryPack(activeVertical);
+  const vocab = resolveCrmVocabulary(pack);
+  const choices = isDenied(vertical) ? listIndustryPackChoices() : vertical.choices;
 
   return (
     <CrmClient
@@ -35,6 +46,10 @@ export default async function CrmPage({
       initialLeads={isDenied(leads) ? [] : leads}
       initialCases={isDenied(cases) ? [] : cases}
       initialAgreements={isDenied(agreements) ? [] : agreements}
+      vocab={vocab}
+      verticalKey={activeVertical}
+      verticalLabel={pack?.label ?? null}
+      packChoices={choices}
       queryString={q}
     />
   );

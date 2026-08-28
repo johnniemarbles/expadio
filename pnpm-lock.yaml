@@ -23,6 +23,9 @@ importers:
       '@expadio/agreement':
         specifier: workspace:*
         version: link:../../packages/agreement
+      '@expadio/business-config':
+        specifier: workspace:*
+        version: link:../../packages/business-config
       '@expadio/case':
         specifier: workspace:*
         version: link:../../packages/case
@@ -35,6 +38,9 @@ importers:
       '@expadio/iam':
         specifier: workspace:*
         version: link:../../packages/iam
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../../packages/industry-packs
       '@expadio/lead':
         specifier: workspace:*
         version: link:../../packages/lead
@@ -180,6 +186,12 @@ importers:
       '@expadio/tenancy-persistence':
         specifier: workspace:*
         version: link:../tenancy-persistence
+
+  packages/industry-packs:
+    dependencies:
+      '@expadio/business-config':
+        specifier: workspace:*
+        version: link:../business-config
 
   packages/knowledge:
     dependencies:

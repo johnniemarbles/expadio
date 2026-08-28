@@ -5,6 +5,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
 import type { CrmCase, CaseStatus } from "@expadio/case";
 import type { CrmAgreement, AgreementStatus } from "@expadio/agreement";
+import type { CrmVocabulary } from "@expadio/industry-packs";
 import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
@@ -59,6 +60,10 @@ interface CrmClientProps {
   initialLeads: LeadRow[];
   initialCases: CaseRow[];
   initialAgreements: AgreementRow[];
+  vocab: CrmVocabulary;
+  verticalKey: string | null;
+  verticalLabel: string | null;
+  packChoices: readonly { verticalKey: string; label: string }[];
   queryString?: string;
 }
 
@@ -66,7 +71,8 @@ const inp: React.CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
 };
 
-export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, queryString = "" }: CrmClientProps) {
+export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, verticalKey, verticalLabel, packChoices, queryString = "" }: CrmClientProps) {
+  const lc = (s: string) => s.toLowerCase();
   const [tab, setTab] = useState<"accounts" | "contacts" | "leads" | "cases" | "agreements">("accounts");
   const [accounts, setAccounts] = useState<CrmAccount[]>(initialAccounts);
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
@@ -85,6 +91,24 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const [agreementError, setAgreementError] = useState<string | null>(null);
   const [movingAgreement, setMovingAgreement] = useState<string | null>(null);
   const [convertTarget, setConvertTarget] = useState<LeadRow | null>(null);
+  const [switchingVertical, setSwitchingVertical] = useState(false);
+  const [verticalError, setVerticalError] = useState<string | null>(null);
+
+  async function changeVertical(next: string) {
+    setSwitchingVertical(true); setVerticalError(null);
+    try {
+      const res = await fetch(`/api/tenancy/vertical${queryString}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ verticalKey: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not change the industry pack."));
+      // Vocabulary is resolved on the server, so re-run the page to re-skin.
+      window.location.reload();
+    } catch (cause) {
+      setVerticalError(cause instanceof Error ? cause.message : "Could not change the industry pack.");
+      setSwitchingVertical(false);
+    }
+  }
 
   async function reloadAccounts() {
     const res = await fetch(`/api/crm/accounts${queryString}`);
@@ -172,31 +196,47 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
     <div style={{ display: "grid", gap: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>Business engine / CRM</div>
+          <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>Business engine / CRM{verticalLabel ? ` · ${verticalLabel}` : ""}</div>
           <h1 style={{ margin: "4px 0 0", fontSize: 24 }}>Customer relationships</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--ink-600, #475569)" }}>Accounts and contacts for this workspace, isolated by tenant.</p>
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--ink-600, #475569)" }}>{vocab.account.plural} and {lc(vocab.contact.plural)} for this workspace, isolated by tenant.</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: "pointer" }}>+ New account</button>
-          <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New contact</button>
-          <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New lead</button>
-          <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New case</button>
-          <button type="button" onClick={() => setShowAgreement(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New agreement</button>
+        <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: "var(--ink-600, #475569)" }}>
+            Industry pack
+            <select
+              value={verticalKey ?? ""}
+              disabled={switchingVertical}
+              onChange={(e) => changeVertical(e.target.value)}
+              aria-label="Industry pack"
+              style={{ fontSize: 12, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", fontWeight: 700 }}
+            >
+              <option value="">Neutral engine</option>
+              {packChoices.map((c) => <option key={c.verticalKey} value={c.verticalKey}>{c.label}</option>)}
+            </select>
+          </label>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.account.singular)}</button>
+            <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.contact.singular)}</button>
+            <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.lead.singular)}</button>
+            <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.case.singular)}</button>
+            <button type="button" onClick={() => setShowAgreement(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.agreement.singular)}</button>
+          </div>
+          {verticalError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>⚠️ {verticalError}</div>}
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-        <Stat label="Accounts" value={accounts.length} />
+        <Stat label={vocab.account.plural} value={accounts.length} />
         <Stat label="Open pipeline" value={money(openPipelineMinor, pipeCurrency)} />
         <Stat label="Won" value={money(wonMinor, pipeCurrency)} />
-        <Stat label="Open cases" value={openCases} />
-        <Stat label="Active contracts" value={money(activeContractMinor, pipeCurrency)} />
+        <Stat label={`Open ${lc(vocab.case.plural)}`} value={openCases} />
+        <Stat label={`Active ${lc(vocab.agreement.plural)}`} value={money(activeContractMinor, pipeCurrency)} />
       </div>
 
       <div style={{ display: "flex", gap: 6, borderBottom: "1px solid var(--line, #e2e8f0)" }}>
         {(["accounts", "contacts", "leads", "cases", "agreements"] as const).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} style={{ padding: "8px 14px", border: 0, background: "transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: tab === t ? "var(--brand, #4f46e5)" : "var(--ink-500, #64748b)", borderBottom: tab === t ? "2px solid var(--brand, #4f46e5)" : "2px solid transparent" }}>
-            {t === "accounts" ? "Accounts" : t === "contacts" ? "Contacts" : t === "leads" ? "Leads" : t === "cases" ? "Cases" : "Agreements"}
+            {t === "accounts" ? vocab.account.plural : t === "contacts" ? vocab.contact.plural : t === "leads" ? vocab.lead.plural : t === "cases" ? vocab.case.plural : vocab.agreement.plural}
           </button>
         ))}
       </div>
@@ -204,7 +244,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       {tab === "accounts" ? (
         <Panel>
           {accounts.length > 0 ? (
-            <Table head={["Account", "Domain", "Industry", "Stage", "Created"]}>
+            <Table head={[vocab.account.singular, "Domain", "Industry", "Stage", "Created"]}>
               {accounts.map((a) => {
                 const tone = STAGE_TONE[a.lifecycleStage] ?? STAGE_TONE.PROSPECT;
                 return (
@@ -219,13 +259,13 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               })}
             </Table>
           ) : (
-            <Empty title="No accounts yet" desc="Create your first customer account to start building the pipeline." />
+            <Empty title={`No ${lc(vocab.account.plural)} yet`} desc={`Create your first ${lc(vocab.account.singular)} to start building the pipeline.`} />
           )}
         </Panel>
       ) : tab === "contacts" ? (
         <Panel>
           {contacts.length > 0 ? (
-            <Table head={["Contact", "Email", "Phone", "Title", "Account"]}>
+            <Table head={[vocab.contact.singular, "Email", "Phone", "Title", vocab.account.singular]}>
               {contacts.map((c) => (
                 <tr key={c.contactId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
                   <td style={td}><strong>{c.fullName}</strong></td>
@@ -237,14 +277,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               ))}
             </Table>
           ) : (
-            <Empty title="No contacts yet" desc="Add people and optionally attach them to an account." />
+            <Empty title={`No ${lc(vocab.contact.plural)} yet`} desc={`Add people and optionally attach them to a ${lc(vocab.account.singular)}.`} />
           )}
         </Panel>
       ) : tab === "leads" ? (
         <Panel>
           {leadError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {leadError}</div>}
           {leads.length > 0 ? (
-            <Table head={["Lead", "Account", "Amount", "Source", "Stage", ""]}>
+            <Table head={[vocab.lead.singular, vocab.account.singular, "Amount", "Source", "Stage", ""]}>
               {leads.map((l) => {
                 const tone = LEAD_TONE[l.stage] ?? LEAD_TONE.NEW;
                 return (
@@ -260,7 +300,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                           <button
                             type="button"
                             onClick={() => setConvertTarget(l)}
-                            title="Close-won this lead and turn it into a customer account"
+                            title={`Close-won this ${lc(vocab.lead.singular)} and turn it into a customer ${lc(vocab.account.singular)}`}
                             style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "#166534", color: "white", fontWeight: 700, cursor: "pointer" }}
                           >
                             Convert →
@@ -282,14 +322,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               })}
             </Table>
           ) : (
-            <Empty title="No leads yet" desc="Create a lead to start tracking the pipeline. Move it through stages as it progresses." />
+            <Empty title={`No ${lc(vocab.lead.plural)} yet`} desc={`Create a ${lc(vocab.lead.singular)} to start tracking the pipeline. Move it through stages as it progresses.`} />
           )}
         </Panel>
       ) : tab === "cases" ? (
         <Panel>
           {caseError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
           {cases.length > 0 ? (
-            <Table head={["Case", "Account", "Priority", "Blueprint", "Status", ""]}>
+            <Table head={[vocab.case.singular, vocab.account.singular, "Priority", "Blueprint", "Status", ""]}>
               {cases.map((c) => {
                 const tone = CASE_STATUS_TONE[c.status] ?? CASE_STATUS_TONE.OPEN;
                 return (
@@ -315,14 +355,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               })}
             </Table>
           ) : (
-            <Empty title="No cases yet" desc="Open a case to track a unit of work. Link it to the workflow blueprint that will govern it." />
+            <Empty title={`No ${lc(vocab.case.plural)} yet`} desc={`Open a ${lc(vocab.case.singular)} to track a unit of work. Link it to the workflow blueprint that will govern it.`} />
           )}
         </Panel>
       ) : (
         <Panel>
           {agreementError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {agreementError}</div>}
           {agreements.length > 0 ? (
-            <Table head={["Agreement", "Account", "Value", "Term", "Status", ""]}>
+            <Table head={[vocab.agreement.singular, vocab.account.singular, "Value", "Term", "Status", ""]}>
               {agreements.map((g) => {
                 const tone = AGREEMENT_TONE[g.status] ?? AGREEMENT_TONE.DRAFT;
                 const term = g.startsOn || g.endsOn ? `${g.startsOn ?? "…"} → ${g.endsOn ?? "…"}` : "—";
@@ -349,13 +389,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               })}
             </Table>
           ) : (
-            <Empty title="No agreements yet" desc="Sign a customer to a contract or subscription. Convert a won lead, or add one directly against an account." />
+            <Empty title={`No ${lc(vocab.agreement.plural)} yet`} desc={`Sign a ${lc(vocab.account.singular)} to a ${lc(vocab.agreement.singular)}. Convert a won ${lc(vocab.lead.singular)}, or add one directly against a ${lc(vocab.account.singular)}.`} />
           )}
         </Panel>
       )}
 
       {showAccount && (
         <AccountModal
+          vocab={vocab}
           queryString={queryString}
           onClose={() => setShowAccount(false)}
           onCreated={() => { setShowAccount(false); reloadAccounts(); }}
@@ -364,6 +405,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       {showContact && (
         <ContactModal
           accounts={accounts}
+          vocab={vocab}
           queryString={queryString}
           onClose={() => setShowContact(false)}
           onCreated={() => { setShowContact(false); reloadContacts(); }}
@@ -372,6 +414,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       {showLead && (
         <LeadModal
           accounts={accounts}
+          vocab={vocab}
           queryString={queryString}
           onClose={() => setShowLead(false)}
           onCreated={() => { setShowLead(false); reloadLeads(); }}
@@ -380,6 +423,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       {showCase && (
         <CaseModal
           accounts={accounts}
+          vocab={vocab}
           queryString={queryString}
           onClose={() => setShowCase(false)}
           onCreated={() => { setShowCase(false); reloadCases(); }}
@@ -388,6 +432,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       {convertTarget && (
         <ConvertModal
           lead={convertTarget}
+          vocab={vocab}
           queryString={queryString}
           onClose={() => setConvertTarget(null)}
           onConverted={onConverted}
@@ -396,6 +441,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       {showAgreement && (
         <AgreementModal
           accounts={accounts}
+          vocab={vocab}
           queryString={queryString}
           onClose={() => setShowAgreement(false)}
           onCreated={() => { setShowAgreement(false); reloadAgreements(); }}
@@ -440,7 +486,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
   );
 }
 
-function AccountModal({ queryString, onClose, onCreated }: { queryString: string; onClose: () => void; onCreated: () => void }) {
+function AccountModal({ vocab, queryString, onClose, onCreated }: { vocab: CrmVocabulary; queryString: string; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
   const [industry, setIndustry] = useState("");
@@ -467,7 +513,7 @@ function AccountModal({ queryString, onClose, onCreated }: { queryString: string
   }
 
   return (
-    <Modal title="New account" onClose={onClose}>
+    <Modal title={`New ${vocab.account.singular.toLowerCase()}`} onClose={onClose}>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Name<input required value={name} onChange={(e) => setName(e.target.value)} style={inp} /></label>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Domain<input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="acme.com" style={inp} /></label>
@@ -478,14 +524,14 @@ function AccountModal({ queryString, onClose, onCreated }: { queryString: string
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create account"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.account.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function ContactModal({ accounts, queryString, onClose, onCreated }: { accounts: CrmAccount[]; queryString: string; onClose: () => void; onCreated: () => void }) {
+function ContactModal({ accounts, vocab, queryString, onClose, onCreated }: { accounts: CrmAccount[]; vocab: CrmVocabulary; queryString: string; onClose: () => void; onCreated: () => void }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -513,7 +559,7 @@ function ContactModal({ accounts, queryString, onClose, onCreated }: { accounts:
   }
 
   return (
-    <Modal title="New contact" onClose={onClose}>
+    <Modal title={`New ${vocab.contact.singular.toLowerCase()}`} onClose={onClose}>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Full name<input required value={fullName} onChange={(e) => setFullName(e.target.value)} style={inp} /></label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -522,20 +568,20 @@ function ContactModal({ accounts, queryString, onClose, onCreated }: { accounts:
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Title<input value={title} onChange={(e) => setTitle(e.target.value)} style={inp} /></label>
-          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         </div>
-        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-500, #64748b)" }}>A contact needs an email, a phone, or an account.</p>
+        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-500, #64748b)" }}>A {vocab.contact.singular.toLowerCase()} needs an email, a phone, or a {vocab.account.singular.toLowerCase()}.</p>
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create contact"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.contact.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function LeadModal({ accounts, queryString, onClose, onCreated }: { accounts: CrmAccount[]; queryString: string; onClose: () => void; onCreated: () => void }) {
+function LeadModal({ accounts, vocab, queryString, onClose, onCreated }: { accounts: CrmAccount[]; vocab: CrmVocabulary; queryString: string; onClose: () => void; onCreated: () => void }) {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
@@ -569,7 +615,7 @@ function LeadModal({ accounts, queryString, onClose, onCreated }: { accounts: Cr
   }
 
   return (
-    <Modal title="New lead" onClose={onClose}>
+    <Modal title={`New ${vocab.lead.singular.toLowerCase()}`} onClose={onClose}>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Title<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enterprise expansion" style={inp} /></label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr", gap: 10 }}>
@@ -579,19 +625,19 @@ function LeadModal({ accounts, queryString, onClose, onCreated }: { accounts: Cr
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Source<input value={source} onChange={(e) => setSource(e.target.value)} placeholder="inbound, referral…" style={inp} /></label>
-          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         </div>
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create lead"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.lead.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function AgreementModal({ accounts, queryString, onClose, onCreated }: { accounts: CrmAccount[]; queryString: string; onClose: () => void; onCreated: () => void }) {
+function AgreementModal({ accounts, vocab, queryString, onClose, onCreated }: { accounts: CrmAccount[]; vocab: CrmVocabulary; queryString: string; onClose: () => void; onCreated: () => void }) {
   const [accountId, setAccountId] = useState("");
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
@@ -606,7 +652,7 @@ function AgreementModal({ accounts, queryString, onClose, onCreated }: { account
     e.preventDefault();
     setSaving(true); setError(null);
     try {
-      if (!accountId) throw new Error("Choose the customer account this agreement is with.");
+      if (!accountId) throw new Error(`Choose the ${vocab.account.singular.toLowerCase()} this ${vocab.agreement.singular.toLowerCase()} is with.`);
       const trimmed = value.trim();
       const valueMinorUnits = trimmed === "" ? undefined : Math.round(Number(trimmed) * 100);
       if (valueMinorUnits !== undefined && (!Number.isInteger(valueMinorUnits) || valueMinorUnits < 0)) {
@@ -627,9 +673,9 @@ function AgreementModal({ accounts, queryString, onClose, onCreated }: { account
   }
 
   return (
-    <Modal title="New agreement" onClose={onClose}>
+    <Modal title={`New ${vocab.agreement.singular.toLowerCase()}`} onClose={onClose}>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account<select required value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— choose a customer —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select required value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— choose a {vocab.account.singular.toLowerCase()} —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Title<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Annual subscription" style={inp} /></label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr", gap: 10 }}>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Value<input value={value} onChange={(e) => setValue(e.target.value)} placeholder="120000" inputMode="decimal" style={inp} /></label>
@@ -643,14 +689,14 @@ function AgreementModal({ accounts, queryString, onClose, onCreated }: { account
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create agreement"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.agreement.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function ConvertModal({ lead, queryString, onClose, onConverted }: { lead: LeadRow; queryString: string; onClose: () => void; onConverted: (openedCase: boolean) => void }) {
+function ConvertModal({ lead, vocab, queryString, onClose, onConverted }: { lead: LeadRow; vocab: CrmVocabulary; queryString: string; onClose: () => void; onConverted: (openedCase: boolean) => void }) {
   const [openCase, setOpenCase] = useState(true);
   const [caseSubject, setCaseSubject] = useState(`Onboarding — ${lead.accountName ?? lead.title}`);
   const [saving, setSaving] = useState(false);
@@ -678,15 +724,15 @@ function ConvertModal({ lead, queryString, onClose, onConverted }: { lead: LeadR
     <Modal title="Convert to customer" onClose={onClose}>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
         <p style={{ margin: 0, fontSize: 13, color: "var(--ink-600, #475569)" }}>
-          Closes <strong>{lead.title}</strong> as won and {lead.accountId ? "promotes its account to " : "creates a new customer account at the "}
+          Closes <strong>{lead.title}</strong> as won and {lead.accountId ? `promotes its ${vocab.account.singular.toLowerCase()} to ` : `creates a new ${vocab.account.singular.toLowerCase()} at the `}
           <span style={{ fontWeight: 700, color: "#166534" }}>CUSTOMER</span> stage.
         </p>
         <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
           <input type="checkbox" checked={openCase} onChange={(e) => setOpenCase(e.target.checked)} />
-          Open an onboarding case for the new customer
+          Open an onboarding {vocab.case.singular.toLowerCase()} for the new customer
         </label>
         {openCase && (
-          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Case subject<input value={caseSubject} onChange={(e) => setCaseSubject(e.target.value)} style={inp} /></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.case.singular} subject<input value={caseSubject} onChange={(e) => setCaseSubject(e.target.value)} style={inp} /></label>
         )}
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
@@ -698,7 +744,7 @@ function ConvertModal({ lead, queryString, onClose, onConverted }: { lead: LeadR
   );
 }
 
-function CaseModal({ accounts, queryString, onClose, onCreated }: { accounts: CrmAccount[]; queryString: string; onClose: () => void; onCreated: () => void }) {
+function CaseModal({ accounts, vocab, queryString, onClose, onCreated }: { accounts: CrmAccount[]; vocab: CrmVocabulary; queryString: string; onClose: () => void; onCreated: () => void }) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("NORMAL");
@@ -726,19 +772,19 @@ function CaseModal({ accounts, queryString, onClose, onCreated }: { accounts: Cr
   }
 
   return (
-    <Modal title="New case" onClose={onClose}>
+    <Modal title={`New ${vocab.case.singular.toLowerCase()}`} onClose={onClose}>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Subject<input required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Customer can't log in" style={inp} /></label>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Description<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ ...inp, resize: "vertical" }} /></label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Priority<select value={priority} onChange={(e) => setPriority(e.target.value)} style={inp}>{CASE_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
-          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         </div>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Workflow blueprint (optional)<input value={blueprintKey} onChange={(e) => setBlueprintKey(e.target.value)} placeholder="support.case" style={inp} /><span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}>The Decision Fabric blueprint that will govern this case's lifecycle.</span></label>
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create case"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.case.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
