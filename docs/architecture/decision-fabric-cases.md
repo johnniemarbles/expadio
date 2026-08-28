@@ -1,13 +1,31 @@
-# Decision Fabric — how a CRM case runs on a governed workflow
+# Decision Fabric — how any business entity runs on the governed workflow engine
 
 **Status:** Implementation note
-**Scope:** `apps/platform-web` case workflow wiring over `@expadio/workflow` + `@expadio/postgres-runtime`
+**Scope:** `apps/platform-web` workflow wiring over `@expadio/workflow` + `@expadio/postgres-runtime`
 
-A CRM **case** (`platform.crm_cases`) is a first-class business entity that also
-binds to a governed **workflow instance**. This note maps the moving parts so a
-maintainer can find where each rule lives. Nothing here is new domain logic — the
-pure workflow domain and its Postgres adapters already existed; the app supplies
-a thin seam that drives them from governed HTTP routes.
+A governed business entity — a CRM **case** (`platform.crm_cases`), a **vendor**
+(`platform.vendors`), an **expense** (`platform.expense_reports`) — is a
+first-class record that also binds to a governed **workflow instance**. The same
+runtime drives all of them; nothing in the transition/decision path names a
+particular vertical. This note maps the moving parts so a maintainer can find
+where each rule lives, and gives the recipe for adding a vertical. The pure
+workflow domain and its Postgres adapters already existed; the app supplies a
+thin, work-type-agnostic seam that drives them from governed HTTP routes.
+
+## The verticals
+
+Each vertical is the same engine over a different subject and blueprint. What
+differs is only the binding record, the seeded blueprint, and how approval
+authority is derived.
+
+| Work type | Subject table | Blueprint (PLATFORM) | Approval authority derived from |
+|-----------|---------------|----------------------|---------------------------------|
+| `crm.case` | `platform.crm_cases` | `0049`/`0050` | the case account's most valuable ACTIVE **agreement** (monetary threshold, org-scoped) |
+| `vendor.onboarding` | `platform.vendors` | `0053` (v1), `0054` (v2 adds a decision-required `APPROVAL`) | **nothing** — role + separation of duties only |
+| `expense.reimbursement` | `platform.expense_reports` | `0055` | the expense's **own amount** (`amount_minor_units`), tenant-scoped |
+
+The authority basis is the one genuinely per-vertical decision, and it is a
+registered strategy — see **Authority derivation seam** below.
 
 ## Layering
 
@@ -15,18 +33,28 @@ a thin seam that drives them from governed HTTP routes.
 |-------|-------|----------------|
 | Pure domain | `packages/workflow` | Blueprint instantiation, the transition state machine (`commitWorkflowStageTransition`), and the gate evaluators (decision, participant) + authority/decision-capture contracts. No persistence, no transport. |
 | Persistence adapters | `packages/postgres-runtime` | `PostgresWorkflowBlueprintRepository`, `PostgresWorkflowInstanceRepository` (atomic `commitTransition`), `PostgresWorkflowStageDecisionRepository`. Each takes a client already bound to the tenant RLS context. |
-| App seam | `apps/platform-web/lib/workflow-runtime.ts` | `startWorkflow`, `transitionWorkflow`, `recordCaseDecision`, `describeWorkflow`, `loadCaseWorkflowHistory`. Composes the domain + adapters; owns gate ordering and the auto-complete step. |
-| App authority | `apps/platform-web/lib/workflow-authority.ts` + `workflow-participants.ts` | `RoleAndSeparationOfDutiesAuthorityProvider` (four-eyes + governing-role, records role evidence) and the Postgres participant-assignment provider. |
-| Routes | `apps/platform-web/app/api/crm/cases/[id]/workflow[/…]` | `resolveRequestContext`-scoped; reads require membership, writes a governing role. Mirror the instance's current stage onto the case's `stage_key`. |
-| Surface | `apps/platform-web/app/(shell)/crm/CrmClient.tsx` | The Cases tab: start, assign, decide, advance, completed badge, and a trace modal. |
+| App seam | `apps/platform-web/lib/workflow-runtime.ts` | `startWorkflow`, `transitionWorkflow`, `recordCaseDecision`, `describeWorkflow`, `loadCaseWorkflowHistory`. Composes the domain + adapters; owns gate ordering and the auto-complete step. Takes an arbitrary `subjectType` / `workTypeKey` — it does not name a vertical. |
+| Authority derivation | `apps/platform-web/lib/workflow-authority-derivation.ts` | A `workTypeKey → deriver` registry. `deriveAuthorityRequirements` dispatches; a work type with no registered deriver has no monetary/scope requirement. |
+| App authority | `apps/platform-web/lib/workflow-authority.ts` + `workflow-authority-grants.ts` + `workflow-participants.ts` | `RoleAndSeparationOfDutiesAuthorityProvider` (four-eyes + governing-role, monetary/org-scope/delegation), the authority-grant reader/writer, and the Postgres participant-assignment provider. |
+| Routes | `apps/platform-web/app/api/{crm/cases,vendors,expenses}/[id]/workflow[/…]` | `resolveRequestContext`-scoped; reads require membership, writes a governing role. Mirror the instance's current stage onto the subject's `stage_key`. Per vertical: `route` (start/advance), `participants`, `decision`, `history`. |
+| Surface | `apps/platform-web/app/(shell)/{crm,vendors,expenses}` + `WorkflowTraceModal.tsx` + `authority` | Each vertical's tab: start, assign, decide, advance, status; a shared trace overlay; and the Approval Authority admin page that grants the authority the decision gate enforces. |
 
-## Tables (all tenant-scoped)
+## Tables (all tenant-scoped, RLS `ENABLE` + `FORCE`)
 
-- `platform.workflow_blueprints` — the `crm.case@1` PLATFORM blueprint is seeded in migration `0049` and given a `reviewer` participant slot on `REVIEW` in `0050`. Platform blueprints (`tenant_id IS NULL`) are visible to every tenant.
+- `platform.workflow_blueprints` — PLATFORM blueprints (`tenant_id IS NULL`) are visible to every tenant; the resolver picks the highest-version ACTIVE row, so a v2 supersedes v1 while existing instances keep resolving their own version by identity.
 - `platform.workflow_instances` — **mutable** under RLS (state, current stage, revision).
 - `platform.workflow_instance_transitions` — **append-only** (BEFORE UPDATE/DELETE trigger rejects mutation).
 - `platform.workflow_stage_decisions` — **immutable** (one per instance/stage; trigger rejects mutation).
-- `platform.workflow_participant_assignments` — one row per instance/stage/slot (migration `0050`, RLS-forced).
+- `platform.workflow_participant_assignments` — one row per instance/stage/slot.
+- `platform.workflow_authority_grants` — per-subject approval-authority grants (monetary ceiling, org scope, delegation).
+- The subject tables (`crm_cases`, `vendors`, `expense_reports`) each carry the same binding seam: `blueprint_key`, `workflow_instance_id`, `stage_key`.
+
+Because the app connects as the database **owner** (not a superuser), every
+tenant-scoped table must be `FORCE ROW LEVEL SECURITY` with a policy — an owner
+bypasses plain `ENABLE`. `infra/db/tests/rls_coverage_smoke.sql` fails the build
+if any `tenant_id` table is missing enable/force/policy, and
+`test-integration/rls-isolation.itest.ts` proves the mechanism actually blocks
+cross-tenant access under a non-superuser role.
 
 ## The transition gate order (`transitionWorkflow`)
 
@@ -43,22 +71,46 @@ For a move into a target stage, the runtime evaluates, in order, and blocks on t
 Runs through `AuthorityGatedWorkflowDecisionCaptureService`, which evaluates authority **before** persisting:
 
 - **Governing role** — the approver must hold a role (tenant owner/admin or platform admin); the satisfying role is recorded as `authority:role:<ROLE>` evidence. No role → `WORKFLOW_AUTHORITY_ROLE_MISSING`.
-- **Separation of duties** — the approver must not be the maker who advanced the case into the stage (`makerForStage` = latest transition into the current stage). Self-approval → `WORKFLOW_SOD_SELF_APPROVAL`.
+- **Separation of duties** — the approver must not be the maker who advanced the subject into the stage (`makerForStage` = latest transition into the current stage). Self-approval → `WORKFLOW_SOD_SELF_APPROVAL`.
+- **Authority requirements** — any requirements from the derivation seam (below) are enforced: a monetary requirement needs a `monetary.approval` grant whose ceiling covers it, honoring org scope and delegation. Under the ceiling → `WORKFLOW_AUTHORITY_THRESHOLD`.
 
-Evidence (`authority:role:…`, `sod:maker:…`, `sod:checker:…`) lands in the decision's immutable `evidence_refs` and surfaces in the trace.
+Evidence (`authority:role:…`, `authority:monetary:…`, `sod:maker:…`, `sod:checker:…`) lands in the decision's immutable `evidence_refs` and surfaces in the trace.
 
-## Validation note
+### Authority derivation seam
 
-The package test harness is strip-types (no DB) + SQL smoke tests; it does not
-execute the TS adapters against a database. Each workflow slice was therefore
-validated end-to-end against a real Postgres 16 during development (start →
-gates → decision → four-eyes/role → auto-complete → trace). This is how the
-latent ambiguous-`revision` bug in `commitTransition`'s `RETURNING` was caught
-(fixed in the wiring PR): the CTE had never run against real Postgres.
+`recordCaseDecision` never queries a vertical's tables for its threshold; it
+calls `deriveAuthorityRequirements(client, { tenantId, instanceId, workTypeKey })`
+from `workflow-authority-derivation.ts`, which dispatches to the deriver
+registered for that work type:
 
-## Extending
+- `crm.case` → the account-agreement query.
+- `expense.reimbursement` → the expense's own `amount_minor_units`.
+- `vendor.onboarding` → **no deriver**, so `[]` — role + SoD alone gate it.
 
-Further gates (entry/exit conditions, blocking requirements) and authority
-dimensions (delegation, organization scope, monetary thresholds) attach to the
-same evaluation points — a new gate evaluator in the ordered list, or a new
-requirement consumed by the authority provider via `context.requirements`.
+Dispatch is keyed by work type, not by the subject's table, so adding a
+vertical-appropriate requirement is a one-function `registerAuthorityDeriver`
+call with no change to the runtime.
+
+## Validation
+
+`pnpm test` (the app's contract tests) is source-shape + pure-TS and does not
+touch a database. The **integration harness** `test-integration/*.itest.ts`
+(`pnpm test:integration`, run in the CI **Workflow Integration** job) drives the
+real `workflow-runtime` seam against a live Postgres 16 with all migrations
+applied — start → gates → decision → four-eyes/role/monetary → auto-complete →
+trace, across all three verticals. The **Core Spine** job runs the SQL smoke
+checks in `infra/db/tests/*.sql` (blueprint shapes, table constraints, RLS
+coverage) against the same fresh database. Any workflow change must go green on
+both.
+
+## Adding a vertical
+
+The engine is work-type-agnostic, so a new vertical is additive — no runtime
+change. Mirror an existing vertical (vendors is the simplest, expenses the most
+complete):
+
+1. **Migration** — a subject table (tenant-scoped, `ENABLE` + `FORCE` RLS + a `tenant_id = platform.current_tenant_id()` policy) carrying the binding seam (`blueprint_key`, `workflow_instance_id`, `stage_key`); and a PLATFORM `workflow_blueprints` row (`tenant_id NULL`, `state ACTIVE`) whose `stages` JSON uses the camelCase `WorkflowStageDefinition` shape. Put required participant slots and `decisionRequired` where the process needs a gate.
+2. **Authority (optional)** — if approval should clear a monetary/scope threshold, `registerAuthorityDeriver('<work.type>', …)` in `workflow-authority-derivation.ts`, reading whatever the subject makes authoritative. Omit it for role + SoD only.
+3. **Routes** — clone the vendor routes under `app/api/<vertical>/…`: list/create, `[id]/workflow` (GET/POST/PATCH), `participants`, `decision`, `history`. They are analogues with the table/subject swapped; keep the `hasCrmWriteRole` gate and the `BEGIN` + `applyTo` transaction pattern so RLS holds across multi-statement writes.
+4. **Surface** — a `(shell)/<vertical>` page + client (file/register → assign → decide → advance), reusing `WorkflowTraceModal`; add a nav entry in `app/api/workspaces/route.ts`.
+5. **Tests** — an `*.itest.ts` that drives the lifecycle (including the gate denials) against real Postgres; a `*_smoke.sql` for the blueprint/table shape; and a `test/*.test.ts` contract test asserting the route/UI/migration shapes.
