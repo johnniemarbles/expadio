@@ -78,6 +78,20 @@ test("template authoring surfaces the real API reason", () => {
   assert.match(templatePreview, /apiError/);
 });
 
+test("draft templates are editable end to end (PATCH + inspector edit mode)", () => {
+  const route = read("../app/api/communications/templates/[key]/route.ts");
+  // Backend: a governed PATCH that only edits DRAFT rows, scope-gated.
+  assert.match(route, /export async function PATCH/);
+  assert.match(route, /Only DRAFT template versions can be edited/);
+  assert.match(route, /PLATFORM_TEMPLATE_ROLES/);
+  assert.match(route, /TENANT_TEMPLATE_ROLES/);
+  assert.match(route, /UPDATE platform\.communication_templates/);
+  // Inspector: an edit mode that PATCHes the draft.
+  assert.match(templatePreview, /saveDraft/);
+  assert.match(templatePreview, /method:\s*"PATCH"/);
+  assert.match(templatePreview, /Edit draft/);
+});
+
 test("dashboard controls are truthful: real export, surfaced toggle errors, distinct tabs, real library", () => {
   const dash = read("../app/(shell)/communications/CommunicationsDashboardClient.tsx");
   const library = read("../app/(shell)/communications/TemplateLibraryModal.tsx");

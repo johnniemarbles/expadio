@@ -19,12 +19,17 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
   const [working, setWorking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<{ subject: string; title: string; body: string; contentFormat: string; requiredVariables: string }>(
+    { subject: "", title: "", body: "", contentFormat: "HTML", requiredVariables: "" },
+  );
 
   const loadTemplate = useCallback(() => {
     if (!triggerKey) return;
     setLoading(true);
     setActionError(null);
     setActionNotice(null);
+    setEditing(false);
     fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}${window.location.search}`)
       .then((res) => res.json())
       .then((data) => {
@@ -40,6 +45,53 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
       .catch((err) => console.error("Error loading template details:", err))
       .finally(() => setLoading(false));
   }, [triggerKey]);
+
+  function startEditing() {
+    if (!template) return;
+    setDraft({
+      subject: template.subject ?? "",
+      title: template.title ?? "",
+      body: template.body,
+      contentFormat: template.contentFormat,
+      requiredVariables: template.requiredVariables.join(", "),
+    });
+    setActionError(null);
+    setActionNotice(null);
+    setEditing(true);
+  }
+
+  async function saveDraft() {
+    if (!template) return;
+    setWorking(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const res = await fetch(`/api/communications/templates/${encodeURIComponent(triggerKey)}${window.location.search}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: template.templateId,
+          version: template.version,
+          subject: draft.subject.trim() || null,
+          title: draft.title.trim() || null,
+          body: draft.body,
+          contentFormat: draft.contentFormat,
+          requiredVariables: draft.requiredVariables.split(",").map((v) => v.trim()).filter(Boolean),
+          defaultVariables: template.defaultVariables,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not save the draft."));
+      setActionNotice(`Draft v${template.version} saved.`);
+      setEditing(false);
+      loadTemplate();
+      onChanged?.();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Could not save the draft.");
+    } finally {
+      setWorking(false);
+    }
+  }
 
   useEffect(() => {
     if (!isOpen || !triggerKey) return;
@@ -185,6 +237,34 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
           <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-500, #64748b)" }}>
             Loading template content and variable schema...
           </div>
+        ) : template && editing ? (
+          <div style={{ display: "grid", gap: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: "12px" }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Subject
+                <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13 }} />
+              </label>
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Format
+                <select value={draft.contentFormat} onChange={(e) => setDraft({ ...draft, contentFormat: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13 }}>
+                  {["TEXT", "HTML", "MARKDOWN"].map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </label>
+            </div>
+            <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Title
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13 }} />
+            </label>
+            <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Body
+              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={12} style={{ padding: "10px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, fontFamily: "monospace", resize: "vertical" }} />
+            </label>
+            <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Required variables (comma-separated)
+              <input value={draft.requiredVariables} onChange={(e) => setDraft({ ...draft, requiredVariables: e.target.value })} placeholder="name, code" style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13 }} />
+            </label>
+            {actionError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>⚠️ {actionError}</div>}
+            {actionNotice && <div style={{ fontSize: 12, color: "#15803d" }}>✅ {actionNotice}</div>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button type="button" onClick={() => setEditing(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={saveDraft} disabled={working} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: working ? "not-allowed" : "pointer" }}>{working ? "Saving…" : "Save draft"}</button>
+            </div>
+          </div>
         ) : template ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "24px" }}>
             {/* Left Preview Window */}
@@ -309,7 +389,18 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                     >
                       {working ? "Working…" : `Publish v${template.version}`}
                     </button>
-                  ) : (
+                  ) : null}
+                  {template.status === "DRAFT" && (
+                    <button
+                      type="button"
+                      onClick={startEditing}
+                      disabled={working}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, #4f46e5)", background: "transparent", color: "var(--brand, #4f46e5)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                    >
+                      Edit draft
+                    </button>
+                  )}
+                  {template.status !== "DRAFT" && (
                     <button
                       type="button"
                       onClick={createDraftVersion}
