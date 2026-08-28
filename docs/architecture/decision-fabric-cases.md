@@ -4,7 +4,8 @@
 **Scope:** `apps/platform-web` workflow wiring over `@expadio/workflow` + `@expadio/postgres-runtime`
 
 A governed business entity — a CRM **case** (`platform.crm_cases`), a **vendor**
-(`platform.vendors`), an **expense** (`platform.expense_reports`) — is a
+(`platform.vendors`), an **expense** (`platform.expense_reports`), an **access
+request** (`platform.access_requests`) — is a
 first-class record that also binds to a governed **workflow instance**. The same
 runtime drives all of them; nothing in the transition/decision path names a
 particular vertical. This note maps the moving parts so a maintainer can find
@@ -23,9 +24,12 @@ authority is derived.
 | `crm.case` | `platform.crm_cases` | `0049`/`0050` | the case account's most valuable ACTIVE **agreement** (monetary threshold, org-scoped) |
 | `vendor.onboarding` | `platform.vendors` | `0053` (v1), `0054` (v2 adds a decision-required `APPROVAL`) | **nothing** — role + separation of duties only |
 | `expense.reimbursement` | `platform.expense_reports` | `0055` | the expense's **own amount** (`amount_minor_units`), tenant-scoped |
+| `access.request` | `platform.access_requests` | `0056` | **nothing** — role + separation of duties only (a `security_reviewer` who is not the requester) |
 
 The authority basis is the one genuinely per-vertical decision, and it is a
-registered strategy — see **Authority derivation seam** below.
+registered strategy — see **Authority derivation seam** below. Four verticals
+share the engine today; each was added purely additively, and the newest
+(`access.request`) was built by following the **Adding a vertical** recipe.
 
 ## Layering
 
@@ -36,8 +40,9 @@ registered strategy — see **Authority derivation seam** below.
 | App seam | `apps/platform-web/lib/workflow-runtime.ts` | `startWorkflow`, `transitionWorkflow`, `recordCaseDecision`, `describeWorkflow`, `loadCaseWorkflowHistory`. Composes the domain + adapters; owns gate ordering and the auto-complete step. Takes an arbitrary `subjectType` / `workTypeKey` — it does not name a vertical. |
 | Authority derivation | `apps/platform-web/lib/workflow-authority-derivation.ts` | A `workTypeKey → deriver` registry. `deriveAuthorityRequirements` dispatches; a work type with no registered deriver has no monetary/scope requirement. |
 | App authority | `apps/platform-web/lib/workflow-authority.ts` + `workflow-authority-grants.ts` + `workflow-participants.ts` | `RoleAndSeparationOfDutiesAuthorityProvider` (four-eyes + governing-role, monetary/org-scope/delegation), the authority-grant reader/writer, and the Postgres participant-assignment provider. |
-| Routes | `apps/platform-web/app/api/{crm/cases,vendors,expenses}/[id]/workflow[/…]` | `resolveRequestContext`-scoped; reads require membership, writes a governing role. Mirror the instance's current stage onto the subject's `stage_key`. Per vertical: `route` (start/advance), `participants`, `decision`, `history`. |
-| Surface | `apps/platform-web/app/(shell)/{crm,vendors,expenses}` + `WorkflowTraceModal.tsx` + `authority` | Each vertical's tab: start, assign, decide, advance, status; a shared trace overlay; and the Approval Authority admin page that grants the authority the decision gate enforces. |
+| Routes | `apps/platform-web/app/api/{crm/cases,vendors,expenses,access-requests}/[id]/workflow[/…]` | `resolveRequestContext`-scoped; reads require membership, writes a governing role. Mirror the instance's current stage onto the subject's `stage_key`. Per vertical: `route` (start/advance), `participants`, `decision`, `history`. |
+| Surface | `apps/platform-web/app/(shell)/{crm,vendors,expenses,access-requests}` + `WorkflowTraceModal.tsx` | Each vertical's tab: start, assign, decide, advance, status, and a shared trace overlay. A decision denied for insufficient authority links to the Approval Authority page. |
+| Governance layer | `apps/platform-web/app/(shell)/authority` + `app/(shell)/governance/decisions` (`lib/governance-decisions.ts`) | The Approval Authority admin page (grant/inspect the authority the decision gate enforces) and the tenant-wide governed-decision oversight log — every immutable decision across all verticals, filterable, with its authority/SoD evidence. |
 
 ## Tables (all tenant-scoped, RLS `ENABLE` + `FORCE`)
 
@@ -47,7 +52,7 @@ registered strategy — see **Authority derivation seam** below.
 - `platform.workflow_stage_decisions` — **immutable** (one per instance/stage; trigger rejects mutation).
 - `platform.workflow_participant_assignments` — one row per instance/stage/slot.
 - `platform.workflow_authority_grants` — per-subject approval-authority grants (monetary ceiling, org scope, delegation).
-- The subject tables (`crm_cases`, `vendors`, `expense_reports`) each carry the same binding seam: `blueprint_key`, `workflow_instance_id`, `stage_key`.
+- The subject tables (`crm_cases`, `vendors`, `expense_reports`, `access_requests`) each carry the same binding seam: `blueprint_key`, `workflow_instance_id`, `stage_key`.
 
 Because the app connects as the database **owner** (not a superuser), every
 tenant-scoped table must be `FORCE ROW LEVEL SECURITY` with a policy — an owner
@@ -106,8 +111,9 @@ both.
 ## Adding a vertical
 
 The engine is work-type-agnostic, so a new vertical is additive — no runtime
-change. Mirror an existing vertical (vendors is the simplest, expenses the most
-complete):
+change. Mirror an existing vertical: `access.request` is the most recent
+worked example (role + SoD gated), `expense.reimbursement` the one with an
+amount-based authority deriver:
 
 1. **Migration** — a subject table (tenant-scoped, `ENABLE` + `FORCE` RLS + a `tenant_id = platform.current_tenant_id()` policy) carrying the binding seam (`blueprint_key`, `workflow_instance_id`, `stage_key`); and a PLATFORM `workflow_blueprints` row (`tenant_id NULL`, `state ACTIVE`) whose `stages` JSON uses the camelCase `WorkflowStageDefinition` shape. Put required participant slots and `decisionRequired` where the process needs a gate.
 2. **Authority (optional)** — if approval should clear a monetary/scope threshold, `registerAuthorityDeriver('<work.type>', …)` in `workflow-authority-derivation.ts`, reading whatever the subject makes authoritative. Omit it for role + SoD only.
