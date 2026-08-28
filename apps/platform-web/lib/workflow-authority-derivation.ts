@@ -70,3 +70,30 @@ export const crmCaseAuthorityDeriver: AuthorityDeriver = async (client, { tenant
 };
 
 registerAuthorityDeriver('crm.case', crmCaseAuthorityDeriver);
+
+/**
+ * Expense reimbursements derive their approval threshold from the expense's own
+ * amount — a different monetary basis than a CRM case (which reads a related
+ * account's agreements). The requirement is tenant-scoped: an approver must hold
+ * a monetary.approval grant whose ceiling covers the amount.
+ */
+export const expenseReimbursementAuthorityDeriver: AuthorityDeriver = async (client, { tenantId, instanceId }) => {
+  const result = await client.query(
+    `SELECT e.amount_minor_units, e.currency
+       FROM platform.expense_reports e
+       JOIN platform.workflow_instances wi ON wi.subject_id = e.expense_id::text
+      WHERE wi.instance_id = $1::uuid AND wi.tenant_id = $2::uuid
+      LIMIT 1`,
+    [instanceId, tenantId],
+  );
+  const row = result.rows[0];
+  if (row === undefined || row.amount_minor_units === null || row.amount_minor_units === undefined) return [];
+  return [{
+    dimensionKey: 'monetary.approval',
+    requiredValue: Number(row.amount_minor_units),
+    unit: row.currency,
+    scopeType: 'TENANT',
+  }];
+};
+
+registerAuthorityDeriver('expense.reimbursement', expenseReimbursementAuthorityDeriver);
