@@ -53,6 +53,7 @@ export async function GET(
     return NextResponse.json({
       instance: result.described.instance,
       stages: result.described.stages,
+      currentDecision: result.described.currentDecision,
       blueprintKey: result.blueprintKey,
     });
   } catch (error) {
@@ -193,6 +194,9 @@ export async function PATCH(
           if (moved.reason === 'TRANSITION_REJECTED') {
             return { rejected: true, message: moved.message, code: moved.code } as const;
           }
+          if (moved.reason === 'GATE_BLOCKED') {
+            return { gateBlocked: true, blockers: moved.blockers } as const;
+          }
           return { failed: moved.reason } as const;
         }
 
@@ -219,6 +223,17 @@ export async function PATCH(
     }
     if ('rejected' in result) {
       return NextResponse.json({ error: result.message, code: result.code }, { status: 422 });
+    }
+    if ('gateBlocked' in result) {
+      const blockers = result.blockers ?? [];
+      const needsDecision = blockers.some((b) => b.code === 'WORKFLOW_DECISION_REQUIRED');
+      return NextResponse.json({
+        error: needsDecision
+          ? 'This stage requires a recorded decision before it can advance.'
+          : 'A workflow gate is blocking this transition.',
+        code: blockers[0]?.code,
+        blockers,
+      }, { status: 422 });
     }
     if ('failed' in result) {
       if (result.failed === 'REVISION_CONFLICT') {

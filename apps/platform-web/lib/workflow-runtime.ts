@@ -2,13 +2,17 @@ import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { PostgresWorkflowBlueprintRepository } from '@expadio/postgres-runtime/workflow';
 import { PostgresWorkflowInstanceRepository } from '@expadio/postgres-runtime/workflow-instance';
+import { PostgresWorkflowStageDecisionRepository } from '@expadio/postgres-runtime/workflow-decision';
 import {
   instantiateWorkflowBlueprint,
   commitWorkflowStageTransition,
   WorkflowTransitionError,
+  WorkflowStageDecisionGateEvaluator,
   type WorkflowInstance,
   type WorkflowTransitionIntent,
   type InstantiatedWorkflowBlueprint,
+  type WorkflowGateBlocker,
+  type WorkflowStageDecisionCommitResult,
 } from '@expadio/workflow';
 
 /**
@@ -29,6 +33,8 @@ export interface WorkflowStageSummary {
   readonly stageKey: string;
   readonly label: string;
   readonly sequence: number;
+  readonly decisionRequired: boolean;
+  readonly decisionOutcomes: readonly string[];
 }
 
 function stagesOf(instantiated: InstantiatedWorkflowBlueprint): WorkflowStageSummary[] {
@@ -36,6 +42,8 @@ function stagesOf(instantiated: InstantiatedWorkflowBlueprint): WorkflowStageSum
     stageKey: stage.stageKey,
     label: stage.label,
     sequence: stage.sequence,
+    decisionRequired: stage.decisionRequired,
+    decisionOutcomes: stage.decisionOutcomes,
   }));
 }
 
@@ -91,11 +99,26 @@ export async function startWorkflow(
   return { ok: true, instance: created, stages: stagesOf(instantiated) };
 }
 
-/** Load an existing instance plus its blueprint's stage list, for display. */
+export interface CurrentDecision {
+  readonly stageKey: string;
+  readonly outcome: string;
+  readonly decidedBySubjectId: string;
+  readonly decidedAt: string;
+}
+
+/**
+ * Load an existing instance, its blueprint's stage list, and the decision (if
+ * any) recorded against the current stage — enough for a surface to know whether
+ * the current stage is gated and already decided.
+ */
 export async function describeWorkflow(
   client: PoolClient,
   input: { readonly tenantId: string; readonly instanceId: string },
-): Promise<{ readonly instance: WorkflowInstance; readonly stages: WorkflowStageSummary[] } | null> {
+): Promise<{
+  readonly instance: WorkflowInstance;
+  readonly stages: WorkflowStageSummary[];
+  readonly currentDecision: CurrentDecision | null;
+} | null> {
   const instance = await new PostgresWorkflowInstanceRepository(client).findById({
     tenantId: input.tenantId,
     instanceId: input.instanceId,
@@ -108,13 +131,71 @@ export async function describeWorkflow(
     identity: { blueprintKey: instance.blueprint.blueprintKey, version: instance.blueprint.version },
   });
   const stages = definition === null ? [] : stagesOf(instantiateWorkflowBlueprint({ blueprint: definition }));
-  return { instance, stages };
+
+  let currentDecision: CurrentDecision | null = null;
+  if (instance.currentStageKey !== undefined) {
+    const recorded = await new PostgresWorkflowStageDecisionRepository(client).resolve({
+      tenantId: input.tenantId,
+      instanceId: input.instanceId,
+      workTypeKey: instance.workTypeKey,
+      stageKey: instance.currentStageKey,
+    });
+    if (recorded !== null && recorded.outcome !== undefined && recorded.decidedBySubjectId !== undefined && recorded.decidedAt !== undefined) {
+      currentDecision = {
+        stageKey: recorded.stageKey,
+        outcome: recorded.outcome,
+        decidedBySubjectId: recorded.decidedBySubjectId,
+        decidedAt: recorded.decidedAt,
+      };
+    }
+  }
+  return { instance, stages, currentDecision };
+}
+
+export type RecordDecisionResult =
+  | { readonly ok: true; readonly status: 'COMMITTED' | 'ALREADY_RECORDED'; readonly outcome: string }
+  | { readonly ok: false; readonly reason: 'CONFLICT'; readonly existingOutcome: string };
+
+/**
+ * Record an immutable decision against a workflow stage. One decision per
+ * tenant/instance/stage; an exact retry is idempotent, a different decision for
+ * the same stage is a conflict (never an overwrite — the table is append-only).
+ */
+export async function recordCaseDecision(
+  client: PoolClient,
+  input: {
+    readonly tenantId: string;
+    readonly instanceId: string;
+    readonly workTypeKey: string;
+    readonly stageKey: string;
+    readonly outcome: string;
+    readonly decidedBySubjectId: string;
+  },
+): Promise<RecordDecisionResult> {
+  const repo = new PostgresWorkflowStageDecisionRepository(client);
+  const result: WorkflowStageDecisionCommitResult = await repo.record({
+    tenantId: input.tenantId,
+    instanceId: input.instanceId,
+    workTypeKey: input.workTypeKey,
+    stageKey: input.stageKey,
+    decisionId: randomUUID(),
+    outcome: input.outcome,
+    decidedBySubjectId: input.decidedBySubjectId,
+    decidedAt: new Date().toISOString(),
+    code: 'crm.case.decision',
+    evidenceRefs: [],
+  });
+  if (result.status === 'CONFLICT') {
+    return { ok: false, reason: 'CONFLICT', existingOutcome: result.existing.outcome ?? '' };
+  }
+  return { ok: true, status: result.status, outcome: result.decision.outcome ?? input.outcome };
 }
 
 export type TransitionResult =
   | { readonly ok: true; readonly instance: WorkflowInstance; readonly stages: WorkflowStageSummary[] }
   | { readonly ok: false; readonly reason: 'INSTANCE_NOT_FOUND' | 'NO_ACTIVE_BLUEPRINT' | 'REVISION_CONFLICT' }
-  | { readonly ok: false; readonly reason: 'TRANSITION_REJECTED'; readonly code: string; readonly message: string };
+  | { readonly ok: false; readonly reason: 'TRANSITION_REJECTED'; readonly code: string; readonly message: string }
+  | { readonly ok: false; readonly reason: 'GATE_BLOCKED'; readonly blockers: readonly WorkflowGateBlocker[] };
 
 /**
  * Advance an instance to a target stage. The pure domain enforces revision,
@@ -165,6 +246,21 @@ export async function transitionWorkflow(
       return { ok: false, reason: 'TRANSITION_REJECTED', code: error.code, message: error.message };
     }
     throw error;
+  }
+
+  // Enforce the blueprint's exit gate: leaving a decision-required stage needs a
+  // recorded decision with an allowed outcome. The gate and its evidence live in
+  // @expadio/workflow; here we back it with the immutable decision table.
+  const toStage = instantiated.stages.find((stage) => stage.stageKey === input.toStageKey);
+  const fromStage = instance.currentStageKey === undefined
+    ? undefined
+    : instantiated.stages.find((stage) => stage.stageKey === instance.currentStageKey);
+  if (toStage !== undefined) {
+    const gate = new WorkflowStageDecisionGateEvaluator(new PostgresWorkflowStageDecisionRepository(client));
+    const gateDecision = await gate.evaluate({ instance, blueprint: instantiated, intent, fromStage, toStage });
+    if (!gateDecision.allowed) {
+      return { ok: false, reason: 'GATE_BLOCKED', blockers: gateDecision.blockers };
+    }
   }
 
   const result = await instanceRepo.commitTransition({
