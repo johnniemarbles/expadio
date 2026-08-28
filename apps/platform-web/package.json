@@ -24,7 +24,8 @@
     "react-dom": "19.2.4",
     "@expadio/credential-custody": "workspace:*",
     "@expadio/party": "workspace:*",
-    "@expadio/lead": "workspace:*"
+    "@expadio/lead": "workspace:*",
+    "@expadio/case": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
