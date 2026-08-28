@@ -17,6 +17,7 @@ import {
 } from '@expadio/workflow';
 import { RoleAndSeparationOfDutiesAuthorityProvider } from './workflow-authority';
 import { resolveGoverningRole } from './crm-authz';
+import { resolveAuthorityGrants } from './workflow-authority-grants';
 import { PostgresParticipantAssignmentProvider, listAssignments, type AssignmentSummary } from './workflow-participants';
 import { CrmCaseConditionEvaluator } from './workflow-conditions';
 
@@ -257,11 +258,52 @@ export async function makerForStage(
 }
 
 /**
+ * Derive the authority requirements for a decision on a case's workflow. The
+ * monetary requirement is the most valuable ACTIVE agreement on the case's
+ * account, scoped to that account's organization when present. No account or no
+ * agreement → no monetary requirement.
+ */
+async function deriveAuthorityRequirements(
+  client: PoolClient,
+  tenantId: string,
+  instanceId: string,
+): Promise<import('@expadio/workflow').WorkflowAuthorityRequirement[]> {
+  const result = await client.query(
+    `SELECT a.organization_id,
+            g.max_value,
+            g.currency
+       FROM platform.crm_cases c
+       JOIN platform.workflow_instances wi ON wi.subject_id = c.case_id::text
+       JOIN platform.crm_accounts a ON a.account_id = c.account_id
+       JOIN LATERAL (
+         SELECT max(value_minor_units) AS max_value, currency
+           FROM platform.crm_agreements
+          WHERE account_id = c.account_id AND status = 'ACTIVE' AND value_minor_units IS NOT NULL
+          GROUP BY currency
+          ORDER BY max(value_minor_units) DESC
+          LIMIT 1
+       ) g ON true
+      WHERE wi.instance_id = $1::uuid AND wi.tenant_id = $2::uuid
+      LIMIT 1`,
+    [instanceId, tenantId],
+  );
+  const row = result.rows[0];
+  if (row === undefined || row.max_value === null || row.max_value === undefined) return [];
+  const orgId = row.organization_id ?? null;
+  return [{
+    dimensionKey: 'monetary.approval',
+    requiredValue: Number(row.max_value),
+    unit: row.currency,
+    ...(orgId === null ? { scopeType: 'TENANT' } : { scopeType: 'ORGANIZATION', scopeEntityId: orgId }),
+  }];
+}
+
+/**
  * Record an immutable decision against a workflow stage, through the authority
- * gate. Separation of duties is enforced first: the approver must not be the
- * maker who advanced the case into the stage. A denied approval never reaches
- * the immutable table. One decision per stage; an exact retry is idempotent, a
- * different decision is a conflict (never an overwrite).
+ * gate. Role, separation of duties, and any authority requirements (e.g. a
+ * monetary threshold from the case's agreements) are enforced first: a denied
+ * approval never reaches the immutable table. One decision per stage; an exact
+ * retry is idempotent, a different decision is a conflict (never an overwrite).
  */
 export async function recordCaseDecision(
   client: PoolClient,
@@ -275,8 +317,16 @@ export async function recordCaseDecision(
     readonly makerSubjectId: string | null;
   },
 ): Promise<RecordDecisionResult> {
+  // The monetary authority requirement is derived from the case's account: the
+  // most valuable ACTIVE agreement sets the approval threshold, scoped to the
+  // account's organization when it has one.
+  const requirements = await deriveAuthorityRequirements(client, input.tenantId, input.instanceId);
+
   const service = new AuthorityGatedWorkflowDecisionCaptureService(
-    new RoleAndSeparationOfDutiesAuthorityProvider((subjectId) => resolveGoverningRole(client, subjectId)),
+    new RoleAndSeparationOfDutiesAuthorityProvider(
+      (subjectId) => resolveGoverningRole(client, subjectId),
+      (subjectId) => resolveAuthorityGrants(client, subjectId),
+    ),
     new PostgresWorkflowStageDecisionRepository(client),
   );
   const result = await service.capture({
@@ -288,7 +338,7 @@ export async function recordCaseDecision(
     outcome: input.outcome,
     requestedBySubjectId: input.makerSubjectId ?? '',
     approverSubjectId: input.approverSubjectId,
-    authorityRequirements: [],
+    authorityRequirements: requirements,
     decidedAt: new Date().toISOString(),
     code: 'crm.case.decision',
     evidenceRefs: [],
