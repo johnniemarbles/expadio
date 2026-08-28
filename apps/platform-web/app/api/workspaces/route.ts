@@ -64,6 +64,7 @@ export async function GET(request: Request) {
       { id: 'ws_live_workflows', label: 'Workflow Console', short: 'WC', href: '/workflows' },
       { id: 'ws_live_workflow_blueprints', label: 'Workflow Blueprints', short: 'WB', href: '/workflows/blueprints' },
       { id: 'ws_live_vendors', label: 'Vendor Onboarding', short: 'VO', href: '/vendors' },
+      { id: 'ws_live_expenses', label: 'Expense Reimbursement', short: 'EX', href: '/expenses' },
       { id: 'ws_live_auth_inspector', label: 'Auth Inspector', short: 'AI', href: '/governance/authorization' },
       { id: 'ws_live_config_manager', label: 'Config Manager', short: 'CM', href: '/configuration' },
       { id: 'ws_live_credentials', label: 'Credentials & Secrets', short: 'CS', href: '/configuration/credentials' },
