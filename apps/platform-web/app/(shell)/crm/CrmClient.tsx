@@ -631,7 +631,7 @@ function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide, onAss
 function CaseTraceModal({ caseRow, queryString, onClose }: { caseRow: CaseRow; queryString: string; onClose: () => void }) {
   type Entry =
     | { kind: "TRANSITION"; at: string; revision: number; fromStageKey: string | null; toStageKey: string; bySubjectId: string; reason: string | null }
-    | { kind: "DECISION"; at: string; stageKey: string; outcome: string; bySubjectId: string; code: string };
+    | { kind: "DECISION"; at: string; stageKey: string; outcome: string; bySubjectId: string; code: string; evidenceRefs?: string[] };
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -672,6 +672,13 @@ function CaseTraceModal({ caseRow, queryString, onClose }: { caseRow: CaseRow; q
                     <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "#166534", background: "#dcfce7" }}>DECISION</span>{" "}
                     <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
                     <span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}> · {e.bySubjectId}</span>
+                    {e.evidenceRefs && e.evidenceRefs.length > 0 && (
+                      <span style={{ display: "block", marginTop: 2 }}>
+                        {e.evidenceRefs.map((ref) => (
+                          <code key={ref} style={{ fontSize: 10, color: "var(--ink-500, #64748b)", background: "var(--surface-2, #f1f5f9)", padding: "1px 5px", borderRadius: 4, marginRight: 4 }}>{ref}</code>
+                        ))}
+                      </span>
+                    )}
                   </>
                 )}
               </span>

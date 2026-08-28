@@ -5,22 +5,40 @@ import type {
 } from '@expadio/workflow';
 
 /**
- * Separation-of-duties authority: four-eyes / maker-checker.
+ * Role + separation-of-duties authority for stage decisions.
  *
- * The subject approving a stage decision must not be the same subject who
- * advanced the case into that stage. This is the recording authority the
- * decision-capture service consults before it persists — a denial never reaches
- * the immutable decision table.
+ * Two rules, evaluated before the decision is ever persisted (a denial never
+ * reaches the immutable decision table):
+ *   1. Role authority — the approver must hold a governing role in the tenant;
+ *      the satisfying role is recorded as authority evidence, so the decision
+ *      record shows *under what role* it was approved.
+ *   2. Separation of duties — the approver must not be the subject who advanced
+ *      the case into the stage (four-eyes / maker-checker).
  *
- * This deliberately enforces SoD only. Role authority dimensions, delegation,
- * organization scope and monetary thresholds are further requirements the same
- * provider contract can carry (context.requirements); they are out of scope
- * here and left for a later layer.
+ * The role lookup is injected so this stays free of a persistence dependency and
+ * testable. Delegation, organization scope and monetary thresholds are further
+ * requirements the same provider contract carries (context.requirements); they
+ * are left for a later layer.
  */
-export class SeparationOfDutiesAuthorityProvider implements WorkflowApprovalAuthorityProvider {
+export class RoleAndSeparationOfDutiesAuthorityProvider implements WorkflowApprovalAuthorityProvider {
+  readonly #resolveRole: (subjectId: string) => Promise<string | null>;
+  constructor(resolveRole: (subjectId: string) => Promise<string | null>) {
+    this.#resolveRole = resolveRole;
+  }
+
   async evaluate(context: WorkflowApprovalAuthorityContext): Promise<WorkflowApprovalAuthorityDecision> {
     const maker = context.requestedBySubjectId.trim();
     const checker = context.approverSubjectId.trim();
+
+    const roleKey = await this.#resolveRole(checker);
+    if (roleKey === null) {
+      return {
+        allowed: false,
+        code: 'WORKFLOW_AUTHORITY_ROLE_MISSING',
+        reason: 'The approver does not hold a governing role in this workspace.',
+        evidenceRefs: [`authority:role:none:${checker}`],
+      };
+    }
 
     if (maker !== '' && checker !== '' && maker === checker) {
       return {
@@ -33,11 +51,12 @@ export class SeparationOfDutiesAuthorityProvider implements WorkflowApprovalAuth
 
     return {
       allowed: true,
-      code: 'WORKFLOW_SOD_OK',
+      code: 'WORKFLOW_AUTHORITY_OK',
       authority: {
         approverSubjectId: checker,
+        roleKey,
         capturedAt: new Date().toISOString(),
-        evidenceRefs: [],
+        evidenceRefs: [`authority:role:${roleKey}`],
       },
       sodEvidenceRefs: maker === '' ? [`sod:checker:${checker}`] : [`sod:maker:${maker}`, `sod:checker:${checker}`],
     };
