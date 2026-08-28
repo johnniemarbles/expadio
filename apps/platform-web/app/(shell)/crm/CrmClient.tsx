@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
 import type { CrmCase, CaseStatus } from "@expadio/case";
@@ -93,6 +93,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const [workflows, setWorkflows] = useState<Record<string, WorkflowState>>({});
   const [wfBusy, setWfBusy] = useState<string | null>(null);
   const [wfError, setWfError] = useState<string | null>(null);
+  const [traceCase, setTraceCase] = useState<CaseRow | null>(null);
   const [agreementError, setAgreementError] = useState<string | null>(null);
   const [movingAgreement, setMovingAgreement] = useState<string | null>(null);
   const [convertTarget, setConvertTarget] = useState<LeadRow | null>(null);
@@ -399,7 +400,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}>{c.accountName ?? "—"}</td>
                     <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
-                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} /></td>
+                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onTrace={() => setTraceCase(c)} /></td>
                     <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <select
@@ -491,6 +492,9 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           onCreated={() => { setShowCase(false); reloadCases(); }}
         />
       )}
+      {traceCase && (
+        <CaseTraceModal caseRow={traceCase} queryString={queryString} onClose={() => setTraceCase(null)} />
+      )}
       {convertTarget && (
         <ConvertModal
           lead={convertTarget}
@@ -513,7 +517,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   );
 }
 
-function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide }: {
+function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide, onTrace }: {
   c: CaseRow;
   wf?: { instanceId: string; currentStageKey: string | null; revision: number; stages: { stageKey: string; label: string; sequence: number; decisionRequired: boolean; decisionOutcomes: string[] }[]; currentDecision: { outcome: string } | null };
   busy: boolean;
@@ -521,8 +525,12 @@ function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide }: {
   onLoad: () => void;
   onAdvance: (stageKey: string) => void;
   onDecide: (outcome: string) => void;
+  onTrace: () => void;
 }) {
   const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
+  const traceBtn = (
+    <button type="button" onClick={onTrace} title="View this case's governed workflow trace" style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)", background: "transparent", color: "var(--ink-600, #475569)", fontWeight: 700, cursor: "pointer" }}>Trace</button>
+  );
   if (!c.workflowInstanceId) {
     if (c.blueprintKey) {
       return <button type="button" disabled={busy} onClick={onStart} style={btn} title="Start a governed Decision Fabric workflow for this case">{busy ? "Starting…" : "Start workflow"}</button>;
@@ -532,9 +540,12 @@ function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide }: {
   const stage = wf?.currentStageKey ?? c.stageKey ?? "—";
   if (!wf) {
     return (
-      <button type="button" disabled={busy} onClick={onLoad} style={{ ...btn, background: "transparent", color: "var(--brand, #4f46e5)", border: "1px solid var(--line, #cbd5e1)" }} title="Load the workflow's stages">
-        {busy ? "Loading…" : `Stage: ${stage} ▾`}
-      </button>
+      <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+        <button type="button" disabled={busy} onClick={onLoad} style={{ ...btn, background: "transparent", color: "var(--brand, #4f46e5)", border: "1px solid var(--line, #cbd5e1)" }} title="Load the workflow's stages">
+          {busy ? "Loading…" : `Stage: ${stage} ▾`}
+        </button>
+        {traceBtn}
+      </div>
     );
   }
   const cur = wf.stages.find((s) => s.stageKey === wf.currentStageKey);
@@ -569,7 +580,66 @@ function WorkflowCell({ c, wf, busy, onStart, onLoad, onAdvance, onDecide }: {
           {wf.stages.filter((s) => s.stageKey !== wf.currentStageKey).map((s) => <option key={s.stageKey} value={s.stageKey}>{s.label}</option>)}
         </select>
       )}
+      {traceBtn}
     </div>
+  );
+}
+
+function CaseTraceModal({ caseRow, queryString, onClose }: { caseRow: CaseRow; queryString: string; onClose: () => void }) {
+  type Entry =
+    | { kind: "TRANSITION"; at: string; revision: number; fromStageKey: string | null; toStageKey: string; bySubjectId: string; reason: string | null }
+    | { kind: "DECISION"; at: string; stageKey: string; outcome: string; bySubjectId: string; code: string };
+  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/crm/cases/${encodeURIComponent(caseRow.caseId)}/workflow/history${queryString}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(apiError(data, "Could not load the trace."));
+        if (live) setEntries(Array.isArray(data.entries) ? data.entries : []);
+      } catch (cause) {
+        if (live) setError(cause instanceof Error ? cause.message : "Could not load the trace.");
+      }
+    })();
+    return () => { live = false; };
+  }, [caseRow.caseId, queryString]);
+
+  return (
+    <Modal title={`Workflow trace — ${caseRow.subject}`} onClose={onClose}>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-500, #64748b)" }}>Append-only transitions and immutable decisions, in order. This is the governed audit trail.</p>
+      {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+      {entries === null && !error && <p style={{ fontSize: 13, color: "var(--ink-500, #64748b)" }}>Loading…</p>}
+      {entries !== null && entries.length === 0 && <Empty title="No trace yet" desc="Start the workflow and advance it to build a history." />}
+      {entries !== null && entries.length > 0 && (
+        <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8, maxHeight: 360, overflowY: "auto" }}>
+          {entries.map((e, i) => (
+            <li key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${e.kind === "DECISION" ? "#166534" : "#4f46e5"}`, paddingLeft: 10 }}>
+              <span style={{ fontSize: 10, color: "var(--ink-500, #64748b)", minWidth: 132 }}>{new Date(e.at).toLocaleString()}</span>
+              <span style={{ fontSize: 13 }}>
+                {e.kind === "TRANSITION" ? (
+                  <>
+                    <strong>{e.fromStageKey ?? "—"}</strong> → <strong>{e.toStageKey}</strong>
+                    <span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}> · rev {e.revision} · {e.bySubjectId}{e.reason ? ` · “${e.reason}”` : ""}</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "#166534", background: "#dcfce7" }}>DECISION</span>{" "}
+                    <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
+                    <span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}> · {e.bySubjectId}</span>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Close</button>
+      </div>
+    </Modal>
   );
 }
 

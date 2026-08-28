@@ -152,6 +152,78 @@ export async function describeWorkflow(
   return { instance, stages, currentDecision };
 }
 
+export interface WorkflowHistoryTransition {
+  readonly kind: 'TRANSITION';
+  readonly at: string;
+  readonly revision: number;
+  readonly fromStageKey: string | null;
+  readonly toStageKey: string;
+  readonly bySubjectId: string;
+  readonly reason: string | null;
+}
+
+export interface WorkflowHistoryDecision {
+  readonly kind: 'DECISION';
+  readonly at: string;
+  readonly stageKey: string;
+  readonly outcome: string;
+  readonly bySubjectId: string;
+  readonly code: string;
+}
+
+export type WorkflowHistoryEntry = WorkflowHistoryTransition | WorkflowHistoryDecision;
+
+/**
+ * The full governed trace for an instance: every append-only stage transition
+ * and every immutable stage decision, merged into one chronological timeline.
+ * Read-only and tenant-scoped by the bound RLS context.
+ */
+export async function loadCaseWorkflowHistory(
+  client: PoolClient,
+  input: { readonly tenantId: string; readonly instanceId: string },
+): Promise<WorkflowHistoryEntry[]> {
+  const [transitions, decisions] = await Promise.all([
+    client.query(
+      `SELECT transitioned_at, revision, from_stage_key, to_stage_key, transitioned_by_subject_id, reason
+         FROM platform.workflow_instance_transitions
+        WHERE tenant_id = $1::uuid AND instance_id = $2::uuid
+        ORDER BY revision ASC`,
+      [input.tenantId, input.instanceId],
+    ),
+    client.query(
+      `SELECT decided_at, stage_key, outcome, decided_by_subject_id, code
+         FROM platform.workflow_stage_decisions
+        WHERE tenant_id = $1::uuid AND instance_id = $2::uuid
+        ORDER BY decided_at ASC`,
+      [input.tenantId, input.instanceId],
+    ),
+  ]);
+
+  const entries: WorkflowHistoryEntry[] = [
+    ...transitions.rows.map((row): WorkflowHistoryTransition => ({
+      kind: 'TRANSITION',
+      at: new Date(row.transitioned_at).toISOString(),
+      revision: row.revision,
+      fromStageKey: row.from_stage_key ?? null,
+      toStageKey: row.to_stage_key,
+      bySubjectId: row.transitioned_by_subject_id,
+      reason: row.reason ?? null,
+    })),
+    ...decisions.rows.map((row): WorkflowHistoryDecision => ({
+      kind: 'DECISION',
+      at: new Date(row.decided_at).toISOString(),
+      stageKey: row.stage_key,
+      outcome: row.outcome,
+      bySubjectId: row.decided_by_subject_id,
+      code: row.code,
+    })),
+  ];
+  // Chronological; a decision and the transition it unlocks can share a moment,
+  // so a decision sorts before the transition at an equal timestamp.
+  entries.sort((a, b) => (a.at === b.at ? (a.kind === 'DECISION' ? -1 : 1) : a.at < b.at ? -1 : 1));
+  return entries;
+}
+
 export type RecordDecisionResult =
   | { readonly ok: true; readonly status: 'COMMITTED' | 'ALREADY_RECORDED'; readonly outcome: string }
   | { readonly ok: false; readonly reason: 'CONFLICT'; readonly existingOutcome: string };
