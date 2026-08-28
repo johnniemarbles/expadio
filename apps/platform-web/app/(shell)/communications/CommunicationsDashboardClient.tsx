@@ -15,6 +15,8 @@ import type { TemplateCatalogueItem } from "../../api/communications/templates/r
 import type { FleetHealthItem } from "../../api/communications/fleet/route";
 import type { CommunicationOverview } from "../../../lib/communication-contracts";
 import { EmptyState } from "@expadio/ui";
+import { apiError } from "../../../lib/api-error";
+import { TemplateLibraryModal } from "./TemplateLibraryModal";
 
 const CHANNEL_LABELS: Record<string, string> = {
   email: "EMAIL",
@@ -64,6 +66,8 @@ export function CommunicationsDashboardClient({
   const [selectedTriggerKey, setSelectedTriggerKey] = useState<string>("identity.verification.code");
   const [updatingConnector, setUpdatingConnector] = useState<string | null>(null);
   const [activeConnector, setActiveConnector] = useState<ConnectorListItem | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
 
   const successRate = overview.totals.deliveries === 0
     ? null
@@ -93,19 +97,23 @@ export function CommunicationsDashboardClient({
 
   async function handleToggleConnector(connectorKey: string, currentEnabled: boolean) {
     setUpdatingConnector(connectorKey);
+    setToggleError(null);
     try {
       const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}${queryString}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !currentEnabled }),
       });
-      if (res.ok) {
-        setProviders((prev) =>
-          prev.map((p) => (p.connectorKey === connectorKey ? { ...p, enabled: !currentEnabled } : p))
-        );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Only mutate local state after a confirmed success; otherwise tell the operator why.
+        throw new Error(apiError(data, `Could not ${currentEnabled ? "disable" : "enable"} ${connectorKey}.`));
       }
+      setProviders((prev) =>
+        prev.map((p) => (p.connectorKey === connectorKey ? { ...p, enabled: !currentEnabled } : p))
+      );
     } catch (err) {
-      console.error("Failed to toggle connector:", err);
+      setToggleError(err instanceof Error ? err.message : "The connector could not be updated.");
     } finally {
       setUpdatingConnector(null);
     }
@@ -114,6 +122,30 @@ export function CommunicationsDashboardClient({
   function handleOpenTemplate(triggerKey: string) {
     setSelectedTriggerKey(triggerKey);
     setIsTemplateModalOpen(true);
+  }
+
+  function handleExport() {
+    // Real CSV export of the current live snapshot (channels + providers), not a print dialog.
+    const lines: string[] = [];
+    lines.push("section,name,channel,total,delivered,failed,delivery_rate_pct");
+    for (const c of overview.channels) {
+      const rate = c.total === 0 ? "" : String(Math.round((c.delivered / c.total) * 1000) / 10);
+      lines.push(["channel", c.channel, c.channel, c.total, c.delivered, c.failed, rate].join(","));
+    }
+    lines.push("");
+    lines.push("section,connector,channel,health,enabled,credential_state,probe_status");
+    for (const p of providers) {
+      lines.push(["provider", p.connectorKey, p.providerType, p.health, p.enabled, p.credentialState ?? "", p.probeStatus ?? ""].join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `communications-snapshot-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -131,9 +163,10 @@ export function CommunicationsDashboardClient({
           <button
             type="button"
             className={styles.btnExport}
-            onClick={() => window.print()}
+            onClick={handleExport}
+            title="Download the current channel + provider snapshot as CSV"
           >
-            Export
+            Export CSV
           </button>
           <button
             type="button"
@@ -149,11 +182,16 @@ export function CommunicationsDashboardClient({
       <div className={styles.fleetHeaderRow}>
         <div className={styles.fleetTitle}>
           <h2>Communication fleet overview</h2>
-          <p>Health, throughput and risk across every tenant and channel.</p>
+          <p>Health, throughput and risk across this workspace's channels and platform-shared providers.</p>
         </div>
-        <span className={styles.dataTimestamp}>
-          Live snapshot · {new Date(overview.capturedAt).toLocaleString()}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 10px", borderRadius: 999, background: "#eef2ff", color: "#3730a3" }}>
+            Scope: this workspace + platform-shared
+          </span>
+          <span className={styles.dataTimestamp}>
+            Live snapshot · {new Date(overview.capturedAt).toLocaleString()}
+          </span>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -215,7 +253,7 @@ export function CommunicationsDashboardClient({
       </div>
 
       {/* Tab Content: Fleet Overview (Default PDF View) */}
-      {(activeTab === "fleet" || activeTab === "tenant_health") && (
+      {activeTab === "fleet" && (
         <>
           {/* 3 Summary Metrics */}
           <div className={styles.summaryMetricsGrid}>
@@ -347,6 +385,60 @@ export function CommunicationsDashboardClient({
         </>
       )}
 
+      {/* Tab Content: Tenant health — this workspace's per-connector health + delivery */}
+      {activeTab === "tenant_health" && (
+        <section className={styles.attentionTablePanel}>
+          <div className={styles.attentionPanelHeading}>
+            <div>
+              <h3>Tenant health</h3>
+              <p>Per-connector credential and delivery health for this workspace.</p>
+            </div>
+            <span className={styles.tag}>{providers.length} connectors</span>
+          </div>
+          {providers.length > 0 ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Connector</th>
+                    <th>Channel</th>
+                    <th>Health</th>
+                    <th>Credential</th>
+                    <th>Probe</th>
+                    <th>Delivered</th>
+                    <th>Failed</th>
+                    <th>Delivery rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {providers.map((p) => {
+                    const stats = fleet.find((f) => f.connectorKey === p.connectorKey);
+                    const healthy = p.enabled && p.health !== "UNHEALTHY";
+                    return (
+                      <tr key={p.connectorKey}>
+                        <td><code>{p.connectorKey}</code></td>
+                        <td>{(CHANNEL_LABELS[p.providerType.toLowerCase()] || p.providerType).toUpperCase()}</td>
+                        <td><span style={{ color: healthy ? "#166534" : "#b91c1c", fontWeight: 700 }}>{healthy ? p.health : (p.enabled ? p.health : "DISABLED")}</span></td>
+                        <td>{p.credentialState ?? (p.hasCredential ? "—" : "none")}</td>
+                        <td><span style={{ color: p.probeStatus === "VALID" ? "#166534" : p.probeStatus === "FAILING" ? "#925b0b" : p.probeStatus ? "#b91c1c" : undefined }}>{p.probeStatus ?? "—"}</span></td>
+                        <td>{stats ? stats.delivered : 0}</td>
+                        <td><span style={{ color: stats && stats.failed > 0 ? "#b91c1c" : undefined }}>{stats ? stats.failed : 0}</span></td>
+                        <td><strong>{stats && stats.deliveryRatePct !== null ? `${stats.deliveryRatePct}%` : "—"}</strong></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              title="No connectors in this workspace"
+              description="Register a governed connector to see its credential and delivery health here."
+            />
+          )}
+        </section>
+      )}
+
       {/* Tab Content: Provider Control */}
       {activeTab === "providers" && (
         <>
@@ -397,8 +489,7 @@ export function CommunicationsDashboardClient({
                 </button>
                 <button
                   type="button"
-                  onClick={() => templates[0] && handleOpenTemplate(templates[0].triggerKey)}
-                  disabled={templates.length === 0}
+                  onClick={() => setIsLibraryOpen(true)}
                   className={styles.btnPillDark}
                 >
                   Manage Templates →
@@ -417,6 +508,11 @@ export function CommunicationsDashboardClient({
                 Capabilities →
               </Link>
             </div>
+            {toggleError && (
+              <div role="alert" style={{ margin: "0 0 12px", fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: 8 }}>
+                ⚠️ {toggleError}
+              </div>
+            )}
             {providers.length > 0 ? (
               <div className={styles.tableWrap}>
               <table className={styles.table}>
@@ -589,6 +685,19 @@ export function CommunicationsDashboardClient({
         ownershipScope={activeConnector?.ownershipScope ?? "TENANT"}
         queryString={queryString}
         onChanged={reloadProviders}
+      />
+      <TemplateLibraryModal
+        isOpen={isLibraryOpen}
+        onClose={() => setIsLibraryOpen(false)}
+        templates={templates}
+        onOpenTemplate={(triggerKey) => {
+          setIsLibraryOpen(false);
+          handleOpenTemplate(triggerKey);
+        }}
+        onNewTemplate={() => {
+          setIsLibraryOpen(false);
+          setIsTemplateComposerOpen(true);
+        }}
       />
     </div>
   );
