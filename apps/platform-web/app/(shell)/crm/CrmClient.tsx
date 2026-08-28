@@ -3,10 +3,22 @@
 import { useState } from "react";
 import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
+import type { CrmCase, CaseStatus } from "@expadio/case";
 import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
 type LeadRow = CrmLead & { accountName: string | null };
+type CaseRow = CrmCase & { accountName: string | null };
+
+const CASE_STATUSES: CaseStatus[] = ["OPEN", "PENDING", "RESOLVED", "CLOSED"];
+const CASE_PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
+const CASE_STATUS_TONE: Record<string, { fg: string; bg: string }> = {
+  OPEN: { fg: "#3730a3", bg: "#e0e7ff" },
+  PENDING: { fg: "#925b0b", bg: "#fef3c7" },
+  RESOLVED: { fg: "#166534", bg: "#dcfce7" },
+  CLOSED: { fg: "#475569", bg: "#f1f5f9" },
+};
+const PRIORITY_TONE: Record<string, string> = { URGENT: "#b91c1c", HIGH: "#c2410c", NORMAL: "#475569", LOW: "#94a3b8" };
 
 const LEAD_STAGES: LeadStage[] = ["NEW", "QUALIFIED", "PROPOSAL", "WON", "LOST"];
 const LEAD_TONE: Record<string, { fg: string; bg: string }> = {
@@ -35,6 +47,7 @@ interface CrmClientProps {
   initialAccounts: CrmAccount[];
   initialContacts: ContactRow[];
   initialLeads: LeadRow[];
+  initialCases: CaseRow[];
   queryString?: string;
 }
 
@@ -42,16 +55,20 @@ const inp: React.CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
 };
 
-export function CrmClient({ initialAccounts, initialContacts, initialLeads, queryString = "" }: CrmClientProps) {
-  const [tab, setTab] = useState<"accounts" | "contacts" | "leads">("accounts");
+export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, queryString = "" }: CrmClientProps) {
+  const [tab, setTab] = useState<"accounts" | "contacts" | "leads" | "cases">("accounts");
   const [accounts, setAccounts] = useState<CrmAccount[]>(initialAccounts);
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
   const [leads, setLeads] = useState<LeadRow[]>(initialLeads);
+  const [cases, setCases] = useState<CaseRow[]>(initialCases);
   const [showAccount, setShowAccount] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showLead, setShowLead] = useState(false);
+  const [showCase, setShowCase] = useState(false);
   const [leadError, setLeadError] = useState<string | null>(null);
   const [movingLead, setMovingLead] = useState<string | null>(null);
+  const [caseError, setCaseError] = useState<string | null>(null);
+  const [movingCase, setMovingCase] = useState<string | null>(null);
 
   async function reloadAccounts() {
     const res = await fetch(`/api/crm/accounts${queryString}`);
@@ -82,6 +99,27 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, quer
     }
   }
 
+  async function reloadCases() {
+    const res = await fetch(`/api/crm/cases${queryString}`);
+    if (res.ok) { const d = await res.json(); if (Array.isArray(d)) setCases(d); }
+  }
+  async function moveCase(caseId: string, status: CaseStatus) {
+    setMovingCase(caseId); setCaseError(null);
+    try {
+      const res = await fetch(`/api/crm/cases/${encodeURIComponent(caseId)}${queryString}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not update the case."));
+      setCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, status } : c)));
+    } catch (cause) {
+      setCaseError(cause instanceof Error ? cause.message : "Could not update the case.");
+    } finally {
+      setMovingCase(null);
+    }
+  }
+
+  const openCases = cases.filter((c) => c.status === "OPEN" || c.status === "PENDING").length;
   const openPipelineMinor = leads.filter((l) => l.stage !== "WON" && l.stage !== "LOST").reduce((s, l) => s + (l.amountMinorUnits ?? 0), 0);
   const wonMinor = leads.filter((l) => l.stage === "WON").reduce((s, l) => s + (l.amountMinorUnits ?? 0), 0);
   const pipeCurrency = leads[0]?.currency ?? "USD";
@@ -98,20 +136,21 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, quer
           <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: "pointer" }}>+ New account</button>
           <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New contact</button>
           <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New lead</button>
+          <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New case</button>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
         <Stat label="Accounts" value={accounts.length} />
-        <Stat label="Contacts" value={contacts.length} />
         <Stat label="Open pipeline" value={money(openPipelineMinor, pipeCurrency)} />
         <Stat label="Won" value={money(wonMinor, pipeCurrency)} />
+        <Stat label="Open cases" value={openCases} />
       </div>
 
       <div style={{ display: "flex", gap: 6, borderBottom: "1px solid var(--line, #e2e8f0)" }}>
-        {(["accounts", "contacts", "leads"] as const).map((t) => (
+        {(["accounts", "contacts", "leads", "cases"] as const).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} style={{ padding: "8px 14px", border: 0, background: "transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: tab === t ? "var(--brand, #4f46e5)" : "var(--ink-500, #64748b)", borderBottom: tab === t ? "2px solid var(--brand, #4f46e5)" : "2px solid transparent" }}>
-            {t === "accounts" ? "Accounts" : t === "contacts" ? "Contacts" : "Leads"}
+            {t === "accounts" ? "Accounts" : t === "contacts" ? "Contacts" : t === "leads" ? "Leads" : "Cases"}
           </button>
         ))}
       </div>
@@ -155,7 +194,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, quer
             <Empty title="No contacts yet" desc="Add people and optionally attach them to an account." />
           )}
         </Panel>
-      ) : (
+      ) : tab === "leads" ? (
         <Panel>
           {leadError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {leadError}</div>}
           {leads.length > 0 ? (
@@ -188,6 +227,39 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, quer
             <Empty title="No leads yet" desc="Create a lead to start tracking the pipeline. Move it through stages as it progresses." />
           )}
         </Panel>
+      ) : (
+        <Panel>
+          {caseError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
+          {cases.length > 0 ? (
+            <Table head={["Case", "Account", "Priority", "Blueprint", "Status", ""]}>
+              {cases.map((c) => {
+                const tone = CASE_STATUS_TONE[c.status] ?? CASE_STATUS_TONE.OPEN;
+                return (
+                  <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                    <td style={td}><strong>{c.subject}</strong></td>
+                    <td style={td}>{c.accountName ?? "—"}</td>
+                    <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
+                    <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
+                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
+                    <td style={{ ...td, textAlign: "right" }}>
+                      <select
+                        value={c.status}
+                        disabled={movingCase === c.caseId}
+                        onChange={(e) => moveCase(c.caseId, e.target.value as CaseStatus)}
+                        aria-label={`Update ${c.subject}`}
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)" }}
+                      >
+                        {CASE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </Table>
+          ) : (
+            <Empty title="No cases yet" desc="Open a case to track a unit of work. Link it to the workflow blueprint that will govern it." />
+          )}
+        </Panel>
       )}
 
       {showAccount && (
@@ -211,6 +283,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, quer
           queryString={queryString}
           onClose={() => setShowLead(false)}
           onCreated={() => { setShowLead(false); reloadLeads(); }}
+        />
+      )}
+      {showCase && (
+        <CaseModal
+          accounts={accounts}
+          queryString={queryString}
+          onClose={() => setShowCase(false)}
+          onCreated={() => { setShowCase(false); reloadCases(); }}
         />
       )}
     </div>
@@ -397,6 +477,53 @@ function LeadModal({ accounts, queryString, onClose, onCreated }: { accounts: Cr
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create lead"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function CaseModal({ accounts, queryString, onClose, onCreated }: { accounts: CrmAccount[]; queryString: string; onClose: () => void; onCreated: () => void }) {
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<string>("NORMAL");
+  const [blueprintKey, setBlueprintKey] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch(`/api/crm/cases${queryString}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, description: description.trim() || undefined, priority, blueprintKey: blueprintKey.trim() || undefined, accountId: accountId || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, "Could not create the case."));
+      onCreated();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not create the case.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="New case" onClose={onClose}>
+      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Subject<input required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Customer can't log in" style={inp} /></label>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Description<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ ...inp, resize: "vertical" }} /></label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Priority<select value={priority} onChange={(e) => setPriority(e.target.value)} style={inp}>{CASE_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
+        </div>
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Workflow blueprint (optional)<input value={blueprintKey} onChange={(e) => setBlueprintKey(e.target.value)} placeholder="support.case" style={inp} /><span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}>The Decision Fabric blueprint that will govern this case's lifecycle.</span></label>
+        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create case"}</button>
         </div>
       </form>
     </Modal>

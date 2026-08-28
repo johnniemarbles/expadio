@@ -2,6 +2,7 @@ import { DeniedState } from "@expadio/ui";
 import { isDenied } from "@expadio/ui/contracts";
 import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead } from "@expadio/lead";
+import type { CrmCase } from "@expadio/case";
 import { fetchApi } from "../../../lib/live-adapter";
 import { CrmClient } from "./CrmClient";
 
@@ -16,10 +17,11 @@ export default async function CrmPage({
   if (typeof params.org === "string") qs.set("org", params.org);
   const q = qs.toString() ? `?${qs.toString()}` : "";
 
-  const [accounts, contacts, leads] = await Promise.all([
+  const [accounts, contacts, leads, cases] = await Promise.all([
     fetchApi<CrmAccount[]>(`/api/crm/accounts${q}`),
     fetchApi<(CrmContact & { accountName: string | null })[]>(`/api/crm/contacts${q}`),
     fetchApi<(CrmLead & { accountName: string | null })[]>(`/api/crm/leads${q}`),
+    fetchApi<(CrmCase & { accountName: string | null })[]>(`/api/crm/cases${q}`),
   ]);
 
   if (isDenied(accounts)) return <DeniedState result={accounts} />;
@@ -29,6 +31,7 @@ export default async function CrmPage({
       initialAccounts={isDenied(accounts) ? [] : accounts}
       initialContacts={isDenied(contacts) ? [] : contacts}
       initialLeads={isDenied(leads) ? [] : leads}
+      initialCases={isDenied(cases) ? [] : cases}
       queryString={q}
     />
   );
