@@ -94,6 +94,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   const [workflows, setWorkflows] = useState<Record<string, WorkflowState>>({});
   const [wfBusy, setWfBusy] = useState<string | null>(null);
   const [wfError, setWfError] = useState<string | null>(null);
+  const [wfAuthHint, setWfAuthHint] = useState(false);
   const [traceCase, setTraceCase] = useState<CaseRow | null>(null);
   const [agreementError, setAgreementError] = useState<string | null>(null);
   const [movingAgreement, setMovingAgreement] = useState<string | null>(null);
@@ -267,13 +268,17 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
     } finally { setWfBusy(null); }
   }
   async function decideCase(caseId: string, outcome: string) {
-    setWfBusy(caseId); setWfError(null);
+    setWfBusy(caseId); setWfError(null); setWfAuthHint(false);
     try {
       const res = await fetch(`/api/crm/cases/${encodeURIComponent(caseId)}/workflow/decision${queryString}`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outcome }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(apiError(data, "Could not record the decision."));
+      if (!res.ok) {
+        // A monetary/role authority denial is fixable from the Approval Authority page.
+        if (typeof data?.code === "string" && data.code.startsWith("WORKFLOW_AUTHORITY")) setWfAuthHint(true);
+        throw new Error(apiError(data, "Could not record the decision."));
+      }
       setWorkflows((prev) => ({ ...prev, [caseId]: { ...prev[caseId], currentDecision: { outcome: data.outcome ?? outcome } } }));
     } catch (cause) {
       setWfError(cause instanceof Error ? cause.message : "Could not record the decision.");
@@ -422,7 +427,12 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
       ) : tab === "cases" ? (
         <Panel>
           {caseError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
-          {wfError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {wfError}</div>}
+          {wfError && (
+            <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>
+              ⚠️ {wfError}
+              {wfAuthHint && <> · <a href={`/authority${queryString}`} style={{ color: "#0f766e", fontWeight: 700 }}>Grant approval authority →</a></>}
+            </div>
+          )}
           {cases.length > 0 ? (
             <Table head={[vocab.case.singular, vocab.account.singular, "Priority", "Blueprint", "Workflow", "Status", ""]}>
               {cases.map((c) => {
