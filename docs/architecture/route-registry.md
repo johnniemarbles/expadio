@@ -27,7 +27,7 @@
   - `comms_metrics`: 7-day cross-tenant deliverability aggregates, bounce/complaint rates, and connector performance (`platform.communication_deliveries`).
 - **Mutation Boundary:** Composed control plane (no longer read-only). Performs governed mutations: provider registration via browser-side custody intake, connector enable/disable and provable revocation, template create/edit/version/publish/clone, sending-domain auto-configuration (Cloudflare) and DNS verification, and quota/spend-cap edits. All mutations resolve the request context, are authorization-gated, and are step-up-guarded where destructive. Also deep-links to `/capabilities`, `/configuration/credentials`, `/workflows`, and `/governance`.
 
-### 1b. `/crm` — Customer Relationships (Business Engine)
+### 1b. `/crm` — Universal Business Engine (CRM + Decision Fabric)
 - **Route:** `/crm`
 - **Page Kind:** `HAND_BUILT` (Composed view)
 - **Owner:** `experience-layer`
@@ -35,7 +35,17 @@
 - **Reads From:**
   - `crm_accounts`: Tenant customer organizations (`platform.crm_accounts`, RLS-forced).
   - `crm_contacts`: People, optionally attached to an account (`platform.crm_contacts`, RLS-forced).
-- **Mutation Boundary:** Creates accounts and contacts. Reads require workspace membership; writes require a tenant admin / owner (or platform admin) role. Tenant isolation is enforced at the data layer via `platform.current_tenant_id()`.
+  - `crm_leads`: Sales pipeline over accounts (`platform.crm_leads`, RLS-forced) — stages `NEW → QUALIFIED → PROPOSAL → WON/LOST`.
+  - `crm_cases`: Units of work (`platform.crm_cases`, RLS-forced) — carry the Decision Fabric seam (`blueprint_key`, `workflow_instance_id`, `stage_key`).
+  - `crm_agreements`: Commitments with customers (`platform.crm_agreements`, RLS-forced) — status `DRAFT → ACTIVE → EXPIRED/CANCELLED`, with `source_lead_id` provenance.
+  - `workflow_blueprints` / `workflow_instances` / `workflow_instance_transitions` / `workflow_stage_decisions` / `workflow_participant_assignments`: the governed workflow a case binds to (Decision Fabric).
+- **Industry Packs (verticals as data):** Vocabulary is resolved server-side from the tenant's `tenants.vertical_key` (or a `?vertical=` preview) via `@expadio/industry-packs` (`GET`/`PATCH /api/tenancy/vertical`). Packs (e.g. DENTEX → Practices/Patients/Referrals/Treatments/Care plans) relabel display text only; canonical keys, authorization, RLS, and persisted data are unchanged.
+- **API routes (all `resolveRequestContext`-scoped; reads require membership, writes a governing role):**
+  - `POST/GET /api/crm/{accounts,contacts,leads,cases,agreements}` and `[id]` `PATCH` (stage/status/priority moves).
+  - `POST /api/crm/leads/[id]/convert` — atomic conversion: won lead → CUSTOMER account (+ optional onboarding case).
+  - **Case Decision Fabric** — `/api/crm/cases/[id]/workflow` (`GET` instance+stages+assignments, `POST` start+bind, `PATCH` advance under optimistic concurrency); `…/workflow/decision` (`POST` immutable stage decision); `…/workflow/participants` (`POST` assign a stage's required participant slot); `…/workflow/history` (`GET` the append-only transition + decision trace).
+- **Governed transition gates (evaluated in the runtime before commit):** participant-assignment slots filled → recorded stage decision → **role + separation-of-duties** authority (approver holds a governing role and is not the maker; the authorizing role is recorded as decision evidence) → immutable append-only record → auto-complete at the terminal stage (`RUNNING → COMPLETED`). Instances are mutable under RLS; transitions and decisions are append-only/immutable (DB triggers).
+- **Mutation Boundary:** All CRM and workflow mutations resolve the request context and are authorization-gated (tenant owner/admin or platform admin). Tenant isolation is enforced at the data layer via `platform.current_tenant_id()`; workflow decision authority is enforced additionally at the capture layer.
 
 ### 2. `/overview` — Command Center Overview
 - **Route:** `/overview`
