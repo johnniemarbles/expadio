@@ -13,7 +13,7 @@ import { hasCrmWriteRole } from '../../../../lib/crm-authz';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export function toCase(row: any): CrmCase & { accountName: string | null; attributes: Record<string, string>; attributesSchemaVersion: number | null } {
+export function toCase(row: any): CrmCase & { accountName: string | null; attributes: Record<string, string>; attributesSchemaVersion: number | null; industryPackVerticalKey: string | null; industryPackVersion: number | null; industryPackRuntimeSource: string | null } {
   return {
     caseId: row.case_id,
     tenantId: row.tenant_id,
@@ -35,6 +35,9 @@ export function toCase(row: any): CrmCase & { accountName: string | null; attrib
     // The pack schema revision those attributes were validated against (null on
     // the neutral engine / a case with no pack data).
     attributesSchemaVersion: row.attributes_schema_version ?? null,
+    industryPackVerticalKey: row.industry_pack_vertical_key ?? null,
+    industryPackVersion: row.industry_pack_version ?? null,
+    industryPackRuntimeSource: row.industry_pack_runtime_source ?? null,
   };
 }
 
@@ -49,7 +52,9 @@ export async function GET(request: Request) {
       const result = await client.query(
         `SELECT c.case_id, c.tenant_id, c.account_id, c.contact_id, c.subject, c.description,
                 c.priority, c.status, c.blueprint_key, c.workflow_instance_id, c.stage_key,
-                c.owner_subject_id, c.attributes, c.attributes_schema_version, c.created_at, c.updated_at, a.name AS account_name
+                c.owner_subject_id, c.attributes, c.attributes_schema_version,
+                c.industry_pack_vertical_key, c.industry_pack_version, c.industry_pack_runtime_source,
+                c.created_at, c.updated_at, a.name AS account_name
            FROM platform.crm_cases c
            LEFT JOIN platform.crm_accounts a ON a.account_id = c.account_id
           WHERE ($1 = '' OR c.status = $1)
@@ -110,13 +115,17 @@ export async function POST(request: Request) {
       try {
         const inserted = await client.query(
           `INSERT INTO platform.crm_cases
-             (tenant_id, account_id, contact_id, subject, description, priority, status, blueprint_key, owner_subject_id, attributes, attributes_schema_version)
-           VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11)
+             (tenant_id, account_id, contact_id, subject, description, priority, status, blueprint_key,
+              owner_subject_id, attributes, attributes_schema_version,
+              industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source)
+           VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14)
            RETURNING case_id, tenant_id, account_id, contact_id, subject, description, priority, status,
-                     blueprint_key, workflow_instance_id, stage_key, owner_subject_id, attributes, attributes_schema_version, created_at, updated_at`,
+                     blueprint_key, workflow_instance_id, stage_key, owner_subject_id, attributes, attributes_schema_version,
+                     industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source, created_at, updated_at`,
           [
             context.tenantId, input.accountId, input.contactId, input.subject, input.description,
             input.priority, input.status, input.blueprintKey, context.subjectId, JSON.stringify(validated.attributes), schemaVersion,
+            runtimePack.provenance.verticalKey, runtimePack.provenance.version, runtimePack.provenance.source,
           ],
         );
         return { case: toCase(inserted.rows[0]) } as const;
