@@ -53,6 +53,17 @@ test('a pack can configure case domain fields, stored and validated', () => {
   assert.match(migration, /ALTER TABLE platform\.crm_cases[\s\S]*ADD COLUMN IF NOT EXISTS attributes jsonb/);
 });
 
+test('stored case attributes are stamped with the pack schema version', () => {
+  const casesRoute = read('../app/api/crm/cases/route.ts');
+  // The create route stamps the validating schema revision onto the case.
+  assert.match(casesRoute, /validated\.schemaVersion/);
+  assert.match(casesRoute, /attributes_schema_version/);
+  assert.match(casesRoute, /attributesSchemaVersion/);
+  // The column is added by migration.
+  const migration = read('../../../infra/db/migrations/0058_crm_case_attributes_schema_version.sql');
+  assert.match(migration, /ALTER TABLE platform\.crm_cases[\s\S]*ADD COLUMN IF NOT EXISTS attributes_schema_version integer/);
+});
+
 test("the case create form renders the pack's declared fields and sends them", () => {
   // The page resolves the pack's case schema server-side and threads it down.
   assert.match(page, /resolveCaseSchema/);

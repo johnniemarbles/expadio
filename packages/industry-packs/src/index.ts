@@ -89,10 +89,18 @@ export interface CaseField {
 
 export interface CaseSchema {
   readonly fields: readonly CaseField[];
+  /**
+   * The schema's revision. Stamped onto each case's stored attributes so a
+   * value bag is tied to the field set that validated it — the seam that lets a
+   * pack evolve its fields (DENTEX v1 urgency options → v2) without silently
+   * reinterpreting historical data. A pack's schema starts at 1; the neutral
+   * engine has no schema and is version 0.
+   */
+  readonly version: number;
 }
 
-/** The neutral engine adds no domain fields — the fallback. */
-export const NEUTRAL_CASE_SCHEMA: CaseSchema = { fields: [] };
+/** The neutral engine adds no domain fields — the fallback (version 0 = no schema). */
+export const NEUTRAL_CASE_SCHEMA: CaseSchema = { fields: [], version: 0 };
 
 export interface IndustryPack {
   readonly verticalKey: string;
@@ -153,6 +161,7 @@ const DENTEX_CASE_WORKFLOW: CaseWorkflowVocabulary = {
 // A Treatment carries dental data a generic case does not: which tooth, the
 // procedure, and how urgent — the pack configuring the subject's own fields.
 const DENTEX_CASE_SCHEMA: CaseSchema = {
+  version: 1,
   fields: [
     { key: 'tooth', label: 'Tooth / quadrant', type: 'text' },
     { key: 'procedureCode', label: 'Procedure code', type: 'text' },
@@ -211,6 +220,7 @@ const LEXFLOW_CASE_WORKFLOW: CaseWorkflowVocabulary = {
 // governing jurisdiction, and the opposing party — the pack configuring its own
 // subject fields, exactly as DENTEX does with different ones.
 const LEXFLOW_CASE_SCHEMA: CaseSchema = {
+  version: 1,
   fields: [
     { key: 'matterType', label: 'Matter type', type: 'select', options: ['Litigation', 'Corporate', 'Real estate', 'Intellectual property', 'Employment'], required: true },
     { key: 'jurisdiction', label: 'Jurisdiction', type: 'text' },
@@ -328,6 +338,12 @@ export interface CaseAttributeValidation {
   readonly attributes: Record<string, string>;
   /** Human-readable problems, keyed loosely by field. */
   readonly errors: string[];
+  /**
+   * The schema revision that validated these attributes — stamped onto the case
+   * so its stored values stay tied to the field set that produced them. 0 for
+   * the neutral engine (no schema); the caller persists null for 0.
+   */
+  readonly schemaVersion: number;
 }
 
 /**
@@ -361,7 +377,7 @@ export function validateCaseAttributes(
     }
     attributes[field.key] = value;
   }
-  return { ok: errors.length === 0, attributes, errors };
+  return { ok: errors.length === 0, attributes, errors, schemaVersion: schema.version };
 }
 
 /** The packs a workspace can choose from, for a picker. */

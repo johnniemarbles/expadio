@@ -72,17 +72,20 @@ test('a LEXFLOW-bound tenant is validated against the legal schema', async () =>
     const bad = await bindResolveValidate(c, tenantId, { matterType: 'Tax' });
     assert.equal(bad.ok, false);
 
-    // A valid Matter normalizes and persists as the case's attributes.
+    // A valid Matter normalizes and persists as the case's attributes, stamped
+    // with the schema revision that validated it.
     const good = await bindResolveValidate(c, tenantId, { matterType: 'Litigation', jurisdiction: ' NY ', junk: 'x' });
     assert.equal(good.ok, true);
     assert.deepEqual(good.attributes, { matterType: 'Litigation', jurisdiction: 'NY' });
+    assert.equal(good.schemaVersion, 1, 'the legal schema is version 1');
 
     const stored = (await c.query(
-      `INSERT INTO platform.crm_cases (tenant_id, subject, attributes)
-       VALUES ($1, 'Acme v. Roe', $2::jsonb) RETURNING attributes`,
-      [tenantId, JSON.stringify(good.attributes)],
+      `INSERT INTO platform.crm_cases (tenant_id, subject, attributes, attributes_schema_version)
+       VALUES ($1, 'Acme v. Roe', $2::jsonb, $3) RETURNING attributes, attributes_schema_version`,
+      [tenantId, JSON.stringify(good.attributes), good.schemaVersion],
     )).rows[0];
     assert.deepEqual(stored.attributes, { matterType: 'Litigation', jurisdiction: 'NY' });
+    assert.equal(stored.attributes_schema_version, 1, 'the case records which schema version validated it');
   } finally {
     c.release();
     await p.end();
@@ -120,13 +123,16 @@ test('an unbound tenant uses the neutral engine — no fields, nothing stored', 
     const res = await bindResolveValidate(c, tenantId, { matterType: 'Litigation', tooth: 'UR6' });
     assert.equal(res.ok, true);
     assert.deepEqual(res.attributes, {});
+    assert.equal(res.schemaVersion, 0, 'the neutral engine has no schema (version 0)');
 
+    // version 0 → the route stores NULL (no schema governed this case).
     const stored = (await c.query(
-      `INSERT INTO platform.crm_cases (tenant_id, subject, attributes)
-       VALUES ($1, 'Generic case', $2::jsonb) RETURNING attributes`,
-      [tenantId, JSON.stringify(res.attributes)],
+      `INSERT INTO platform.crm_cases (tenant_id, subject, attributes, attributes_schema_version)
+       VALUES ($1, 'Generic case', $2::jsonb, $3) RETURNING attributes, attributes_schema_version`,
+      [tenantId, JSON.stringify(res.attributes), res.schemaVersion > 0 ? res.schemaVersion : null],
     )).rows[0];
     assert.deepEqual(stored.attributes, {});
+    assert.equal(stored.attributes_schema_version, null, 'a neutral case carries no schema version');
   } finally {
     c.release();
     await p.end();
