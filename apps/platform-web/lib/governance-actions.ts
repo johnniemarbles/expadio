@@ -1,5 +1,7 @@
 import type { PoolClient } from 'pg';
-import { describeWorkflow } from './workflow-runtime';
+import { PostgresWorkflowInstanceRepository } from '@expadio/postgres-runtime/workflow-instance';
+import { describeWorkflow, recordCaseDecision, makerForStage } from './workflow-runtime';
+import { assignParticipant } from './workflow-participants';
 import { SUBJECT_TABLES } from './verticals';
 
 /**
@@ -85,4 +87,76 @@ export async function availableActions(
   }
 
   return { instanceId, currentStageKey, state: described.instance.state, actions };
+}
+
+// ---------------------------------------------------------------------------
+// Mutations — the write half of cross-vertical actions. Each resolves the
+// subject to its instance via the registry, then performs the same governed
+// primitive the vertical's own route would: a decision goes through
+// recordCaseDecision (role + separation of duties + any authority deriver the
+// work type registered), an assignment through assignParticipant. Callers gate
+// on role and bind RLS before calling; the subject id is never trusted as SQL.
+// ---------------------------------------------------------------------------
+
+export type DecideOnSubjectResult =
+  | { readonly ok: false; readonly reason: 'NO_WORKFLOW' | 'NO_STAGE' }
+  | Awaited<ReturnType<typeof recordCaseDecision>>;
+
+/** Record a decision on a subject's current stage, cross-vertical. */
+export async function decideOnSubject(
+  client: PoolClient,
+  input: {
+    readonly tenantId: string;
+    readonly workTypeKey: string;
+    readonly subjectId: string;
+    readonly outcome: string;
+    readonly approverSubjectId: string;
+  },
+): Promise<DecideOnSubjectResult> {
+  const instanceId = await resolveInstanceForSubject(client, input);
+  if (instanceId === null) return { ok: false, reason: 'NO_WORKFLOW' };
+  const instance = await new PostgresWorkflowInstanceRepository(client).findById({ tenantId: input.tenantId, instanceId });
+  if (instance === null || instance.currentStageKey === undefined) return { ok: false, reason: 'NO_STAGE' };
+  const maker = await makerForStage(client, { tenantId: input.tenantId, instanceId, stageKey: instance.currentStageKey });
+  return recordCaseDecision(client, {
+    tenantId: input.tenantId,
+    instanceId,
+    workTypeKey: instance.workTypeKey,
+    stageKey: instance.currentStageKey,
+    outcome: input.outcome,
+    approverSubjectId: input.approverSubjectId,
+    makerSubjectId: maker,
+  });
+}
+
+export type AssignOnSubjectResult =
+  | { readonly ok: false; readonly reason: 'NO_WORKFLOW' }
+  | { readonly ok: true; readonly assigned: Awaited<ReturnType<typeof assignParticipant>> };
+
+/** Fill a participant slot on a subject's stage, cross-vertical. */
+export async function assignOnSubject(
+  client: PoolClient,
+  input: {
+    readonly tenantId: string;
+    readonly workTypeKey: string;
+    readonly subjectId: string;
+    readonly stageKey: string;
+    readonly participantKey: string;
+    readonly targetKind: string;
+    readonly targetKey: string;
+    readonly assignedBySubjectId: string;
+  },
+): Promise<AssignOnSubjectResult> {
+  const instanceId = await resolveInstanceForSubject(client, input);
+  if (instanceId === null) return { ok: false, reason: 'NO_WORKFLOW' };
+  const assigned = await assignParticipant(client, {
+    tenantId: input.tenantId,
+    instanceId,
+    stageKey: input.stageKey,
+    participantKey: input.participantKey,
+    targetKind: input.targetKind,
+    targetKey: input.targetKey,
+    assignedBySubjectId: input.assignedBySubjectId,
+  });
+  return { ok: true, assigned };
 }
