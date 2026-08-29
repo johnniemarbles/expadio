@@ -35,6 +35,10 @@ export type IndustryPackDefinitionValidationResult =
     };
 
 const CANONICAL_KEY = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
+// Domain attribute keys are stable programmatic identifiers and existing Packs
+// use camelCase (for example DENTEX `procedureCode`). They are not canonical
+// configuration keys and therefore must not be forced to lowercase.
+const CASE_FIELD_KEY = /^[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*$/;
 const CASE_STAGE_KEYS = ['INTAKE', 'IN_PROGRESS', 'REVIEW', 'RESOLVED'] as const;
 const CASE_RELATIONSHIP_KEYS = ['crm.account', 'crm.contact', 'crm.agreement'] as const;
 
@@ -213,7 +217,7 @@ function validCaseSchema(input: unknown): boolean {
     if (!isRecord(field)) return false;
     if (
       typeof field.key !== 'string'
-      || !CANONICAL_KEY.test(field.key)
+      || !CASE_FIELD_KEY.test(field.key)
       || keys.has(field.key)
       || typeof field.label !== 'string'
       || field.label.trim() === ''
