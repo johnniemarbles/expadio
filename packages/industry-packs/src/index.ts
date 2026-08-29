@@ -71,6 +71,29 @@ export const NEUTRAL_CASE_WORKFLOW_VOCABULARY: CaseWorkflowVocabulary = {
   stages: { INTAKE: 'Intake', IN_PROGRESS: 'In progress', REVIEW: 'Review', RESOLVED: 'Resolved' },
 };
 
+/**
+ * A domain field a pack adds to the crm.case subject — the pack configuring
+ * *data*, not just labels. Values are stored in the case's `attributes` JSONB
+ * (canonical columns and the runtime are untouched); the field set is the pack's.
+ */
+export interface CaseField {
+  /** Stored attribute key, e.g. 'tooth'. */
+  readonly key: string;
+  /** Display label, e.g. 'Tooth / quadrant'. */
+  readonly label: string;
+  readonly type: 'text' | 'number' | 'select';
+  /** Allowed values for a select field. */
+  readonly options?: readonly string[];
+  readonly required?: boolean;
+}
+
+export interface CaseSchema {
+  readonly fields: readonly CaseField[];
+}
+
+/** The neutral engine adds no domain fields — the fallback. */
+export const NEUTRAL_CASE_SCHEMA: CaseSchema = { fields: [] };
+
 export interface IndustryPack {
   readonly verticalKey: string;
   readonly label: string;
@@ -82,6 +105,12 @@ export interface IndustryPack {
    * canonical stage keys, the blueprint, and the runtime are untouched.
    */
   readonly caseWorkflow?: CaseWorkflowVocabulary;
+  /**
+   * Optional domain fields the pack adds to the crm.case subject — the pack
+   * configuring data. Stored in the case's `attributes` JSONB; canonical columns,
+   * authorization and RLS are untouched.
+   */
+  readonly caseSchema?: CaseSchema;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,12 +150,23 @@ const DENTEX_CASE_WORKFLOW: CaseWorkflowVocabulary = {
   },
 };
 
+// A Treatment carries dental data a generic case does not: which tooth, the
+// procedure, and how urgent — the pack configuring the subject's own fields.
+const DENTEX_CASE_SCHEMA: CaseSchema = {
+  fields: [
+    { key: 'tooth', label: 'Tooth / quadrant', type: 'text' },
+    { key: 'procedureCode', label: 'Procedure code', type: 'text' },
+    { key: 'urgency', label: 'Urgency', type: 'select', options: ['Routine', 'Priority', 'Emergency'], required: true },
+  ],
+};
+
 export const DENTEX_PACK: IndustryPack = {
   verticalKey: 'dentex',
   label: 'DENTEX — Dental practice',
   profile: DENTEX_PROFILE,
   terminology: DENTEX_TERMINOLOGY,
   caseWorkflow: DENTEX_CASE_WORKFLOW,
+  caseSchema: DENTEX_CASE_SCHEMA,
 };
 
 // ---------------------------------------------------------------------------
@@ -217,6 +257,53 @@ export function resolveStageLabel(
     return (resolveCaseWorkflowVocabulary(pack).stages as Record<string, string>)[stageKey] ?? stageKey;
   }
   return stageKey ?? '';
+}
+
+/** The domain fields the active pack adds to a case — empty for the neutral engine. */
+export function resolveCaseSchema(pack: IndustryPack | null | undefined): CaseSchema {
+  return pack?.caseSchema ?? NEUTRAL_CASE_SCHEMA;
+}
+
+export interface CaseAttributeValidation {
+  readonly ok: boolean;
+  /** The attributes narrowed to the schema's known keys, trimmed. */
+  readonly attributes: Record<string, string>;
+  /** Human-readable problems, keyed loosely by field. */
+  readonly errors: string[];
+}
+
+/**
+ * Validate and normalize a case's domain attributes against the pack's schema,
+ * purely: unknown keys are dropped, required fields must be present, and a select
+ * field's value must be one of its options. Values are coerced to trimmed
+ * strings (the JSONB column stores text values); the caller persists
+ * `attributes` on the case. No schema field → nothing to validate.
+ */
+export function validateCaseAttributes(
+  schema: CaseSchema,
+  input: Record<string, unknown> | null | undefined,
+): CaseAttributeValidation {
+  const raw = input ?? {};
+  const attributes: Record<string, string> = {};
+  const errors: string[] = [];
+  for (const field of schema.fields) {
+    const present = Object.prototype.hasOwnProperty.call(raw, field.key) && raw[field.key] !== null && raw[field.key] !== undefined;
+    const value = present ? String(raw[field.key]).trim() : '';
+    if (value === '') {
+      if (field.required) errors.push(`${field.label} is required.`);
+      continue;
+    }
+    if (field.type === 'number' && Number.isNaN(Number(value))) {
+      errors.push(`${field.label} must be a number.`);
+      continue;
+    }
+    if (field.type === 'select' && field.options !== undefined && !field.options.includes(value)) {
+      errors.push(`${field.label} must be one of: ${field.options.join(', ')}.`);
+      continue;
+    }
+    attributes[field.key] = value;
+  }
+  return { ok: errors.length === 0, attributes, errors };
 }
 
 /** The packs a workspace can choose from, for a picker. */

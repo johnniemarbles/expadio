@@ -41,6 +41,18 @@ test("the CRM client renders through the vocabulary and offers a pack picker", (
   assert.match(client, /Neutral engine/);
 });
 
+test('a pack can configure case domain fields, stored and validated', () => {
+  const casesRoute = read('../app/api/crm/cases/route.ts');
+  // The create route validates pack-declared attributes and stores them as JSONB.
+  assert.match(casesRoute, /findIndustryPack/);
+  assert.match(casesRoute, /resolveCaseSchema/);
+  assert.match(casesRoute, /validateCaseAttributes/);
+  assert.match(casesRoute, /attributes[\s\S]*\$10::jsonb/);
+  // The subject table gains the attributes column by migration.
+  const migration = read('../../../infra/db/migrations/0057_crm_case_attributes.sql');
+  assert.match(migration, /ALTER TABLE platform\.crm_cases[\s\S]*ADD COLUMN IF NOT EXISTS attributes jsonb/);
+});
+
 test("the case workflow speaks the active pack's process language", () => {
   // The page resolves the pack's case-workflow vocabulary server-side and passes it down.
   assert.match(page, /resolveCaseWorkflowVocabulary/);
