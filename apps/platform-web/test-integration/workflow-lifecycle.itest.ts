@@ -276,16 +276,17 @@ test('transitions and decisions are append-only/immutable, and the trace is orde
 test('workflow start persists the exact Industry Pack provenance governing its CRM case', async () => {
   await withClient(async (c) => {
     const { tenantId } = await seedTenant(c);
-    const { caseId } = await makeCase(c, tenantId);
-
-    await c.query(
-      `UPDATE platform.crm_cases
-          SET industry_pack_vertical_key = 'dentex',
-              industry_pack_version = 7,
-              industry_pack_runtime_source = 'TENANT_PUBLISHED'
-        WHERE case_id = $1::uuid`,
-      [caseId],
-    );
+    const caseId = (await c.query(
+      `INSERT INTO platform.crm_cases (
+         tenant_id, subject, blueprint_key,
+         industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
+       ) VALUES (
+         $1::uuid, 'Case', 'crm.case',
+         'dentex', 7, 'TENANT_PUBLISHED'
+       )
+       RETURNING case_id`,
+      [tenantId],
+    )).rows[0].case_id as string;
 
     const caseRow = (await c.query(
       `SELECT industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
