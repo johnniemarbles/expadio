@@ -24,8 +24,10 @@ test('the access.request table and blueprint are seeded, RLS-forced, decision-ga
 test('the access-request routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /INSERT INTO platform\.access_requests/);
   assert.match(listRoute, /hasCrmWriteRole/);
-  assert.match(workflowRoute, /startWorkflow/);
-  assert.match(workflowRoute, /SUBJECT_TYPE = 'access\.request'/);
+  assert.match(workflowRoute, /createVerticalWorkflowRoute/);
+  assert.match(workflowRoute, /table: 'platform\.access_requests'/);
+  assert.match(workflowRoute, /subjectType: 'access\.request'/);
+  assert.match(workflowRoute, /stageKey === 'GRANTED' \? 'GRANTED' : 'SUBMITTED'/);
   assert.match(decisionRoute, /recordCaseDecision/);
   assert.match(decisionRoute, /platform\.access_requests/);
 });

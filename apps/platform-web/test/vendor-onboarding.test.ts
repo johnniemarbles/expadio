@@ -23,15 +23,19 @@ test('the vendors list/create route is governed and RLS-scoped', () => {
 });
 
 test('the vendor workflow route runs the generic Decision Fabric runtime', () => {
-  assert.match(workflowRoute, /export async function GET/);
-  assert.match(workflowRoute, /export async function POST/);
-  assert.match(workflowRoute, /export async function PATCH/);
-  assert.match(workflowRoute, /startWorkflow/);
-  assert.match(workflowRoute, /transitionWorkflow/);
-  assert.match(workflowRoute, /SUBJECT_TYPE = 'vendor'/);
-  // The vendor row mirrors the instance's stage and flips to ACTIVE on the final stage.
-  assert.match(workflowRoute, /UPDATE platform\.vendors[\s\S]*workflow_instance_id/);
-  assert.match(workflowRoute, /vendorStatusForStage/);
+  // The route is now the shared factory with the vendor's binding.
+  assert.match(workflowRoute, /createVerticalWorkflowRoute/);
+  assert.match(workflowRoute, /export const \{ GET, POST, PATCH \}/);
+  assert.match(workflowRoute, /table: 'platform\.vendors'/);
+  assert.match(workflowRoute, /idColumn: 'vendor_id'/);
+  assert.match(workflowRoute, /subjectType: 'vendor'/);
+  // The vendor row flips to ACTIVE on the final stage.
+  assert.match(workflowRoute, /stageKey === 'ACTIVE' \? 'ACTIVE' : 'PENDING'/);
+  // The shared factory carries the generic runtime orchestration.
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /startWorkflow/);
+  assert.match(factory, /transitionWorkflow/);
+  assert.match(factory, /UPDATE \$\{table\}[\s\S]*workflow_instance_id/);
 });
 
 test('the vendor participant route fills the SCREENING compliance slot', () => {

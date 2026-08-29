@@ -36,9 +36,10 @@ test('the expense routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /export async function POST/);
   assert.match(listRoute, /INSERT INTO platform\.expense_reports/);
   assert.match(listRoute, /hasCrmWriteRole/);
-  assert.match(workflowRoute, /startWorkflow/);
-  assert.match(workflowRoute, /transitionWorkflow/);
-  assert.match(workflowRoute, /SUBJECT_TYPE = 'expense\.reimbursement'/);
+  assert.match(workflowRoute, /createVerticalWorkflowRoute/);
+  assert.match(workflowRoute, /table: 'platform\.expense_reports'/);
+  assert.match(workflowRoute, /subjectType: 'expense\.reimbursement'/);
+  assert.match(workflowRoute, /stageKey === 'PAID' \? 'PAID' : 'SUBMITTED'/);
   assert.match(decisionRoute, /recordCaseDecision/);
   assert.match(decisionRoute, /platform\.expense_reports/);
 });
