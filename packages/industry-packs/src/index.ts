@@ -580,3 +580,5 @@ export * from './authoring.ts';
 export * from './authoring-repository.ts';
 export * from './authoring-lifecycle.ts';
 export * from './runtime-resolver.ts';
+
+export * from './definition-validation.ts';
