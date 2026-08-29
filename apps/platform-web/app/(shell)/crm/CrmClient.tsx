@@ -5,7 +5,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
 import type { CrmCase, CaseStatus } from "@expadio/case";
 import type { CrmAgreement, AgreementStatus } from "@expadio/agreement";
-import type { CrmVocabulary, CaseWorkflowVocabulary, CaseSchema, CaseField, CaseOntology } from "@expadio/industry-packs";
+import type { CrmVocabulary, CaseWorkflowVocabulary, CaseSchema, CaseField, CaseOntology, IndustryPackCapabilities } from "@expadio/industry-packs";
 import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
@@ -67,6 +67,7 @@ interface CrmClientProps {
   verticalKey: string | null;
   verticalLabel: string | null;
   packChoices: readonly { verticalKey: string; label: string }[];
+  packCatalog: readonly IndustryPackCapabilities[];
   queryString?: string;
 }
 
@@ -74,7 +75,7 @@ const inp: React.CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
 };
 
-export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, caseSchema, caseOntology, verticalKey, verticalLabel, packChoices, queryString = "" }: CrmClientProps) {
+export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, caseSchema, caseOntology, verticalKey, verticalLabel, packChoices, packCatalog, queryString = "" }: CrmClientProps) {
   const lc = (s: string) => s.toLowerCase();
   // Display a canonical stage key in the active vertical's process language,
   // falling back to the raw key when a pack does not relabel it.
@@ -327,6 +328,21 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               {packChoices.map((c) => <option key={c.verticalKey} value={c.verticalKey}>{c.label}</option>)}
             </select>
           </label>
+          {packCatalog.length > 0 && (
+            <details style={{ fontSize: 12, color: "var(--ink-600, #475569)", maxWidth: 340 }}>
+              <summary style={{ cursor: "pointer", color: "var(--ink-500, #64748b)" }}>What each pack configures</summary>
+              <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                {packCatalog.map((p) => (
+                  <div key={p.verticalKey} style={{ border: `1px solid ${p.verticalKey === verticalKey ? "var(--brand, #4f46e5)" : "var(--line, #e2e8f0)"}`, borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ fontWeight: 800 }}>{p.label}{p.verticalKey === verticalKey ? " · active" : ""}</div>
+                    <div style={{ marginTop: 2 }}><span style={{ color: "var(--ink-500, #64748b)" }}>Entities:</span> {p.entities.account} · {p.entities.contact} · {p.entities.lead} · {p.entities.case} · {p.entities.agreement}</div>
+                    <div><span style={{ color: "var(--ink-500, #64748b)" }}>{p.workType}:</span> {p.stages.map((s) => s.label).join(" → ")}</div>
+                    <div><span style={{ color: "var(--ink-500, #64748b)" }}>Fields (v{p.caseSchemaVersion}):</span> {p.caseFields.length > 0 ? p.caseFields.map((f) => f.label + (f.required ? "*" : "")).join(", ") : "—"}</div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.account.singular)}</button>
             <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.contact.singular)}</button>

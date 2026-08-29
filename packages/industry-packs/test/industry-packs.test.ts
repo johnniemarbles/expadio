@@ -15,6 +15,8 @@ import {
   resolveStageLabel,
   resolveCaseSchema,
   resolveCaseOntology,
+  describeIndustryPack,
+  listIndustryPackCatalog,
   validateCaseAttributes,
   NEUTRAL_CASE_SCHEMA,
   listIndustryPackChoices,
@@ -174,6 +176,22 @@ test('no pack (or unknown key) falls back to the neutral engine vocabulary', () 
   assert.equal(findIndustryPack('does-not-exist'), null);
   assert.equal(findIndustryPack(''), null);
   assert.deepEqual(resolveCrmVocabulary(findIndustryPack(undefined)), NEUTRAL_CRM_VOCABULARY);
+});
+
+test('the management plane describes what each pack configures', () => {
+  const dentex = describeIndustryPack(DENTEX_PACK);
+  assert.equal(dentex.verticalKey, 'dentex');
+  assert.equal(dentex.entities.case, 'Treatment');
+  assert.equal(dentex.workType, 'Treatment');
+  assert.deepEqual(dentex.stages.map((s) => s.key), ['INTAKE', 'IN_PROGRESS', 'REVIEW', 'RESOLVED']);
+  assert.equal(dentex.stages.find((s) => s.key === 'INTAKE')?.label, 'Consultation');
+  assert.equal(dentex.caseSchemaVersion, 1);
+  assert.deepEqual(dentex.caseFields.map((f) => f.key), ['tooth', 'procedureCode', 'urgency']);
+  assert.equal(dentex.caseFields.find((f) => f.key === 'urgency')?.required, true);
+  assert.equal(dentex.relationships.find((r) => r.conceptKey === 'crm.contact')?.entityLabel, 'Patient');
+  // The catalog covers every registered pack.
+  const catalog = listIndustryPackCatalog();
+  assert.deepEqual([...catalog.map((c) => c.verticalKey)].sort(), ['dentex', 'lexflow']);
 });
 
 test('pack lookup is case-insensitive and exposed for a picker', () => {

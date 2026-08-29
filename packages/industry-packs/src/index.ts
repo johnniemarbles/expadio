@@ -518,3 +518,60 @@ export function validateCaseAttributes(
 export function listIndustryPackChoices(): readonly { verticalKey: string; label: string }[] {
   return INDUSTRY_PACKS.map((p) => ({ verticalKey: p.verticalKey, label: p.label }));
 }
+
+/**
+ * Everything a pack configures, as a flat descriptor — the management plane's
+ * read model. An admin reviews what adopting a pack changes (entity words, the
+ * case process language, the case's data fields and their schema version, and
+ * the domain relationships) before binding it. Composed from the pack's own
+ * declarations; adds nothing.
+ */
+export interface IndustryPackCapabilities {
+  readonly verticalKey: string;
+  readonly label: string;
+  /** The pack's singular nouns for the five CRM concepts. */
+  readonly entities: {
+    readonly account: string;
+    readonly contact: string;
+    readonly lead: string;
+    readonly case: string;
+    readonly agreement: string;
+  };
+  /** The case process's name and its stage labels, in order. */
+  readonly workType: string;
+  readonly stages: readonly { readonly key: CrmCaseStage; readonly label: string }[];
+  /** The case's declared domain fields and the schema revision they belong to. */
+  readonly caseSchemaVersion: number;
+  readonly caseFields: readonly { readonly key: string; readonly label: string; readonly type: string; readonly required: boolean }[];
+  /** The case's typed relationships to the canonical CRM entities. */
+  readonly relationships: readonly CaseOntologyRelationship[];
+}
+
+/** Describe a single pack's full capability surface. */
+export function describeIndustryPack(pack: IndustryPack): IndustryPackCapabilities {
+  const crm = resolveCrmVocabulary(pack);
+  const wf = resolveCaseWorkflowVocabulary(pack);
+  const schema = resolveCaseSchema(pack);
+  const ontology = resolveCaseOntology(pack);
+  return {
+    verticalKey: pack.verticalKey,
+    label: pack.label,
+    entities: {
+      account: crm.account.singular,
+      contact: crm.contact.singular,
+      lead: crm.lead.singular,
+      case: crm.case.singular,
+      agreement: crm.agreement.singular,
+    },
+    workType: wf.workType,
+    stages: CRM_CASE_STAGES.map((key) => ({ key, label: wf.stages[key] })),
+    caseSchemaVersion: schema.version,
+    caseFields: schema.fields.map((f) => ({ key: f.key, label: f.label, type: f.type, required: f.required === true })),
+    relationships: ontology.relationships,
+  };
+}
+
+/** The full pack catalog — every registered pack's capability descriptor. */
+export function listIndustryPackCatalog(): readonly IndustryPackCapabilities[] {
+  return INDUSTRY_PACKS.map(describeIndustryPack);
+}
