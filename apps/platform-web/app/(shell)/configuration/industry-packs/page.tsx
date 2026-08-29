@@ -4,6 +4,7 @@ import { isDenied } from '@expadio/ui/contracts';
 import { fetchApi } from '../../../../lib/live-adapter';
 import type { RouteSearchParams } from '../../../../lib/request-context';
 import styles from './page.module.css';
+import { CloneActiveDraftButton } from './CloneActiveDraftButton';
 
 interface IndustryPackCatalogItem {
   readonly verticalKey: string;
@@ -114,6 +115,9 @@ export default async function IndustryPacksPage({
             <h2 id="catalog-title">Pack catalogue</h2>
             <p>Select a vertical to inspect its authored and platform version history.</p>
           </div>
+          {selectedVertical !== null && selectedVertical === catalogResult.verticalKey ? (
+            <CloneActiveDraftButton />
+          ) : null}
         </div>
         <div className={styles.packGrid}>
           {catalogResult.catalog.map((pack) => {
