@@ -17,19 +17,23 @@ export interface GovernanceSummary {
 }
 
 export async function loadGovernanceSummary(client: PoolClient): Promise<GovernanceSummary> {
-  const open = await client.query(
-    `SELECT work_type_key, count(*)::int AS n
-       FROM platform.workflow_instances
-      WHERE state NOT IN ('COMPLETED','CANCELLED','FAILED')
-      GROUP BY work_type_key
-      ORDER BY n DESC, work_type_key ASC`,
-  );
-  const decisions = await client.query(
-    `SELECT outcome, count(*)::int AS n
-       FROM platform.workflow_stage_decisions
-      GROUP BY outcome
-      ORDER BY n DESC, outcome ASC`,
-  );
+  // Two independent full-table aggregates — run them concurrently on this hot
+  // dashboard path rather than serially.
+  const [open, decisions] = await Promise.all([
+    client.query(
+      `SELECT work_type_key, count(*)::int AS n
+         FROM platform.workflow_instances
+        WHERE state NOT IN ('COMPLETED','CANCELLED','FAILED')
+        GROUP BY work_type_key
+        ORDER BY n DESC, work_type_key ASC`,
+    ),
+    client.query(
+      `SELECT outcome, count(*)::int AS n
+         FROM platform.workflow_stage_decisions
+        GROUP BY outcome
+        ORDER BY n DESC, outcome ASC`,
+    ),
+  ]);
   const openByWorkType = open.rows.map((r) => ({ workTypeKey: r.work_type_key as string, count: Number(r.n) }));
   const decisionsByOutcome = decisions.rows.map((r) => ({ outcome: r.outcome as string, count: Number(r.n) }));
   return {

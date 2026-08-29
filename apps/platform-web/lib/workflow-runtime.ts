@@ -291,6 +291,21 @@ export async function recordCaseDecision(
     readonly makerSubjectId: string | null;
   },
 ): Promise<RecordDecisionResult> {
+  // Separation of duties fails closed: if the maker (who advanced the subject
+  // into this stage) is unknown, four-eyes cannot be verified — do not coerce
+  // it to an empty string and let the check pass by default. A decision-required
+  // stage is always entered via a transition, so a null maker means a
+  // misconfigured blueprint (e.g. a decision-required first stage), not a valid
+  // decision.
+  if (input.makerSubjectId === null) {
+    return {
+      ok: false,
+      reason: 'AUTHORITY_DENIED',
+      code: 'WORKFLOW_SOD_MAKER_UNKNOWN',
+      message: 'Cannot determine who advanced this subject into the stage, so separation of duties cannot be verified.',
+    };
+  }
+
   // The authority requirements are derived by the subject's work type through
   // the registered deriver (crm.case → monetary threshold from its agreements);
   // a work type with no deriver is gated by role and separation of duties alone.
