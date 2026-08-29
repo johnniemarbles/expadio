@@ -577,3 +577,4 @@ export function listIndustryPackCatalog(): readonly IndustryPackCapabilities[] {
 }
 
 export * from './authoring.ts';
+export * from './authoring-repository.ts';
