@@ -35,3 +35,21 @@ test('the actions route is a membership read behind RLS keyed by work type + sub
   assert.match(route, /searchParams\.get\('workType'\)/);
   assert.match(route, /searchParams\.get\('subject'\)/);
 });
+
+test('the actions route POST performs a governed DECIDE or ASSIGN, role-gated', () => {
+  assert.match(route, /export async function POST/);
+  assert.match(route, /hasCrmWriteRole/);
+  assert.match(route, /decideOnSubject/);
+  assert.match(route, /assignOnSubject/);
+  assert.match(route, /Action must be DECIDE or ASSIGN/);
+});
+
+test('the mutation helpers resolve the instance then use the governed primitives', () => {
+  // DECIDE goes through recordCaseDecision (role + SoD + any authority deriver).
+  assert.match(lib, /export async function decideOnSubject/);
+  assert.match(lib, /makerForStage/);
+  assert.match(lib, /recordCaseDecision/);
+  // ASSIGN goes through assignParticipant.
+  assert.match(lib, /export async function assignOnSubject/);
+  assert.match(lib, /assignParticipant/);
+});
