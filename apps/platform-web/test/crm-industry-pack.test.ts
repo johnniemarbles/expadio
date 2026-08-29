@@ -58,8 +58,11 @@ test("the Industry Pack management plane is a governed catalog read", () => {
 
 test('a pack can configure case domain fields, stored and validated', () => {
   const casesRoute = read('../app/api/crm/cases/route.ts');
-  // The create route validates pack-declared attributes and stores them as JSONB.
-  assert.match(casesRoute, /findIndustryPack/);
+  // The create route resolves the governed runtime pack, validates its declared
+  // attributes, and stores them as JSONB. It must not resolve directly from the
+  // code registry anymore.
+  assert.match(casesRoute, /PostgresIndustryPackRuntimeResolver/);
+  assert.doesNotMatch(casesRoute, /findIndustryPack/);
   assert.match(casesRoute, /resolveCaseSchema/);
   assert.match(casesRoute, /validateCaseAttributes/);
   assert.match(casesRoute, /attributes[\s\S]*\$10::jsonb/);
