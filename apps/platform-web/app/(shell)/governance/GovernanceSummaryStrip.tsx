@@ -17,6 +17,10 @@ interface Summary {
   decisionsByOutcome: { outcome: string; count: number }[];
 }
 
+interface Queue {
+  items: { workTypeKey: string }[];
+}
+
 const tile: React.CSSProperties = {
   border: '1px solid var(--line, #e2e8f0)', borderRadius: 12, padding: '14px 16px',
   background: 'var(--surface, #fff)', minWidth: 150, flex: '1 1 150px',
@@ -26,11 +30,25 @@ const label: React.CSSProperties = { fontSize: 11, color: 'var(--ink-500, #64748
 const chip: React.CSSProperties = { fontSize: 11, color: 'var(--ink-600, #475569)', marginRight: 8, whiteSpace: 'nowrap' };
 
 export async function GovernanceSummaryStrip({ queryString = '' }: { queryString?: string }) {
-  const summary = await fetchApi<Summary>(`/api/governance/summary${queryString}`);
+  const [summary, queue] = await Promise.all([
+    fetchApi<Summary>(`/api/governance/summary${queryString}`),
+    fetchApi<Queue>(`/api/governance/queue`),
+  ]);
   if (isDenied(summary)) return null;
+  // The review queue is caller-scoped; if it is denied, just omit its tile.
+  const awaitingYou = isDenied(queue) ? null : (queue.items ?? []);
 
   return (
     <section aria-label="Governed activity summary" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '0 0 20px' }}>
+      {awaitingYou !== null && (
+        <a href={`/governance/queue`} style={{ ...tile, textDecoration: 'none', color: 'inherit' }}>
+          <div style={label}>Awaiting you</div>
+          <div style={{ ...num, color: awaitingYou.length > 0 ? '#b45309' : undefined }}>{awaitingYou.length}</div>
+          <div style={{ marginTop: 6 }}>
+            <span style={chip}>{awaitingYou.length === 0 ? 'nothing pending' : 'in your review queue'}</span>
+          </div>
+        </a>
+      )}
       <a href={`/governance/workflows${queryString}`} style={{ ...tile, textDecoration: 'none', color: 'inherit' }}>
         <div style={label}>In-flight work</div>
         <div style={num}>{summary.openTotal}</div>
