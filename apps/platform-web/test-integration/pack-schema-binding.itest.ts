@@ -7,18 +7,19 @@ import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/i
 
 /**
  * The seam POST /api/crm/cases relies on: a tenant's stored `vertical_key`
- * selects which Industry Pack schema validates that tenant's cases. The route
- * reads platform.tenants.vertical_key, resolves the pack, validates the
- * submitted attributes against its schema, and stores the normalized bag. The
- * pack resolution and the validator are unit-tested in @expadio/industry-packs,
+ * selects which Industry Pack family validates that tenant's cases. The route
+ * reads platform.tenants.vertical_key, resolves the executable PUBLISHED pack
+ * through PostgresIndustryPackRuntimeResolver, validates the submitted attributes
+ * against that definition, and stores the normalized bag. Runtime resolution and
+ * the validator are unit-tested independently,
  * and the JSONB column in crm-case-attributes.itest; this proves the whole
  * chain composes on a real Postgres — the DB-stored binding actually drives the
  * schema, rejects an invalid case, and stores a valid one — for both packs and
  * the neutral engine.
  *
  * (The route itself imports next/server and can't run under this harness, so we
- * reproduce its resolution — read vertical_key, findIndustryPack,
- * validateCaseAttributes — faithfully, against the same schema the route uses.)
+ * reproduce its resolution — read vertical_key, resolve the governed runtime
+ * pack, validateCaseAttributes — faithfully, against the same schema the route uses.)
  */
 
 function pool(): pg.Pool {
