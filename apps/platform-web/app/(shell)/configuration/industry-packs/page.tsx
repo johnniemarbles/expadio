@@ -55,7 +55,7 @@ function firstParam(
   return Array.isArray(value) ? value[0] : value;
 }
 
-function pillState(state: string): string {
+function pillState(state: string): 'Published' | 'Review' | 'Draft' | null {
   switch (state) {
     case 'PUBLISHED':
       return 'Published';
@@ -63,12 +63,8 @@ function pillState(state: string): string {
       return 'Review';
     case 'DRAFT':
       return 'Draft';
-    case 'SUPERSEDED':
-      return 'Inactive';
-    case 'ARCHIVED':
-      return 'Archived';
     default:
-      return state;
+      return null;
   }
 }
 
@@ -217,7 +213,11 @@ function VersionTable({
                 <tr key={`${version.scope}:${version.verticalKey}:${version.version}`}>
                   <td><span className={styles.code}>v{version.version}</span></td>
                   <td><strong>{version.label}</strong></td>
-                  <td><StatePill state={pillState(version.state)} /></td>
+                  <td>
+                    {pillState(version.state) === null
+                      ? <span className={styles.stateText}>{version.state}</span>
+                      : <StatePill state={pillState(version.state)!} />}
+                  </td>
                   <td>{version.revision}</td>
                   <td>{new Date(version.updatedAt).toLocaleString()}</td>
                   <td>{version.publishedAt ? new Date(version.publishedAt).toLocaleString() : '—'}</td>
