@@ -10,7 +10,7 @@ import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
 type LeadRow = CrmLead & { accountName: string | null };
-type CaseRow = CrmCase & { accountName: string | null };
+type CaseRow = CrmCase & { accountName: string | null; attributes?: Record<string, string> };
 type AgreementRow = CrmAgreement & { accountName: string | null };
 
 const AGREEMENT_STATUSES: AgreementStatus[] = ["DRAFT", "ACTIVE", "EXPIRED", "CANCELLED"];
@@ -556,7 +556,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
         />
       )}
       {traceCase && (
-        <CaseTraceModal caseRow={traceCase} queryString={queryString} onClose={() => setTraceCase(null)} />
+        <CaseTraceModal caseRow={traceCase} fields={caseSchema.fields} queryString={queryString} onClose={() => setTraceCase(null)} />
       )}
       {convertTarget && (
         <ConvertModal
@@ -673,7 +673,10 @@ function WorkflowCell({ c, wf, stageLabel, busy, onStart, onLoad, onAdvance, onD
   );
 }
 
-function CaseTraceModal({ caseRow, queryString, onClose }: { caseRow: CaseRow; queryString: string; onClose: () => void }) {
+function CaseTraceModal({ caseRow, fields, queryString, onClose }: { caseRow: CaseRow; fields: readonly CaseField[]; queryString: string; onClose: () => void }) {
+  // The pack's declared domain fields that this case actually carries a value for.
+  const attrs = caseRow.attributes ?? {};
+  const filledFields = fields.filter((f) => (attrs[f.key] ?? "").trim() !== "");
   type Entry =
     | { kind: "TRANSITION"; at: string; revision: number; fromStageKey: string | null; toStageKey: string; bySubjectId: string; reason: string | null }
     | { kind: "DECISION"; at: string; stageKey: string; outcome: string; bySubjectId: string; code: string; evidenceRefs?: string[] };
@@ -697,6 +700,19 @@ function CaseTraceModal({ caseRow, queryString, onClose }: { caseRow: CaseRow; q
 
   return (
     <Modal title={`Workflow trace — ${caseRow.subject}`} onClose={onClose}>
+      {filledFields.length > 0 && (
+        <div style={{ display: "grid", gap: 6, border: "1px solid var(--line, #e2e8f0)", borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-500, #64748b)" }}>Details</div>
+          <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", margin: 0, fontSize: 13 }}>
+            {filledFields.map((f) => (
+              <div key={f.key} style={{ display: "contents" }}>
+                <dt style={{ color: "var(--ink-500, #64748b)" }}>{f.label}</dt>
+                <dd style={{ margin: 0, fontWeight: 600 }}>{attrs[f.key]}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
       <p style={{ margin: 0, fontSize: 12, color: "var(--ink-500, #64748b)" }}>Append-only transitions and immutable decisions, in order. This is the governed audit trail.</p>
       {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
       {entries === null && !error && <p style={{ fontSize: 13, color: "var(--ink-500, #64748b)" }}>Loading…</p>}
