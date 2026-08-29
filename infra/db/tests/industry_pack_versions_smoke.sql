@@ -1,8 +1,8 @@
 \set ON_ERROR_STOP on
 
 INSERT INTO platform.tenants (tenant_id, name) VALUES
-  ('d1d1d1d1-d1d1-d1d1-d1d1-d1d1d1d1d1d1', 'Industry Pack Tenant A'),
-  ('d2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2', 'Industry Pack Tenant B');
+  ('7f3a9c20-6b2d-4f11-9a77-100000000001', 'Industry Pack Tenant A'),
+  ('7f3a9c20-6b2d-4f11-9a77-100000000002', 'Industry Pack Tenant B');
 
 INSERT INTO platform.industry_pack_versions (
   pack_version_id, tenant_id, vertical_key, version, source, state, revision,
@@ -17,14 +17,14 @@ INSERT INTO platform.industry_pack_versions (
   ),
   (
     'd1000000-0000-0000-0000-000000000002',
-    'd1d1d1d1-d1d1-d1d1-d1d1-d1d1d1d1d1d1', 'dentex', 2,
+    '7f3a9c20-6b2d-4f11-9a77-100000000001', 'dentex', 2,
     'TENANT_AUTHORED', 'DRAFT', 1,
     '{"verticalKey":"dentex","label":"Tenant DENTEX"}'::jsonb,
     'subject-a', 'subject-a', NULL, NULL
   ),
   (
     'd2000000-0000-0000-0000-000000000001',
-    'd2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2', 'dentex', 2,
+    '7f3a9c20-6b2d-4f11-9a77-100000000002', 'dentex', 2,
     'TENANT_AUTHORED', 'DRAFT', 1,
     '{"verticalKey":"dentex","label":"Tenant B DENTEX"}'::jsonb,
     'subject-b', 'subject-b', NULL, NULL
@@ -70,7 +70,7 @@ GRANT USAGE ON SCHEMA platform TO expadio_industry_pack_test;
 GRANT SELECT, INSERT, UPDATE, DELETE ON platform.industry_pack_versions TO expadio_industry_pack_test;
 
 SET ROLE expadio_industry_pack_test;
-SELECT set_config('app.tenant_id', 'd1d1d1d1-d1d1-d1d1-d1d1-d1d1d1d1d1d1', false);
+SELECT set_config('app.tenant_id', '7f3a9c20-6b2d-4f11-9a77-100000000001', false);
 
 DO $$
 DECLARE
@@ -80,7 +80,7 @@ DECLARE
 BEGIN
   SELECT count(*) INTO visible_count FROM platform.industry_pack_versions;
   SELECT count(*) INTO own_count FROM platform.industry_pack_versions
-    WHERE tenant_id = 'd1d1d1d1-d1d1-d1d1-d1d1-d1d1d1d1d1d1';
+    WHERE tenant_id = '7f3a9c20-6b2d-4f11-9a77-100000000001';
   SELECT count(*) INTO platform_count FROM platform.industry_pack_versions
     WHERE tenant_id IS NULL;
 
@@ -98,7 +98,7 @@ BEGIN
       tenant_id, vertical_key, version, source, state, revision,
       definition, created_by_subject_id, updated_by_subject_id
     ) VALUES (
-      'd2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2', 'forbidden', 1,
+      '7f3a9c20-6b2d-4f11-9a77-100000000002', 'forbidden', 1,
       'TENANT_AUTHORED', 'DRAFT', 1, '{}'::jsonb, 'x', 'x'
     );
     RAISE EXCEPTION 'cross-tenant industry pack write unexpectedly succeeded';
