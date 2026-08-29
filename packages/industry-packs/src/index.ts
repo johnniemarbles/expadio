@@ -49,11 +49,39 @@ export const NEUTRAL_CRM_VOCABULARY: CrmVocabulary = {
   agreement: { singular: 'Agreement', plural: 'Agreements' },
 };
 
+/**
+ * The canonical stages of the crm.case ("unit of work") lifecycle — the neutral
+ * engine's blueprint. A pack may relabel these to speak its vertical's process
+ * language; the keys themselves (and the runtime that drives them) never change.
+ */
+export const CRM_CASE_STAGES = ['INTAKE', 'IN_PROGRESS', 'REVIEW', 'RESOLVED'] as const;
+export type CrmCaseStage = (typeof CRM_CASE_STAGES)[number];
+
+/** A pack's words for the crm.case process itself and each of its stages. */
+export interface CaseWorkflowVocabulary {
+  /** The process's own name — e.g. "Treatment" for a dental practice. */
+  readonly workType: string;
+  /** Display label per canonical stage key. */
+  readonly stages: Record<CrmCaseStage, string>;
+}
+
+/** The neutral engine's own words for the case lifecycle — the fallback. */
+export const NEUTRAL_CASE_WORKFLOW_VOCABULARY: CaseWorkflowVocabulary = {
+  workType: 'Case',
+  stages: { INTAKE: 'Intake', IN_PROGRESS: 'In progress', REVIEW: 'Review', RESOLVED: 'Resolved' },
+};
+
 export interface IndustryPack {
   readonly verticalKey: string;
   readonly label: string;
   readonly profile: IndustryProfile;
   readonly terminology: PresentationTerminologyCatalogue;
+  /**
+   * Optional workflow-lifecycle vocabulary — display text for the crm.case
+   * process and its stages. Display-only, like the entity terminology: the
+   * canonical stage keys, the blueprint, and the runtime are untouched.
+   */
+  readonly caseWorkflow?: CaseWorkflowVocabulary;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,11 +109,24 @@ const DENTEX_PROFILE: IndustryProfile = {
   ],
 };
 
+// The crm.case process is a "Treatment" in a dental practice; its stages read
+// as a course of care rather than a generic ticket lifecycle.
+const DENTEX_CASE_WORKFLOW: CaseWorkflowVocabulary = {
+  workType: 'Treatment',
+  stages: {
+    INTAKE: 'Consultation',
+    IN_PROGRESS: 'In treatment',
+    REVIEW: 'Clinical review',
+    RESOLVED: 'Discharged',
+  },
+};
+
 export const DENTEX_PACK: IndustryPack = {
   verticalKey: 'dentex',
   label: 'DENTEX — Dental practice',
   profile: DENTEX_PROFILE,
   terminology: DENTEX_TERMINOLOGY,
+  caseWorkflow: DENTEX_CASE_WORKFLOW,
 };
 
 // ---------------------------------------------------------------------------
@@ -130,6 +171,23 @@ export function resolveCrmVocabulary(
     lead: term('crm.lead', NEUTRAL_CRM_VOCABULARY.lead),
     case: term('crm.case', NEUTRAL_CRM_VOCABULARY.case),
     agreement: term('crm.agreement', NEUTRAL_CRM_VOCABULARY.agreement),
+  };
+}
+
+/**
+ * Resolve the crm.case process and stage labels for the active pack, with the
+ * neutral engine's words as the guaranteed fallback for the process name and for
+ * any stage a pack does not relabel. Pure over the pack's caseWorkflow — no
+ * persistence, no transport.
+ */
+export function resolveCaseWorkflowVocabulary(
+  pack: IndustryPack | null | undefined,
+): CaseWorkflowVocabulary {
+  const words = pack?.caseWorkflow;
+  if (!words) return NEUTRAL_CASE_WORKFLOW_VOCABULARY;
+  return {
+    workType: words.workType?.trim() ? words.workType : NEUTRAL_CASE_WORKFLOW_VOCABULARY.workType,
+    stages: { ...NEUTRAL_CASE_WORKFLOW_VOCABULARY.stages, ...words.stages },
   };
 }
 

@@ -40,3 +40,13 @@ test("the CRM client renders through the vocabulary and offers a pack picker", (
   assert.match(client, /Industry pack/);
   assert.match(client, /Neutral engine/);
 });
+
+test("the case workflow speaks the active pack's process language", () => {
+  // The page resolves the pack's case-workflow vocabulary server-side and passes it down.
+  assert.match(page, /resolveCaseWorkflowVocabulary/);
+  assert.match(page, /caseVocab=\{caseVocab\}/);
+  // The client relabels canonical stage keys through the pack vocabulary at display time.
+  assert.match(client, /caseVocab: CaseWorkflowVocabulary/);
+  assert.match(client, /const stageLabel =/);
+  assert.match(client, /stageLabel\(s\.stageKey\)/);
+});

@@ -4,7 +4,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead } from "@expadio/lead";
 import type { CrmCase } from "@expadio/case";
 import type { CrmAgreement } from "@expadio/agreement";
-import { findIndustryPack, resolveCrmVocabulary, listIndustryPackChoices } from "@expadio/industry-packs";
+import { findIndustryPack, resolveCrmVocabulary, resolveCaseWorkflowVocabulary, listIndustryPackChoices } from "@expadio/industry-packs";
 import { fetchApi } from "../../../lib/live-adapter";
 import { CrmClient } from "./CrmClient";
 
@@ -37,6 +37,7 @@ export default async function CrmPage({
   const activeVertical = previewVertical ?? boundVertical;
   const pack = findIndustryPack(activeVertical);
   const vocab = resolveCrmVocabulary(pack);
+  const caseVocab = resolveCaseWorkflowVocabulary(pack);
   const choices = isDenied(vertical) ? listIndustryPackChoices() : vertical.choices;
 
   return (
@@ -47,6 +48,7 @@ export default async function CrmPage({
       initialCases={isDenied(cases) ? [] : cases}
       initialAgreements={isDenied(agreements) ? [] : agreements}
       vocab={vocab}
+      caseVocab={caseVocab}
       verticalKey={activeVertical}
       verticalLabel={pack?.label ?? null}
       packChoices={choices}
