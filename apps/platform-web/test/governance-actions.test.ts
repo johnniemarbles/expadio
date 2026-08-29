@@ -19,13 +19,18 @@ test('available actions derive from the current stage gates, read-only', () => {
   assert.match(lib, /resolveInstanceForSubject/);
   assert.match(lib, /SUBJECT_TABLES\[input\.workTypeKey\]/);
   assert.match(lib, /describeWorkflow/);
-  // The three governed action types and their gate conditions.
+  // The queue's actionable set is exactly the two the POST endpoint performs.
   assert.match(lib, /type: 'ASSIGN'/);
   assert.match(lib, /type: 'DECIDE'/);
-  assert.match(lib, /type: 'ADVANCE'/);
   assert.match(lib, /cur\.decisionRequired && described\.currentDecision === null/);
-  // Terminal instances offer nothing.
+  // Advancing is not a queue action but a readiness status — no target stages
+  // are advertised that the runtime might reject (the read model projects the
+  // write model exactly).
+  assert.doesNotMatch(lib, /type: 'ADVANCE'/);
+  assert.match(lib, /const canAdvance = unmet\.length === 0 && !needsDecision/);
+  // Terminal instances offer nothing and cannot advance.
   assert.match(lib, /COMPLETED', 'CANCELLED', 'FAILED'/);
+  assert.match(lib, /actions: \[\], canAdvance: false/);
 });
 
 test('the actions route is a membership read behind RLS keyed by work type + subject', () => {

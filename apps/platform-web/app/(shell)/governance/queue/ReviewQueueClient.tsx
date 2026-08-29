@@ -25,8 +25,7 @@ export interface ReviewQueueItem {
 
 type GovernedAction =
   | { type: 'DECIDE'; outcomes: string[] }
-  | { type: 'ASSIGN'; slots: string[] }
-  | { type: 'ADVANCE'; toStages: { stageKey: string; label: string }[] };
+  | { type: 'ASSIGN'; slots: string[] };
 
 type ActState =
   | { status: 'loading' }
@@ -90,7 +89,10 @@ export function ReviewQueueClient({ initial, verticalKey = null }: { initial: Re
       const actions = (data.actions ?? []) as GovernedAction[];
       const decide = actions.find((a) => a.type === 'DECIDE');
       const outcomes = decide && decide.type === 'DECIDE' ? decide.outcomes : [];
-      setActs((p) => ({ ...p, [k]: { status: 'ready', outcomes, other: actions.some((a) => a.type !== 'DECIDE') } }));
+      // "Open to act" covers work the queue itself doesn't perform inline: a
+      // participant assignment, or a stage that's ready to advance in the vertical.
+      const other = actions.some((a) => a.type === 'ASSIGN') || data.canAdvance === true;
+      setActs((p) => ({ ...p, [k]: { status: 'ready', outcomes, other } }));
     } catch (cause) {
       setActs((p) => ({ ...p, [k]: { status: 'error', message: cause instanceof Error ? cause.message : 'Could not load actions.' } }));
     }

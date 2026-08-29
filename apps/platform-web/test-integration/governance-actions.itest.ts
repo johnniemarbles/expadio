@@ -7,8 +7,10 @@ import { resolveInstanceForSubject, availableActions, decideOnSubject, assignOnS
 
 /**
  * The cross-vertical action layer resolves any subject to its instance and
- * derives the governed actions its current stage permits — ADVANCE for an open
- * gate-free stage, DECIDE for a decision-required one — read-only.
+ * derives the governed actions its current stage permits — DECIDE for a
+ * decision-required stage, ASSIGN for an unfilled slot — plus a canAdvance
+ * status when a gate-free stage is ready to move on (advancing itself is a
+ * vertical action, not a queue one). Read-only.
  */
 
 function pool(): pg.Pool {
@@ -48,12 +50,15 @@ test('actions resolve any subject to its instance and derive stage gates', async
     assert.equal(await resolveInstanceForSubject(c, { workTypeKey: 'no.such.type', subjectId: vendorId }), null);
     assert.equal(await resolveInstanceForSubject(c, { workTypeKey: 'vendor.onboarding', subjectId: randomUUID() }), null);
 
-    // At the open first stage (no gates), ADVANCE is offered.
+    // At the open first stage (no gates), the stage is ready to advance — a
+    // status, not an action (advancing happens in the vertical). The actionable
+    // set stays an exact projection of the mutation endpoint (DECIDE/ASSIGN only).
     const atStart = await availableActions(c, { tenantId, workTypeKey: 'vendor.onboarding', subjectId: vendorId });
     assert.ok(atStart, 'the started instance resolves to an actions descriptor');
     assert.equal(atStart.instanceId, instanceId);
     assert.equal(atStart.state, 'RUNNING');
-    assert.ok(atStart.actions.some((a) => a.type === 'ADVANCE'), 'an open gate-free stage can advance');
+    assert.equal(atStart.canAdvance, true, 'an open gate-free stage is ready to advance');
+    assert.ok(atStart.actions.every((a) => a.type === 'DECIDE' || a.type === 'ASSIGN'), 'only DECIDE/ASSIGN are advertised as actions');
 
     // Move the instance to the decision-required APPROVAL stage: DECIDE is offered.
     await c.query(`UPDATE platform.workflow_instances SET current_stage_key = 'APPROVAL' WHERE instance_id = $1`, [instanceId]);
@@ -61,6 +66,7 @@ test('actions resolve any subject to its instance and derive stage gates', async
     assert.ok(atApproval);
     const decide = atApproval.actions.find((a) => a.type === 'DECIDE');
     assert.ok(decide && decide.type === 'DECIDE' && decide.outcomes.length > 0, 'a decision-required stage offers DECIDE with outcomes');
+    assert.equal(atApproval.canAdvance, false, 'a stage awaiting a decision is not ready to advance');
   } finally {
     c.release();
     await p.end();
