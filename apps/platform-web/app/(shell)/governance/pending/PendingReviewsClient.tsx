@@ -38,6 +38,7 @@ const ageColor = (iso: string): string => {
 };
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
+const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#475569', background: 'var(--surface-2, #f1f5f9)', border: '1px solid var(--line, #e2e8f0)', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
 
 export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) {
   const [workType, setWorkType] = useState('');
@@ -56,7 +57,7 @@ export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) 
   return (
     <section className={styles.panel} aria-labelledby="pr-title">
       <div className={styles.panelHeading}>
-        <div><p className={styles.eyebrow}>Oversight</p><h2 id="pr-title">Pending review load</h2></div>
+        <div><p className={styles.eyebrow}>Oversight</p><h2 id="pr-title">Pending review load{initial.length > 0 && <span style={badge}>{initial.length}</span>}</h2></div>
         <div style={{ display: 'flex', gap: 8 }}>
           <select style={inp} value={workType} onChange={(e) => setWorkType(e.target.value)} aria-label="Filter by work type">
             <option value="">All work types</option>
