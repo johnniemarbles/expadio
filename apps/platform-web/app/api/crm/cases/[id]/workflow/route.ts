@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../../../lib/crm-authz';
 import { startWorkflow, transitionWorkflow, describeWorkflow } from '../../../../../../lib/workflow-runtime';
+import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
 
 /**
  * Bind a CRM case to the Decision Fabric.
@@ -19,6 +20,37 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SUBJECT_TYPE = 'crm.case';
+
+function workflowPackProvenanceFromRow(row: any): WorkflowIndustryPackProvenance | undefined {
+  const source = row.industry_pack_runtime_source as
+    | 'TENANT_PUBLISHED'
+    | 'PLATFORM_PUBLISHED'
+    | 'CODE_BASELINE'
+    | 'NEUTRAL'
+    | null
+    | undefined;
+  if (source == null) return undefined;
+  if (source === 'NEUTRAL') return { runtimeSource: 'NEUTRAL' };
+
+  const verticalKey = String(row.industry_pack_vertical_key ?? '').trim();
+  if (verticalKey === '') {
+    throw new Error('CRM_CASE_INDUSTRY_PACK_PROVENANCE_VERTICAL_KEY_MISSING');
+  }
+  if (source === 'CODE_BASELINE') {
+    const version = row.industry_pack_version == null ? undefined : Number(row.industry_pack_version);
+    return {
+      runtimeSource: source,
+      verticalKey,
+      ...(version === undefined ? {} : { version }),
+    };
+  }
+
+  const version = Number(row.industry_pack_version);
+  if (!Number.isInteger(version) || version <= 0) {
+    throw new Error('CRM_CASE_INDUSTRY_PACK_PROVENANCE_VERSION_INVALID');
+  }
+  return { runtimeSource: source, verticalKey, version };
+}
 
 export async function GET(
   request: Request,
@@ -79,7 +111,11 @@ export async function POST(
       try {
         await context.applyTo(client);
         const row = await client.query(
-          `SELECT blueprint_key, workflow_instance_id FROM platform.crm_cases WHERE case_id = $1::uuid FOR UPDATE`,
+          `SELECT blueprint_key, workflow_instance_id,
+                  industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
+             FROM platform.crm_cases
+            WHERE case_id = $1::uuid
+            FOR UPDATE`,
           [caseId],
         );
         if (row.rows.length === 0) {
@@ -101,6 +137,7 @@ export async function POST(
           subjectType: SUBJECT_TYPE,
           subjectId: caseId,
           blueprintKey,
+          industryPackProvenance: workflowPackProvenanceFromRow(row.rows[0]),
         });
         if (!started.ok) {
           await client.query('ROLLBACK');
