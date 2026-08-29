@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
-import { findIndustryPack, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { DENTEX_PACK, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 
 /**
  * The seam POST /api/crm/cases relies on: a tenant's stored `vertical_key`
@@ -42,8 +43,11 @@ async function bindResolveValidate(
     `SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`,
     [tenantId],
   )).rows[0];
-  const pack = findIndustryPack(row?.vertical_key ?? null);
-  const schema = resolveCaseSchema(pack);
+  const resolved = await new PostgresIndustryPackRuntimeResolver(c).resolve({
+    tenantId,
+    verticalKey: row?.vertical_key ?? null,
+  });
+  const schema = resolveCaseSchema(resolved.pack);
   return validateCaseAttributes(schema, submitted);
 }
 
@@ -106,6 +110,45 @@ test('a DENTEX-bound tenant is validated against the dental schema', async () =>
     const good = await bindResolveValidate(c, tenantId, { tooth: 'UR6', urgency: 'Emergency' });
     assert.equal(good.ok, true);
     assert.deepEqual(good.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+test('tenant PUBLISHED pack overrides the code baseline at runtime', async () => {
+  const p = pool();
+  const c = await p.connect();
+  try {
+    const tenantId = await seedTenant(c, 'dentex');
+    const authored = {
+      ...DENTEX_PACK,
+      label: 'Tenant DENTEX v2',
+      caseSchema: {
+        version: 2,
+        fields: [
+          { key: 'clinicCode', label: 'Clinic code', type: 'text', required: true },
+        ],
+      },
+    };
+
+    await c.query(
+      `INSERT INTO platform.industry_pack_versions
+         (tenant_id, vertical_key, version, source, state, revision, definition,
+          created_by_subject_id, updated_by_subject_id)
+       VALUES ($1::uuid, 'dentex', 2, 'TENANT_AUTHORED', 'PUBLISHED', 1, $2::jsonb,
+               'itest-author', 'itest-author')`,
+      [tenantId, JSON.stringify(authored)],
+    );
+
+    const baselineOnlyValue = await bindResolveValidate(c, tenantId, { urgency: 'Emergency' });
+    assert.equal(baselineOnlyValue.ok, false);
+    assert.match(baselineOnlyValue.errors.join(' '), /Clinic code is required/);
+
+    const governed = await bindResolveValidate(c, tenantId, { clinicCode: ' C-12 ' });
+    assert.equal(governed.ok, true);
+    assert.deepEqual(governed.attributes, { clinicCode: 'C-12' });
+    assert.equal(governed.schemaVersion, 2);
   } finally {
     c.release();
     await p.end();
