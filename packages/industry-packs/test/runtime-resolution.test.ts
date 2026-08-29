@@ -8,7 +8,12 @@ import {
 } from '../src/index.ts';
 
 class Reader implements PublishedIndustryPackReader {
-  constructor(readonly value: IndustryPackVersion | null) {}
+  readonly value: IndustryPackVersion | null;
+
+  constructor(value: IndustryPackVersion | null) {
+    this.value = value;
+  }
+
   async findPublished(): Promise<IndustryPackVersion | null> {
     return this.value;
   }
