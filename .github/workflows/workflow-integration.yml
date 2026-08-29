@@ -15,14 +15,6 @@ on:
       - 'packages/**'
       - 'infra/db/**'
       - '.github/workflows/workflow-integration.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/platform-web/**'
-      - 'packages/**'
-      - 'infra/db/**'
-      - '.github/workflows/workflow-integration.yml'
 
 concurrency:
   group: workflow-integration-${{ github.event.pull_request.number || github.ref }}

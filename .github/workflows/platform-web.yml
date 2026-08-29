@@ -1,9 +1,10 @@
 name: Platform Web
+# Runs on pull_request only. main advances solely through these PR-gated merges
+# (the branch is synced to main before each PR, so the PR check validates the
+# exact tree that becomes main), so a separate push:main run would only duplicate
+# the check already gone green — dropped to keep Actions usage down.
 on:
   pull_request:
-    paths: ['apps/platform-web/**', 'packages/ui/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.json', '.github/workflows/platform-web.yml']
-  push:
-    branches: [main]
     paths: ['apps/platform-web/**', 'packages/ui/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.json', '.github/workflows/platform-web.yml']
 concurrency:
   group: platform-web-${{ github.event.pull_request.number || github.ref }}

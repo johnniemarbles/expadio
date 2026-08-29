@@ -6,13 +6,10 @@ on:
       - 'docs/**'
       - 'README.md'
       - '.github/workflows/architecture-baseline.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'docs/**'
-      - 'README.md'
-      - '.github/workflows/architecture-baseline.yml'
+
+concurrency:
+  group: architecture-baseline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
