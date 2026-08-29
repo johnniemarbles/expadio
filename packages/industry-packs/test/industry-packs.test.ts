@@ -11,6 +11,9 @@ import {
   resolveCaseWorkflowVocabulary,
   resolveWorkTypeLabel,
   resolveStageLabel,
+  resolveCaseSchema,
+  validateCaseAttributes,
+  NEUTRAL_CASE_SCHEMA,
   listIndustryPackChoices,
 } from '../src/index.ts';
 
@@ -54,6 +57,33 @@ test('governance labels relabel only crm.case under an active pack', () => {
   // A null/unknown stage falls back safely.
   assert.equal(resolveStageLabel(DENTEX_PACK, 'crm.case', null), '');
   assert.equal(resolveStageLabel(DENTEX_PACK, 'crm.case', 'MYSTERY'), 'MYSTERY');
+});
+
+test('DENTEX adds domain fields to the case; the neutral engine adds none', () => {
+  const schema = resolveCaseSchema(DENTEX_PACK);
+  assert.deepEqual(schema.fields.map((f) => f.key), ['tooth', 'procedureCode', 'urgency']);
+  const urgency = schema.fields.find((f) => f.key === 'urgency');
+  assert.ok(urgency && urgency.type === 'select' && urgency.required === true);
+  assert.deepEqual(resolveCaseSchema(null), NEUTRAL_CASE_SCHEMA);
+});
+
+test('case attributes are validated and normalized against the pack schema', () => {
+  const schema = resolveCaseSchema(DENTEX_PACK);
+  // Unknown keys dropped; known ones trimmed; required select present and valid.
+  const ok = validateCaseAttributes(schema, { tooth: '  UR6 ', urgency: 'Emergency', junk: 'x' });
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+  // A bad select value is rejected, and nothing is invented.
+  const badSelect = validateCaseAttributes(schema, { urgency: 'Whenever' });
+  assert.equal(badSelect.ok, false);
+  assert.match(badSelect.errors.join(' '), /Urgency must be one of/);
+  assert.deepEqual(badSelect.attributes, {});
+  // A missing required field is reported.
+  const missing = validateCaseAttributes(schema, { tooth: 'UL4' });
+  assert.equal(missing.ok, false);
+  assert.match(missing.errors.join(' '), /Urgency is required/);
+  // The neutral schema validates anything (no fields).
+  assert.equal(validateCaseAttributes(NEUTRAL_CASE_SCHEMA, { anything: 1 }).ok, true);
 });
 
 test('no pack falls back to the neutral case workflow vocabulary', () => {
