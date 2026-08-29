@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel } from '@expadio/industry-packs';
 import styles from '../../workflows/page.module.css';
 
 /**
@@ -49,7 +50,8 @@ const ageColor = (iso: string): string => {
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
 const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
 
-export function ReviewQueueClient({ initial }: { initial: ReviewQueueItem[] }) {
+export function ReviewQueueClient({ initial, verticalKey = null }: { initial: ReviewQueueItem[]; verticalKey?: string | null }) {
+  const pack = findIndustryPack(verticalKey);
   const [workType, setWorkType] = useState('');
   const workTypes = Array.from(new Set(initial.map((d) => d.workTypeKey))).sort();
   const rows = workType === '' ? initial : initial.filter((d) => d.workTypeKey === workType);
@@ -60,7 +62,7 @@ export function ReviewQueueClient({ initial }: { initial: ReviewQueueItem[] }) {
         <div><p className={styles.eyebrow}>Awaiting you</p><h2 id="rq-title">Your review queue{initial.length > 0 && <span style={badge}>{initial.length}</span>}</h2></div>
         <select style={inp} value={workType} onChange={(e) => setWorkType(e.target.value)} aria-label="Filter by work type">
           <option value="">All work types</option>
-          {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
+          {workTypes.map((wt) => <option key={wt} value={wt}>{resolveWorkTypeLabel(pack, wt)}</option>)}
         </select>
       </div>
 
@@ -77,9 +79,9 @@ export function ReviewQueueClient({ initial }: { initial: ReviewQueueItem[] }) {
                 const href = VERTICAL_HREF[d.workTypeKey];
                 return (
                   <tr key={i}>
-                    <td>{d.workTypeKey}</td>
+                    <td title={pack ? d.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, d.workTypeKey)}</td>
                     <td>{d.subjectLabel ? <>{d.subjectLabel} <span style={{ color: '#94a3b8' }}>· {d.subjectType}</span></> : <>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></>}</td>
-                    <td>{d.currentStageKey}</td>
+                    <td title={pack ? d.currentStageKey : undefined}>{resolveStageLabel(pack, d.workTypeKey, d.currentStageKey)}</td>
                     <td>{d.participantKey}</td>
                     <td style={{ color: ageColor(d.waitingSince), fontWeight: 600 }}>{sinceLabel(d.waitingSince)}</td>
                     <td>{href ? <a href={href} style={{ color: '#2563eb', fontSize: 13 }}>Open</a> : null}</td>

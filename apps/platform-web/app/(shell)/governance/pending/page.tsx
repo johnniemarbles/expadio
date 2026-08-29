@@ -6,8 +6,12 @@ import { isDenied } from '@expadio/ui/contracts';
 import { PendingReviewsClient, type PendingReview } from './PendingReviewsClient';
 
 export default async function PendingReviewsPage() {
-  const payload = await fetchApi<{ items: PendingReview[] }>(`/api/governance/pending-reviews`);
+  const [payload, vertical] = await Promise.all([
+    fetchApi<{ items: PendingReview[] }>(`/api/governance/pending-reviews`),
+    fetchApi<{ verticalKey: string | null }>(`/api/tenancy/vertical`),
+  ]);
   if (isDenied(payload)) return <DeniedState result={payload} />;
+  const verticalKey = isDenied(vertical) ? null : vertical.verticalKey;
 
   return (
     <>
@@ -19,7 +23,7 @@ export default async function PendingReviewsPage() {
         </div>
       </section>
 
-      <PendingReviewsClient initial={payload.items ?? []} />
+      <PendingReviewsClient initial={payload.items ?? []} verticalKey={verticalKey} />
     </>
   );
 }

@@ -42,6 +42,11 @@ test('the pending-reviews surface shows the load per assignee and links from nav
   assert.match(page, /PendingReviewsClient/);
   assert.match(client, /Pending review load/);
   assert.match(client, /style=\{badge\}>\{initial\.length\}/); // at-a-glance count
+  // Pack-aware: work type and stage read the active vertical's language.
+  assert.match(page, /\/api\/tenancy\/vertical/);
+  assert.match(page, /verticalKey=\{verticalKey\}/);
+  assert.match(client, /resolveWorkTypeLabel\(pack, d\.workTypeKey\)/);
+  assert.match(client, /resolveStageLabel\(pack, d\.workTypeKey, d\.currentStageKey\)/);
   assert.match(client, /Waiting on/);
   assert.match(nav, /href: '\/governance\/pending'/);
 });
