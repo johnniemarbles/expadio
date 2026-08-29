@@ -25,6 +25,9 @@ test('pending reviews are open, assigned, not-yet-decided instances, filterable'
   assert.match(lib, /ORDER BY i\.updated_at ASC/);
   // Surfaces who each item is waiting on.
   assert.match(lib, /pa\.target_key AS assignee/);
+  // Resolves a human subject label per vertical.
+  assert.match(lib, /COALESCE\(ve\.legal_name, cc\.subject, er\.purpose, ar\.resource\) AS subject_label/);
+  assert.match(lib, /LEFT JOIN platform\.expense_reports er/);
 });
 
 test('the pending-reviews route is a membership read behind RLS with filters', () => {

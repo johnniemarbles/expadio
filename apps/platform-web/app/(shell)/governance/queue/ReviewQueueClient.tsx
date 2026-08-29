@@ -14,6 +14,7 @@ export interface ReviewQueueItem {
   workTypeKey: string;
   subjectType: string;
   subjectId: string;
+  subjectLabel: string | null;
   state: string;
   currentStageKey: string;
   participantKey: string;
@@ -76,7 +77,7 @@ export function ReviewQueueClient({ initial }: { initial: ReviewQueueItem[] }) {
                 return (
                   <tr key={i}>
                     <td>{d.workTypeKey}</td>
-                    <td>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></td>
+                    <td>{d.subjectLabel ? <>{d.subjectLabel} <span style={{ color: '#94a3b8' }}>· {d.subjectType}</span></> : <>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></>}</td>
                     <td>{d.currentStageKey}</td>
                     <td>{d.participantKey}</td>
                     <td style={{ color: ageColor(d.waitingSince), fontWeight: 600 }}>{sinceLabel(d.waitingSince)}</td>

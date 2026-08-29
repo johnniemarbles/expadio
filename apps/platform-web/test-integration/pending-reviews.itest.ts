@@ -55,6 +55,7 @@ test('the pending load shows who each open item waits on, and filters and drains
     const aItem = all.find((i) => i.subjectId === a.vendorId);
     const bItem = all.find((i) => i.subjectId === b.vendorId);
     assert.ok(aItem && aItem.assigneeSubjectId === alice, 'Alice\'s item is pending on Alice');
+    assert.equal(aItem.subjectLabel, 'Alice Co', 'the vendor legal name is resolved as the subject label');
     assert.ok(bItem && bItem.assigneeSubjectId === bob, 'Bob\'s item is pending on Bob');
 
     // The assignee filter narrows to one person (random ids, so no global bleed).
