@@ -3,6 +3,7 @@ import test from 'node:test';
 import { validateIndustryProfile, validatePresentationTerminology } from '@expadio/business-config';
 import {
   DENTEX_PACK,
+  LEXFLOW_PACK,
   INDUSTRY_PACKS,
   NEUTRAL_CRM_VOCABULARY,
   NEUTRAL_CASE_WORKFLOW_VOCABULARY,
@@ -84,6 +85,36 @@ test('case attributes are validated and normalized against the pack schema', () 
   assert.match(missing.errors.join(' '), /Urgency is required/);
   // The neutral schema validates anything (no fields).
   assert.equal(validateCaseAttributes(NEUTRAL_CASE_SCHEMA, { anything: 1 }).ok, true);
+});
+
+test('LEXFLOW proves the reskin generalizes — a second vertical, all as data', () => {
+  // Different entity words than DENTEX, over the same canonical concept keys.
+  const vocab = resolveCrmVocabulary(LEXFLOW_PACK);
+  assert.equal(vocab.account.plural, 'Clients');
+  assert.equal(vocab.case.plural, 'Matters');
+  assert.equal(vocab.agreement.plural, 'Engagement letters');
+  // A different process language on the same four canonical stages.
+  const wf = resolveCaseWorkflowVocabulary(LEXFLOW_PACK);
+  assert.equal(wf.workType, 'Matter');
+  assert.equal(wf.stages.INTAKE, 'Intake & conflicts');
+  assert.equal(wf.stages.RESOLVED, 'Closed');
+  assert.equal(resolveWorkTypeLabel(LEXFLOW_PACK, 'crm.case'), 'Matter');
+  assert.equal(resolveStageLabel(LEXFLOW_PACK, 'crm.case', 'REVIEW'), 'Partner review');
+  // Its own case fields — a required select plus free-text, distinct from DENTEX.
+  const schema = resolveCaseSchema(LEXFLOW_PACK);
+  assert.deepEqual(schema.fields.map((f) => f.key), ['matterType', 'jurisdiction', 'opposingParty']);
+  const matterType = schema.fields.find((f) => f.key === 'matterType');
+  assert.ok(matterType && matterType.type === 'select' && matterType.required === true);
+  // The same validator enforces the new schema — bad select rejected, good accepted.
+  assert.equal(validateCaseAttributes(schema, { matterType: 'Tax' }).ok, false);
+  const good = validateCaseAttributes(schema, { matterType: 'Litigation', jurisdiction: ' NY ', junk: 'x' });
+  assert.equal(good.ok, true);
+  assert.deepEqual(good.attributes, { matterType: 'Litigation', jurisdiction: 'NY' });
+  // Both packs are discoverable by the picker and by case-insensitive lookup.
+  assert.equal(findIndustryPack('LexFlow')?.verticalKey, 'lexflow');
+  const choices = listIndustryPackChoices();
+  assert.ok(choices.some((c) => c.verticalKey === 'lexflow'));
+  assert.ok(choices.some((c) => c.verticalKey === 'dentex'));
 });
 
 test('no pack falls back to the neutral case workflow vocabulary', () => {
