@@ -17,7 +17,7 @@ test('the vendors list/create route is governed and RLS-scoped', () => {
   assert.match(vendorsRoute, /export async function GET/);
   assert.match(vendorsRoute, /export async function POST/);
   assert.match(vendorsRoute, /resolveRequestContext\(request\)/);
-  assert.match(vendorsRoute, /hasCrmWriteRole/);
+  assert.match(vendorsRoute, /hasGovernanceWriteRole/);
   assert.match(vendorsRoute, /INSERT INTO platform\.vendors/);
   assert.match(vendorsRoute, /'vendor\.onboarding'/);
 });
@@ -43,7 +43,7 @@ test('the vendor participant route fills the SCREENING compliance slot', () => {
   assert.match(participantsRoute, /createVerticalParticipantsRoute\(VENDOR_WORKFLOW\)/);
   const factory = read('../lib/vertical-workflow-route.ts');
   assert.match(factory, /assignParticipant/);
-  assert.match(factory, /hasCrmWriteRole/);
+  assert.match(factory, /hasGovernanceWriteRole/);
 });
 
 test('a platform vendor.onboarding blueprint is seeded and active', () => {
@@ -76,7 +76,7 @@ test('v2 adds a governed decision stage and the vendor decision route captures i
   const factory = read('../lib/vertical-workflow-route.ts');
   assert.match(factory, /recordCaseDecision/);
   assert.match(factory, /makerForStage/);
-  assert.match(factory, /hasCrmWriteRole/);
+  assert.match(factory, /hasGovernanceWriteRole/);
 });
 
 test('the vendor workflow exposes its governed trace', () => {

@@ -7,7 +7,7 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const accountsRoute = read("../app/api/crm/accounts/route.ts");
 const contactsRoute = read("../app/api/crm/contacts/route.ts");
 const migration = read("../../../infra/db/migrations/0044_crm_party.sql");
-const authz = read("../lib/crm-authz.ts");
+const authz = read("../lib/governance-authz.ts");
 
 test("CRM routes are governed and tenant-scoped, using the party domain", () => {
   for (const route of [accountsRoute, contactsRoute]) {
