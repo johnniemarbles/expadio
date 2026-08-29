@@ -238,6 +238,9 @@ importers:
       '@expadio/communication':
         specifier: workspace:*
         version: link:../communication
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../industry-packs
       '@expadio/knowledge':
         specifier: workspace:*
         version: link:../knowledge
