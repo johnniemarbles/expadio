@@ -6,6 +6,7 @@ import {
   withTenantTransaction,
   deniedResponse,
 } from '../../../../../../../lib/request-context';
+import { hasGovernanceWriteRole } from '../../../../../../../lib/governance-authz';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,18 +52,32 @@ export async function PATCH(
     }
 
     try {
-      const draft = await withTenantTransaction(context, async (client) => {
+      const result = await withTenantTransaction(context, async (client) => {
+        if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
+          return { forbidden: true } as const;
+        }
         const repository = new PostgresIndustryPackVersionRepository(client);
-        return repository.updateDraft({
+        const draft = await repository.updateDraft({
           scope: { type: 'TENANT', tenantId: context.tenantId },
           identity: { verticalKey, version },
           expectedRevision: Number(expectedRevision),
           definition: validation.definition,
           updatedBySubjectId: context.subjectId,
         });
+        return { draft } as const;
       });
 
-      return NextResponse.json({ draft });
+      if ('forbidden' in result) {
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'FORBIDDEN',
+            message: 'You need a governing role to edit Industry Pack drafts.',
+          },
+          { status: 403 },
+        );
+      }
+      return NextResponse.json({ draft: result.draft });
     } catch (error) {
       if (error instanceof Error && error.message === 'INDUSTRY_PACK_DRAFT_UPDATE_CONFLICT') {
         return NextResponse.json(
