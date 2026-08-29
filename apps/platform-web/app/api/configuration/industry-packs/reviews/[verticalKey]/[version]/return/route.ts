@@ -6,6 +6,7 @@ import {
   withTenantTransaction,
   deniedResponse,
 } from '../../../../../../../../lib/request-context';
+import { hasGovernanceWriteRole } from '../../../../../../../../lib/governance-authz';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,9 @@ export async function POST(
     }
 
     const outcome = await withTenantTransaction(context, async (client) => {
+      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
+        return { kind: 'FORBIDDEN' as const };
+      }
       const repository = new PostgresIndustryPackVersionRepository(client);
       const scope = { type: 'TENANT' as const, tenantId: context.tenantId };
       const current = await repository.findByIdentity({
@@ -65,6 +69,16 @@ export async function POST(
       }
     });
 
+    if (outcome.kind === 'FORBIDDEN') {
+      return NextResponse.json(
+        {
+          denied: true,
+          reasonKey: 'FORBIDDEN',
+          message: 'You need a governing role to return Industry Packs to draft.',
+        },
+        { status: 403 },
+      );
+    }
     if (outcome.kind === 'NOT_FOUND') {
       return NextResponse.json({ error: 'Industry Pack review version was not found.' }, { status: 404 });
     }
