@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateCaseInput, CaseValidationError, type CrmCase } from '@expadio/case';
-import { findIndustryPack, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../lib/crm-authz';
 
@@ -89,10 +90,18 @@ export async function POST(request: Request) {
       if (!(await hasCrmWriteRole(client, context.subjectId))) {
         return { forbidden: true } as const;
       }
-      // Validate the pack-declared domain fields against the tenant's active pack.
-      const vertical = await client.query(`SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`, [context.tenantId]);
-      const pack = findIndustryPack(vertical.rows[0]?.vertical_key ?? null);
-      const validated = validateCaseAttributes(resolveCaseSchema(pack), rawAttributes);
+      // Resolve the tenant's executable Industry Pack from governed runtime sources.
+      // Published tenant/platform definitions are authoritative; the code registry
+      // remains only the compatibility fallback inside the resolver.
+      const vertical = await client.query(
+        `SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`,
+        [context.tenantId],
+      );
+      const runtimePack = await new PostgresIndustryPackRuntimeResolver(client).resolve({
+        tenantId: context.tenantId,
+        verticalKey: vertical.rows[0]?.vertical_key ?? null,
+      });
+      const validated = validateCaseAttributes(resolveCaseSchema(runtimePack.pack), rawAttributes);
       if (!validated.ok) return { invalidAttributes: true, errors: validated.errors } as const;
       // Stamp the schema revision that validated these attributes (null on the
       // neutral engine, version 0), so the value bag stays tied to its field set.

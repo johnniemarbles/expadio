@@ -2,22 +2,24 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
-import { findIndustryPack, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { DENTEX_PACK, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 
 /**
  * The seam POST /api/crm/cases relies on: a tenant's stored `vertical_key`
- * selects which Industry Pack schema validates that tenant's cases. The route
- * reads platform.tenants.vertical_key, resolves the pack, validates the
- * submitted attributes against its schema, and stores the normalized bag. The
- * pack resolution and the validator are unit-tested in @expadio/industry-packs,
+ * selects which Industry Pack family validates that tenant's cases. The route
+ * reads platform.tenants.vertical_key, resolves the executable PUBLISHED pack
+ * through PostgresIndustryPackRuntimeResolver, validates the submitted attributes
+ * against that definition, and stores the normalized bag. Runtime resolution and
+ * the validator are unit-tested independently,
  * and the JSONB column in crm-case-attributes.itest; this proves the whole
  * chain composes on a real Postgres — the DB-stored binding actually drives the
  * schema, rejects an invalid case, and stores a valid one — for both packs and
  * the neutral engine.
  *
  * (The route itself imports next/server and can't run under this harness, so we
- * reproduce its resolution — read vertical_key, findIndustryPack,
- * validateCaseAttributes — faithfully, against the same schema the route uses.)
+ * reproduce its resolution — read vertical_key, resolve the governed runtime
+ * pack, validateCaseAttributes — faithfully, against the same schema the route uses.)
  */
 
 function pool(): pg.Pool {
@@ -42,8 +44,11 @@ async function bindResolveValidate(
     `SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`,
     [tenantId],
   )).rows[0];
-  const pack = findIndustryPack(row?.vertical_key ?? null);
-  const schema = resolveCaseSchema(pack);
+  const resolved = await new PostgresIndustryPackRuntimeResolver(c).resolve({
+    tenantId,
+    verticalKey: row?.vertical_key ?? null,
+  });
+  const schema = resolveCaseSchema(resolved.pack);
   return validateCaseAttributes(schema, submitted);
 }
 
@@ -106,6 +111,45 @@ test('a DENTEX-bound tenant is validated against the dental schema', async () =>
     const good = await bindResolveValidate(c, tenantId, { tooth: 'UR6', urgency: 'Emergency' });
     assert.equal(good.ok, true);
     assert.deepEqual(good.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+test('tenant PUBLISHED pack overrides the code baseline at runtime', async () => {
+  const p = pool();
+  const c = await p.connect();
+  try {
+    const tenantId = await seedTenant(c, 'dentex');
+    const authored = {
+      ...DENTEX_PACK,
+      label: 'Tenant DENTEX v2',
+      caseSchema: {
+        version: 2,
+        fields: [
+          { key: 'clinicCode', label: 'Clinic code', type: 'text', required: true },
+        ],
+      },
+    };
+
+    await c.query(
+      `INSERT INTO platform.industry_pack_versions
+         (tenant_id, vertical_key, version, source, state, revision, definition,
+          created_by_subject_id, updated_by_subject_id)
+       VALUES ($1::uuid, 'dentex', 2, 'TENANT_AUTHORED', 'PUBLISHED', 1, $2::jsonb,
+               'itest-author', 'itest-author')`,
+      [tenantId, JSON.stringify(authored)],
+    );
+
+    const baselineOnlyValue = await bindResolveValidate(c, tenantId, { urgency: 'Emergency' });
+    assert.equal(baselineOnlyValue.ok, false);
+    assert.match(baselineOnlyValue.errors.join(' '), /Clinic code is required/);
+
+    const governed = await bindResolveValidate(c, tenantId, { clinicCode: ' C-12 ' });
+    assert.equal(governed.ok, true);
+    assert.deepEqual(governed.attributes, { clinicCode: 'C-12' });
+    assert.equal(governed.schemaVersion, 2);
   } finally {
     c.release();
     await p.end();
