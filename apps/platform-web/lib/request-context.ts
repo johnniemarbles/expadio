@@ -122,6 +122,37 @@ export async function withTenantClient<T>(
   }
 }
 
+/**
+ * Runs one tenant-scoped work unit inside an explicit transaction.
+ *
+ * `context.applyTo` uses transaction-local PostgreSQL GUCs. Callers that need
+ * RLS to remain bound across multiple statements must use this helper rather
+ * than relying on an autocommit statement to retain a local setting.
+ */
+export async function withTenantTransaction<T>(
+  context: ResolvedRequestContext,
+  work: (client: import('pg').PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+    await context.applyTo(client);
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Preserve the original failure. Driver/pool health handling belongs to
+      // the runtime composition root rather than changing the denial surface.
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 /** §3.4 — step-up authentication for credential intake, rotation, revocation. */
 export async function requireStepUp(maxAgeSeconds = 300): Promise<void> {
   const headerList = await headers();
