@@ -229,6 +229,9 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../industry-packs
       '@expadio/capabilities':
         specifier: workspace:*
         version: link:../capabilities
