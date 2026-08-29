@@ -16,6 +16,9 @@ interface WorkflowInstanceRow {
   readonly blueprint_key: string;
   readonly blueprint_version: number;
   readonly blueprint_scope: 'PLATFORM' | 'TENANT';
+  readonly industry_pack_vertical_key: string | null;
+  readonly industry_pack_version: number | null;
+  readonly industry_pack_runtime_source: 'TENANT_PUBLISHED' | 'PLATFORM_PUBLISHED' | 'CODE_BASELINE' | 'NEUTRAL' | null;
   readonly state: WorkflowInstanceState;
   readonly current_stage_key: string | null;
   readonly revision: number;
@@ -30,8 +33,9 @@ interface CommitRow extends Partial<WorkflowInstanceRow> {
 }
 
 const SELECT_COLUMNS = `instance_id, tenant_id, work_type_key, subject_type, subject_id,
-  blueprint_key, blueprint_version, blueprint_scope, state, current_stage_key,
-  revision, created_at, started_at, completed_at, updated_at`;
+  blueprint_key, blueprint_version, blueprint_scope,
+  industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source,
+  state, current_stage_key, revision, created_at, started_at, completed_at, updated_at`;
 
 /**
  * The same columns qualified with the UPDATE alias, whitespace-normalized.
@@ -60,12 +64,14 @@ export class PostgresWorkflowInstanceRepository implements WorkflowInstanceRepos
     const result = await this.#client.query<WorkflowInstanceRow>(
       `INSERT INTO platform.workflow_instances (
          instance_id, tenant_id, work_type_key, subject_type, subject_id,
-         blueprint_key, blueprint_version, blueprint_scope, state,
-         current_stage_key, revision, created_at, started_at, completed_at, updated_at
+         blueprint_key, blueprint_version, blueprint_scope,
+         industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source,
+         state, current_stage_key, revision, created_at, started_at, completed_at, updated_at
        ) VALUES (
          $1::uuid, $2::uuid, $3, $4, $5,
-         $6, $7, $8, $9,
-         $10, $11, $12::timestamptz, $13::timestamptz, $14::timestamptz, $15::timestamptz
+         $6, $7, $8,
+         $9, $10, $11,
+         $12, $13, $14, $15::timestamptz, $16::timestamptz, $17::timestamptz, $18::timestamptz
        )
        RETURNING ${SELECT_COLUMNS}`,
       valuesForInstance(instance),
@@ -146,6 +152,9 @@ export class PostgresWorkflowInstanceRepository implements WorkflowInstanceRepos
               NULL::text AS blueprint_key,
               NULL::integer AS blueprint_version,
               NULL::text AS blueprint_scope,
+              NULL::text AS industry_pack_vertical_key,
+              NULL::integer AS industry_pack_version,
+              NULL::text AS industry_pack_runtime_source,
               NULL::text AS state,
               NULL::text AS current_stage_key,
               NULL::integer AS revision,
@@ -208,6 +217,13 @@ function valuesForInstance(instance: WorkflowInstance): readonly unknown[] {
     instance.blueprint.blueprintKey,
     instance.blueprint.version,
     instance.blueprint.scope,
+    instance.industryPackProvenance?.runtimeSource === 'NEUTRAL'
+      ? null
+      : instance.industryPackProvenance?.verticalKey ?? null,
+    instance.industryPackProvenance !== undefined && 'version' in instance.industryPackProvenance
+      ? instance.industryPackProvenance.version ?? null
+      : null,
+    instance.industryPackProvenance?.runtimeSource ?? null,
     instance.state,
     instance.currentStageKey ?? null,
     instance.revision,
@@ -237,6 +253,7 @@ function mapInstance(row: WorkflowInstanceRow): WorkflowInstance {
       version: row.blueprint_version,
       scope: row.blueprint_scope,
     },
+    ...mapIndustryPackProvenance(row),
     state: row.state,
     ...(row.current_stage_key === null ? {} : { currentStageKey: row.current_stage_key }),
     revision: row.revision,
@@ -249,4 +266,36 @@ function mapInstance(row: WorkflowInstanceRow): WorkflowInstance {
 
 function toIsoString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+
+function mapIndustryPackProvenance(
+  row: WorkflowInstanceRow,
+): Pick<WorkflowInstance, 'industryPackProvenance'> | Record<string, never> {
+  const source = row.industry_pack_runtime_source;
+  if (source === null) return {};
+  if (source === 'NEUTRAL') {
+    return { industryPackProvenance: { runtimeSource: 'NEUTRAL' } };
+  }
+  const verticalKey = row.industry_pack_vertical_key;
+  if (verticalKey === null) throw new Error('WORKFLOW_INSTANCE_PACK_PROVENANCE_VERTICAL_KEY_MISSING');
+  if (source === 'CODE_BASELINE') {
+    return {
+      industryPackProvenance: {
+        runtimeSource: source,
+        verticalKey,
+        ...(row.industry_pack_version === null ? {} : { version: row.industry_pack_version }),
+      },
+    };
+  }
+  if (row.industry_pack_version === null) {
+    throw new Error('WORKFLOW_INSTANCE_PACK_PROVENANCE_VERSION_MISSING');
+  }
+  return {
+    industryPackProvenance: {
+      runtimeSource: source,
+      verticalKey,
+      version: row.industry_pack_version,
+    },
+  };
 }
