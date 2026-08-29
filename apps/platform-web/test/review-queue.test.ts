@@ -39,6 +39,7 @@ test('the queue route is a membership read behind RLS, scoped to the caller', ()
 test('the queue surface lists pending work and links to each vertical', () => {
   assert.match(page, /ReviewQueueClient/);
   assert.match(client, /Your review queue/);
+  assert.match(client, /style=\{badge\}>\{initial\.length\}/); // at-a-glance count
   assert.match(client, /'crm\.case': '\/crm'/);
   assert.match(client, /'vendor\.onboarding': '\/vendors'/);
   assert.match(client, /'expense\.reimbursement': '\/expenses'/);

@@ -41,6 +41,7 @@ test('the pending-reviews route is a membership read behind RLS with filters', (
 test('the pending-reviews surface shows the load per assignee and links from nav', () => {
   assert.match(page, /PendingReviewsClient/);
   assert.match(client, /Pending review load/);
+  assert.match(client, /style=\{badge\}>\{initial\.length\}/); // at-a-glance count
   assert.match(client, /Waiting on/);
   assert.match(nav, /href: '\/governance\/pending'/);
 });

@@ -47,6 +47,7 @@ const ageColor = (iso: string): string => {
 };
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
+const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
 
 export function ReviewQueueClient({ initial }: { initial: ReviewQueueItem[] }) {
   const [workType, setWorkType] = useState('');
@@ -56,7 +57,7 @@ export function ReviewQueueClient({ initial }: { initial: ReviewQueueItem[] }) {
   return (
     <section className={styles.panel} aria-labelledby="rq-title">
       <div className={styles.panelHeading}>
-        <div><p className={styles.eyebrow}>Awaiting you</p><h2 id="rq-title">Your review queue</h2></div>
+        <div><p className={styles.eyebrow}>Awaiting you</p><h2 id="rq-title">Your review queue{initial.length > 0 && <span style={badge}>{initial.length}</span>}</h2></div>
         <select style={inp} value={workType} onChange={(e) => setWorkType(e.target.value)} aria-label="Filter by work type">
           <option value="">All work types</option>
           {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
