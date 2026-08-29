@@ -1,0 +1,134 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import test from 'node:test';
+import pg from 'pg';
+import { findIndustryPack, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+
+/**
+ * The seam POST /api/crm/cases relies on: a tenant's stored `vertical_key`
+ * selects which Industry Pack schema validates that tenant's cases. The route
+ * reads platform.tenants.vertical_key, resolves the pack, validates the
+ * submitted attributes against its schema, and stores the normalized bag. The
+ * pack resolution and the validator are unit-tested in @expadio/industry-packs,
+ * and the JSONB column in crm-case-attributes.itest; this proves the whole
+ * chain composes on a real Postgres — the DB-stored binding actually drives the
+ * schema, rejects an invalid case, and stores a valid one — for both packs and
+ * the neutral engine.
+ *
+ * (The route itself imports next/server and can't run under this harness, so we
+ * reproduce its resolution — read vertical_key, findIndustryPack,
+ * validateCaseAttributes — faithfully, against the same schema the route uses.)
+ */
+
+function pool(): pg.Pool {
+  return new pg.Pool({
+    host: process.env.PGHOST ?? 'localhost',
+    port: Number(process.env.PGPORT ?? 5432),
+    user: process.env.PGUSER ?? 'postgres',
+    password: process.env.PGPASSWORD ?? 'postgres',
+    database: process.env.PGDATABASE ?? 'expadio_test',
+    max: 1,
+  });
+}
+
+// The route's resolution, over a live tenant row: read the binding, resolve the
+// schema, validate, and (when valid) persist onto the case.
+async function bindResolveValidate(
+  c: pg.PoolClient,
+  tenantId: string,
+  submitted: Record<string, unknown>,
+) {
+  const row = (await c.query(
+    `SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`,
+    [tenantId],
+  )).rows[0];
+  const pack = findIndustryPack(row?.vertical_key ?? null);
+  const schema = resolveCaseSchema(pack);
+  return validateCaseAttributes(schema, submitted);
+}
+
+async function seedTenant(c: pg.PoolClient, verticalKey: string | null): Promise<string> {
+  const tenantId = randomUUID();
+  await c.query(
+    `INSERT INTO platform.tenants (tenant_id, name, vertical_key) VALUES ($1, 'itest', $2)`,
+    [tenantId, verticalKey],
+  );
+  await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
+  return tenantId;
+}
+
+test('a LEXFLOW-bound tenant is validated against the legal schema', async () => {
+  const p = pool();
+  const c = await p.connect();
+  try {
+    const tenantId = await seedTenant(c, 'lexflow');
+
+    // The required select (matterType) is enforced from the stored binding.
+    const missing = await bindResolveValidate(c, tenantId, { jurisdiction: 'NY' });
+    assert.equal(missing.ok, false);
+    assert.match(missing.errors.join(' '), /Matter type is required/);
+
+    // A bad option is rejected; nothing is invented.
+    const bad = await bindResolveValidate(c, tenantId, { matterType: 'Tax' });
+    assert.equal(bad.ok, false);
+
+    // A valid Matter normalizes and persists as the case's attributes.
+    const good = await bindResolveValidate(c, tenantId, { matterType: 'Litigation', jurisdiction: ' NY ', junk: 'x' });
+    assert.equal(good.ok, true);
+    assert.deepEqual(good.attributes, { matterType: 'Litigation', jurisdiction: 'NY' });
+
+    const stored = (await c.query(
+      `INSERT INTO platform.crm_cases (tenant_id, subject, attributes)
+       VALUES ($1, 'Acme v. Roe', $2::jsonb) RETURNING attributes`,
+      [tenantId, JSON.stringify(good.attributes)],
+    )).rows[0];
+    assert.deepEqual(stored.attributes, { matterType: 'Litigation', jurisdiction: 'NY' });
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+test('a DENTEX-bound tenant is validated against the dental schema', async () => {
+  const p = pool();
+  const c = await p.connect();
+  try {
+    const tenantId = await seedTenant(c, 'dentex');
+
+    // DENTEX's own required field (urgency) governs this tenant's cases.
+    const missing = await bindResolveValidate(c, tenantId, { tooth: 'UR6' });
+    assert.equal(missing.ok, false);
+    assert.match(missing.errors.join(' '), /Urgency is required/);
+
+    const good = await bindResolveValidate(c, tenantId, { tooth: 'UR6', urgency: 'Emergency' });
+    assert.equal(good.ok, true);
+    assert.deepEqual(good.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+test('an unbound tenant uses the neutral engine — no fields, nothing stored', async () => {
+  const p = pool();
+  const c = await p.connect();
+  try {
+    const tenantId = await seedTenant(c, null);
+
+    // The neutral engine declares no fields, so any submission is accepted and
+    // reduced to an empty bag — no pack data leaks onto a neutral case.
+    const res = await bindResolveValidate(c, tenantId, { matterType: 'Litigation', tooth: 'UR6' });
+    assert.equal(res.ok, true);
+    assert.deepEqual(res.attributes, {});
+
+    const stored = (await c.query(
+      `INSERT INTO platform.crm_cases (tenant_id, subject, attributes)
+       VALUES ($1, 'Generic case', $2::jsonb) RETURNING attributes`,
+      [tenantId, JSON.stringify(res.attributes)],
+    )).rows[0];
+    assert.deepEqual(stored.attributes, {});
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
