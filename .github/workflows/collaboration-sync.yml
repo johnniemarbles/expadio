@@ -5,12 +5,10 @@ on:
     paths:
       - 'docs/collaboration/**'
       - '.github/workflows/collaboration-sync.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'docs/collaboration/**'
-      - '.github/workflows/collaboration-sync.yml'
+
+concurrency:
+  group: collaboration-sync-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
