@@ -79,6 +79,13 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   // falling back to the raw key when a pack does not relabel it.
   const stageLabel = (k: string | null | undefined): string =>
     (k && (caseVocab.stages as Record<string, string>)[k]) || k || "—";
+  // A canonical decision outcome in the pack's language (APPROVE → "Approve
+  // treatment plan"); the recorded outcome stays canonical underneath.
+  const outcomeLabel = (o: string): string =>
+    (caseVocab.decisionOutcomeLabels as Record<string, string> | undefined)?.[o] ?? o;
+  // The pack's domain note for a canonical stage, if any.
+  const stageGuidance = (k: string | null | undefined): string | undefined =>
+    (k && (caseVocab.stageGuidance as Record<string, string> | undefined)?.[k]) || undefined;
   const [tab, setTab] = useState<"accounts" | "contacts" | "leads" | "cases" | "agreements">("accounts");
   const [accounts, setAccounts] = useState<CrmAccount[]>(initialAccounts);
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
@@ -462,7 +469,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     </td>
                     <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
-                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} stageLabel={stageLabel} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onAssign={(stageKey, pk) => assignMe(c.caseId, stageKey, pk)} onTrace={() => setTraceCase(c)} /></td>
+                    <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} stageLabel={stageLabel} outcomeLabel={outcomeLabel} stageGuidance={stageGuidance} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onAssign={(stageKey, pk) => assignMe(c.caseId, stageKey, pk)} onTrace={() => setTraceCase(c)} /></td>
                     <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <select
@@ -580,10 +587,12 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
   );
 }
 
-function WorkflowCell({ c, wf, stageLabel, busy, onStart, onLoad, onAdvance, onDecide, onAssign, onTrace }: {
+function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, onStart, onLoad, onAdvance, onDecide, onAssign, onTrace }: {
   c: CaseRow;
   wf?: { instanceId: string; currentStageKey: string | null; revision: number; state: string; stages: { stageKey: string; label: string; sequence: number; decisionRequired: boolean; decisionOutcomes: string[]; requiredParticipantKeys: string[] }[]; currentDecision: { outcome: string } | null; assignments: { stageKey: string; participantKey: string; status: string }[] };
   stageLabel: (k: string | null | undefined) => string;
+  outcomeLabel: (o: string) => string;
+  stageGuidance: (k: string | null | undefined) => string | undefined;
   busy: boolean;
   onStart: () => void;
   onLoad: () => void;
@@ -627,7 +636,7 @@ function WorkflowCell({ c, wf, stageLabel, busy, onStart, onLoad, onAdvance, onD
   const unmet = wf.stages.flatMap((s) => s.requiredParticipantKeys.filter((pk) => !isAssigned(s.stageKey, pk)).map((pk) => ({ stageKey: s.stageKey, label: s.label, participantKey: pk })));
   return (
     <div style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#3730a3", background: "#e0e7ff" }} title={`${stage} · revision ${wf.revision}`}>{stageLabel(stage)}</span>
+      <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#3730a3", background: "#e0e7ff" }} title={[`${stage} · revision ${wf.revision}`, stageGuidance(stage)].filter(Boolean).join(" — ")}>{stageLabel(stage)}</span>
       {unmet.length > 0 && (
         <select
           value=""
@@ -642,7 +651,7 @@ function WorkflowCell({ c, wf, stageLabel, busy, onStart, onLoad, onAdvance, onD
         </select>
       )}
       {wf.currentDecision && (
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#166534", background: "#dcfce7" }} title="Recorded decision (immutable)">✓ {wf.currentDecision.outcome}</span>
+        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#166534", background: "#dcfce7" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
       )}
       {gated ? (
         <select
@@ -654,7 +663,7 @@ function WorkflowCell({ c, wf, stageLabel, busy, onStart, onLoad, onAdvance, onD
           style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #c2410c", color: "#c2410c", fontWeight: 700 }}
         >
           <option value="">Decide…</option>
-          {(cur?.decisionOutcomes ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          {(cur?.decisionOutcomes ?? []).map((o) => <option key={o} value={o}>{outcomeLabel(o)}</option>)}
         </select>
       ) : (
         <select

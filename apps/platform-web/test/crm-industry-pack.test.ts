@@ -90,3 +90,16 @@ test("the case workflow speaks the active pack's process language", () => {
   assert.match(client, /const stageLabel =/);
   assert.match(client, /stageLabel\(s\.stageKey\)/);
 });
+
+test("a pack reskins the decision experience in both decision surfaces", () => {
+  // The CRM client offers/labels decision outcomes in the pack's language, while
+  // POSTing the canonical outcome (recorded outcome unchanged → gate/audit intact).
+  assert.match(client, /const outcomeLabel =/);
+  assert.match(client, /decisionOutcomeLabels/);
+  assert.match(client, /outcomeLabel\(o\)/);
+  assert.match(client, /stageGuidance/);
+  // The cross-vertical review queue relabels its decide buttons through the pack.
+  const queue = read("../app/(shell)/governance/queue/ReviewQueueClient.tsx");
+  assert.match(queue, /resolveDecisionOutcomeLabel/);
+  assert.match(queue, /resolveDecisionOutcomeLabel\(pack, o\)/);
+});

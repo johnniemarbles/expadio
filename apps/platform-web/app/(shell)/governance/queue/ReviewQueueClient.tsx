@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel } from '@expadio/industry-packs';
+import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel, resolveDecisionOutcomeLabel } from '@expadio/industry-packs';
 import styles from '../../workflows/page.module.css';
 
 /**
@@ -165,7 +165,7 @@ export function ReviewQueueClient({ initial, verticalKey = null }: { initial: Re
                         {act?.status === 'loading' && <span style={{ fontSize: 12, color: '#64748b' }}>Loading…</span>}
                         {act?.status === 'error' && <span role="alert" style={{ fontSize: 12, color: '#b91c1c' }}>{act.message}</span>}
                         {act?.status === 'ready' && act.outcomes.length > 0 && act.outcomes.map((o) => (
-                          <button key={o} type="button" disabled={busy === k} onClick={() => decide(d, o)} style={chip(outcomeColor(o))}>{o}</button>
+                          <button key={o} type="button" disabled={busy === k} onClick={() => decide(d, o)} style={chip(outcomeColor(o))} title={pack ? o : undefined}>{resolveDecisionOutcomeLabel(pack, o)}</button>
                         ))}
                         {act?.status === 'ready' && act.outcomes.length === 0 && (
                           <span style={{ fontSize: 12, color: '#64748b' }}>{act.other ? 'Open to act' : 'No action'}</span>
