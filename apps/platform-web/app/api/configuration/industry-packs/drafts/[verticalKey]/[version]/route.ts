@@ -11,6 +11,70 @@ import { hasGovernanceWriteRole } from '../../../../../../../lib/governance-auth
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ verticalKey: string; version: string }> },
+) {
+  try {
+    const context = await resolveRequestContext(request);
+    const resolvedParams = await params;
+    const verticalKey = decodeURIComponent(resolvedParams.verticalKey).trim().toLowerCase();
+    const version = Number(resolvedParams.version);
+    if (verticalKey === '' || !Number.isInteger(version) || version <= 0) {
+      return NextResponse.json(
+        { error: 'A valid verticalKey and positive integer version are required.' },
+        { status: 400 },
+      );
+    }
+
+    const result = await withTenantTransaction(context, async (client) => {
+      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
+        return { kind: 'FORBIDDEN' as const };
+      }
+      const repository = new PostgresIndustryPackVersionRepository(client);
+      const draft = await repository.findByIdentity({
+        scope: { type: 'TENANT', tenantId: context.tenantId },
+        identity: { verticalKey, version },
+      });
+
+      if (draft === null) return { kind: 'NOT_FOUND' as const };
+      if (draft.state !== 'DRAFT') {
+        return { kind: 'STATE_CONFLICT' as const, state: draft.state };
+      }
+      return { kind: 'FOUND' as const, draft };
+    });
+
+    if (result.kind === 'FORBIDDEN') {
+      return NextResponse.json(
+        {
+          denied: true,
+          reasonKey: 'FORBIDDEN',
+          message: 'You need a governing role to inspect Industry Pack drafts.',
+        },
+        { status: 403 },
+      );
+    }
+    if (result.kind === 'NOT_FOUND') {
+      return NextResponse.json({ error: 'Industry Pack draft was not found.' }, { status: 404 });
+    }
+    if (result.kind === 'STATE_CONFLICT') {
+      return NextResponse.json(
+        {
+          error: 'Only DRAFT Industry Pack versions can be opened for editing.',
+          reasonKey: 'INDUSTRY_PACK_DRAFT_REQUIRED',
+          state: result.state,
+        },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({ draft: result.draft });
+  } catch (error) {
+    const { body, status } = deniedResponse(error);
+    return NextResponse.json(body, { status });
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ verticalKey: string; version: string }> },
