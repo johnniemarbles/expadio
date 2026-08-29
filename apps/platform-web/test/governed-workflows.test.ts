@@ -27,3 +27,14 @@ test('the oversight surface lists and filters in-flight work', () => {
   assert.match(client, /All work types/);
   assert.match(nav, /href: '\/governance\/workflows'/);
 });
+
+test('in-flight work type and stage speak the active pack language', () => {
+  const page = read('../app/(shell)/governance/workflows/page.tsx');
+  // The page resolves the tenant's active vertical and passes it down.
+  assert.match(page, /\/api\/tenancy\/vertical/);
+  assert.match(page, /verticalKey=\{verticalKey\}/);
+  // The client relabels work type and stage per row through the pack resolvers.
+  assert.match(client, /findIndustryPack, resolveWorkTypeLabel, resolveStageLabel/);
+  assert.match(client, /resolveWorkTypeLabel\(pack, d\.workTypeKey\)/);
+  assert.match(client, /resolveStageLabel\(pack, d\.workTypeKey, d\.currentStageKey\)/);
+});

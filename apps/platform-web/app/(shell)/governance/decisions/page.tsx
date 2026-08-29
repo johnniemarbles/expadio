@@ -13,8 +13,12 @@ export default async function GovernedDecisionsPage({ searchParams }: { searchPa
   if (typeof params.org === 'string') qs.set('org', params.org);
   const q = qs.toString() ? `?${qs.toString()}` : '';
 
-  const payload = await fetchApi<{ decisions: GovernedDecision[] }>(`/api/governance/decisions${q}`);
+  const [payload, vertical] = await Promise.all([
+    fetchApi<{ decisions: GovernedDecision[] }>(`/api/governance/decisions${q}`),
+    fetchApi<{ verticalKey: string | null }>(`/api/tenancy/vertical${q}`),
+  ]);
   if (isDenied(payload)) return <DeniedState result={payload} />;
+  const verticalKey = isDenied(vertical) ? null : vertical.verticalKey;
 
   return (
     <>
@@ -26,7 +30,7 @@ export default async function GovernedDecisionsPage({ searchParams }: { searchPa
         </div>
       </section>
 
-      <DecisionsClient initial={payload.decisions ?? []} queryString={q} />
+      <DecisionsClient initial={payload.decisions ?? []} verticalKey={verticalKey} queryString={q} />
     </>
   );
 }

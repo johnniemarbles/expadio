@@ -30,3 +30,12 @@ test('the oversight surface lists and filters decisions', () => {
   assert.match(client, /Evidence/);
   assert.match(nav, /href: '\/governance\/decisions'/);
 });
+
+test('the decision log work type and stage speak the active pack language', () => {
+  const page = read('../app/(shell)/governance/decisions/page.tsx');
+  assert.match(page, /\/api\/tenancy\/vertical/);
+  assert.match(page, /verticalKey=\{verticalKey\}/);
+  assert.match(client, /findIndustryPack, resolveWorkTypeLabel, resolveStageLabel/);
+  assert.match(client, /resolveWorkTypeLabel\(pack, d\.workTypeKey\)/);
+  assert.match(client, /resolveStageLabel\(pack, d\.workTypeKey, d\.stageKey\)/);
+});

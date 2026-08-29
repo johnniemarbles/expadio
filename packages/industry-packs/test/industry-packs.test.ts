@@ -9,6 +9,8 @@ import {
   findIndustryPack,
   resolveCrmVocabulary,
   resolveCaseWorkflowVocabulary,
+  resolveWorkTypeLabel,
+  resolveStageLabel,
   listIndustryPackChoices,
 } from '../src/index.ts';
 
@@ -37,6 +39,21 @@ test('DENTEX reskins the case workflow lifecycle as a course of care', () => {
   assert.equal(wf.stages.IN_PROGRESS, 'In treatment');
   assert.equal(wf.stages.REVIEW, 'Clinical review');
   assert.equal(wf.stages.RESOLVED, 'Discharged');
+});
+
+test('governance labels relabel only crm.case under an active pack', () => {
+  // DENTEX relabels the case process and its stages.
+  assert.equal(resolveWorkTypeLabel(DENTEX_PACK, 'crm.case'), 'Treatment');
+  assert.equal(resolveStageLabel(DENTEX_PACK, 'crm.case', 'INTAKE'), 'Consultation');
+  // Other verticals keep their raw work type / stage even under a pack.
+  assert.equal(resolveWorkTypeLabel(DENTEX_PACK, 'vendor.onboarding'), 'vendor.onboarding');
+  assert.equal(resolveStageLabel(DENTEX_PACK, 'vendor.onboarding', 'APPROVAL'), 'APPROVAL');
+  // No pack → raw keys everywhere (the neutral engine is unchanged).
+  assert.equal(resolveWorkTypeLabel(null, 'crm.case'), 'crm.case');
+  assert.equal(resolveStageLabel(null, 'crm.case', 'INTAKE'), 'INTAKE');
+  // A null/unknown stage falls back safely.
+  assert.equal(resolveStageLabel(DENTEX_PACK, 'crm.case', null), '');
+  assert.equal(resolveStageLabel(DENTEX_PACK, 'crm.case', 'MYSTERY'), 'MYSTERY');
 });
 
 test('no pack falls back to the neutral case workflow vocabulary', () => {
