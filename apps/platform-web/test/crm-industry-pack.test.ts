@@ -82,6 +82,21 @@ test('stored case attributes are stamped with the pack schema version', () => {
   assert.match(migration, /ALTER TABLE platform\.crm_cases[\s\S]*ADD COLUMN IF NOT EXISTS attributes_schema_version integer/);
 });
 
+test('created cases stamp immutable Industry Pack runtime provenance', () => {
+  const casesRoute = read('../app/api/crm/cases/route.ts');
+  assert.match(casesRoute, /runtimePack\.provenance\.verticalKey/);
+  assert.match(casesRoute, /runtimePack\.provenance\.version/);
+  assert.match(casesRoute, /runtimePack\.provenance\.source/);
+  assert.match(casesRoute, /industry_pack_vertical_key/);
+  assert.match(casesRoute, /industry_pack_version/);
+  assert.match(casesRoute, /industry_pack_runtime_source/);
+  assert.match(casesRoute, /industryPackVerticalKey/);
+  assert.match(casesRoute, /industryPackVersion/);
+  assert.match(casesRoute, /industryPackRuntimeSource/);
+  const migration = read('../../../infra/db/migrations/0061_crm_case_industry_pack_provenance.sql');
+  assert.match(migration, /crm_cases_pack_provenance_immutable/);
+});
+
 test("the case create form renders the pack's declared fields and sends them", () => {
   // The page resolves the pack's case schema server-side and threads it down.
   assert.match(page, /resolveCaseSchema/);
