@@ -64,10 +64,21 @@ export function WorkflowsClient({ initial, queryString = '' }: { initial: Govern
     <section className={styles.panel} aria-labelledby="wf-title">
       <div className={styles.panelHeading}>
         <div><p className={styles.eyebrow}>Oversight</p><h2 id="wf-title">In-flight work</h2></div>
-        <select style={inp} value={workType} onChange={(e) => apply(e.target.value)} aria-label="Filter by work type">
-          <option value="">All work types</option>
-          {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <select style={inp} value={workType} onChange={(e) => apply(e.target.value)} aria-label="Filter by work type">
+            <option value="">All work types</option>
+            {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
+          </select>
+          <a
+            href={`/api/governance/workflows/export${(() => {
+              const sep = queryString ? '&' : '?';
+              return `${queryString}${workType.trim() !== '' ? `${sep}workType=${encodeURIComponent(workType.trim())}` : ''}`;
+            })()}`}
+            style={{ ...inp, textDecoration: 'none', color: '#2563eb', whiteSpace: 'nowrap' }}
+          >
+            Download CSV
+          </a>
+        </div>
       </div>
 
       {error && <p role="alert" style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
