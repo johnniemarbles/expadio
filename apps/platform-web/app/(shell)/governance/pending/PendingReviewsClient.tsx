@@ -14,6 +14,7 @@ export interface PendingReview {
   workTypeKey: string;
   subjectType: string;
   subjectId: string;
+  subjectLabel: string | null;
   state: string;
   currentStageKey: string;
   participantKey: string;
@@ -80,7 +81,7 @@ export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) 
               {rows.map((d, i) => (
                 <tr key={i}>
                   <td>{d.workTypeKey}</td>
-                  <td>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></td>
+                  <td>{d.subjectLabel ? <>{d.subjectLabel} <span style={{ color: '#94a3b8' }}>· {d.subjectType}</span></> : <>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></>}</td>
                   <td>{d.currentStageKey}</td>
                   <td>{d.participantKey}</td>
                   <td><code>{d.assigneeSubjectId.slice(0, 12)}</code></td>

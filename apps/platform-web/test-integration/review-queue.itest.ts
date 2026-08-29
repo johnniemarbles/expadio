@@ -57,6 +57,7 @@ test('the queue surfaces work assigned to me and pending, and nothing else', asy
     const mine = await loadReviewQueue(c, { subjectId: me });
     const item = mine.find((i) => i.subjectId === vendorId);
     assert.ok(item, 'the instance assigned to me and awaiting action is on my queue');
+    assert.equal(item.subjectLabel, 'Waiting Co', 'the vendor legal name is resolved as the subject label');
     assert.equal(item.currentStageKey, stageKey);
     assert.equal(item.participantKey, 'reviewer');
     assert.equal(item.workTypeKey, 'vendor.onboarding');

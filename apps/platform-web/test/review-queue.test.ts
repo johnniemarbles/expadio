@@ -24,6 +24,9 @@ test('the queue returns open instances awaiting the given subject, not yet decid
   assert.match(lib, /FROM platform\.workflow_stage_decisions/);
   // Worked by age — oldest waiting first.
   assert.match(lib, /ORDER BY i\.updated_at ASC/);
+  // Resolves a human subject label per vertical.
+  assert.match(lib, /COALESCE\(ve\.legal_name, cc\.subject, er\.purpose, ar\.resource\) AS subject_label/);
+  assert.match(lib, /LEFT JOIN platform\.vendors ve/);
 });
 
 test('the queue route is a membership read behind RLS, scoped to the caller', () => {

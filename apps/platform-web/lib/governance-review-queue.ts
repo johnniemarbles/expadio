@@ -18,6 +18,7 @@ export interface ReviewQueueItem {
   readonly workTypeKey: string;
   readonly subjectType: string;
   readonly subjectId: string;
+  readonly subjectLabel: string | null;
   readonly state: string;
   readonly currentStageKey: string;
   readonly participantKey: string;
@@ -35,10 +36,15 @@ export async function loadReviewQueue(
   const result = await client.query(
     `SELECT i.work_type_key, i.subject_type, i.subject_id, i.state,
             i.current_stage_key, i.revision, i.updated_at,
-            pa.participant_key
+            pa.participant_key,
+            COALESCE(ve.legal_name, cc.subject, er.purpose, ar.resource) AS subject_label
        FROM platform.workflow_participant_assignments pa
        JOIN platform.workflow_instances i
          ON i.instance_id = pa.instance_id AND i.tenant_id = pa.tenant_id
+       LEFT JOIN platform.vendors ve ON i.work_type_key = 'vendor.onboarding' AND ve.vendor_id::text = i.subject_id
+       LEFT JOIN platform.crm_cases cc ON i.work_type_key = 'crm.case' AND cc.case_id::text = i.subject_id
+       LEFT JOIN platform.expense_reports er ON i.work_type_key = 'expense.reimbursement' AND er.expense_id::text = i.subject_id
+       LEFT JOIN platform.access_requests ar ON i.work_type_key = 'access.request' AND ar.access_request_id::text = i.subject_id
       WHERE pa.target_kind = 'USER'
         AND pa.target_key = $1
         AND pa.status = 'ASSIGNED'
@@ -57,6 +63,7 @@ export async function loadReviewQueue(
     workTypeKey: row.work_type_key as string,
     subjectType: row.subject_type as string,
     subjectId: row.subject_id as string,
+    subjectLabel: (row.subject_label as string | null) ?? null,
     state: row.state as string,
     currentStageKey: row.current_stage_key as string,
     participantKey: row.participant_key as string,
