@@ -15,6 +15,7 @@ const instance: WorkflowInstance = {
     version: 7,
     scope: 'TENANT',
   },
+  industryPackProvenance: { runtimeSource: 'TENANT_PUBLISHED', verticalKey: 'dentex', version: 7 },
   state: 'RUNNING',
   currentStageKey: 'qualification',
   revision: 3,
@@ -41,6 +42,11 @@ test('workflow instance pins exact blueprint scope and revision', () => {
   });
   assert.equal(instance.revision, 3);
   assert.equal(instance.subject.type, 'lead-case');
+  assert.deepEqual(instance.industryPackProvenance, {
+    runtimeSource: 'TENANT_PUBLISHED',
+    verticalKey: 'dentex',
+    version: 7,
+  });
 });
 
 test('transition intent carries optimistic revision and explicit stage movement', () => {
