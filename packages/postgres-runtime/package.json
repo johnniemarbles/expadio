@@ -36,7 +36,8 @@
     "./sensitive-read-event": "./src/sensitive-read-event.ts",
     "./company-brain-correction": "./src/company-brain-correction.ts",
     "./agent-capability-manifest": "./src/agent-capability-manifest.ts",
-    "./industry-pack-authoring": "./src/industry-pack-authoring.ts"
+    "./industry-pack-authoring": "./src/industry-pack-authoring.ts",
+    "./industry-pack-runtime": "./src/industry-pack-runtime.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
