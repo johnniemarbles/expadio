@@ -2,22 +2,18 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
-import { findIndustryPack, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { DENTEX_PACK, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 
 /**
  * The seam POST /api/crm/cases relies on: a tenant's stored `vertical_key`
- * selects which Industry Pack schema validates that tenant's cases. The route
- * reads platform.tenants.vertical_key, resolves the pack, validates the
- * submitted attributes against its schema, and stores the normalized bag. The
- * pack resolution and the validator are unit-tested in @expadio/industry-packs,
- * and the JSONB column in crm-case-attributes.itest; this proves the whole
- * chain composes on a real Postgres — the DB-stored binding actually drives the
- * schema, rejects an invalid case, and stores a valid one — for both packs and
- * the neutral engine.
+ * selects which persisted PUBLISHED Industry Pack validates that tenant's cases.
+ * The route resolves through PostgresIndustryPackRuntimeResolver, then validates
+ * the submitted attributes and stores the normalized bag. This test reproduces
+ * that same path against a real Postgres and proves an authored tenant Pack can
+ * override the registered code baseline at runtime.
  *
- * (The route itself imports next/server and can't run under this harness, so we
- * reproduce its resolution — read vertical_key, findIndustryPack,
- * validateCaseAttributes — faithfully, against the same schema the route uses.)
+ * (The route itself imports next/server and cannot run under this harness.)
  */
 
 function pool(): pg.Pool {
@@ -42,8 +38,11 @@ async function bindResolveValidate(
     `SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`,
     [tenantId],
   )).rows[0];
-  const pack = findIndustryPack(row?.vertical_key ?? null);
-  const schema = resolveCaseSchema(pack);
+  const resolution = await new PostgresIndustryPackRuntimeResolver(c).resolve({
+    tenantId,
+    verticalKey: row?.vertical_key ?? null,
+  });
+  const schema = resolveCaseSchema(resolution.pack);
   return validateCaseAttributes(schema, submitted);
 }
 
@@ -106,6 +105,52 @@ test('a DENTEX-bound tenant is validated against the dental schema', async () =>
     const good = await bindResolveValidate(c, tenantId, { tooth: 'UR6', urgency: 'Emergency' });
     assert.equal(good.ok, true);
     assert.deepEqual(good.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+
+test('a tenant-published DENTEX definition overrides the TypeScript baseline at runtime', async () => {
+  const p = pool();
+  const c = await p.connect();
+  try {
+    const tenantId = await seedTenant(c, 'dentex');
+    const authored = {
+      ...DENTEX_PACK,
+      label: 'Tenant-authored DENTEX',
+      caseSchema: {
+        version: 9,
+        fields: [
+          { key: 'clinicalCode', label: 'Clinical code', type: 'text', required: true },
+        ],
+      },
+    };
+
+    await c.query(
+      `INSERT INTO platform.industry_pack_versions (
+         tenant_id, vertical_key, version, source, state, revision, definition,
+         created_by_subject_id, updated_by_subject_id,
+         published_by_subject_id, published_at
+       ) VALUES (
+         $1::uuid, 'dentex', 9, 'TENANT_AUTHORED', 'PUBLISHED', 3, $2::jsonb,
+         'itest-author', 'itest-author', 'itest-publisher', now()
+       )`,
+      [tenantId, JSON.stringify(authored)],
+    );
+
+    // The code baseline requires urgency. The authored definition does not; it
+    // requires clinicalCode instead. This fails only if DB-authored runtime
+    // authority is actually being used.
+    const baselineShaped = await bindResolveValidate(c, tenantId, { urgency: 'Emergency' });
+    assert.equal(baselineShaped.ok, false);
+    assert.match(baselineShaped.errors.join(' '), /Clinical code is required/);
+
+    const governed = await bindResolveValidate(c, tenantId, { clinicalCode: ' D-100 ' });
+    assert.equal(governed.ok, true);
+    assert.deepEqual(governed.attributes, { clinicalCode: 'D-100' });
+    assert.equal(governed.schemaVersion, 9);
   } finally {
     c.release();
     await p.end();
