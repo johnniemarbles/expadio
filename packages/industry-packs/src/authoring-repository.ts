@@ -20,4 +20,11 @@ export interface IndustryPackVersionRepository {
     readonly scope: IndustryPackAuthoringScope;
     readonly verticalKey: string;
   }): Promise<readonly IndustryPackVersion[]>;
+
+  transitionLifecycle(input: {
+    readonly scope: IndustryPackAuthoringScope;
+    readonly identity: IndustryPackVersionIdentity;
+    readonly expectedState: IndustryPackVersion['state'];
+    readonly next: IndustryPackVersion;
+  }): Promise<IndustryPackVersion>;
 }
