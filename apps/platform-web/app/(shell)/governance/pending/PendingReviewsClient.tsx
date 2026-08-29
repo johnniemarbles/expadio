@@ -66,6 +66,17 @@ export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) 
             <option value="">All assignees</option>
             {assignees.map((a) => <option key={a} value={a}>{a.slice(0, 12)} ({load.get(a)})</option>)}
           </select>
+          <a
+            href={`/api/governance/pending-reviews/export${(() => {
+              const p = new URLSearchParams();
+              if (workType.trim() !== '') p.set('workType', workType.trim());
+              if (assignee.trim() !== '') p.set('assignee', assignee.trim());
+              return p.toString() ? `?${p.toString()}` : '';
+            })()}`}
+            style={{ ...inp, textDecoration: 'none', color: '#2563eb', whiteSpace: 'nowrap' }}
+          >
+            Download CSV
+          </a>
         </div>
       </div>
 
