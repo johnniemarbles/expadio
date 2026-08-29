@@ -68,6 +68,17 @@ test('DENTEX adds domain fields to the case; the neutral engine adds none', () =
   assert.deepEqual(resolveCaseSchema(null), NEUTRAL_CASE_SCHEMA);
 });
 
+test('a case schema carries a version, stamped through validation', () => {
+  // A pack schema is versioned (starts at 1); the neutral engine has no schema (0).
+  assert.equal(resolveCaseSchema(DENTEX_PACK).version, 1);
+  assert.equal(resolveCaseSchema(LEXFLOW_PACK).version, 1);
+  assert.equal(NEUTRAL_CASE_SCHEMA.version, 0);
+  // The validator reports the version that validated the attributes, so the
+  // caller can stamp it onto the stored case.
+  assert.equal(validateCaseAttributes(resolveCaseSchema(DENTEX_PACK), { urgency: 'Routine' }).schemaVersion, 1);
+  assert.equal(validateCaseAttributes(NEUTRAL_CASE_SCHEMA, { anything: 1 }).schemaVersion, 0);
+});
+
 test('case attributes are validated and normalized against the pack schema', () => {
   const schema = resolveCaseSchema(DENTEX_PACK);
   // Unknown keys dropped; known ones trimmed; required select present and valid.
