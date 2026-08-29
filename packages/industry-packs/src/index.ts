@@ -575,3 +575,5 @@ export function describeIndustryPack(pack: IndustryPack): IndustryPackCapabiliti
 export function listIndustryPackCatalog(): readonly IndustryPackCapabilities[] {
   return INDUSTRY_PACKS.map(describeIndustryPack);
 }
+
+export * from './authoring.ts';
