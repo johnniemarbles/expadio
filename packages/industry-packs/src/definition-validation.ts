@@ -128,11 +128,11 @@ export function validateIndustryPackDefinition(
       label: (input.label as string).trim(),
       profile,
       terminology,
-      ...(input.caseWorkflow === undefined ? {} : { caseWorkflow: input.caseWorkflow as IndustryPack['caseWorkflow'] }),
-      ...(input.caseSchema === undefined ? {} : { caseSchema: input.caseSchema as IndustryPack['caseSchema'] }),
+      ...(input.caseWorkflow === undefined ? {} : { caseWorkflow: input.caseWorkflow as NonNullable<IndustryPack['caseWorkflow']> }),
+      ...(input.caseSchema === undefined ? {} : { caseSchema: input.caseSchema as NonNullable<IndustryPack['caseSchema']> }),
       ...(input.caseOntologyRoles === undefined
         ? {}
-        : { caseOntologyRoles: input.caseOntologyRoles as IndustryPack['caseOntologyRoles'] }),
+        : { caseOntologyRoles: input.caseOntologyRoles as NonNullable<IndustryPack['caseOntologyRoles']> }),
     },
   };
 }
