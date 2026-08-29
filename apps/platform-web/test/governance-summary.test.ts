@@ -23,8 +23,10 @@ test('the summary route is a membership read behind RLS', () => {
 });
 
 test('the Governance Center shows the activity KPI strip linking to detail views', () => {
+  assert.match(strip, /Awaiting you/);
   assert.match(strip, /In-flight work/);
   assert.match(strip, /Decisions recorded/);
+  assert.match(strip, /\/governance\/queue/);
   assert.match(strip, /\/governance\/workflows/);
   assert.match(strip, /\/governance\/decisions/);
   assert.match(page, /GovernanceSummaryStrip/);

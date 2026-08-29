@@ -67,6 +67,7 @@ export async function GET(request: Request) {
       { id: 'ws_live_expenses', label: 'Expense Reimbursement', short: 'EX', href: '/expenses' },
       { id: 'ws_live_authority', label: 'Approval Authority', short: 'AA', href: '/authority' },
       { id: 'ws_live_access', label: 'Access Requests', short: 'AR', href: '/access-requests' },
+      { id: 'ws_live_gov_queue', label: 'My Review Queue', short: 'RQ', href: '/governance/queue' },
       { id: 'ws_live_gov_workflows', label: 'In-flight Workflows', short: 'IW', href: '/governance/workflows' },
       { id: 'ws_live_gov_decisions', label: 'Governed Decisions', short: 'GD', href: '/governance/decisions' },
       { id: 'ws_live_auth_inspector', label: 'Auth Inspector', short: 'AI', href: '/governance/authorization' },
