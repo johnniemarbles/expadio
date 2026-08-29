@@ -23,7 +23,7 @@ test('the access.request table and blueprint are seeded, RLS-forced, decision-ga
 
 test('the access-request routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /INSERT INTO platform\.access_requests/);
-  assert.match(listRoute, /hasCrmWriteRole/);
+  assert.match(listRoute, /hasGovernanceWriteRole/);
   assert.match(workflowRoute, /createVerticalWorkflowRoute\(ACCESS_WORKFLOW\)/);
   assert.match(decisionRoute, /createVerticalDecisionRoute\(ACCESS_WORKFLOW\)/);
   // The access request's binding lives once in lib/verticals.ts.

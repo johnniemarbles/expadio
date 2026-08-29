@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 
 const authority = read("../lib/workflow-authority.ts");
-const authz = read("../lib/crm-authz.ts");
+const authz = read("../lib/governance-authz.ts");
 const runtime = read("../lib/workflow-runtime.ts");
 const client = read("../app/(shell)/crm/CrmClient.tsx");
 

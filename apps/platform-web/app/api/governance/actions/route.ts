@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
-import { hasCrmWriteRole } from '../../../../lib/crm-authz';
+import { hasGovernanceWriteRole } from '../../../../lib/governance-authz';
 import { availableActions, decideOnSubject, assignOnSubject } from '../../../../lib/governance-actions';
 
 const TARGET_KINDS = new Set([
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const targetKey = typeof body?.targetKey === 'string' && body.targetKey.trim() !== '' ? body.targetKey.trim() : context.subjectId;
 
     const result = await withTenantClient(context, async (client) => {
-      if (!(await hasCrmWriteRole(client, context.subjectId))) {
+      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
         return { forbidden: true } as const;
       }
       if (action === 'DECIDE') {

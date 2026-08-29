@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PostgresWorkflowInstanceRepository } from '@expadio/postgres-runtime/workflow-instance';
 import { resolveRequestContext, withTenantClient, deniedResponse } from './request-context';
-import { hasCrmWriteRole } from './crm-authz';
+import { hasGovernanceWriteRole } from './governance-authz';
 import {
   startWorkflow,
   transitionWorkflow,
@@ -93,7 +93,7 @@ export function createVerticalWorkflowRoute(config: VerticalWorkflowConfig) {
       const subjectId = decodeURIComponent((await params).id);
 
       const result = await withTenantClient(context, async (client) => {
-        if (!(await hasCrmWriteRole(client, context.subjectId))) {
+        if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
           return { forbidden: true } as const;
         }
         await client.query('BEGIN');
@@ -177,7 +177,7 @@ export function createVerticalWorkflowRoute(config: VerticalWorkflowConfig) {
       }
 
       const result = await withTenantClient(context, async (client) => {
-        if (!(await hasCrmWriteRole(client, context.subjectId))) {
+        if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
           return { forbidden: true } as const;
         }
         await client.query('BEGIN');
@@ -276,7 +276,7 @@ export function createVerticalDecisionRoute({ table, idColumn, subjectNoun }: Su
       }
 
       const result = await withTenantClient(context, async (client) => {
-        if (!(await hasCrmWriteRole(client, context.subjectId))) {
+        if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
           return { forbidden: true } as const;
         }
         const row = await client.query(
@@ -412,7 +412,7 @@ export function createVerticalParticipantsRoute({ table, idColumn, subjectNoun }
       const targetKey = typeof body?.targetKey === 'string' && body.targetKey.trim() !== '' ? body.targetKey.trim() : context.subjectId;
 
       const result = await withTenantClient(context, async (client) => {
-        if (!(await hasCrmWriteRole(client, context.subjectId))) {
+        if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
           return { forbidden: true } as const;
         }
         const row = await client.query(

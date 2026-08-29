@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../lib/request-context';
-import { hasCrmWriteRole } from '../../../lib/crm-authz';
+import { hasGovernanceWriteRole } from '../../../lib/governance-authz';
 
 /**
  * Expense reimbursements — a third governed vertical on the Decision Fabric.
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const currency = typeof body?.currency === 'string' && body.currency.trim() !== '' ? body.currency.trim().toUpperCase() : 'USD';
 
     const result = await withTenantClient(context, async (client) => {
-      if (!(await hasCrmWriteRole(client, context.subjectId))) {
+      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
         return { forbidden: true } as const;
       }
       await client.query('BEGIN');

@@ -35,7 +35,7 @@ test('the expense routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /export async function GET/);
   assert.match(listRoute, /export async function POST/);
   assert.match(listRoute, /INSERT INTO platform\.expense_reports/);
-  assert.match(listRoute, /hasCrmWriteRole/);
+  assert.match(listRoute, /hasGovernanceWriteRole/);
   assert.match(workflowRoute, /createVerticalWorkflowRoute\(EXPENSE_WORKFLOW\)/);
   assert.match(decisionRoute, /createVerticalDecisionRoute\(EXPENSE_WORKFLOW\)/);
   // The expense's binding lives once in lib/verticals.ts.

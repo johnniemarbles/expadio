@@ -43,7 +43,7 @@ test('the actions route is a membership read behind RLS keyed by work type + sub
 
 test('the actions route POST performs a governed DECIDE or ASSIGN, role-gated', () => {
   assert.match(route, /export async function POST/);
-  assert.match(route, /hasCrmWriteRole/);
+  assert.match(route, /hasGovernanceWriteRole/);
   assert.match(route, /decideOnSubject/);
   assert.match(route, /assignOnSubject/);
   assert.match(route, /Action must be DECIDE or ASSIGN/);

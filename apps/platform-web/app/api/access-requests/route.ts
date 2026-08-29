@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../lib/request-context';
-import { hasCrmWriteRole } from '../../../lib/crm-authz';
+import { hasGovernanceWriteRole } from '../../../lib/governance-authz';
 
 /**
  * Access requests — the fourth governed vertical. Tenant-scoped via RLS; reads
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const justification = typeof body?.justification === 'string' && body.justification.trim() !== '' ? body.justification.trim() : null;
 
     const result = await withTenantClient(context, async (client) => {
-      if (!(await hasCrmWriteRole(client, context.subjectId))) {
+      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
         return { forbidden: true } as const;
       }
       await client.query('BEGIN');
