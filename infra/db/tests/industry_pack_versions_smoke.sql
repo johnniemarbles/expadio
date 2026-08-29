@@ -78,11 +78,14 @@ DECLARE
   own_count integer;
   platform_count integer;
 BEGIN
-  SELECT count(*) INTO visible_count FROM platform.industry_pack_versions;
+  SELECT count(*) INTO visible_count FROM platform.industry_pack_versions
+    WHERE lower(vertical_key) = 'dentex';
   SELECT count(*) INTO own_count FROM platform.industry_pack_versions
-    WHERE tenant_id = '7f3a9c20-6b2d-4f11-9a77-100000000001';
+    WHERE tenant_id = '7f3a9c20-6b2d-4f11-9a77-100000000001'
+      AND lower(vertical_key) = 'dentex';
   SELECT count(*) INTO platform_count FROM platform.industry_pack_versions
-    WHERE tenant_id IS NULL;
+    WHERE tenant_id IS NULL
+      AND lower(vertical_key) = 'dentex';
 
   IF visible_count <> 2 OR own_count <> 1 OR platform_count <> 1 THEN
     RAISE EXCEPTION 'industry pack tenant visibility incorrect: visible %, own %, platform %',
