@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
+import { PostgresWorkflowInstanceRepository } from '@expadio/postgres-runtime/workflow-instance';
 import { resolveRequestContext, withTenantClient, deniedResponse } from './request-context';
 import { hasCrmWriteRole } from './crm-authz';
-import { startWorkflow, transitionWorkflow, describeWorkflow } from './workflow-runtime';
+import {
+  startWorkflow,
+  transitionWorkflow,
+  describeWorkflow,
+  recordCaseDecision,
+  makerForStage,
+  loadCaseWorkflowHistory,
+} from './workflow-runtime';
+import { assignParticipant } from './workflow-participants';
 
 /**
  * The governed workflow route, shared by every non-CRM vertical.
@@ -241,4 +250,213 @@ export function createVerticalWorkflowRoute(config: VerticalWorkflowConfig) {
   }
 
   return { GET, POST, PATCH };
+}
+
+/** Config a governed sub-route needs: which table/id the subject lives in, and its noun. */
+type SubjectBinding = Pick<VerticalWorkflowConfig, 'table' | 'idColumn' | 'subjectNoun'>;
+
+/**
+ * Record an immutable decision against the subject's current workflow stage —
+ * the same governed capture as a CRM case. Work type and stage come from the
+ * instance, so authority derivation and separation of duties apply per the
+ * vertical's own registration; role gates the write.
+ */
+export function createVerticalDecisionRoute({ table, idColumn, subjectNoun }: SubjectBinding) {
+  const notFound = `That ${subjectNoun} was not found in this workspace.`;
+  const noWorkflow = `Start a workflow for this ${subjectNoun} first.`;
+
+  async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+      const context = await resolveRequestContext(request);
+      const subjectId = decodeURIComponent((await params).id);
+      const body = await request.json();
+      const outcome = typeof body?.outcome === 'string' ? body.outcome.trim() : '';
+      if (outcome === '') {
+        return NextResponse.json({ error: 'A decision outcome is required.' }, { status: 400 });
+      }
+
+      const result = await withTenantClient(context, async (client) => {
+        if (!(await hasCrmWriteRole(client, context.subjectId))) {
+          return { forbidden: true } as const;
+        }
+        const row = await client.query(
+          `SELECT workflow_instance_id FROM ${table} WHERE ${idColumn} = $1::uuid`,
+          [subjectId],
+        );
+        if (row.rows.length === 0) return { notFound: true } as const;
+        const instanceId = row.rows[0].workflow_instance_id as string | null;
+        if (instanceId === null) return { noWorkflow: true } as const;
+
+        const instance = await new PostgresWorkflowInstanceRepository(client).findById({
+          tenantId: context.tenantId,
+          instanceId,
+        });
+        if (instance === null || instance.currentStageKey === undefined) {
+          return { noStage: true } as const;
+        }
+
+        const maker = await makerForStage(client, {
+          tenantId: context.tenantId,
+          instanceId,
+          stageKey: instance.currentStageKey,
+        });
+        const recorded = await recordCaseDecision(client, {
+          tenantId: context.tenantId,
+          instanceId,
+          workTypeKey: instance.workTypeKey,
+          stageKey: instance.currentStageKey,
+          outcome,
+          approverSubjectId: context.subjectId,
+          makerSubjectId: maker,
+        });
+        return { recorded, stageKey: instance.currentStageKey } as const;
+      });
+
+      if ('forbidden' in result) {
+        return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'You need a tenant admin role to record a decision.' }, { status: 403 });
+      }
+      if ('notFound' in result) {
+        return NextResponse.json({ error: notFound }, { status: 404 });
+      }
+      if ('noWorkflow' in result || 'noStage' in result) {
+        return NextResponse.json({ error: noWorkflow }, { status: 409 });
+      }
+      if (!result.recorded.ok) {
+        if (result.recorded.reason === 'AUTHORITY_DENIED') {
+          return NextResponse.json({ error: result.recorded.message, code: result.recorded.code }, { status: 403 });
+        }
+        return NextResponse.json(
+          { error: `This stage already has a different decision recorded (${result.recorded.existingOutcome}). Decisions are immutable.` },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        status: result.recorded.status,
+        stageKey: result.stageKey,
+        outcome: result.recorded.outcome,
+      }, { status: 201 });
+    } catch (error) {
+      const { body, status } = deniedResponse(error);
+      return NextResponse.json(body, { status });
+    }
+  }
+
+  return { POST };
+}
+
+/**
+ * The governed trace for a subject's workflow: its append-only stage transitions
+ * and immutable decisions, one chronological timeline. A membership read; RLS
+ * keeps it within the caller's tenant.
+ */
+export function createVerticalHistoryRoute({ table, idColumn, subjectNoun }: SubjectBinding) {
+  const notFound = `That ${subjectNoun} was not found in this workspace.`;
+
+  async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+      const context = await resolveRequestContext(request);
+      const subjectId = decodeURIComponent((await params).id);
+
+      const result = await withTenantClient(context, async (client) => {
+        const row = await client.query(
+          `SELECT workflow_instance_id FROM ${table} WHERE ${idColumn} = $1::uuid`,
+          [subjectId],
+        );
+        if (row.rows.length === 0) return { notFound: true } as const;
+        const instanceId = row.rows[0].workflow_instance_id as string | null;
+        if (instanceId === null) return { entries: [] } as const;
+        const entries = await loadCaseWorkflowHistory(client, { tenantId: context.tenantId, instanceId });
+        return { entries } as const;
+      });
+
+      if ('notFound' in result) {
+        return NextResponse.json({ error: notFound }, { status: 404 });
+      }
+      return NextResponse.json({ entries: result.entries });
+    } catch (error) {
+      const { body, status } = deniedResponse(error);
+      return NextResponse.json(body, { status });
+    }
+  }
+
+  return { GET };
+}
+
+const PARTICIPANT_TARGET_KINDS = new Set([
+  'USER', 'ROLE', 'PERSONA', 'TEAM', 'QUEUE', 'ORGANIZATION', 'TERRITORY', 'EXTERNAL_PARTY', 'SYSTEM', 'AI_AGENT',
+]);
+
+/**
+ * Assign a participant to a subject stage's semantic slot. Entering a stage is
+ * gated until its required slots are filled. Governed by a tenant role; the
+ * assignment is tenant-scoped by RLS. With no explicit target, the caller is
+ * assigned as a USER.
+ */
+export function createVerticalParticipantsRoute({ table, idColumn, subjectNoun }: SubjectBinding) {
+  const notFound = `That ${subjectNoun} was not found in this workspace.`;
+  const noWorkflow = `Start a workflow for this ${subjectNoun} first.`;
+
+  async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+      const context = await resolveRequestContext(request);
+      const subjectId = decodeURIComponent((await params).id);
+      const body = await request.json();
+
+      const stageKey = typeof body?.stageKey === 'string' ? body.stageKey.trim() : '';
+      const participantKey = typeof body?.participantKey === 'string' ? body.participantKey.trim() : '';
+      if (stageKey === '' || participantKey === '') {
+        return NextResponse.json({ error: 'A stage and participant slot are required.' }, { status: 400 });
+      }
+      const targetKind = typeof body?.targetKind === 'string' && PARTICIPANT_TARGET_KINDS.has(body.targetKind) ? body.targetKind : 'USER';
+      const targetKey = typeof body?.targetKey === 'string' && body.targetKey.trim() !== '' ? body.targetKey.trim() : context.subjectId;
+
+      const result = await withTenantClient(context, async (client) => {
+        if (!(await hasCrmWriteRole(client, context.subjectId))) {
+          return { forbidden: true } as const;
+        }
+        const row = await client.query(
+          `SELECT workflow_instance_id FROM ${table} WHERE ${idColumn} = $1::uuid`,
+          [subjectId],
+        );
+        if (row.rows.length === 0) return { notFound: true } as const;
+        const instanceId = row.rows[0].workflow_instance_id as string | null;
+        if (instanceId === null) return { noWorkflow: true } as const;
+
+        const assigned = await assignParticipant(client, {
+          tenantId: context.tenantId,
+          instanceId,
+          stageKey,
+          participantKey,
+          targetKind,
+          targetKey,
+          assignedBySubjectId: context.subjectId,
+        });
+        return { assigned, stageKey, participantKey, targetKind, targetKey } as const;
+      });
+
+      if ('forbidden' in result) {
+        return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'You need a tenant admin role to assign participants.' }, { status: 403 });
+      }
+      if ('notFound' in result) {
+        return NextResponse.json({ error: notFound }, { status: 404 });
+      }
+      if ('noWorkflow' in result) {
+        return NextResponse.json({ error: noWorkflow }, { status: 409 });
+      }
+      return NextResponse.json({
+        success: true,
+        stageKey: result.stageKey,
+        participantKey: result.participantKey,
+        targetKind: result.targetKind,
+        targetKey: result.targetKey,
+        status: result.assigned.ok ? result.assigned.status : 'ASSIGNED',
+      }, { status: 201 });
+    } catch (error) {
+      const { body, status } = deniedResponse(error);
+      return NextResponse.json(body, { status });
+    }
+  }
+
+  return { POST };
 }

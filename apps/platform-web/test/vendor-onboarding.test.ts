@@ -23,14 +23,15 @@ test('the vendors list/create route is governed and RLS-scoped', () => {
 });
 
 test('the vendor workflow route runs the generic Decision Fabric runtime', () => {
-  // The route is now the shared factory with the vendor's binding.
-  assert.match(workflowRoute, /createVerticalWorkflowRoute/);
+  // The route delegates to the shared factory with the vendor's shared binding.
+  assert.match(workflowRoute, /createVerticalWorkflowRoute\(VENDOR_WORKFLOW\)/);
   assert.match(workflowRoute, /export const \{ GET, POST, PATCH \}/);
-  assert.match(workflowRoute, /table: 'platform\.vendors'/);
-  assert.match(workflowRoute, /idColumn: 'vendor_id'/);
-  assert.match(workflowRoute, /subjectType: 'vendor'/);
-  // The vendor row flips to ACTIVE on the final stage.
-  assert.match(workflowRoute, /stageKey === 'ACTIVE' \? 'ACTIVE' : 'PENDING'/);
+  // The binding lives once in lib/verticals.ts.
+  const verticals = read('../lib/verticals.ts');
+  assert.match(verticals, /table: 'platform\.vendors'/);
+  assert.match(verticals, /idColumn: 'vendor_id'/);
+  assert.match(verticals, /subjectType: 'vendor'/);
+  assert.match(verticals, /stageKey === 'ACTIVE' \? 'ACTIVE' : 'PENDING'/);
   // The shared factory carries the generic runtime orchestration.
   const factory = read('../lib/vertical-workflow-route.ts');
   assert.match(factory, /startWorkflow/);
@@ -39,9 +40,10 @@ test('the vendor workflow route runs the generic Decision Fabric runtime', () =>
 });
 
 test('the vendor participant route fills the SCREENING compliance slot', () => {
-  assert.match(participantsRoute, /assignParticipant/);
-  assert.match(participantsRoute, /hasCrmWriteRole/);
-  assert.match(participantsRoute, /platform\.vendors/);
+  assert.match(participantsRoute, /createVerticalParticipantsRoute\(VENDOR_WORKFLOW\)/);
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /assignParticipant/);
+  assert.match(factory, /hasCrmWriteRole/);
 });
 
 test('a platform vendor.onboarding blueprint is seeded and active', () => {
@@ -69,17 +71,19 @@ test('v2 adds a governed decision stage and the vendor decision route captures i
   assert.match(approvalMigration, /"stageKey": "APPROVAL"/);
   assert.match(approvalMigration, /"decisionRequired": true/);
   assert.match(approvalMigration, /SET state = 'SUPERSEDED'/);
-  // The route records the decision through the same governed capture as a case.
-  assert.match(decisionRoute, /recordCaseDecision/);
-  assert.match(decisionRoute, /makerForStage/);
-  assert.match(decisionRoute, /platform\.vendors/);
-  assert.match(decisionRoute, /hasCrmWriteRole/);
+  // The route records the decision through the shared governed-capture factory.
+  assert.match(decisionRoute, /createVerticalDecisionRoute\(VENDOR_WORKFLOW\)/);
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /recordCaseDecision/);
+  assert.match(factory, /makerForStage/);
+  assert.match(factory, /hasCrmWriteRole/);
 });
 
 test('the vendor workflow exposes its governed trace', () => {
   const historyRoute = read('../app/api/vendors/[id]/workflow/history/route.ts');
-  assert.match(historyRoute, /loadCaseWorkflowHistory/);
-  assert.match(historyRoute, /platform\.vendors/);
+  assert.match(historyRoute, /createVerticalHistoryRoute\(VENDOR_WORKFLOW\)/);
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /loadCaseWorkflowHistory/);
   assert.match(client, /WorkflowTraceModal/);
   assert.match(client, /workflow\/history/);
 });
