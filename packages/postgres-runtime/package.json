@@ -35,7 +35,8 @@
     "./credential-rotation": "./src/credential-rotation.ts",
     "./sensitive-read-event": "./src/sensitive-read-event.ts",
     "./company-brain-correction": "./src/company-brain-correction.ts",
-    "./agent-capability-manifest": "./src/agent-capability-manifest.ts"
+    "./agent-capability-manifest": "./src/agent-capability-manifest.ts",
+    "./industry-pack-authoring": "./src/industry-pack-authoring.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
@@ -56,6 +57,7 @@
     "@expadio/usage-metering": "workspace:*",
     "@expadio/workflow": "workspace:*",
     "@types/pg": "^8.23.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "@expadio/industry-packs": "workspace:*"
   }
 }
