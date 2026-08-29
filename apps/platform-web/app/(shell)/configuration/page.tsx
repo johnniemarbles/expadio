@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import styles from './page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
 import { DeniedState, StatePill } from '@expadio/ui';
@@ -6,7 +7,7 @@ import { isDenied } from '@expadio/ui/contracts';
 import { requestedOrganizationId, type RouteSearchParams } from '../../../lib/request-context';
 
 export default async function ConfigurationManagerPage({ searchParams }: { searchParams: RouteSearchParams }) {
-  const orgId = await requestedOrganizationId(searchParams);
+  await requestedOrganizationId(searchParams);
   const config = await fetchApi<any>('/api/configuration');
   
   if (isDenied(config)) return <DeniedState result={config} />;
@@ -18,6 +19,16 @@ export default async function ConfigurationManagerPage({ searchParams }: { searc
           <p className={styles.eyebrow}>Platform Operations</p>
           <h1 id="page-title">Business Configuration</h1>
           <p>Manage effective configuration across Platform, Vertical, and Tenant inheritance scopes.</p>
+        </div>
+      </section>
+
+      <section className={styles.panel} aria-labelledby="industry-packs-title">
+        <div className={styles.panelHeading}>
+          <div>
+            <h2 id="industry-packs-title">Industry Packs</h2>
+            <p>Inspect governed vertical configuration, tenant bindings, and authored version history.</p>
+          </div>
+          <Link href="/configuration/industry-packs">Open Industry Packs</Link>
         </div>
       </section>
 
