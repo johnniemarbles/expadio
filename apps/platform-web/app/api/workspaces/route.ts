@@ -71,6 +71,7 @@ export async function GET(request: Request) {
       { id: 'ws_live_gov_pending', label: 'Pending Review Load', short: 'PL', href: '/governance/pending' },
       { id: 'ws_live_gov_workflows', label: 'In-flight Workflows', short: 'IW', href: '/governance/workflows' },
       { id: 'ws_live_gov_decisions', label: 'Governed Decisions', short: 'GD', href: '/governance/decisions' },
+      { id: 'ws_live_gov_analytics', label: 'Decision Analytics', short: 'DA', href: '/governance/analytics' },
       { id: 'ws_live_auth_inspector', label: 'Auth Inspector', short: 'AI', href: '/governance/authorization' },
       { id: 'ws_live_config_manager', label: 'Config Manager', short: 'CM', href: '/configuration' },
       { id: 'ws_live_credentials', label: 'Credentials & Secrets', short: 'CS', href: '/configuration/credentials' },
