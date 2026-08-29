@@ -62,6 +62,9 @@ test("the case create form renders the pack's declared fields and sends them", (
   assert.match(client, /fields=\{caseSchema\.fields\}/);
   assert.match(client, /fields\.map/);
   assert.match(client, /attributes: attrs/);
+  // The trace/detail view reads the stored attributes back through the field labels.
+  assert.match(client, /filledFields/);
+  assert.match(client, /caseRow\.attributes/);
 });
 
 test("the case workflow speaks the active pack's process language", () => {
