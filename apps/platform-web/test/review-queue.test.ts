@@ -39,7 +39,12 @@ test('the queue route is a membership read behind RLS, scoped to the caller', ()
 test('the queue surface lists pending work and links to each vertical', () => {
   assert.match(page, /ReviewQueueClient/);
   assert.match(client, /Your review queue/);
-  assert.match(client, /style=\{badge\}>\{initial\.length\}/); // at-a-glance count
+  assert.match(client, /style=\{badge\}>\{items\.length\}/); // at-a-glance count
+  // Actionable in place: load available actions, record a decision, drop the row.
+  assert.match(client, /\/api\/governance\/actions\?workType=/);
+  assert.match(client, /action: 'DECIDE'/);
+  assert.match(client, /method: 'POST'/);
+  assert.match(client, /setItems\(\(prev\) => prev\.filter/);
   // Pack-aware: work type and stage read the active vertical's language.
   assert.match(page, /\/api\/tenancy\/vertical/);
   assert.match(page, /verticalKey=\{verticalKey\}/);
