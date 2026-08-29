@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel } from '@expadio/industry-packs';
 import styles from '../../workflows/page.module.css';
 
 /**
@@ -31,7 +32,8 @@ const outcomeColor = (o: string): string => {
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
 
-export function DecisionsClient({ initial, queryString = '' }: { initial: GovernedDecision[]; queryString?: string }) {
+export function DecisionsClient({ initial, verticalKey = null, queryString = '' }: { initial: GovernedDecision[]; verticalKey?: string | null; queryString?: string }) {
+  const pack = findIndustryPack(verticalKey);
   const [rows, setRows] = useState<GovernedDecision[]>(initial);
   const [workType, setWorkType] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function DecisionsClient({ initial, queryString = '' }: { initial: Govern
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select style={inp} value={workType} onChange={(e) => apply(e.target.value)} aria-label="Filter by work type">
             <option value="">All work types</option>
-            {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
+            {workTypes.map((wt) => <option key={wt} value={wt}>{resolveWorkTypeLabel(pack, wt)}</option>)}
           </select>
           <a
             href={`/api/governance/decisions/export${(() => {
@@ -83,9 +85,9 @@ export function DecisionsClient({ initial, queryString = '' }: { initial: Govern
             {rows.map((d, i) => (
               <tr key={i}>
                 <td style={{ whiteSpace: 'nowrap' }}>{new Date(d.decidedAt).toLocaleString()}</td>
-                <td>{d.workTypeKey}</td>
+                <td title={pack ? d.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, d.workTypeKey)}</td>
                 <td><span className={styles.muted}>{d.subjectType}</span><br />{d.subjectId.slice(0, 8)}…</td>
-                <td>{d.stageKey}</td>
+                <td title={pack ? d.stageKey : undefined}>{resolveStageLabel(pack, d.workTypeKey, d.stageKey)}</td>
                 <td><strong style={{ color: outcomeColor(d.outcome) }}>{d.outcome}</strong></td>
                 <td>{d.decidedBySubjectId}</td>
                 <td>

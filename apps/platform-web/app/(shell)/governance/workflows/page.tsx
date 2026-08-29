@@ -13,8 +13,12 @@ export default async function GovernedWorkflowsPage({ searchParams }: { searchPa
   if (typeof params.org === 'string') qs.set('org', params.org);
   const q = qs.toString() ? `?${qs.toString()}` : '';
 
-  const payload = await fetchApi<{ instances: GovernedInstance[] }>(`/api/governance/workflows${q}`);
+  const [payload, vertical] = await Promise.all([
+    fetchApi<{ instances: GovernedInstance[] }>(`/api/governance/workflows${q}`),
+    fetchApi<{ verticalKey: string | null }>(`/api/tenancy/vertical${q}`),
+  ]);
   if (isDenied(payload)) return <DeniedState result={payload} />;
+  const verticalKey = isDenied(vertical) ? null : vertical.verticalKey;
 
   return (
     <>
@@ -26,7 +30,7 @@ export default async function GovernedWorkflowsPage({ searchParams }: { searchPa
         </div>
       </section>
 
-      <WorkflowsClient initial={payload.instances ?? []} queryString={q} />
+      <WorkflowsClient initial={payload.instances ?? []} verticalKey={verticalKey} queryString={q} />
     </>
   );
 }

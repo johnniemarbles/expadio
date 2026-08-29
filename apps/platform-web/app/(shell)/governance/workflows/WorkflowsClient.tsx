@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel } from '@expadio/industry-packs';
 import styles from '../../workflows/page.module.css';
 
 /**
@@ -38,7 +39,8 @@ const sinceLabel = (iso: string): string => {
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
 
-export function WorkflowsClient({ initial, queryString = '' }: { initial: GovernedInstance[]; queryString?: string }) {
+export function WorkflowsClient({ initial, verticalKey = null, queryString = '' }: { initial: GovernedInstance[]; verticalKey?: string | null; queryString?: string }) {
+  const pack = findIndustryPack(verticalKey);
   const [rows, setRows] = useState<GovernedInstance[]>(initial);
   const [workType, setWorkType] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function WorkflowsClient({ initial, queryString = '' }: { initial: Govern
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select style={inp} value={workType} onChange={(e) => apply(e.target.value)} aria-label="Filter by work type">
             <option value="">All work types</option>
-            {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
+            {workTypes.map((wt) => <option key={wt} value={wt}>{resolveWorkTypeLabel(pack, wt)}</option>)}
           </select>
           <a
             href={`/api/governance/workflows/export${(() => {
@@ -89,9 +91,9 @@ export function WorkflowsClient({ initial, queryString = '' }: { initial: Govern
           <tbody>
             {rows.map((d, i) => (
               <tr key={i}>
-                <td>{d.workTypeKey}</td>
+                <td title={pack ? d.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, d.workTypeKey)}</td>
                 <td><span className={styles.muted}>{d.subjectType}</span><br />{d.subjectId.slice(0, 8)}…</td>
-                <td>{d.currentStageKey ?? <span className={styles.muted}>—</span>}</td>
+                <td title={pack && d.currentStageKey ? d.currentStageKey : undefined}>{d.currentStageKey ? resolveStageLabel(pack, d.workTypeKey, d.currentStageKey) : <span className={styles.muted}>—</span>}</td>
                 <td><strong style={{ color: stateColor(d.state) }}>{d.state}</strong></td>
                 <td>{d.revision}</td>
                 <td title={new Date(d.updatedAt).toLocaleString()}>{sinceLabel(d.updatedAt)}</td>

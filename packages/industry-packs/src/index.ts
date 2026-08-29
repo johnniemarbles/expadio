@@ -191,6 +191,34 @@ export function resolveCaseWorkflowVocabulary(
   };
 }
 
+/**
+ * Relabel a governed work type for the active pack — the cross-vertical oversight
+ * views (in-flight work, decision log) show a work_type_key like `crm.case`; a
+ * pack speaks its own word for it (DENTEX: "Treatment"). Only the crm.case
+ * process is relabelled (the pack's caseWorkflow); every other vertical, and the
+ * neutral engine (no pack), keeps the raw key.
+ */
+export function resolveWorkTypeLabel(pack: IndustryPack | null | undefined, workTypeKey: string): string {
+  if (pack && workTypeKey === 'crm.case') return resolveCaseWorkflowVocabulary(pack).workType;
+  return workTypeKey;
+}
+
+/**
+ * Relabel a governed stage for the active pack — crm.case stages read in the
+ * pack's process language (DENTEX: INTAKE → "Consultation"). Other verticals and
+ * the neutral engine keep the raw key; an unrelabelled stage falls back to its key.
+ */
+export function resolveStageLabel(
+  pack: IndustryPack | null | undefined,
+  workTypeKey: string,
+  stageKey: string | null | undefined,
+): string {
+  if (stageKey && pack && workTypeKey === 'crm.case') {
+    return (resolveCaseWorkflowVocabulary(pack).stages as Record<string, string>)[stageKey] ?? stageKey;
+  }
+  return stageKey ?? '';
+}
+
 /** The packs a workspace can choose from, for a picker. */
 export function listIndustryPackChoices(): readonly { verticalKey: string; label: string }[] {
   return INDUSTRY_PACKS.map((p) => ({ verticalKey: p.verticalKey, label: p.label }));
