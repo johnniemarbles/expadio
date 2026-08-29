@@ -29,3 +29,5 @@
 .code { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px; background:var(--line); padding:2px 6px; border-radius:4px; }
 .emptyRow, .emptyState { margin:0; padding:22px 19px; color:var(--ink-500); font-size:13px; }
 .emptyState { background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+
+.stateText { color:var(--ink-500); font-size:12px; font-weight:700; letter-spacing:.02em; }
