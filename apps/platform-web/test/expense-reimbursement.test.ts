@@ -36,12 +36,16 @@ test('the expense routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /export async function POST/);
   assert.match(listRoute, /INSERT INTO platform\.expense_reports/);
   assert.match(listRoute, /hasCrmWriteRole/);
-  assert.match(workflowRoute, /createVerticalWorkflowRoute/);
-  assert.match(workflowRoute, /table: 'platform\.expense_reports'/);
-  assert.match(workflowRoute, /subjectType: 'expense\.reimbursement'/);
-  assert.match(workflowRoute, /stageKey === 'PAID' \? 'PAID' : 'SUBMITTED'/);
-  assert.match(decisionRoute, /recordCaseDecision/);
-  assert.match(decisionRoute, /platform\.expense_reports/);
+  assert.match(workflowRoute, /createVerticalWorkflowRoute\(EXPENSE_WORKFLOW\)/);
+  assert.match(decisionRoute, /createVerticalDecisionRoute\(EXPENSE_WORKFLOW\)/);
+  // The expense's binding lives once in lib/verticals.ts.
+  const verticals = read('../lib/verticals.ts');
+  assert.match(verticals, /table: 'platform\.expense_reports'/);
+  assert.match(verticals, /subjectType: 'expense\.reimbursement'/);
+  assert.match(verticals, /stageKey === 'PAID' \? 'PAID' : 'SUBMITTED'/);
+  // The shared factory carries the governed decision capture.
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /recordCaseDecision/);
 });
 
 test('the Expenses surface can file, review, approve and pay', () => {
@@ -55,8 +59,9 @@ test('the Expenses surface can file, review, approve and pay', () => {
 
 test('the expense workflow exposes its governed trace', () => {
   const historyRoute = read('../app/api/expenses/[id]/workflow/history/route.ts');
-  assert.match(historyRoute, /loadCaseWorkflowHistory/);
-  assert.match(historyRoute, /platform\.expense_reports/);
+  assert.match(historyRoute, /createVerticalHistoryRoute\(EXPENSE_WORKFLOW\)/);
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /loadCaseWorkflowHistory/);
   assert.match(client, /WorkflowTraceModal/);
   assert.match(client, /workflow\/history/);
 });

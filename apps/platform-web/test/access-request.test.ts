@@ -24,12 +24,16 @@ test('the access.request table and blueprint are seeded, RLS-forced, decision-ga
 test('the access-request routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /INSERT INTO platform\.access_requests/);
   assert.match(listRoute, /hasCrmWriteRole/);
-  assert.match(workflowRoute, /createVerticalWorkflowRoute/);
-  assert.match(workflowRoute, /table: 'platform\.access_requests'/);
-  assert.match(workflowRoute, /subjectType: 'access\.request'/);
-  assert.match(workflowRoute, /stageKey === 'GRANTED' \? 'GRANTED' : 'SUBMITTED'/);
-  assert.match(decisionRoute, /recordCaseDecision/);
-  assert.match(decisionRoute, /platform\.access_requests/);
+  assert.match(workflowRoute, /createVerticalWorkflowRoute\(ACCESS_WORKFLOW\)/);
+  assert.match(decisionRoute, /createVerticalDecisionRoute\(ACCESS_WORKFLOW\)/);
+  // The access request's binding lives once in lib/verticals.ts.
+  const verticals = read('../lib/verticals.ts');
+  assert.match(verticals, /table: 'platform\.access_requests'/);
+  assert.match(verticals, /subjectType: 'access\.request'/);
+  assert.match(verticals, /stageKey === 'GRANTED' \? 'GRANTED' : 'SUBMITTED'/);
+  // The shared factory carries the governed decision capture.
+  const factory = read('../lib/vertical-workflow-route.ts');
+  assert.match(factory, /recordCaseDecision/);
 });
 
 test('the Access Requests surface can file, review, approve and grant', () => {
