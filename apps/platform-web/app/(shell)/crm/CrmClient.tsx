@@ -445,7 +445,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                 const tone = CASE_STATUS_TONE[c.status] ?? CASE_STATUS_TONE.OPEN;
                 return (
                   <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
-                    <td style={td}><strong>{c.subject}</strong></td>
+                    <td style={td}><strong>{c.subject}</strong><CaseAttrChips fields={caseSchema.fields} attributes={c.attributes} /></td>
                     <td style={td}>
                       {c.accountName ? c.accountName : (
                         <select
@@ -669,6 +669,26 @@ function WorkflowCell({ c, wf, stageLabel, busy, onStart, onLoad, onAdvance, onD
         </select>
       )}
       {traceBtn}
+    </div>
+  );
+}
+
+// The pack's declared case fields, shown inline in the list as compact chips —
+// so a Treatment shows its urgency and a Matter its type without opening the
+// trace. Only fields the case carries a value for render; none on the neutral
+// engine, so the chips are simply absent.
+function CaseAttrChips({ fields, attributes }: { fields: readonly CaseField[]; attributes?: Record<string, string> }) {
+  const attrs = attributes ?? {};
+  const filled = fields.filter((f) => (attrs[f.key] ?? "").trim() !== "");
+  if (filled.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+      {filled.map((f) => (
+        <span key={f.key} title={f.label} style={{ display: "inline-flex", gap: 4, fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "var(--surface-2, #f1f5f9)", color: "var(--ink-600, #475569)" }}>
+          <span style={{ color: "var(--ink-500, #64748b)" }}>{f.label}:</span>
+          <span style={{ fontWeight: 700 }}>{attrs[f.key]}</span>
+        </span>
+      ))}
     </div>
   );
 }
