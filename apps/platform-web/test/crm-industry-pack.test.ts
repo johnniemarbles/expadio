@@ -65,6 +65,9 @@ test("the case create form renders the pack's declared fields and sends them", (
   // The trace/detail view reads the stored attributes back through the field labels.
   assert.match(client, /filledFields/);
   assert.match(client, /caseRow\.attributes/);
+  // The cases list shows the pack's filled fields inline as chips.
+  assert.match(client, /function CaseAttrChips/);
+  assert.match(client, /<CaseAttrChips fields=\{caseSchema\.fields\} attributes=\{c\.attributes\}/);
 });
 
 test("the case workflow speaks the active pack's process language", () => {
