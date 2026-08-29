@@ -271,3 +271,60 @@ test('transitions and decisions are append-only/immutable, and the trace is orde
     assert.ok(described !== null && described.instance.state === 'COMPLETED');
   });
 });
+
+
+test('workflow start persists the exact Industry Pack provenance governing its CRM case', async () => {
+  await withClient(async (c) => {
+    const { tenantId } = await seedTenant(c);
+    const caseId = (await c.query(
+      `INSERT INTO platform.crm_cases (
+         tenant_id, subject, blueprint_key,
+         industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
+       ) VALUES (
+         $1::uuid, 'Case', 'crm.case',
+         'dentex', 7, 'TENANT_PUBLISHED'
+       )
+       RETURNING case_id`,
+      [tenantId],
+    )).rows[0].case_id as string;
+
+    const caseRow = (await c.query(
+      `SELECT industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
+         FROM platform.crm_cases
+        WHERE case_id = $1::uuid`,
+      [caseId],
+    )).rows[0];
+
+    const started = await startWorkflow(c, {
+      tenantId,
+      subjectType: 'crm.case',
+      subjectId: caseId,
+      blueprintKey: 'crm.case',
+      industryPackProvenance: {
+        runtimeSource: caseRow.industry_pack_runtime_source,
+        verticalKey: caseRow.industry_pack_vertical_key,
+        version: caseRow.industry_pack_version,
+      },
+    });
+    assert.ok(started.ok);
+
+    const stored = (await c.query(
+      `SELECT industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
+         FROM platform.workflow_instances
+        WHERE tenant_id = $1::uuid
+          AND instance_id = $2::uuid`,
+      [tenantId, started.instance.instanceId],
+    )).rows[0];
+
+    assert.deepEqual(stored, {
+      industry_pack_vertical_key: 'dentex',
+      industry_pack_version: 7,
+      industry_pack_runtime_source: 'TENANT_PUBLISHED',
+    });
+    assert.deepEqual(started.instance.industryPackProvenance, {
+      runtimeSource: 'TENANT_PUBLISHED',
+      verticalKey: 'dentex',
+      version: 7,
+    });
+  });
+});
