@@ -27,6 +27,10 @@ test("the case workflow route is governed and binds the case to the instance", (
   assert.match(route, /hasCrmWriteRole/);
   assert.match(route, /startWorkflow/);
   assert.match(route, /transitionWorkflow/);
+  assert.match(route, /industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source/);
+  assert.match(route, /industryPackProvenance: workflowPackProvenanceFromRow/);
+  assert.match(runtime, /industryPackProvenance\?: WorkflowIndustryPackProvenance/);
+  assert.match(runtime, /industryPackProvenance: input\.industryPackProvenance/);
   // Case mirrors the instance's current stage so the surfaces never drift.
   assert.match(route, /UPDATE platform\.crm_cases[\s\S]*workflow_instance_id/);
   assert.match(route, /UPDATE platform\.crm_cases SET stage_key/);
