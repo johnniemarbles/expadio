@@ -14,10 +14,10 @@ test('clone-active is a governed tenant-scoped POST boundary', () => {
   assert.match(route, /export async function POST/);
   assert.doesNotMatch(route, /export async function GET/);
 
-  const authIndex = route.indexOf('hasGovernanceWriteRole');
+  const authIndex = route.indexOf('await hasGovernanceWriteRole');
   const tenantReadIndex = route.indexOf('SELECT vertical_key');
-  const resolverIndex = route.indexOf('PostgresIndustryPackRuntimeResolver');
-  const draftIndex = route.indexOf('repository.createDraft');
+  const resolverIndex = route.indexOf('new PostgresIndustryPackRuntimeResolver');
+  const draftIndex = route.indexOf('await repository.createDraft');
 
   assert.ok(authIndex >= 0);
   assert.ok(tenantReadIndex > authIndex);
