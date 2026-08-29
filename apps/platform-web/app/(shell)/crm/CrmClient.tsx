@@ -5,7 +5,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
 import type { CrmCase, CaseStatus } from "@expadio/case";
 import type { CrmAgreement, AgreementStatus } from "@expadio/agreement";
-import type { CrmVocabulary, CaseWorkflowVocabulary } from "@expadio/industry-packs";
+import type { CrmVocabulary, CaseWorkflowVocabulary, CaseSchema, CaseField } from "@expadio/industry-packs";
 import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
@@ -62,6 +62,7 @@ interface CrmClientProps {
   initialAgreements: AgreementRow[];
   vocab: CrmVocabulary;
   caseVocab: CaseWorkflowVocabulary;
+  caseSchema: CaseSchema;
   verticalKey: string | null;
   verticalLabel: string | null;
   packChoices: readonly { verticalKey: string; label: string }[];
@@ -72,7 +73,7 @@ const inp: React.CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
 };
 
-export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, verticalKey, verticalLabel, packChoices, queryString = "" }: CrmClientProps) {
+export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, caseSchema, verticalKey, verticalLabel, packChoices, queryString = "" }: CrmClientProps) {
   const lc = (s: string) => s.toLowerCase();
   // Display a canonical stage key in the active vertical's process language,
   // falling back to the raw key when a pack does not relabel it.
@@ -548,6 +549,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
         <CaseModal
           accounts={accounts}
           vocab={vocab}
+          fields={caseSchema.fields}
           queryString={queryString}
           onClose={() => setShowCase(false)}
           onCreated={() => { setShowCase(false); reloadCases(); }}
@@ -1029,14 +1031,18 @@ function ConvertModal({ lead, vocab, queryString, onClose, onConverted }: { lead
   );
 }
 
-function CaseModal({ accounts, vocab, queryString, onClose, onCreated }: { accounts: CrmAccount[]; vocab: CrmVocabulary; queryString: string; onClose: () => void; onCreated: () => void }) {
+function CaseModal({ accounts, vocab, fields, queryString, onClose, onCreated }: { accounts: CrmAccount[]; vocab: CrmVocabulary; fields: readonly CaseField[]; queryString: string; onClose: () => void; onCreated: () => void }) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("NORMAL");
   const [blueprintKey, setBlueprintKey] = useState("");
   const [accountId, setAccountId] = useState("");
+  // Pack-declared domain fields (empty on the neutral engine).
+  const [attrs, setAttrs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setAttr = (key: string, value: string) => setAttrs((prev) => ({ ...prev, [key]: value }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -1044,7 +1050,7 @@ function CaseModal({ accounts, vocab, queryString, onClose, onCreated }: { accou
     try {
       const res = await fetch(`/api/crm/cases${queryString}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, description: description.trim() || undefined, priority, blueprintKey: blueprintKey.trim() || undefined, accountId: accountId || undefined }),
+        body: JSON.stringify({ subject, description: description.trim() || undefined, priority, blueprintKey: blueprintKey.trim() || undefined, accountId: accountId || undefined, attributes: attrs }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Could not create the case."));
@@ -1066,6 +1072,23 @@ function CaseModal({ accounts, vocab, queryString, onClose, onCreated }: { accou
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         </div>
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Workflow blueprint (optional)<input value={blueprintKey} onChange={(e) => setBlueprintKey(e.target.value)} placeholder="support.case" style={inp} /><span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}>The Decision Fabric blueprint that will govern this case's lifecycle.</span></label>
+        {fields.length > 0 && (
+          <div style={{ display: "grid", gap: 12, paddingTop: 4, borderTop: "1px solid var(--line, #e2e8f0)" }}>
+            {fields.map((f) => (
+              <label key={f.key} style={{ display: "grid", gap: 4, fontSize: 12 }}>
+                {f.label}{f.required ? <span style={{ color: "#b91c1c" }}> *</span> : null}
+                {f.type === "select" ? (
+                  <select required={f.required} value={attrs[f.key] ?? ""} onChange={(e) => setAttr(f.key, e.target.value)} style={inp}>
+                    <option value="">— select —</option>
+                    {(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input required={f.required} type={f.type === "number" ? "number" : "text"} value={attrs[f.key] ?? ""} onChange={(e) => setAttr(f.key, e.target.value)} style={inp} />
+                )}
+              </label>
+            ))}
+          </div>
+        )}
         {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
