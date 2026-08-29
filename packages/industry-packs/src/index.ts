@@ -63,12 +63,29 @@ export interface CaseWorkflowVocabulary {
   readonly workType: string;
   /** Display label per canonical stage key. */
   readonly stages: Record<CrmCaseStage, string>;
+  /**
+   * The pack's words for the blueprint's canonical decision outcomes, keyed by
+   * the canonical outcome the runtime records (e.g. APPROVE, RETURN). A clinician
+   * decides "Approve treatment plan"; the immutable decision still records the
+   * canonical APPROVE, so the decision gate and the audit trail are unchanged —
+   * this reskins the *decision experience*, not the governed outcome. An outcome
+   * a pack does not relabel keeps its canonical key.
+   */
+  readonly decisionOutcomeLabels?: Readonly<Record<string, string>>;
+  /**
+   * A short domain note per canonical stage — what this stage governs in the
+   * vertical's terms (DENTEX REVIEW: "A clinician signs off before discharge").
+   * Guidance only: the canonical gates and runtime are untouched.
+   */
+  readonly stageGuidance?: Partial<Readonly<Record<CrmCaseStage, string>>>;
 }
 
 /** The neutral engine's own words for the case lifecycle — the fallback. */
 export const NEUTRAL_CASE_WORKFLOW_VOCABULARY: CaseWorkflowVocabulary = {
   workType: 'Case',
   stages: { INTAKE: 'Intake', IN_PROGRESS: 'In progress', REVIEW: 'Review', RESOLVED: 'Resolved' },
+  decisionOutcomeLabels: {},
+  stageGuidance: {},
 };
 
 /**
@@ -156,6 +173,18 @@ const DENTEX_CASE_WORKFLOW: CaseWorkflowVocabulary = {
     REVIEW: 'Clinical review',
     RESOLVED: 'Discharged',
   },
+  // The clinical review's canonical APPROVE/RETURN, in a clinician's words. The
+  // recorded outcome stays canonical, so the gate and audit trail are unchanged.
+  decisionOutcomeLabels: {
+    APPROVE: 'Approve treatment plan',
+    RETURN: 'Send back for revision',
+  },
+  stageGuidance: {
+    INTAKE: 'Assess the patient and agree a treatment plan.',
+    IN_PROGRESS: 'Carry out the planned procedures.',
+    REVIEW: 'A clinician signs off the treatment before discharge.',
+    RESOLVED: 'Patient discharged; care plan on file.',
+  },
 };
 
 // A Treatment carries dental data a generic case does not: which tooth, the
@@ -213,6 +242,16 @@ const LEXFLOW_CASE_WORKFLOW: CaseWorkflowVocabulary = {
     IN_PROGRESS: 'Active matter',
     REVIEW: 'Partner review',
     RESOLVED: 'Closed',
+  },
+  decisionOutcomeLabels: {
+    APPROVE: 'Approve & proceed',
+    RETURN: 'Return for revision',
+  },
+  stageGuidance: {
+    INTAKE: 'Run the conflicts check and sign the engagement letter.',
+    IN_PROGRESS: 'Work the matter.',
+    REVIEW: 'A supervising partner reviews before closing.',
+    RESOLVED: 'Matter closed and archived.',
   },
 };
 
@@ -296,7 +335,21 @@ export function resolveCaseWorkflowVocabulary(
   return {
     workType: words.workType?.trim() ? words.workType : NEUTRAL_CASE_WORKFLOW_VOCABULARY.workType,
     stages: { ...NEUTRAL_CASE_WORKFLOW_VOCABULARY.stages, ...words.stages },
+    decisionOutcomeLabels: { ...(words.decisionOutcomeLabels ?? {}) },
+    stageGuidance: { ...(words.stageGuidance ?? {}) },
   };
+}
+
+/**
+ * Relabel a canonical decision outcome for the active pack — a clinician sees
+ * "Approve treatment plan" where the engine records the canonical APPROVE. Only
+ * the crm.case decision experience is reskinned; the recorded outcome, the gate,
+ * and the audit trail keep the canonical key. Unrelabelled outcomes (and the
+ * neutral engine) fall back to the canonical string.
+ */
+export function resolveDecisionOutcomeLabel(pack: IndustryPack | null | undefined, outcome: string): string {
+  const labels = resolveCaseWorkflowVocabulary(pack).decisionOutcomeLabels ?? {};
+  return labels[outcome] ?? outcome;
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   findIndustryPack,
   resolveCrmVocabulary,
   resolveCaseWorkflowVocabulary,
+  resolveDecisionOutcomeLabel,
   resolveWorkTypeLabel,
   resolveStageLabel,
   resolveCaseSchema,
@@ -43,6 +44,20 @@ test('DENTEX reskins the case workflow lifecycle as a course of care', () => {
   assert.equal(wf.stages.IN_PROGRESS, 'In treatment');
   assert.equal(wf.stages.REVIEW, 'Clinical review');
   assert.equal(wf.stages.RESOLVED, 'Discharged');
+});
+
+test('a pack reskins the decision experience without changing the recorded outcome', () => {
+  // The clinician's words for the canonical APPROVE/RETURN.
+  assert.equal(resolveDecisionOutcomeLabel(DENTEX_PACK, 'APPROVE'), 'Approve treatment plan');
+  assert.equal(resolveDecisionOutcomeLabel(DENTEX_PACK, 'RETURN'), 'Send back for revision');
+  assert.equal(resolveDecisionOutcomeLabel(LEXFLOW_PACK, 'APPROVE'), 'Approve & proceed');
+  // An outcome a pack doesn't relabel, and the neutral engine, keep the canonical key.
+  assert.equal(resolveDecisionOutcomeLabel(DENTEX_PACK, 'ESCALATE'), 'ESCALATE');
+  assert.equal(resolveDecisionOutcomeLabel(null, 'APPROVE'), 'APPROVE');
+  // Per-stage domain guidance is carried on the resolved vocabulary.
+  const wf = resolveCaseWorkflowVocabulary(DENTEX_PACK);
+  assert.match(wf.stageGuidance?.REVIEW ?? '', /clinician/i);
+  assert.deepEqual(resolveCaseWorkflowVocabulary(null).stageGuidance, {});
 });
 
 test('governance labels relabel only crm.case under an active pack', () => {
