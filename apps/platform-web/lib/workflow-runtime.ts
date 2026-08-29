@@ -13,6 +13,7 @@ import {
   RepositoryWorkflowBlueprintResolver,
   WorkflowBlueprintResolutionError,
   type WorkflowInstance,
+  type WorkflowIndustryPackProvenance,
   type WorkflowTransitionIntent,
   type InstantiatedWorkflowBlueprint,
   type WorkflowBlueprintDefinition,
@@ -79,6 +80,7 @@ export async function startWorkflow(
     readonly subjectType: string;
     readonly subjectId: string;
     readonly blueprintKey: string;
+    readonly industryPackProvenance?: WorkflowIndustryPackProvenance;
   },
 ): Promise<StartWorkflowResult> {
   const blueprints = new PostgresWorkflowBlueprintRepository(client);
@@ -110,6 +112,9 @@ export async function startWorkflow(
       version: definition.version,
       scope: instantiated.scope,
     },
+    ...(input.industryPackProvenance === undefined
+      ? {}
+      : { industryPackProvenance: input.industryPackProvenance }),
     state: 'RUNNING',
     ...(firstStage === undefined ? {} : { currentStageKey: firstStage }),
     revision: 0,
