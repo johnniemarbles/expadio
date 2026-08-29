@@ -5,7 +5,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead, LeadStage } from "@expadio/lead";
 import type { CrmCase, CaseStatus } from "@expadio/case";
 import type { CrmAgreement, AgreementStatus } from "@expadio/agreement";
-import type { CrmVocabulary, CaseWorkflowVocabulary, CaseSchema, CaseField } from "@expadio/industry-packs";
+import type { CrmVocabulary, CaseWorkflowVocabulary, CaseSchema, CaseField, CaseOntology } from "@expadio/industry-packs";
 import { apiError } from "../../../lib/api-error";
 
 type ContactRow = CrmContact & { accountName: string | null };
@@ -63,6 +63,7 @@ interface CrmClientProps {
   vocab: CrmVocabulary;
   caseVocab: CaseWorkflowVocabulary;
   caseSchema: CaseSchema;
+  caseOntology: CaseOntology;
   verticalKey: string | null;
   verticalLabel: string | null;
   packChoices: readonly { verticalKey: string; label: string }[];
@@ -73,7 +74,7 @@ const inp: React.CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
 };
 
-export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, caseSchema, verticalKey, verticalLabel, packChoices, queryString = "" }: CrmClientProps) {
+export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, caseSchema, caseOntology, verticalKey, verticalLabel, packChoices, queryString = "" }: CrmClientProps) {
   const lc = (s: string) => s.toLowerCase();
   // Display a canonical stage key in the active vertical's process language,
   // falling back to the raw key when a pack does not relabel it.
@@ -563,7 +564,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
         />
       )}
       {traceCase && (
-        <CaseTraceModal caseRow={traceCase} fields={caseSchema.fields} queryString={queryString} onClose={() => setTraceCase(null)} />
+        <CaseTraceModal caseRow={traceCase} fields={caseSchema.fields} ontology={caseOntology} queryString={queryString} onClose={() => setTraceCase(null)} />
       )}
       {convertTarget && (
         <ConvertModal
@@ -702,7 +703,7 @@ function CaseAttrChips({ fields, attributes }: { fields: readonly CaseField[]; a
   );
 }
 
-function CaseTraceModal({ caseRow, fields, queryString, onClose }: { caseRow: CaseRow; fields: readonly CaseField[]; queryString: string; onClose: () => void }) {
+function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { caseRow: CaseRow; fields: readonly CaseField[]; ontology: CaseOntology; queryString: string; onClose: () => void }) {
   // The pack's declared domain fields that this case actually carries a value for.
   const attrs = caseRow.attributes ?? {};
   const filledFields = fields.filter((f) => (attrs[f.key] ?? "").trim() !== "");
@@ -729,6 +730,31 @@ function CaseTraceModal({ caseRow, fields, queryString, onClose }: { caseRow: Ca
 
   return (
     <Modal title={`Workflow trace — ${caseRow.subject}`} onClose={onClose}>
+      <details style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 10, padding: "8px 12px" }}>
+        <summary style={{ cursor: "pointer", fontSize: 12, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-500, #64748b)" }}>
+          Domain model — {ontology.entity}
+        </summary>
+        <div style={{ display: "grid", gap: 8, marginTop: 8, fontSize: 13 }}>
+          <div>
+            <div style={{ fontSize: 11, color: "var(--ink-500, #64748b)", marginBottom: 2 }}>Relates to</div>
+            <ul style={{ margin: 0, paddingLeft: 16 }}>
+              {ontology.relationships.map((r) => (
+                <li key={r.conceptKey} title={r.conceptKey}><span style={{ color: "var(--ink-500, #64748b)" }}>{r.role}:</span> <strong>{r.entityLabel}</strong></li>
+              ))}
+            </ul>
+          </div>
+          {ontology.fields.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: "var(--ink-500, #64748b)", marginBottom: 2 }}>Domain fields</div>
+              <ul style={{ margin: 0, paddingLeft: 16 }}>
+                {ontology.fields.map((f) => (
+                  <li key={f.key}><strong>{f.label}</strong> <span style={{ color: "var(--ink-500, #64748b)" }}>· {f.type}{f.required ? " · required" : ""}</span></li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </details>
       {filledFields.length > 0 && (
         <div style={{ display: "grid", gap: 6, border: "1px solid var(--line, #e2e8f0)", borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-500, #64748b)" }}>Details</div>
