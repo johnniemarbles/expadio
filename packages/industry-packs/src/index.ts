@@ -119,6 +119,40 @@ export interface CaseSchema {
 /** The neutral engine adds no domain fields — the fallback (version 0 = no schema). */
 export const NEUTRAL_CASE_SCHEMA: CaseSchema = { fields: [], version: 0 };
 
+/** The canonical CRM entities a case already links, that an ontology names. */
+export const CASE_RELATIONSHIP_CONCEPTS = ['crm.account', 'crm.contact', 'crm.agreement'] as const;
+export type CaseRelationshipConcept = (typeof CASE_RELATIONSHIP_CONCEPTS)[number];
+
+/** One typed edge of a case's domain model — a canonical relation, in the pack's words. */
+export interface CaseOntologyRelationship {
+  /** The canonical CRM concept this edge points at. */
+  readonly conceptKey: CaseRelationshipConcept;
+  /** The pack's noun for the related entity (DENTEX contact → "Patient"). */
+  readonly entityLabel: string;
+  /** How the case relates to it (DENTEX contact → "Patient treated"). */
+  readonly role: string;
+}
+
+/**
+ * A case's domain model, made explicit: what a case *is* in the vertical's terms
+ * (DENTEX: a "Treatment"), the typed relationships it has to the canonical CRM
+ * entities it already links (account/contact/agreement, in the pack's words),
+ * and the domain fields it carries. Composed from what a pack already declares —
+ * an explicit ontology view, not a new store.
+ */
+export interface CaseOntology {
+  readonly entity: string;
+  readonly relationships: readonly CaseOntologyRelationship[];
+  readonly fields: readonly CaseField[];
+}
+
+/** Default relationship roles when a pack does not name them. */
+const NEUTRAL_CASE_RELATIONSHIP_ROLES: Readonly<Record<CaseRelationshipConcept, string>> = {
+  'crm.account': 'Belongs to',
+  'crm.contact': 'Concerns',
+  'crm.agreement': 'Governed by',
+};
+
 export interface IndustryPack {
   readonly verticalKey: string;
   readonly label: string;
@@ -136,6 +170,13 @@ export interface IndustryPack {
    * authorization and RLS are untouched.
    */
   readonly caseSchema?: CaseSchema;
+  /**
+   * Optional per-relationship role names for the case's domain model — how the
+   * case relates to each canonical CRM entity, in the pack's words (DENTEX
+   * contact → "Patient treated"). Display-only: the canonical links are
+   * unchanged; this names them. Unspecified relations fall back to neutral roles.
+   */
+  readonly caseOntologyRoles?: Partial<Readonly<Record<CaseRelationshipConcept, string>>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -205,6 +246,12 @@ export const DENTEX_PACK: IndustryPack = {
   terminology: DENTEX_TERMINOLOGY,
   caseWorkflow: DENTEX_CASE_WORKFLOW,
   caseSchema: DENTEX_CASE_SCHEMA,
+  // A Treatment concerns a Patient, is performed at a Practice, under a Care plan.
+  caseOntologyRoles: {
+    'crm.contact': 'Patient treated',
+    'crm.account': 'Performed at practice',
+    'crm.agreement': 'Governed by care plan',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -274,6 +321,12 @@ export const LEXFLOW_PACK: IndustryPack = {
   terminology: LEXFLOW_TERMINOLOGY,
   caseWorkflow: LEXFLOW_CASE_WORKFLOW,
   caseSchema: LEXFLOW_CASE_SCHEMA,
+  // A Matter is for a Client, has a client contact, under an engagement letter.
+  caseOntologyRoles: {
+    'crm.contact': 'Client contact',
+    'crm.account': 'Client',
+    'crm.agreement': 'Under engagement letter',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -383,6 +436,34 @@ export function resolveStageLabel(
 /** The domain fields the active pack adds to a case — empty for the neutral engine. */
 export function resolveCaseSchema(pack: IndustryPack | null | undefined): CaseSchema {
   return pack?.caseSchema ?? NEUTRAL_CASE_SCHEMA;
+}
+
+/**
+ * The case's domain model for the active pack, composed — not stored — from what
+ * the pack already declares: the case entity's name (its work type), its typed
+ * relationships to the canonical CRM entities it links (account/contact/agreement,
+ * labelled and roled in the pack's words), and its declared domain fields. This
+ * makes the ontology explicit; it adds no data and changes no canonical link.
+ * The neutral engine yields a generic "Case" model over the same canonical
+ * relations. Pure over the pack's vocabularies and schema.
+ */
+export function resolveCaseOntology(pack: IndustryPack | null | undefined): CaseOntology {
+  const crm = resolveCrmVocabulary(pack);
+  const roles = pack?.caseOntologyRoles ?? {};
+  const labelFor: Record<CaseRelationshipConcept, string> = {
+    'crm.account': crm.account.singular,
+    'crm.contact': crm.contact.singular,
+    'crm.agreement': crm.agreement.singular,
+  };
+  return {
+    entity: resolveCaseWorkflowVocabulary(pack).workType,
+    relationships: CASE_RELATIONSHIP_CONCEPTS.map((conceptKey) => ({
+      conceptKey,
+      entityLabel: labelFor[conceptKey],
+      role: roles[conceptKey] ?? NEUTRAL_CASE_RELATIONSHIP_ROLES[conceptKey],
+    })),
+    fields: resolveCaseSchema(pack).fields,
+  };
 }
 
 export interface CaseAttributeValidation {

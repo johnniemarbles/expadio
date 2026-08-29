@@ -103,3 +103,14 @@ test("a pack reskins the decision experience in both decision surfaces", () => {
   assert.match(queue, /resolveDecisionOutcomeLabel/);
   assert.match(queue, /resolveDecisionOutcomeLabel\(pack, o\)/);
 });
+
+test("a pack's case is surfaced as an explicit domain model", () => {
+  // The page resolves the pack's ontology server-side and threads it down.
+  assert.match(page, /resolveCaseOntology/);
+  assert.match(page, /caseOntology=\{caseOntology\}/);
+  // The trace/detail view renders the domain model — entity, relations, fields.
+  assert.match(client, /ontology: CaseOntology/);
+  assert.match(client, /Domain model/);
+  assert.match(client, /ontology\.relationships\.map/);
+  assert.match(client, /ontology\.fields\.map/);
+});

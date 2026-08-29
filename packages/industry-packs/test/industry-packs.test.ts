@@ -14,6 +14,7 @@ import {
   resolveWorkTypeLabel,
   resolveStageLabel,
   resolveCaseSchema,
+  resolveCaseOntology,
   validateCaseAttributes,
   NEUTRAL_CASE_SCHEMA,
   listIndustryPackChoices,
@@ -141,6 +142,26 @@ test('LEXFLOW proves the reskin generalizes — a second vertical, all as data',
   const choices = listIndustryPackChoices();
   assert.ok(choices.some((c) => c.verticalKey === 'lexflow'));
   assert.ok(choices.some((c) => c.verticalKey === 'dentex'));
+});
+
+test('a pack exposes its case as an explicit domain model over the canonical relations', () => {
+  const onto = resolveCaseOntology(DENTEX_PACK);
+  // The case entity is the pack's work type.
+  assert.equal(onto.entity, 'Treatment');
+  // The canonical account/contact/agreement relations, labelled + roled in the
+  // pack's words — no new relations invented.
+  assert.deepEqual(onto.relationships.map((r) => r.conceptKey), ['crm.account', 'crm.contact', 'crm.agreement']);
+  const patient = onto.relationships.find((r) => r.conceptKey === 'crm.contact');
+  assert.equal(patient?.entityLabel, 'Patient');
+  assert.equal(patient?.role, 'Patient treated');
+  // The domain fields come from the pack's schema.
+  assert.deepEqual(onto.fields.map((f) => f.key), ['tooth', 'procedureCode', 'urgency']);
+  // The neutral engine yields a generic model over the same canonical relations.
+  const neutral = resolveCaseOntology(null);
+  assert.equal(neutral.entity, 'Case');
+  assert.equal(neutral.relationships.find((r) => r.conceptKey === 'crm.contact')?.entityLabel, 'Contact');
+  assert.equal(neutral.relationships.find((r) => r.conceptKey === 'crm.contact')?.role, 'Concerns');
+  assert.deepEqual(neutral.fields, []);
 });
 
 test('no pack falls back to the neutral case workflow vocabulary', () => {
