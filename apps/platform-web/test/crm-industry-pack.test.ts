@@ -53,6 +53,17 @@ test('a pack can configure case domain fields, stored and validated', () => {
   assert.match(migration, /ALTER TABLE platform\.crm_cases[\s\S]*ADD COLUMN IF NOT EXISTS attributes jsonb/);
 });
 
+test("the case create form renders the pack's declared fields and sends them", () => {
+  // The page resolves the pack's case schema server-side and threads it down.
+  assert.match(page, /resolveCaseSchema/);
+  assert.match(page, /caseSchema=\{caseSchema\}/);
+  // The client renders an input per declared field and posts them as attributes.
+  assert.match(client, /caseSchema: CaseSchema/);
+  assert.match(client, /fields=\{caseSchema\.fields\}/);
+  assert.match(client, /fields\.map/);
+  assert.match(client, /attributes: attrs/);
+});
+
 test("the case workflow speaks the active pack's process language", () => {
   // The page resolves the pack's case-workflow vocabulary server-side and passes it down.
   assert.match(page, /resolveCaseWorkflowVocabulary/);
