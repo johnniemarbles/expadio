@@ -20,16 +20,28 @@ import { SUBJECT_TABLES } from './verticals';
  * input, so interpolating them is safe; the subject id is parameterized.
  */
 
+/**
+ * A governed action the review queue can actually take on an item — exactly the
+ * two the mutation endpoint (POST /api/governance/actions) performs. The read
+ * model must stay an exact projection of the write model, so advancing — which
+ * the queue does not perform (it belongs to the vertical's own screen) — is not
+ * an action here but a readiness status (`canAdvance`) on the descriptor.
+ */
 export type GovernedAction =
   | { readonly type: 'DECIDE'; readonly outcomes: readonly string[] }
-  | { readonly type: 'ASSIGN'; readonly slots: readonly string[] }
-  | { readonly type: 'ADVANCE'; readonly toStages: readonly { readonly stageKey: string; readonly label: string }[] };
+  | { readonly type: 'ASSIGN'; readonly slots: readonly string[] };
 
 export interface AvailableActions {
   readonly instanceId: string;
   readonly currentStageKey: string | null;
   readonly state: string;
   readonly actions: readonly GovernedAction[];
+  /**
+   * The current stage's own gates are all met and the instance is live, so it is
+   * ready to advance — but advancing is done in the vertical, not the queue, so
+   * this is reported as a status rather than offered as a (non-existent) action.
+   */
+  readonly canAdvance: boolean;
 }
 
 /** Resolve a governed subject to its workflow instance id, or null. RLS-scoped. */
@@ -50,9 +62,11 @@ export async function resolveInstanceForSubject(
 
 /**
  * What governed actions the caller can take on a subject's current stage right
- * now: ASSIGN while a required participant slot is unfilled, DECIDE while the
- * stage is decision-required and undecided, and ADVANCE once the current stage's
- * own gates are satisfied. Terminal instances offer nothing.
+ * now: ASSIGN while a required participant slot is unfilled, and DECIDE while the
+ * stage is decision-required and undecided — the two the mutation endpoint
+ * performs. Once those gates are met the stage is ready to advance, reported as
+ * `canAdvance` (advancing itself is a vertical-screen action, not a queue one).
+ * Terminal instances offer nothing and cannot advance.
  */
 export async function availableActions(
   client: PoolClient,
@@ -67,7 +81,7 @@ export async function availableActions(
   const terminal = ['COMPLETED', 'CANCELLED', 'FAILED'].includes(described.instance.state);
   const cur = currentStageKey === null ? undefined : described.stages.find((s) => s.stageKey === currentStageKey);
   if (terminal || cur === undefined) {
-    return { instanceId, currentStageKey, state: described.instance.state, actions: [] };
+    return { instanceId, currentStageKey, state: described.instance.state, actions: [], canAdvance: false };
   }
 
   const isAssigned = (slot: string) =>
@@ -78,15 +92,13 @@ export async function availableActions(
   const actions: GovernedAction[] = [];
   if (unmet.length > 0) actions.push({ type: 'ASSIGN', slots: unmet });
   if (needsDecision) actions.push({ type: 'DECIDE', outcomes: cur.decisionOutcomes });
-  // A stage advances only once its own gates are met — advertise ADVANCE only then.
-  if (unmet.length === 0 && !needsDecision) {
-    const toStages = described.stages
-      .filter((s) => s.stageKey !== cur.stageKey)
-      .map((s) => ({ stageKey: s.stageKey, label: s.label }));
-    if (toStages.length > 0) actions.push({ type: 'ADVANCE', toStages });
-  }
+  // Gates all met on a live stage → ready to advance. The actual transition
+  // (and which stage is legal) is the runtime's call, performed in the vertical;
+  // here it is only a status, never advertised with target stages the runtime
+  // might reject.
+  const canAdvance = unmet.length === 0 && !needsDecision;
 
-  return { instanceId, currentStageKey, state: described.instance.state, actions };
+  return { instanceId, currentStageKey, state: described.instance.state, actions, canAdvance };
 }
 
 // ---------------------------------------------------------------------------
