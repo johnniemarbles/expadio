@@ -32,3 +32,16 @@ export const ACCESS_WORKFLOW: VerticalWorkflowConfig = {
   blueprintLabel: 'access.request',
   statusForStage: (stageKey) => (stageKey === 'GRANTED' ? 'GRANTED' : 'SUBMITTED'),
 };
+
+/**
+ * Every governed subject's table + id column, keyed by work type — the generic
+ * subject→instance resolution the cross-vertical action endpoint needs. Includes
+ * crm.case (whose routes predate the factory) so every review-queue item, of any
+ * vertical, is resolvable to its workflow instance.
+ */
+export const SUBJECT_TABLES: Record<string, { readonly table: string; readonly idColumn: string }> = {
+  'crm.case': { table: 'platform.crm_cases', idColumn: 'case_id' },
+  'vendor.onboarding': { table: VENDOR_WORKFLOW.table, idColumn: VENDOR_WORKFLOW.idColumn },
+  'expense.reimbursement': { table: EXPENSE_WORKFLOW.table, idColumn: EXPENSE_WORKFLOW.idColumn },
+  'access.request': { table: ACCESS_WORKFLOW.table, idColumn: ACCESS_WORKFLOW.idColumn },
+};
