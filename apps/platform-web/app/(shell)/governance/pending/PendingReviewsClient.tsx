@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel } from '@expadio/industry-packs';
 import styles from '../../workflows/page.module.css';
 
 /**
@@ -40,7 +41,8 @@ const ageColor = (iso: string): string => {
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
 const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#475569', background: 'var(--surface-2, #f1f5f9)', border: '1px solid var(--line, #e2e8f0)', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
 
-export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) {
+export function PendingReviewsClient({ initial, verticalKey = null }: { initial: PendingReview[]; verticalKey?: string | null }) {
+  const pack = findIndustryPack(verticalKey);
   const [workType, setWorkType] = useState('');
   const [assignee, setAssignee] = useState('');
 
@@ -61,7 +63,7 @@ export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) 
         <div style={{ display: 'flex', gap: 8 }}>
           <select style={inp} value={workType} onChange={(e) => setWorkType(e.target.value)} aria-label="Filter by work type">
             <option value="">All work types</option>
-            {workTypes.map((wt) => <option key={wt} value={wt}>{wt}</option>)}
+            {workTypes.map((wt) => <option key={wt} value={wt}>{resolveWorkTypeLabel(pack, wt)}</option>)}
           </select>
           <select style={inp} value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Filter by assignee">
             <option value="">All assignees</option>
@@ -92,9 +94,9 @@ export function PendingReviewsClient({ initial }: { initial: PendingReview[] }) 
             <tbody>
               {rows.map((d, i) => (
                 <tr key={i}>
-                  <td>{d.workTypeKey}</td>
+                  <td title={pack ? d.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, d.workTypeKey)}</td>
                   <td>{d.subjectLabel ? <>{d.subjectLabel} <span style={{ color: '#94a3b8' }}>· {d.subjectType}</span></> : <>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></>}</td>
-                  <td>{d.currentStageKey}</td>
+                  <td title={pack ? d.currentStageKey : undefined}>{resolveStageLabel(pack, d.workTypeKey, d.currentStageKey)}</td>
                   <td>{d.participantKey}</td>
                   <td><code>{d.assigneeSubjectId.slice(0, 12)}</code></td>
                   <td style={{ color: ageColor(d.waitingSince), fontWeight: 600 }}>{sinceLabel(d.waitingSince)}</td>

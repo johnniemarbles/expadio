@@ -3,6 +3,7 @@ import styles from '../../workflows/page.module.css';
 import { fetchApi } from '../../../../lib/live-adapter';
 import { DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
+import { findIndustryPack, resolveWorkTypeLabel } from '@expadio/industry-packs';
 import { formatDuration } from '../../../../lib/governance-cycle-time';
 
 /**
@@ -33,11 +34,13 @@ const pct = (r: number) => `${(r * 100).toFixed(0)}%`;
 const barColor = (r: number) => (r >= 0.66 ? '#0f766e' : r >= 0.33 ? '#b45309' : '#b91c1c');
 
 export default async function DecisionAnalyticsPage() {
-  const [payload, cyclePayload] = await Promise.all([
+  const [payload, cyclePayload, vertical] = await Promise.all([
     fetchApi<{ stats: Stat[] }>(`/api/governance/analytics`),
     fetchApi<{ cycleTime: Cycle[] }>(`/api/governance/cycle-time`),
+    fetchApi<{ verticalKey: string | null }>(`/api/tenancy/vertical`),
   ]);
   if (isDenied(payload)) return <DeniedState result={payload} />;
+  const pack = findIndustryPack(isDenied(vertical) ? null : vertical.verticalKey);
   const stats = payload.stats ?? [];
   const cycles = isDenied(cyclePayload) ? [] : (cyclePayload.cycleTime ?? []);
   const grandTotal = stats.reduce((a, s) => a + s.total, 0);
@@ -72,7 +75,7 @@ export default async function DecisionAnalyticsPage() {
               <tbody>
                 {stats.map((s) => (
                   <tr key={s.workTypeKey}>
-                    <td>{s.workTypeKey}</td>
+                    <td title={pack ? s.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, s.workTypeKey)}</td>
                     <td>{s.total}</td>
                     <td>{s.approved}</td>
                     <td>
@@ -104,7 +107,7 @@ export default async function DecisionAnalyticsPage() {
               <tbody>
                 {cycles.map((cyc) => (
                   <tr key={cyc.workTypeKey}>
-                    <td>{cyc.workTypeKey}</td>
+                    <td title={pack ? cyc.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, cyc.workTypeKey)}</td>
                     <td>{cyc.decided}</td>
                     <td style={{ fontWeight: 600 }}>{formatDuration(cyc.avgSeconds)}</td>
                     <td style={{ color: '#b45309' }}>{formatDuration(cyc.maxSeconds)}</td>
