@@ -4,7 +4,7 @@ import type { CrmAccount, CrmContact } from "@expadio/party";
 import type { CrmLead } from "@expadio/lead";
 import type { CrmCase } from "@expadio/case";
 import type { CrmAgreement } from "@expadio/agreement";
-import { findIndustryPack, resolveCrmVocabulary, resolveCaseWorkflowVocabulary, resolveCaseSchema, resolveCaseOntology, listIndustryPackChoices } from "@expadio/industry-packs";
+import { findIndustryPack, resolveCrmVocabulary, resolveCaseWorkflowVocabulary, resolveCaseSchema, resolveCaseOntology, listIndustryPackChoices, listIndustryPackCatalog } from "@expadio/industry-packs";
 import { fetchApi } from "../../../lib/live-adapter";
 import { CrmClient } from "./CrmClient";
 
@@ -56,6 +56,7 @@ export default async function CrmPage({
       verticalKey={activeVertical}
       verticalLabel={pack?.label ?? null}
       packChoices={choices}
+      packCatalog={listIndustryPackCatalog()}
       queryString={q}
     />
   );

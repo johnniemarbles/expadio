@@ -41,6 +41,21 @@ test("the CRM client renders through the vocabulary and offers a pack picker", (
   assert.match(client, /Neutral engine/);
 });
 
+test("the Industry Pack management plane is a governed catalog read", () => {
+  const packsRoute = read("../app/api/tenancy/packs/route.ts");
+  assert.match(packsRoute, /export async function GET/);
+  assert.match(packsRoute, /resolveRequestContext\(request\)/);
+  assert.match(packsRoute, /withTenantClient/);
+  assert.match(packsRoute, /listIndustryPackCatalog/);
+  assert.match(packsRoute, /vertical_key/);
+  // The page hands the catalog to the client, which renders a reviewable
+  // "what each pack configures" surface next to the picker.
+  assert.match(page, /listIndustryPackCatalog/);
+  assert.match(page, /packCatalog=\{listIndustryPackCatalog\(\)\}/);
+  assert.match(client, /What each pack configures/);
+  assert.match(client, /packCatalog\.map/);
+});
+
 test('a pack can configure case domain fields, stored and validated', () => {
   const casesRoute = read('../app/api/crm/cases/route.ts');
   // The create route validates pack-declared attributes and stores them as JSONB.
