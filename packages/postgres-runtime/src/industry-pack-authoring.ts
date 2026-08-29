@@ -5,6 +5,7 @@ import type {
   IndustryPackVersion,
   IndustryPackVersionIdentity,
   IndustryPackVersionRepository,
+  IndustryPackLifecycleRepository,
   IndustryPackVersionSource,
   IndustryPackVersionState,
   UpdateIndustryPackDraft,
@@ -43,7 +44,7 @@ const SELECT_COLUMNS = `tenant_id, vertical_key, version, source, state, revisio
  * Platform-authoring calls require the privileged platform control-plane DB role.
  */
 export class PostgresIndustryPackVersionRepository
-  implements IndustryPackVersionRepository {
+  implements IndustryPackVersionRepository, IndustryPackLifecycleRepository {
   readonly #client: PostgresClient;
 
   constructor(client: PostgresClient) {
@@ -160,6 +161,50 @@ export class PostgresIndustryPackVersionRepository
       [tenantId, input.verticalKey],
     );
     return result.rows.map(mapRow);
+  }
+
+  async transitionLifecycle(input: {
+    readonly scope: IndustryPackAuthoringScope;
+    readonly identity: IndustryPackVersionIdentity;
+    readonly expectedState: IndustryPackVersionState;
+    readonly next: IndustryPackVersion;
+  }): Promise<IndustryPackVersion> {
+    const tenantId = scopeTenantId(input.scope);
+    const result = await this.#client.query<IndustryPackVersionRow>(
+      `UPDATE platform.industry_pack_versions
+          SET state = $4,
+              updated_by_subject_id = $5,
+              updated_at = $6::timestamptz,
+              submitted_by_subject_id = $7,
+              submitted_at = $8::timestamptz,
+              published_by_subject_id = $9,
+              published_at = $10::timestamptz
+        WHERE lower(vertical_key) = lower($2)
+          AND version = $3
+          AND state = $11
+          AND (
+            ($1::uuid IS NULL AND tenant_id IS NULL)
+            OR tenant_id = $1::uuid
+          )
+       RETURNING ${SELECT_COLUMNS}`,
+      [
+        tenantId,
+        input.identity.verticalKey,
+        input.identity.version,
+        input.next.state,
+        input.next.updatedBySubjectId,
+        input.next.updatedAt,
+        input.next.submittedBySubjectId ?? null,
+        input.next.submittedAt ?? null,
+        input.next.publishedBySubjectId ?? null,
+        input.next.publishedAt ?? null,
+        input.expectedState,
+      ],
+    );
+
+    const row = result.rows[0];
+    if (row === undefined) throw new Error('INDUSTRY_PACK_LIFECYCLE_TRANSITION_CONFLICT');
+    return mapRow(row);
   }
 }
 

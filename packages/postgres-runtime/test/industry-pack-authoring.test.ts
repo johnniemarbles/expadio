@@ -126,3 +126,84 @@ test('listVersions preserves descending database version order', async () => {
   assert.deepEqual(result.map((item) => item.identity.version), [2, 1]);
   assert.match(client.calls[0]?.text ?? '', /ORDER BY version DESC/);
 });
+
+
+test('transitionLifecycle updates lifecycle metadata only when the expected state matches', async () => {
+  const client = new ScriptedClient();
+  client.responses.push({
+    rows: [{
+      ...row,
+      state: 'IN_REVIEW',
+      submitted_by_subject_id: 'reviewer',
+      submitted_at: '2026-08-29T19:00:00.000Z',
+      updated_by_subject_id: 'reviewer',
+      updated_at: '2026-08-29T19:00:00.000Z',
+    }],
+    rowCount: 1,
+  });
+
+  const repository = new PostgresIndustryPackVersionRepository(client);
+  const current = {
+    identity: { verticalKey: 'dentex', version: 2 },
+    scope: { type: 'TENANT' as const, tenantId: row.tenant_id },
+    source: 'TENANT_AUTHORED' as const,
+    state: 'DRAFT' as const,
+    definition: DENTEX_PACK,
+    revision: 1,
+    createdBySubjectId: 'author',
+    createdAt: '2026-08-29T18:00:00.000Z',
+    updatedBySubjectId: 'author',
+    updatedAt: '2026-08-29T18:00:00.000Z',
+  };
+  const next = {
+    ...current,
+    state: 'IN_REVIEW' as const,
+    updatedBySubjectId: 'reviewer',
+    updatedAt: '2026-08-29T19:00:00.000Z',
+    submittedBySubjectId: 'reviewer',
+    submittedAt: '2026-08-29T19:00:00.000Z',
+  };
+
+  const result = await repository.transitionLifecycle({
+    scope: current.scope,
+    identity: current.identity,
+    expectedState: 'DRAFT',
+    next,
+  });
+
+  assert.equal(result.state, 'IN_REVIEW');
+  assert.equal(result.submittedBySubjectId, 'reviewer');
+  assert.match(client.calls.at(-1)?.text ?? '', /AND state = \$11/);
+  assert.match(client.calls.at(-1)?.text ?? '', /SET state = \$4/);
+  assert.equal(client.calls.at(-1)?.values[10], 'DRAFT');
+});
+
+test('transitionLifecycle fails closed on a stale expected state', async () => {
+  const client = new ScriptedClient();
+  client.responses.push({ rows: [], rowCount: 0 });
+
+  const repository = new PostgresIndustryPackVersionRepository(client);
+
+  await assert.rejects(
+    repository.transitionLifecycle({
+      scope: { type: 'TENANT', tenantId: row.tenant_id },
+      identity: { verticalKey: 'dentex', version: 2 },
+      expectedState: 'DRAFT',
+      next: {
+        identity: { verticalKey: 'dentex', version: 2 },
+        scope: { type: 'TENANT', tenantId: row.tenant_id },
+        source: 'TENANT_AUTHORED',
+        state: 'IN_REVIEW',
+        definition: DENTEX_PACK,
+        revision: 1,
+        createdBySubjectId: 'author',
+        createdAt: '2026-08-29T18:00:00.000Z',
+        updatedBySubjectId: 'reviewer',
+        updatedAt: '2026-08-29T19:00:00.000Z',
+        submittedBySubjectId: 'reviewer',
+        submittedAt: '2026-08-29T19:00:00.000Z',
+      },
+    }),
+    /INDUSTRY_PACK_LIFECYCLE_TRANSITION_CONFLICT/,
+  );
+});
