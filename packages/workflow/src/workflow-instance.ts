@@ -13,12 +13,33 @@ export interface WorkflowSubjectReference {
   readonly id: string;
 }
 
+export type WorkflowIndustryPackProvenance =
+  | {
+      readonly runtimeSource: 'NEUTRAL';
+    }
+  | {
+      readonly runtimeSource: 'CODE_BASELINE';
+      readonly verticalKey: string;
+      readonly version?: number;
+    }
+  | {
+      readonly runtimeSource: 'TENANT_PUBLISHED' | 'PLATFORM_PUBLISHED';
+      readonly verticalKey: string;
+      readonly version: number;
+    };
+
 export interface WorkflowInstance {
   readonly instanceId: string;
   readonly tenantId: string;
   readonly workTypeKey: string;
   readonly subject: WorkflowSubjectReference;
   readonly blueprint: PinnedWorkflowBlueprint;
+  /**
+   * Immutable provenance for the business configuration that governed creation
+   * of this workflow. Absent only for historical instances created before the
+   * provenance contract existed.
+   */
+  readonly industryPackProvenance?: WorkflowIndustryPackProvenance;
   readonly state: WorkflowInstanceState;
   readonly currentStageKey?: string;
   /** Optimistic-concurrency revision for deterministic transition writes. */
