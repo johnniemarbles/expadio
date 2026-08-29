@@ -5,7 +5,7 @@ import {
   resolveRequestContext,
   withTenantTransaction,
   deniedResponse,
-} from '../../../../../../lib/request-context';
+} from '../../../../../../../lib/request-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
