@@ -170,10 +170,68 @@ export const DENTEX_PACK: IndustryPack = {
 };
 
 // ---------------------------------------------------------------------------
+// LEXFLOW — legal matter management. A second pack, to prove the reskin is data,
+// not a DENTEX special case: different words, a different process language, and
+// different case data — all configuration over the one neutral engine.
+// ---------------------------------------------------------------------------
+
+const LEXFLOW_TERMINOLOGY: PresentationTerminologyCatalogue = {
+  defaultLocale: 'en',
+  concepts: [
+    { conceptKey: 'crm.account', labels: [{ locale: 'en', singular: 'Client', plural: 'Clients' }] },
+    { conceptKey: 'crm.contact', labels: [{ locale: 'en', singular: 'Contact', plural: 'Contacts' }] },
+    { conceptKey: 'crm.lead', labels: [{ locale: 'en', singular: 'Prospect', plural: 'Prospects' }], aliases: ['enquiry'] },
+    { conceptKey: 'crm.case', labels: [{ locale: 'en', singular: 'Matter', plural: 'Matters' }] },
+    { conceptKey: 'crm.agreement', labels: [{ locale: 'en', singular: 'Engagement letter', plural: 'Engagement letters' }] },
+  ],
+};
+
+const LEXFLOW_PROFILE: IndustryProfile = {
+  industryKey: 'lexflow',
+  label: 'LEXFLOW — Legal practice',
+  components: [
+    { kind: 'ONTOLOGY', key: 'lexflow.crm', version: 1 },
+    { kind: 'TERMINOLOGY', key: 'lexflow.crm', version: 1 },
+  ],
+};
+
+// The crm.case process is a "Matter" in a law firm; its stages read as the life
+// of a legal engagement rather than a generic ticket.
+const LEXFLOW_CASE_WORKFLOW: CaseWorkflowVocabulary = {
+  workType: 'Matter',
+  stages: {
+    INTAKE: 'Intake & conflicts',
+    IN_PROGRESS: 'Active matter',
+    REVIEW: 'Partner review',
+    RESOLVED: 'Closed',
+  },
+};
+
+// A Matter carries legal data a generic case does not: the kind of matter, the
+// governing jurisdiction, and the opposing party — the pack configuring its own
+// subject fields, exactly as DENTEX does with different ones.
+const LEXFLOW_CASE_SCHEMA: CaseSchema = {
+  fields: [
+    { key: 'matterType', label: 'Matter type', type: 'select', options: ['Litigation', 'Corporate', 'Real estate', 'Intellectual property', 'Employment'], required: true },
+    { key: 'jurisdiction', label: 'Jurisdiction', type: 'text' },
+    { key: 'opposingParty', label: 'Opposing party', type: 'text' },
+  ],
+};
+
+export const LEXFLOW_PACK: IndustryPack = {
+  verticalKey: 'lexflow',
+  label: 'LEXFLOW — Legal practice',
+  profile: LEXFLOW_PROFILE,
+  terminology: LEXFLOW_TERMINOLOGY,
+  caseWorkflow: LEXFLOW_CASE_WORKFLOW,
+  caseSchema: LEXFLOW_CASE_SCHEMA,
+};
+
+// ---------------------------------------------------------------------------
 // Registry + resolution.
 // ---------------------------------------------------------------------------
 
-export const INDUSTRY_PACKS: readonly IndustryPack[] = [DENTEX_PACK];
+export const INDUSTRY_PACKS: readonly IndustryPack[] = [DENTEX_PACK, LEXFLOW_PACK];
 
 export function findIndustryPack(verticalKey: string | null | undefined): IndustryPack | null {
   if (!verticalKey) return null;
