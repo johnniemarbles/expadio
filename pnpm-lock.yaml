@@ -44,6 +44,9 @@ importers:
       '@expadio/industry-packs':
         specifier: workspace:*
         version: link:../../packages/industry-packs
+      '@expadio/governed-actions':
+        specifier: workspace:*
+        version: link:../../packages/governed-actions
       '@expadio/lead':
         specifier: workspace:*
         version: link:../../packages/lead
