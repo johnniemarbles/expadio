@@ -21,6 +21,7 @@ import type {
   IndustryProfile,
   PresentationTerminologyCatalogue,
 } from '@expadio/business-config';
+import type { RelationshipDefinition } from '@expadio/relationship';
 
 export const CRM_CONCEPTS = [
   'crm.account',
@@ -208,6 +209,13 @@ export interface IndustryPack {
    * Decision Fabric remains the only transition engine.
    */
   readonly caseStageSemantics?: CaseWorkflowSemantics;
+  /**
+   * Optional authoritative business-relationship definitions. These are
+   * horizontal Relationship Fabric declarations, not workflow assignments.
+   * A workflow may project one of these relationships into a participant slot,
+   * but the relationship remains the source of truth.
+   */
+  readonly relationshipDefinitions?: readonly RelationshipDefinition[];
 }
 
 // ---------------------------------------------------------------------------
@@ -300,6 +308,16 @@ const DENTEX_CASE_STAGE_SEMANTICS: CaseWorkflowSemantics = {
   ],
 };
 
+const DENTEX_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
+  {
+    key: 'provider',
+    label: 'Treating provider',
+    sourceEntityType: 'crm.case',
+    targetEntityTypes: ['iam.subject'],
+    cardinality: 'ZERO_OR_ONE',
+  },
+];
+
 export const DENTEX_PACK: IndustryPack = {
   verticalKey: 'dentex',
   label: 'DENTEX — Dental practice',
@@ -308,6 +326,7 @@ export const DENTEX_PACK: IndustryPack = {
   caseWorkflow: DENTEX_CASE_WORKFLOW,
   caseSchema: DENTEX_CASE_SCHEMA,
   caseStageSemantics: DENTEX_CASE_STAGE_SEMANTICS,
+  relationshipDefinitions: DENTEX_RELATIONSHIP_DEFINITIONS,
   // A Treatment concerns a Patient, is performed at a Practice, under a Care plan.
   caseOntologyRoles: {
     'crm.contact': 'Patient treated',
@@ -500,6 +519,17 @@ export function resolveCaseSchema(pack: IndustryPack | null | undefined): CaseSc
   return pack?.caseSchema ?? NEUTRAL_CASE_SCHEMA;
 }
 
+/** Relationship Fabric definitions declared by the active pack. */
+export function resolveRelationshipDefinitions(
+  pack: IndustryPack | null | undefined,
+  sourceEntityType?: string | null,
+): readonly RelationshipDefinition[] {
+  const definitions = pack?.relationshipDefinitions ?? [];
+  const source = sourceEntityType?.trim();
+  if (!source) return definitions;
+  return definitions.filter((definition) => definition.sourceEntityType === source);
+}
+
 /** Executable case-stage semantics declared by the active pack; neutral = none. */
 export function resolveCaseStageSemantics(
   pack: IndustryPack | null | undefined,
@@ -614,6 +644,8 @@ export interface IndustryPackCapabilities {
   readonly caseFields: readonly { readonly key: string; readonly label: string; readonly type: string; readonly required: boolean }[];
   /** The case's typed relationships to the canonical CRM entities. */
   readonly relationships: readonly CaseOntologyRelationship[];
+  /** Authoritative Relationship Fabric declarations supplied by the pack. */
+  readonly relationshipDefinitions: readonly RelationshipDefinition[];
 }
 
 /** Describe a single pack's full capability surface. */
@@ -637,6 +669,7 @@ export function describeIndustryPack(pack: IndustryPack): IndustryPackCapabiliti
     caseSchemaVersion: schema.version,
     caseFields: schema.fields.map((f) => ({ key: f.key, label: f.label, type: f.type, required: f.required === true })),
     relationships: ontology.relationships,
+    relationshipDefinitions: resolveRelationshipDefinitions(pack),
   };
 }
 

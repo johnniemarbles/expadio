@@ -201,6 +201,9 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
+      '@expadio/relationship':
+        specifier: workspace:*
+        version: link:../relationship
 
   packages/knowledge:
     dependencies:
@@ -211,6 +214,8 @@ importers:
   packages/lead: {}
 
   packages/party: {}
+
+  packages/relationship: {}
 
   packages/postgres-runtime:
     dependencies:
@@ -253,6 +258,9 @@ importers:
       '@expadio/provider-registry':
         specifier: workspace:*
         version: link:../provider-registry
+      '@expadio/relationship':
+        specifier: workspace:*
+        version: link:../relationship
       '@expadio/storage':
         specifier: workspace:*
         version: link:../storage
