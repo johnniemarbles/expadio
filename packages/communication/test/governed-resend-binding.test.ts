@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ConnectorDefinition, CredentialReference } from '@expadio/provider-registry';
+import type { ConnectorDefinition, CredentialReference, CredentialLease } from '@expadio/provider-registry';
 import {
   GovernedResendCredentialError,
   governedResendApiTokenProvider,
@@ -151,4 +151,84 @@ test('does not release an expired resolved secret to the provider adapter', asyn
     (error: unknown) => error instanceof GovernedResendCredentialError
       && error.code === 'RESEND_SECRET_EXPIRED',
   );
+});
+
+const validLease: CredentialLease = {
+  leaseReference: 'lease://resend/shared', tenantId, connectorKey: connector.connectorKey,
+  credentialReference: credentialRef, authorizationDecisionId: 'decision-shared',
+  issuedAt: '2026-08-26T17:59:59.000Z', expiresAt: '2026-08-26T18:01:00.000Z',
+  auditReference: 'audit://credential-lease/shared',
+};
+
+for (const mismatch of [
+  { tenantId: 'another-brand' }, { connectorKey: 'another-connector' },
+  { credentialReference: 'vault://another/secret' as CredentialReference },
+]) {
+  test(`rejects a mismatched ${Object.keys(mismatch)[0]} before reading a secret`, async () => {
+    let secretReads = 0;
+    const provider = governedResendApiTokenProvider({
+      connector, requestedBySubjectId: 'worker:communications',
+      requestId: () => 'request', correlationId: () => 'correlation',
+      now: () => request.requestedAt,
+      credentialRepository: { async loadCredentialReference() { return credentialRef; } },
+      leaseService: { async issue() { return { ...validLease, ...mismatch }; } },
+      secretResolver: { async resolve() { secretReads++; return { value: 'secret' }; } },
+    });
+    await assert.rejects(provider(request), (error: unknown) =>
+      error instanceof GovernedResendCredentialError && error.code === 'RESEND_CREDENTIAL_LEASE_MISMATCH');
+    assert.equal(secretReads, 0);
+  });
+}
+
+for (const scenario of ['lease expires during read', 'secret expires during read', 'invalid secret expiry']) {
+  test(`does not release a token when ${scenario}`, async () => {
+    let now = request.requestedAt;
+    const provider = governedResendApiTokenProvider({
+      connector, requestedBySubjectId: 'worker:communications',
+      requestId: () => 'request', correlationId: () => 'correlation', now: () => now,
+      credentialRepository: { async loadCredentialReference() { return credentialRef; } },
+      leaseService: { async issue() { return validLease; } },
+      secretResolver: { async resolve() {
+        now = scenario === 'lease expires during read' ? validLease.expiresAt : '2026-08-26T18:00:30.000Z';
+        return { value: 'must-not-escape', ...(scenario === 'lease expires during read' ? {} : {
+          expiresAt: new Date(scenario === 'invalid secret expiry' ? 'invalid' : '2026-08-26T18:00:15.000Z'),
+        }) };
+      } },
+    });
+    await assert.rejects(provider(request), (error: unknown) =>
+      error instanceof GovernedResendCredentialError && error.code === 'RESEND_SECRET_EXPIRED');
+  });
+}
+
+test('one platform credential serves two brands through distinct tenant-scoped leases', async () => {
+  const { tenantId: _ownerTenant, ...shared } = connector;
+  const brands = [tenantId, 'cccccccc-cccc-cccc-cccc-cccccccccccc'];
+  const leases: CredentialLease[] = [];
+  const resolutions: string[] = [];
+  let serial = 0;
+  const provider = governedResendApiTokenProvider({
+    connector: { ...shared, ownership: 'PLATFORM' }, requestedBySubjectId: 'worker:communications',
+    requestId: () => `request-${++serial}`, correlationId: () => `correlation-${serial}`,
+    now: () => request.requestedAt,
+    credentialRepository: { async loadCredentialReference(brand, key) {
+      assert.ok(brands.includes(brand)); assert.equal(key, shared.connectorKey);
+      return credentialRef;
+    } },
+    leaseService: { async issue(input, selected) {
+      assert.equal(selected.ownership, 'PLATFORM');
+      assert.equal(selected.tenantId, undefined);
+      assert.equal(selected.credentialRef, credentialRef);
+      assert.equal(input.requestedBySubjectId, 'worker:communications');
+      const lease = { ...validLease, tenantId: input.tenantId,
+        leaseReference: `lease://${input.requestId}`, auditReference: `audit://${input.requestId}` };
+      leases.push(lease); return lease;
+    } },
+    secretResolver: { async resolve(ref) { resolutions.push(ref); return { value: 'shared-platform-token' }; } },
+  });
+  for (const brand of brands) assert.equal(await provider({ ...request, tenantId: brand }), 'shared-platform-token');
+  assert.deepEqual(leases.map(lease => lease.tenantId), brands);
+  assert.notEqual(leases[0]!.leaseReference, leases[1]!.leaseReference);
+  assert.notEqual(leases[0]!.auditReference, leases[1]!.auditReference);
+  assert.deepEqual(resolutions, [credentialRef, credentialRef]);
+  assert.ok(leases.every(lease => !JSON.stringify(lease).includes('shared-platform-token')));
 });

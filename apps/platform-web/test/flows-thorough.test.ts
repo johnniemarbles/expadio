@@ -14,14 +14,15 @@ const dnsRecords = read("../lib/dns-records.ts");
 const templatePreview = read("../app/(shell)/communications/TemplatePreviewModal.tsx");
 
 test("provider registration performs the governed custody handshake with step-up", () => {
-  // Step-up rides with every custody + provider call.
-  assert.match(providerModal, /x-expadio-reauth-at/);
+  // Clerk handles server-issued challenges; caller timestamps are not proof.
+  assert.match(providerModal, /useCommunicationFetch\(\)/);
+  assert.doesNotMatch(providerModal, /x-expadio-reauth-at/);
   // BYOK: wrapping key -> wrap -> intake -> register.
   assert.match(providerModal, /\/api\/custody\/wrapping-key/);
   assert.match(providerModal, /wrapSecret/);
   assert.match(providerModal, /\/api\/custody\/credentials/);
-  assert.match(providerModal, /fetch\(`\/api\/communications\/providers\$\{window\.location\.search\}`/);
-  // A no-secret path that works without a credential.
+  assert.match(providerModal, /reverifiedFetch\(`\/api\/communications\/providers\$\{window\.location\.search\}`/);
+  // A no-secret placeholder remains disabled until an egress adapter exists.
   assert.match(providerModal, /CUSTOMER_EGRESS/);
 });
 

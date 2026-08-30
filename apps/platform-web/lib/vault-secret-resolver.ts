@@ -34,7 +34,7 @@ interface ParsedVaultReference {
 }
 
 const VAULT_REFERENCE =
-  /^vault:\/\/tenant\/([0-9a-fA-F-]{36})\/connector\/([A-Za-z0-9._-]{1,128})\/v([0-9]{1,6})$/;
+  /^vault:\/\/tenant\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/connector\/([A-Za-z0-9._-]{1,128})\/v([0-9]{1,6})$/;
 
 /**
  * Infrastructure-only resolver for delegated Vault KV v2 references.
@@ -106,12 +106,14 @@ export class VaultDelegatedSecretResolver {
     }
 
     const metadataVersion = payload?.data?.metadata?.version;
-    const resolvedVersion =
-      typeof metadataVersion === 'number' && Number.isInteger(metadataVersion) && metadataVersion > 0
-        ? metadataVersion
-        : parsed.version;
+    if (metadataVersion !== parsed.version) {
+      throw new VaultDelegatedSecretResolverError(
+        'VAULT_SECRET_INVALID',
+        'Vault did not return the requested credential version.',
+      );
+    }
 
-    return { value: secret, version: `v${resolvedVersion}` };
+    return { value: secret, version: `v${parsed.version}` };
   }
 }
 

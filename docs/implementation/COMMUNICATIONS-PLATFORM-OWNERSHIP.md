@@ -142,3 +142,33 @@ cancellation, bounded retry and ordinary denial; UI opening was stubbed.
 Authenticated browser/deployed Clerk verification and live sends were not run.
 
 Reference: https://clerk.com/docs/guides/secure/reverification
+
+## Continuation: shared credential send-time safety
+
+- Corrected the remaining flows-thorough assertion that required the removed
+  browser timestamp header. The test now requires the reverification transport
+  and forbids that header; the custody handshake assertions remain in place.
+- The Resend token binding verifies that the returned lease matches the sending
+  brand, selected connector and loaded credential reference before Vault reads.
+  It rechecks lease validity after secret resolution, and refuses a secret that
+  expired during the read or has invalid expiry metadata.
+- Vault resolution requires returned version metadata to match the exact
+  referenced version. Missing/mismatched versions fail closed instead of being
+  accepted or inferred. Malformed UUID-shaped references fail before network I/O.
+- A two-brand binding regression confirms the same PLATFORM-owned reference can
+  be resolved with separate brand-scoped lease/audit identities. Repository,
+  lease service and secret resolution are test doubles in this test; this does
+  not establish persisted multi-brand delivery, entitlement or usage isolation.
+
+Validation: 24 binding/Vault tests, nine flow-contract tests and the earlier 40
+focused Communications regressions passed locally. Vault helper/tests passed a
+strict standalone typecheck. On the preceding commit, Core Spine, Workflow
+Integration and Architecture Baseline passed; Platform Web failed only on the
+obsolete timestamp assertion (364/365 tests passed). New commit CI must pass.
+
+Additional shared-account rollout blocker: Resend currently forwards the local
+request idempotencyKey unchanged. Two brands using the same local key on one
+provider account need provider-level tenant namespacing. Implement with an
+explicit transition for pending/in-flight retries; blindly changing the key can
+duplicate an already accepted send. This continuation deliberately does not
+change provider idempotency keys or perform live sends.

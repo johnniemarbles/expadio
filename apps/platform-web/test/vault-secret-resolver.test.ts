@@ -120,3 +120,26 @@ test('rejects a successful Vault response that contains no secret value', async 
       error.code === 'VAULT_SECRET_INVALID',
   );
 });
+
+for (const version of [undefined, null, '3', 2, 4, 3.5, 0]) {
+  test(`rejects missing or mismatched Vault version metadata: ${String(version)}`, async () => {
+    const resolver = new VaultDelegatedSecretResolver({
+      address: 'https://vault.example.test', token: 'vault-token',
+      fetchImpl: async () => Response.json({ data: { data: { secret: 'must-not-escape' }, metadata: { version } } }),
+    });
+    await assert.rejects(resolver.resolve(reference), (error: unknown) =>
+      error instanceof VaultDelegatedSecretResolverError && error.code === 'VAULT_SECRET_INVALID'
+        && !error.message.includes('must-not-escape'));
+  });
+}
+
+test('rejects a UUID-shaped sequence with invalid hyphen positions without contacting Vault', async () => {
+  let calls = 0;
+  const resolver = new VaultDelegatedSecretResolver({
+    address: 'https://vault.example.test', token: 'vault-token',
+    fetchImpl: async () => { calls++; return Response.json({}); },
+  });
+  await assert.rejects(resolver.resolve(`vault://tenant/${'-'.repeat(36)}/connector/resend/v1`),
+    (error: unknown) => error instanceof VaultDelegatedSecretResolverError && error.code === 'VAULT_REFERENCE_INVALID');
+  assert.equal(calls, 0);
+});

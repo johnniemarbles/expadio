@@ -29,6 +29,7 @@ export interface GovernedResendCredentialProviderOptions {
 export type GovernedResendCredentialErrorCode =
   | 'RESEND_CONNECTOR_INVALID'
   | 'RESEND_CREDENTIAL_REFERENCE_UNAVAILABLE'
+  | 'RESEND_CREDENTIAL_LEASE_MISMATCH'
   | 'RESEND_SECRET_EXPIRED';
 
 export class GovernedResendCredentialError extends Error {
@@ -81,11 +82,24 @@ export function governedResendApiTokenProvider(
     };
     const connector = { ...options.connector, credentialRef: credentialReference };
     const lease = await options.leaseService.issue(leaseRequest, connector);
+    if (lease.tenantId !== request.tenantId
+      || lease.connectorKey !== connector.connectorKey
+      || lease.credentialReference !== credentialReference) {
+      throw new GovernedResendCredentialError(
+        'RESEND_CREDENTIAL_LEASE_MISMATCH',
+        'Credential lease does not match this brand, connector and credential reference.',
+      );
+    }
     const resolvedAt = options.now?.() ?? new Date().toISOString();
     assertLeaseIsCurrent(lease, resolvedAt);
 
     const secret = await options.secretResolver.resolve(lease.credentialReference);
-    if (secret.expiresAt !== undefined && secret.expiresAt.getTime() <= Date.parse(resolvedAt)) {
+    // Vault I/O can outlive a short lease. Never hand the token to the adapter
+    // based on the timestamp captured before that network request.
+    const releasedAt = options.now?.() ?? new Date().toISOString();
+    assertLeaseIsCurrent(lease, releasedAt);
+    if (secret.expiresAt !== undefined && (!Number.isFinite(secret.expiresAt.getTime())
+      || secret.expiresAt.getTime() <= Date.parse(releasedAt))) {
       throw new GovernedResendCredentialError(
         'RESEND_SECRET_EXPIRED',
         'Resolved Resend credential is expired.',
@@ -97,6 +111,7 @@ export function governedResendApiTokenProvider(
 
 function validateConnector(connector: ConnectorDefinition): void {
   const valid = connector.enabled
+    && connector.providerType === 'email'
     && connector.providerKey.trim().toLowerCase() === RESEND_PROVIDER_KEY
     && connector.capabilityKeys.includes(EMAIL_CAPABILITY_KEY);
   if (!valid) {
