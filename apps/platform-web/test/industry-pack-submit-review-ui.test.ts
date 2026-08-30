@@ -11,14 +11,22 @@ const action = readFileSync(
 );
 
 test('draft submit action calls only the governed submit route', () => {
-  assert.match(action, /industry-packs\\/drafts\\/.*\\/submit/);
-  assert.match(action, /method: 'POST'/);
-  assert.doesNotMatch(action, /publish|archive|return/);
+  assert.ok(
+    action.includes(
+      '/api/configuration/industry-packs/drafts/${encodeURIComponent(verticalKey)}/${version}/submit',
+    ),
+  );
+  assert.ok(action.includes("method: 'POST'"));
+  assert.equal(action.includes('publish'), false);
+  assert.equal(action.includes('archive'), false);
+  assert.equal(action.includes('/return'), false);
 });
 
 test('draft submit action navigates back to version history after success', () => {
-  assert.match(action, /router\\.push/);
-  assert.match(action, /configuration\\/industry-packs\\?vertical=/);
-  assert.match(action, /router\\.refresh\\(\\)/);
-  assert.match(action, /role=\"alert\"/);
+  assert.ok(action.includes('router.push'));
+  assert.ok(
+    action.includes('/configuration/industry-packs?vertical=${encodeURIComponent(verticalKey)}'),
+  );
+  assert.ok(action.includes('router.refresh()'));
+  assert.ok(action.includes('role="alert"'));
 });
