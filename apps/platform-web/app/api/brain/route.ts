@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import type { BrainOverview } from '../../../lib/brain-contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const [sourcesResult, correctionsResult, lastIndexedResult] = await Promise.all([
-      dbPool.query('SELECT count(*) as count FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]),
-      dbPool.query("SELECT count(*) as count FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND status = 'UNREVIEWED'", [effectiveContext.tenantId]),
-      dbPool.query('SELECT max(indexed_at) as last_indexed_at FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId])
-    ]);
+    const [sourcesResult, correctionsResult, lastIndexedResult] = await withTenantClient(effectiveContext, (client) =>
+      Promise.all([
+        client.query('SELECT count(*) as count FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]),
+        client.query("SELECT count(*) as count FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND status = 'UNREVIEWED'", [effectiveContext.tenantId]),
+        client.query('SELECT max(indexed_at) as last_indexed_at FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId])
+      ])
+    );
 
     const indexedSources = parseInt(sourcesResult.rows[0]?.count || '0', 10);
     const pendingCorrections = parseInt(correctionsResult.rows[0]?.count || '0', 10);
