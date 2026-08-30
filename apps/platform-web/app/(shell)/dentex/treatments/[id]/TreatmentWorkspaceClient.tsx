@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type {
   DentexTreatmentReadiness,
   DentexTreatmentRequirement,
@@ -289,14 +289,68 @@ export default function TreatmentWorkspaceClient({
 
       {tab === 'clinical' ? (
         <SectionCard title="Clinical">
-          <DefinitionGrid rows={[
-            ['Patient', workspace.patient?.fullName ?? 'Not linked'],
-            ['Urgency', treatment.attributes.urgency],
-            ['Tooth / quadrant', treatment.attributes.tooth ?? 'Not recorded'],
-            ['Performed procedure', treatment.attributes.procedureCode ?? 'Not recorded'],
-            ['Treating provider', workspace.provider?.subjectId ?? 'Unassigned'],
-          ]} />
-          <TruthfulEmpty text="Clinical findings and notes are not yet attached to the Treatment projection. They remain a planned DENTEX domain slice rather than fabricated fields." />
+          <form
+            className={styles.clinicalForm}
+            onSubmit={(event: FormEvent<HTMLFormElement>) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              void mutate(
+                'clinical',
+                treatmentUrl,
+                'PATCH',
+                {
+                  attributes: {
+                    urgency: form.get('urgency'),
+                    tooth: form.get('tooth'),
+                    procedureCode: form.get('procedureCode'),
+                  },
+                },
+              );
+            }}
+          >
+            <div className={styles.clinicalFields}>
+              <label>
+                Urgency
+                <select name="urgency" defaultValue={treatment.attributes.urgency} disabled={busy !== null}>
+                  <option value="Routine">Routine</option>
+                  <option value="Priority">Priority</option>
+                  <option value="Emergency">Emergency</option>
+                </select>
+              </label>
+              <label>
+                Tooth / quadrant
+                <input
+                  name="tooth"
+                  defaultValue={treatment.attributes.tooth ?? ''}
+                  placeholder="e.g. UR6"
+                  disabled={busy !== null}
+                />
+              </label>
+              <label>
+                Performed procedure
+                <input
+                  name="procedureCode"
+                  defaultValue={treatment.attributes.procedureCode ?? ''}
+                  placeholder="e.g. D3310"
+                  disabled={busy !== null}
+                />
+              </label>
+              <label>
+                Treating provider
+                <input value={workspace.provider?.subjectId ?? 'Unassigned'} readOnly />
+              </label>
+            </div>
+            <div className={styles.clinicalActions}>
+              <span>
+                These values are validated against DENTEX schema v{treatment.schemaVersion}.
+                Procedure is a governed prerequisite for Clinical Review.
+              </span>
+              <button type="submit" className={styles.primaryButton} disabled={busy !== null}>
+                {busy === 'clinical' ? 'Saving…' : 'Save clinical data'}
+              </button>
+            </div>
+          </form>
+          <TruthfulEmpty text="Clinical findings and notes are not yet attached to the Treatment projection. This slice edits only the existing Pack-governed Treatment attributes; findings and notes remain a separate clinical-record domain slice." />
         </SectionCard>
       ) : null}
 
