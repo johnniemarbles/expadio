@@ -68,6 +68,24 @@ INSERT INTO platform.communication_deliveries (
     clock_timestamp() - interval '5 minutes'
   ),
   (
+    '97970000-0000-0000-0000-000000000006',
+    '97979797-9797-9797-9797-979797979797',
+    'communication-health-stale-accepted-attempt',
+    'email',
+    'resend-health-a',
+    'resend-email-v1',
+    NULL,
+    'PENDING',
+    1,
+    '2026-08-30T14:20:00Z',
+    NULL,
+    '2026-08-30T14:20:02Z',
+    'PROVIDER_ACCEPTANCE_NOT_RECONCILED',
+    clock_timestamp() + interval '10 minutes',
+    NULL,
+    NULL
+  ),
+  (
     '97970000-0000-0000-0000-000000000002',
     '97979797-9797-9797-9797-979797979797',
     'communication-health-bounced',
@@ -108,22 +126,39 @@ INSERT INTO platform.communication_provider_attempts (
   provider_attempt_id, tenant_id, delivery_id, attempt_token,
   connector_key, provider_key, adapter_key, idempotency_key, outcome,
   provider_message_id, reason_code, reason, started_at, completed_at
-) VALUES (
-  '97970000-0000-0000-0000-000000000010',
-  '97979797-9797-9797-9797-979797979797',
-  '97970000-0000-0000-0000-000000000003',
-  '97970000-0000-0000-0000-000000000011',
-  'resend-health-a',
-  'resend',
-  'resend-email-v1',
-  'communication-health-provider-attempt',
-  'ERROR',
-  NULL,
-  'PROVIDER_ERROR',
-  'Health smoke forced provider error',
-  '2026-08-30T15:02:01Z',
-  '2026-08-30T15:02:02Z'
-);
+) VALUES
+  (
+    '97970000-0000-0000-0000-000000000010',
+    '97979797-9797-9797-9797-979797979797',
+    '97970000-0000-0000-0000-000000000003',
+    '97970000-0000-0000-0000-000000000011',
+    'resend-health-a',
+    'resend',
+    'resend-email-v1',
+    'communication-health-provider-attempt',
+    'ERROR',
+    NULL,
+    'PROVIDER_ERROR',
+    'Health smoke forced provider error',
+    '2026-08-30T15:02:01Z',
+    '2026-08-30T15:02:02Z'
+  ),
+  (
+    '97970000-0000-0000-0000-000000000012',
+    '97979797-9797-9797-9797-979797979797',
+    '97970000-0000-0000-0000-000000000006',
+    '97970000-0000-0000-0000-000000000013',
+    'resend-health-a',
+    'resend',
+    'resend-email-v1',
+    'communication-health-stale-accepted-attempt',
+    'ACCEPTED',
+    'provider-health-stale-acceptance',
+    'PROVIDER_ACCEPTED',
+    'Health smoke accepted provider attempt not reflected on delivery',
+    clock_timestamp() - interval '10 minutes',
+    clock_timestamp() - interval '9 minutes'
+  );
 
 INSERT INTO platform.communication_provider_webhook_events (
   webhook_event_id, tenant_id, provider_key, connector_key, provider_event_id,
@@ -207,6 +242,7 @@ BEGIN
     'communication_deliveries_negative_terminal',
     'communication_deliveries_stuck_pending',
     'communication_provider_attempt_failures',
+    'communication_provider_attempts_stale_acceptance',
     'communication_provider_webhooks_negative',
     'communication_provider_webhooks_unmatched'
   ]::text[] THEN
@@ -218,8 +254,8 @@ BEGIN
     FROM platform.communication_health_summary
    WHERE health_key = 'communication_deliveries_in_flight';
 
-  IF in_flight_count <> 3 THEN
-    RAISE EXCEPTION 'expected three in-flight rows including stuck open rows, got %', in_flight_count;
+  IF in_flight_count <> 4 THEN
+    RAISE EXCEPTION 'expected four in-flight rows including stuck open rows and stale accepted attempt, got %', in_flight_count;
   END IF;
 
   IF NOT EXISTS (
@@ -242,6 +278,18 @@ BEGIN
        AND metadata -> 'states' ? 'SENT'
   ) THEN
     RAISE EXCEPTION 'expired claim delivery health row missing or malformed';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM platform.communication_health_summary
+     WHERE health_key = 'communication_provider_attempts_stale_acceptance'
+       AND health_status = 'CRITICAL'
+       AND item_count = 1
+       AND metadata ->> 'outcome' = 'ACCEPTED'
+       AND metadata -> 'deliveryStates' ? 'PENDING'
+  ) THEN
+    RAISE EXCEPTION 'stale provider acceptance health row missing or malformed';
   END IF;
 
   IF NOT EXISTS (
