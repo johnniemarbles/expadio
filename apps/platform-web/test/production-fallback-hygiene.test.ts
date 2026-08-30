@@ -26,17 +26,6 @@ const forbiddenContent = [
   "default-resend",
 ];
 
-const knownCurrentBaselineDebt = [
-  "apps/platform-web/app/api/agent/runs/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/agents/bindings/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/brain/corrections/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/brain/history/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/brain/provenance/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/brain/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/brain/slices/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/brain/sources/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-].sort();
-
 const ignoredSegments = new Set([
   "node_modules",
   ".next",
@@ -62,7 +51,7 @@ function walk(path: string): string[] {
   return readdirSync(path).flatMap((entry) => walk(join(path, entry)));
 }
 
-test("production request/runtime fallback debt is explicit and cannot grow", () => {
+test("production request/runtime paths do not contain demo fallbacks", () => {
   const files = productionRoots.flatMap((root) => walk(join(repoRoot.pathname, root)));
   const violations: string[] = [];
 
@@ -82,5 +71,5 @@ test("production request/runtime fallback debt is explicit and cannot grow", () 
     }
   }
 
-  assert.deepEqual(violations.sort(), knownCurrentBaselineDebt);
+  assert.deepEqual(violations.sort(), []);
 });
