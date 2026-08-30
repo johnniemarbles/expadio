@@ -20,6 +20,13 @@ import {
   type DraftTerminologyDefinitionShape,
 } from './terminology-editor-model';
 import {
+  applyDraftOntologyRolesEditorState,
+  draftOntologyRolesStateFromDefinition,
+  hasDraftOntologyRoleErrors,
+  validateDraftOntologyRolesEditorState,
+  type DraftOntologyRolesDefinitionShape,
+} from './ontology-role-editor-model';
+import {
   applyDraftCaseSchemaEditorState,
   caseSchemaFieldKeys,
   draftCaseSchemaStateFromDefinition,
@@ -50,6 +57,7 @@ const errorStyle: React.CSSProperties = { color: '#b91c1c', fontSize: 12, margin
 type EditableDraftDefinition =
   Omit<DraftWorkflowDefinitionShape, 'terminology'>
   & DraftTerminologyDefinitionShape
+  & DraftOntologyRolesDefinitionShape
   & DraftCaseSchemaDefinitionShape
   & DraftCaseSemanticsDefinitionShape;
 
@@ -77,6 +85,7 @@ export function DraftWorkflowEditor({
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<DraftWorkflowEditorState>(initial);
   const [terminologyState, setTerminologyState] = useState(() => draftTerminologyStateFromDefinition(definition));
+  const [ontologyRoleState, setOntologyRoleState] = useState(() => draftOntologyRolesStateFromDefinition(definition));
   const [schemaState, setSchemaState] = useState(() => draftCaseSchemaStateFromDefinition(definition));
   const [semanticState, setSemanticState] = useState(() => draftCaseSemanticsStateFromDefinition(definition));
   const [revision, setRevision] = useState(initialRevision);
@@ -89,6 +98,10 @@ export function DraftWorkflowEditor({
     () => validateDraftTerminologyEditorState(terminologyState, state.defaultLocale),
     [terminologyState, state.defaultLocale],
   );
+  const ontologyRoleErrors = useMemo(
+    () => validateDraftOntologyRolesEditorState(ontologyRoleState),
+    [ontologyRoleState],
+  );
   const schemaErrors = useMemo(() => validateDraftCaseSchemaEditorState(schemaState), [schemaState]);
   const availableAttributeKeys = useMemo(() => caseSchemaFieldKeys(schemaState), [schemaState]);
   const semanticErrors = useMemo(
@@ -97,6 +110,7 @@ export function DraftWorkflowEditor({
   );
   const invalid = hasDraftWorkflowEditorErrors(errors)
     || hasDraftTerminologyEditorErrors(terminologyErrors)
+    || hasDraftOntologyRoleErrors(ontologyRoleErrors)
     || hasDraftCaseSchemaEditorErrors(schemaErrors)
     || hasDraftCaseSemanticsEditorErrors(semanticErrors);
 
@@ -167,9 +181,12 @@ export function DraftWorkflowEditor({
             expectedRevision: revision,
             definition: applyDraftCaseSemanticsEditorState(
               applyDraftCaseSchemaEditorState(
-                applyDraftTerminologyEditorState(
-                  applyDraftWorkflowEditorState(definition, state),
-                  terminologyState,
+                applyDraftOntologyRolesEditorState(
+                  applyDraftTerminologyEditorState(
+                    applyDraftWorkflowEditorState(definition, state),
+                    terminologyState,
+                  ),
+                  ontologyRoleState,
                 ),
                 schemaState,
               ),
@@ -222,6 +239,7 @@ export function DraftWorkflowEditor({
           onClick={() => {
             setState(initial);
             setTerminologyState(draftTerminologyStateFromDefinition(definition));
+            setOntologyRoleState(draftOntologyRolesStateFromDefinition(definition));
             setSchemaState(draftCaseSchemaStateFromDefinition(definition));
             setSemanticState(draftCaseSemanticsStateFromDefinition(definition));
             setEditing(false);
@@ -409,6 +427,41 @@ export function DraftWorkflowEditor({
               </fieldset>
             );
           })}
+        </div>
+      </section>
+
+      <section aria-labelledby="relationship-role-editor-title" style={{ marginTop: 20 }}>
+        <div>
+          <h3 id="relationship-role-editor-title" style={{ margin: 0 }}>Relationship vocabulary</h3>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>
+            Name canonical CRM relationships in this industry without changing their stable identities.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+          {ontologyRoleState.roles.map((entry, index) => (
+            <label key={entry.conceptKey}>
+              <span>{entry.conceptKey}</span>
+              <input
+                style={inputStyle}
+                value={entry.role}
+                placeholder="Leave blank to use the neutral fallback"
+                disabled={saving}
+                onChange={(event) => {
+                  setValidated(false);
+                  setSaveError(null);
+                  setOntologyRoleState((current) => ({
+                    roles: current.roles.map((item, i) => (
+                      i === index ? { ...item, role: event.target.value } : item
+                    )),
+                  }));
+                }}
+              />
+              {validated && ontologyRoleErrors.roles?.[index]
+                ? <div style={errorStyle}>{ontologyRoleErrors.roles[index]}</div>
+                : null}
+            </label>
+          ))}
         </div>
       </section>
 
