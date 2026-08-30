@@ -13,9 +13,11 @@ test('DENTEX Treatment workspace API is tenant-scoped and projection-backed', ()
   assert.match(route, /That Treatment was not found in this workspace/);
 });
 
-test('Treatment workspace reads provider from Relationship Fabric, not workflow assignment', () => {
+test('Treatment workspace reads provider and Care Plan from Relationship Fabric', () => {
   assert.match(projection, /platform\.entity_relationships/);
   assert.match(projection, /relationship_key = 'provider'/);
+  assert.match(projection, /relationship_key = 'care_plan'/);
+  assert.match(projection, /target_entity_type = 'crm\.agreement'/);
   assert.doesNotMatch(projection, /workflow_participant_assignments/);
 });
 
