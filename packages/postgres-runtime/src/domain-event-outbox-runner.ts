@@ -142,7 +142,6 @@ export async function runDomainEventOutboxBatch(
           tenantId: item.tenantId,
           outboxId: item.outboxId,
           claimToken: item.claimToken,
-          attempts: item.attempts,
           error: message,
           maxAttempts,
           retryDelaySeconds,
