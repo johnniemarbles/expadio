@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
 
     console.error('Communications fleet health API error:', err);
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message };
+    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: 'An internal error occurred.' };
     return NextResponse.json(denied, { status: 500 });
   }
 }
