@@ -5,6 +5,8 @@ import { toLead } from '../../route';
 import { toCase } from '../../../cases/route';
 import { resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
 import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
+import { startWorkflow } from '../../../../../../lib/workflow-runtime';
+import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
 
 /**
  * Convert a won piece of business into a customer.
@@ -23,6 +25,32 @@ import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/i
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+function workflowPackProvenance(
+  provenance: {
+    readonly source: 'TENANT_PUBLISHED' | 'PLATFORM_PUBLISHED' | 'CODE_BASELINE' | 'NEUTRAL';
+    readonly verticalKey: string | null;
+    readonly version: number | null;
+  },
+): WorkflowIndustryPackProvenance {
+  if (provenance.source === 'NEUTRAL') return { runtimeSource: 'NEUTRAL' };
+  const verticalKey = provenance.verticalKey;
+  if (verticalKey === null || verticalKey.trim() === '') {
+    throw new Error('INDUSTRY_PACK_PROVENANCE_VERTICAL_KEY_MISSING');
+  }
+  if (provenance.source === 'CODE_BASELINE') {
+    return {
+      runtimeSource: 'CODE_BASELINE',
+      verticalKey,
+      ...(provenance.version === null ? {} : { version: provenance.version }),
+    };
+  }
+  const version = provenance.version;
+  if (version === null || !Number.isInteger(version) || version <= 0) {
+    throw new Error('INDUSTRY_PACK_PROVENANCE_VERSION_INVALID');
+  }
+  return { runtimeSource: provenance.source, verticalKey, version };
+}
 
 export async function POST(
   request: Request,
@@ -148,7 +176,33 @@ export async function POST(
               runtimePack.provenance.source,
             ],
           );
-          caseRow = insertedCase.rows[0];
+          const createdCase = insertedCase.rows[0];
+          const started = await startWorkflow(client, {
+            tenantId: context.tenantId,
+            subjectType: 'crm.case',
+            subjectId: createdCase.case_id,
+            blueprintKey: 'crm.case',
+            industryPackProvenance: workflowPackProvenance(runtimePack.provenance),
+          });
+          if (!started.ok) {
+            await client.query('ROLLBACK');
+            return { noWorkflowBlueprint: true } as const;
+          }
+
+          const boundCase = await client.query(
+            `UPDATE platform.crm_cases
+                SET workflow_instance_id = $2::uuid,
+                    stage_key = $3,
+                    updated_at = now()
+              WHERE case_id = $1::uuid
+              RETURNING case_id, tenant_id, account_id, contact_id, subject, description, priority, status,
+                        blueprint_key, workflow_instance_id, stage_key, owner_subject_id,
+                        attributes, attributes_schema_version,
+                        industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source,
+                        created_at, updated_at`,
+            [createdCase.case_id, started.instance.instanceId, started.instance.currentStageKey ?? null],
+          );
+          caseRow = boundCase.rows[0];
         }
 
         await client.query('COMMIT');
@@ -189,6 +243,9 @@ export async function POST(
     if ('invalidCaseAttributes' in result) {
       const errors = result.errors ?? [];
       return NextResponse.json({ error: errors.join(' '), fields: errors }, { status: 400 });
+    }
+    if ('noWorkflowBlueprint' in result) {
+      return NextResponse.json({ error: 'No active crm.case workflow blueprint is available.' }, { status: 409 });
     }
     return NextResponse.json({ success: true, ...result }, { status: 201 });
   } catch (error) {
