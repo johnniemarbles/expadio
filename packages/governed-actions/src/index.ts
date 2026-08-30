@@ -126,6 +126,19 @@ export function resolveGovernedAction(
 
   validDate(policyDecision.evaluatedAt, 'policyDecision.evaluatedAt');
   const reasonCode = required(policyDecision.reasonCode, 'policyDecision.reasonCode');
+  const requiredPolicyKeys = rule.policyKeys.map((key) => required(key, 'policyKey'));
+  const evaluatedPolicyKeys = new Set(
+    policyDecision.policyKeys.map((key) => required(key, 'policyDecision.policyKey')),
+  );
+  const missingPolicyKeys = requiredPolicyKeys.filter((key) => !evaluatedPolicyKeys.has(key));
+
+  if (missingPolicyKeys.length > 0) {
+    return {
+      matched: true,
+      allowed: false,
+      reasonCode: 'POLICY_EVALUATION_INCOMPLETE',
+    };
+  }
 
   if (!policyDecision.allowed) {
     return {
