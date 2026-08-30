@@ -47,6 +47,10 @@ const providerDetailMutationRoute = readFileSync(
   new URL("../app/api/communications/providers/[key]/route.ts", import.meta.url),
   "utf8",
 );
+const resendWebhookRoute = readFileSync(
+  new URL("../app/api/webhooks/resend/route.ts", import.meta.url),
+  "utf8",
+);
 
 test("communications dashboard is backed by live APIs", () => {
   assert.match(page, /fetchApi<CommunicationOverview>\(`\/api\/communications\/overview\$\{q\}`\)/);
@@ -106,6 +110,17 @@ test("connector detail mutations resolve the real tenant, not the demo scaffold"
   assert.match(providerDetailMutationRoute, /withTenantClient/);
   assert.doesNotMatch(providerDetailMutationRoute, /00000000-0000-0000-0000-000000000001/);
   assert.doesNotMatch(providerDetailMutationRoute, /@clerk\/nextjs\/server/);
+});
+
+test("Resend webhook ingestion fails closed without explicit tenant and connector context", () => {
+  assert.match(resendWebhookRoute, /WEBHOOK_TENANT_REQUIRED/);
+  assert.match(resendWebhookRoute, /WEBHOOK_TENANT_INVALID/);
+  assert.match(resendWebhookRoute, /WEBHOOK_CONNECTOR_REQUIRED/);
+  assert.match(resendWebhookRoute, /UUID_PATTERN\.test\(tenantId\)/);
+  assert.match(resendWebhookRoute, /searchParams\.get\('tenantId'\)\?\.trim\(\)/);
+  assert.match(resendWebhookRoute, /searchParams\.get\('connectorKey'\)\?\.trim\(\)/);
+  assert.doesNotMatch(resendWebhookRoute, /00000000-0000-0000-0000-000000000001/);
+  assert.doesNotMatch(resendWebhookRoute, /default-resend/);
 });
 
 test("connector actions surface the governed custody endpoints", () => {
