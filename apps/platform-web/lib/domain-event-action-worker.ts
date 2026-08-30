@@ -13,6 +13,10 @@ import {
   executeGovernedCommunicateAction,
   type GovernedCommunicateExecutionResult,
 } from './governed-communicate-executor';
+import {
+  executeGovernedScheduleAction,
+  type GovernedScheduleExecutionResult,
+} from './governed-schedule-executor';
 
 export type DomainEventActionWorkerResult =
   | { readonly status: 'IDLE' }
@@ -21,6 +25,7 @@ export type DomainEventActionWorkerResult =
       readonly claim: DomainEventOutboxClaim;
       readonly actions: readonly CrmCaseGovernedActionResult[];
       readonly communications: readonly GovernedCommunicateExecutionResult[];
+      readonly schedules: readonly GovernedScheduleExecutionResult[];
     }
   | {
       readonly status: 'FAILED' | 'DEAD' | 'STALE_CLAIM';
@@ -87,7 +92,7 @@ export async function processOneDomainEventActionWorkItem(
         completedAt: now,
       });
       if (!completed) return { status: 'STALE_CLAIM', claim, reason: 'Claim was superseded before completion.' };
-      return { status: 'PUBLISHED', claim, actions: [], communications: [] };
+      return { status: 'PUBLISHED', claim, actions: [], communications: [], schedules: [] };
     }
 
     const actions = await materializeCrmCaseGovernedActionsForEvent(client, {
@@ -108,12 +113,18 @@ export async function processOneDomainEventActionWorkItem(
     }
 
     const communications: GovernedCommunicateExecutionResult[] = [];
+    const schedules: GovernedScheduleExecutionResult[] = [];
     for (const action of actions) {
       if (action.status !== 'PERSISTED') continue;
       if (action.intent.executorClass === 'COMMUNICATE') {
         communications.push(await executeGovernedCommunicateAction(client, {
           intent: action.intent,
           now: () => now.toISOString(),
+        }));
+      } else if (action.intent.executorClass === 'SCHEDULE') {
+        schedules.push(await executeGovernedScheduleAction(client, {
+          intent: action.intent,
+          now: () => now,
         }));
       } else {
         return failClaim(
@@ -139,6 +150,7 @@ export async function processOneDomainEventActionWorkItem(
       claim,
       actions,
       communications,
+      schedules,
     };
   } catch (error) {
     return failClaim(
