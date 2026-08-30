@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
+const route = readFileSync(
+  new URL('../app/api/communications/providers/[key]/test-send/route.ts', import.meta.url),
+  'utf8',
+);
+
+test('test-send uses the fully governed credential lease path and never resolves a secret directly', () => {
+  assert.match(route, /resolveRequestContext\(request\)/);
+  assert.match(route, /requireStepUp\(\)/);
+  assert.match(route, /withTenantTransaction/);
+  assert.match(route, /PostgresProviderRegistryRepository/);
+  assert.match(route, /routePreparedCommunicationDispatch/);
+  assert.match(route, /PostgresCommunicationSenderRepository/);
+  assert.match(route, /platformFallback:\s*'DENY'/);
+  assert.match(route, /PostgresConnectorCredentialRepository/);
+  assert.match(route, /createGovernedCredentialLeaseRuntime/);
+  assert.match(route, /governedResendApiTokenProvider/);
+  assert.match(route, /delegatedSecretResolver/);
+  assert.match(route, /new ResendEmailAdapter/);
+  assert.doesNotMatch(route, /delegatedSecretResolver\.resolve/);
+  assert.doesNotMatch(route, /apiToken:\s*async\s*\(\)\s*=>\s*resolved\.value/);
+  assert.doesNotMatch(route, /VAULT_TOKEN|credential_ref\s*[:=]|Authorization:\s*['"]Bearer/);
+});
+
+test('test-send records real credential-lease evidence in the decision trace', () => {
+  assert.match(route, /DecisionTraceBuilder/);
+  assert.match(route, /pass\('CREDENTIAL_LEASE'/);
+  assert.match(route, /TEST_SEND_OK/);
+  assert.match(route, /INSERT INTO platform\.communication_decision_traces/);
+  assert.match(route, /traceId:\s*trace\.traceId/);
+});
+
+test('test-send remains an explicit operator test boundary rather than general production dispatch', () => {
+  assert.match(route, /triggerKey:\s*'communications\.test-send'/);
+  assert.match(route, /Explicit step-up authenticated operator test send/);
+  assert.match(route, /platform-test-send/);
+  assert.match(route, /providerKey !== 'resend'/);
+});
