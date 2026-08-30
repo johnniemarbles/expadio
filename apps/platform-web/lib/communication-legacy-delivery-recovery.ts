@@ -57,6 +57,13 @@ export async function listLegacyCommunicationDeliveries(
   return result.rows.map(mapRow);
 }
 
+export interface LegacyCommunicationDeliveryRecoveryResult {
+  readonly deliveryId: string;
+  readonly recoveryEventId: string;
+  readonly resolution: 'CANCELLED';
+  readonly resolvedAt: string;
+}
+
 export async function cancelLegacyCommunicationDelivery(
   client: PoolClient,
   input: {
@@ -68,7 +75,7 @@ export async function cancelLegacyCommunicationDelivery(
     readonly correlationId: string;
     readonly now?: Date;
   },
-): Promise<LegacyCommunicationDelivery | null> {
+): Promise<LegacyCommunicationDeliveryRecoveryResult> {
   const reason = input.reason.trim();
   if (reason === '') throw new Error('LEGACY_DELIVERY_RECOVERY_REASON_REQUIRED');
   const now = input.now ?? new Date();
@@ -110,7 +117,8 @@ export async function cancelLegacyCommunicationDelivery(
       now,
     ],
   );
-  if (audit.rows[0] === undefined) {
+  const recoveryEventId = audit.rows[0]?.recovery_event_id;
+  if (recoveryEventId === undefined) {
     throw new Error('LEGACY_DELIVERY_RECOVERY_AUDIT_FAILED');
   }
 
@@ -145,5 +153,10 @@ export async function cancelLegacyCommunicationDelivery(
     [input.deliveryId, input.tenantId, reason, now],
   );
 
-  return mapRow(cancelled);
+  return {
+    deliveryId: cancelled.delivery_id,
+    recoveryEventId,
+    resolution: 'CANCELLED',
+    resolvedAt: now.toISOString(),
+  };
 }
