@@ -32,6 +32,7 @@
     "@expadio/agreement": "workspace:*",
     "@expadio/business-config": "workspace:*",
     "@expadio/industry-packs": "workspace:*",
+    "@expadio/governed-actions": "workspace:*",
     "@expadio/workflow": "workspace:*"
   },
   "devDependencies": {
