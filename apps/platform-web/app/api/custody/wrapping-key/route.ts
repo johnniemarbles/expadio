@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { WrappingKeyStore } from '@expadio/credential-custody';
-import { resolveRequestContext, requireStepUp, deniedResponse } from '../../../../lib/request-context';
+import { resolveRequestContext, requireStepUp, stepUpReverificationResponse, deniedResponse } from '../../../../lib/request-context';
 
 /**
  * Design spec §2.2 step 1–2 — GET /custody/wrapping-key.
@@ -46,6 +46,8 @@ export async function GET() {
       },
     });
   } catch (error) {
+    const reverification = stepUpReverificationResponse(error);
+    if (reverification !== null) return reverification;
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
   }
