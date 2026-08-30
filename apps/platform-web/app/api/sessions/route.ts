@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbPool } from '../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../lib/request-context';
 import crypto from 'node:crypto';
 
 export async function POST(request: Request) {
@@ -27,57 +26,54 @@ export async function POST(request: Request) {
     const reason = body.reason || 'User initiated session from web platform';
     const evidenceRefs = ['web-ui-initiation'];
 
-    const client = await dbPool.connect();
-    try {
+    const insertedSessionId = await withTenantClient(contextState, async (client) => {
       await client.query('BEGIN');
-      await client.query('SET LOCAL app.tenant_id = $1', [contextState.tenantId]);
+      await contextState.applyTo(client);
+      try {
+        const query = `
+          INSERT INTO platform.agent_runs (
+            run_id, tenant_id, agent_id, purpose, context_bundle_reference, 
+            budget_policy_reference, idempotency_key, requested_by_subject_id, 
+            requested_at, created_at, reason, correlation_id, evidence_refs
+          )
+          VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13
+          )
+          RETURNING run_id
+        `;
 
-      const query = `
-        INSERT INTO platform.agent_runs (
-          run_id, tenant_id, agent_id, purpose, context_bundle_reference, 
-          budget_policy_reference, idempotency_key, requested_by_subject_id, 
-          requested_at, created_at, reason, correlation_id, evidence_refs
-        )
-        VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, $8, $9, $10,
-          $11, $12, $13
-        )
-        RETURNING run_id
-      `;
+        const values = [
+          runId,
+          contextState.tenantId,
+          agentId,
+          purpose,
+          contextBundleReference,
+          budgetPolicyReference,
+          idempotencyKey,
+          contextState.subjectId,
+          requestedAt,
+          createdAt,
+          reason,
+          correlationId,
+          evidenceRefs
+        ];
 
-      const values = [
-        runId,
-        contextState.tenantId,
-        agentId,
-        purpose,
-        contextBundleReference,
-        budgetPolicyReference,
-        idempotencyKey,
-        contextState.subjectId,
-        requestedAt,
-        createdAt,
-        reason,
-        correlationId,
-        evidenceRefs
-      ];
+        const res = await client.query(query, values);
+        await client.query('COMMIT');
+        return res.rows[0].run_id;
+      } catch (dbError) {
+        await client.query('ROLLBACK');
+        console.error("DB Insert Error:", dbError);
+        throw dbError;
+      }
+    });
 
-      const res = await client.query(query, values);
-      await client.query('COMMIT');
-
-      const insertedSessionId = res.rows[0].run_id;
-
-      return NextResponse.json({
-        sessionId: insertedSessionId,
-        status: 'active'
-      });
-    } catch (dbError) {
-      await client.query('ROLLBACK');
-      console.error("DB Insert Error:", dbError);
-      return NextResponse.json({ error: 'Failed to create session in database' }, { status: 500 });
-    } finally {
-      client.release();
-    }
+    return NextResponse.json({
+      sessionId: insertedSessionId,
+      status: 'active'
+    });
   } catch (error) {
     console.error("Session API Error:", error);
     const denied = deniedResponse(error);
