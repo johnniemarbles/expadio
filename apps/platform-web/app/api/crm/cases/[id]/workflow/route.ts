@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../../../lib/crm-authz';
 import { startWorkflow, transitionWorkflow, describeWorkflow } from '../../../../../../lib/workflow-runtime';
+import { appendCrmCaseStageChangedEvent } from '../../../../../../lib/crm-case-stage-events';
 import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
 
 /**
@@ -206,14 +207,21 @@ export async function PATCH(
       try {
         await context.applyTo(client);
         const row = await client.query(
-          `SELECT workflow_instance_id FROM platform.crm_cases WHERE case_id = $1::uuid FOR UPDATE`,
+          `SELECT workflow_instance_id, stage_key,
+                  industry_pack_vertical_key, industry_pack_version,
+                  industry_pack_runtime_source
+             FROM platform.crm_cases
+            WHERE case_id = $1::uuid
+            FOR UPDATE`,
           [caseId],
         );
         if (row.rows.length === 0) {
           await client.query('ROLLBACK');
           return { notFound: true } as const;
         }
-        const instanceId = row.rows[0].workflow_instance_id as string | null;
+        const caseRow = row.rows[0];
+        const instanceId = caseRow.workflow_instance_id as string | null;
+        const previousStageKey = caseRow.stage_key as string | null;
         if (instanceId === null) {
           await client.query('ROLLBACK');
           return { noWorkflow: true } as const;
@@ -242,6 +250,33 @@ export async function PATCH(
           `UPDATE platform.crm_cases SET stage_key = $2, updated_at = now() WHERE case_id = $1::uuid`,
           [caseId, moved.instance.currentStageKey ?? null],
         );
+
+        await appendCrmCaseStageChangedEvent(client, {
+          tenantId: context.tenantId,
+          caseId,
+          instanceId,
+          previousStageKey,
+          currentStageKey: moved.instance.currentStageKey ?? null,
+          revision: moved.instance.revision,
+          actorSubjectId: context.subjectId,
+          correlationId: request.headers.get('x-correlation-id'),
+          ...(reason === undefined ? {} : { reason }),
+          pack: {
+            verticalKey: typeof caseRow.industry_pack_vertical_key === 'string'
+              && caseRow.industry_pack_vertical_key.trim() !== ''
+              ? caseRow.industry_pack_vertical_key.trim()
+              : null,
+            version: Number.isInteger(Number(caseRow.industry_pack_version))
+              && Number(caseRow.industry_pack_version) > 0
+              ? Number(caseRow.industry_pack_version)
+              : null,
+            runtimeSource: typeof caseRow.industry_pack_runtime_source === 'string'
+              && caseRow.industry_pack_runtime_source.trim() !== ''
+              ? caseRow.industry_pack_runtime_source.trim()
+              : null,
+          },
+        });
+
         await client.query('COMMIT');
         return { instance: moved.instance, stages: moved.stages } as const;
       } catch (err) {
