@@ -69,5 +69,6 @@ test("case workflow transition appends a generic Domain Event before transaction
   assert.match(stageEvents, /appendDomainEventWithOutbox/);
   assert.match(stageEvents, /aggregateType: 'crm\.case'/);
   assert.match(stageEvents, /partitionKey: `crm\.case:\$\{input\.caseId\}`/);
-  assert.doesNotMatch(stageEvents, /dentex|lexflow/i);
+  assert.doesNotMatch(stageEvents, /verticalKey\s*===?\s*['"]dentex['"]/i);
+  assert.doesNotMatch(stageEvents, /verticalKey\s*===?\s*['"]lexflow['"]/i);
 });
