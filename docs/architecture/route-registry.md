@@ -47,6 +47,17 @@
 - **Governed transition gates (evaluated in the runtime before commit):** participant-assignment slots filled → recorded stage decision → **role + separation-of-duties** authority (approver holds a governing role and is not the maker; the authorizing role is recorded as decision evidence) → immutable append-only record → auto-complete at the terminal stage (`RUNNING → COMPLETED`). Instances are mutable under RLS; transitions and decisions are append-only/immutable (DB triggers).
 - **Mutation Boundary:** All CRM and workflow mutations resolve the request context and are authorization-gated (tenant owner/admin or platform admin). Tenant isolation is enforced at the data layer via `platform.current_tenant_id()`; workflow decision authority is enforced additionally at the capture layer.
 
+### 1c. `/dentex` — DENTEX Operations
+- **Route:** `/dentex`
+- **Page Kind:** `HAND_BUILT` (vertical composed view)
+- **Owner:** `experience-layer`
+- **Promoted Rail Entry (N5):** `false` (entered from the active DENTEX CRM pack; future vertical navigation may promote it conditionally)
+- **Reads From:**
+  - `crm_contacts`: canonical Patient authority.
+  - `crm_accounts`: canonical Practice authority.
+- **Writes Through:** existing governed `POST /api/crm/contacts` and `POST /api/crm/accounts` routes.
+- **No Shadow Backend:** no DENTEX Patient/Practice persistence or duplicate API is introduced. DENTEX supplies operating vocabulary and composition only.
+
 ### 2. `/overview` — Command Center Overview
 - **Route:** `/overview`
 - **Page Kind:** `HAND_BUILT`
