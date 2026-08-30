@@ -142,6 +142,45 @@ export async function loadDomainEventOperations(
   return result.rows.map(mapRow);
 }
 
+export interface DomainEventOperationCounts {
+  readonly total: number;
+  readonly dead: number;
+  readonly failed: number;
+  readonly claimed: number;
+  readonly pending: number;
+  readonly published: number;
+}
+
+export async function loadDomainEventOperationCounts(
+  client: PoolClient,
+): Promise<DomainEventOperationCounts> {
+  const result = await client.query<{
+    readonly total: number;
+    readonly dead: number;
+    readonly failed: number;
+    readonly claimed: number;
+    readonly pending: number;
+    readonly published: number;
+  }>(
+    `SELECT
+       count(*)::int AS total,
+       count(*) FILTER (WHERE status = 'DEAD')::int AS dead,
+       count(*) FILTER (WHERE status = 'FAILED')::int AS failed,
+       count(*) FILTER (WHERE status = 'CLAIMED')::int AS claimed,
+       count(*) FILTER (WHERE status = 'PENDING')::int AS pending,
+       count(*) FILTER (WHERE status = 'PUBLISHED')::int AS published
+       FROM platform.domain_event_outbox`,
+  );
+  return result.rows[0] ?? {
+    total: 0,
+    dead: 0,
+    failed: 0,
+    claimed: 0,
+    pending: 0,
+    published: 0,
+  };
+}
+
 export interface RequeueDeadDomainEventResult {
   readonly item: DomainEventOperationItem;
   readonly requeueEventId: string;
