@@ -64,6 +64,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Read-only `/platform-health` operator dashboard implemented.
 - [x] Explicit stuck communication delivery health buckets implemented.
 - [x] Due scheduled-action detection covered by scheduler health read model and source-contract guard.
+- [x] Unmatched provider webhook detection covered by communication health read model and source-contract guard.
 
 ### Foundation governance
 
@@ -95,7 +96,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Add platform health dashboard.
 - [x] Add stuck delivery detection.
 - [x] Add due scheduled-action detection.
-- [ ] Add unmatched webhook detection.
+- [x] Add unmatched webhook detection.
 - [ ] Add stale provider-attempt reconciliation detection.
 
 ### Governed recovery
