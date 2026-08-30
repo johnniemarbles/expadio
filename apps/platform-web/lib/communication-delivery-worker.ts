@@ -35,6 +35,11 @@ import {
 import {
   delegatedSecretResolver,
 } from './vault-secret-resolver';
+import {
+  reconcileAcceptedCommunicationProviderAttempt,
+  recordCommunicationProviderAttempt,
+  renewCommunicationDeliveryClaim,
+} from './communication-provider-reconciliation';
 
 const DEFAULT_LEASE_MS = 120_000;
 const DEFAULT_MAX_ATTEMPTS = 5;
@@ -536,11 +541,41 @@ export async function runCommunicationDeliveryWorkerOnce(
     });
 
     const providerAttemptAt = input.options.now?.() ?? new Date();
+    const renewedUntil = await renewCommunicationDeliveryClaim(client, {
+      claim,
+      now: providerAttemptAt,
+      leaseMs: input.options.leaseMs ?? DEFAULT_LEASE_MS,
+    });
+    if (renewedUntil === null) {
+      return {
+        status: 'STALE_CLAIM',
+        deliveryId: claim.deliveryId,
+        reasonCode: 'DELIVERY_CLAIM_LOST',
+      };
+    }
+
     const providerResult = await adapter.send({
       ...senderPrepared.request,
       requestedAt: providerAttemptAt.toISOString(),
     });
     const completedAt = input.options.now?.() ?? new Date();
+
+    const providerAttempt = await recordCommunicationProviderAttempt(client, {
+      claim,
+      providerKey: selected.providerKey,
+      outcome: providerResult.status,
+      ...(providerResult.status === 'ACCEPTED'
+        ? { providerMessageId: providerResult.providerMessageId }
+        : {}),
+      reasonCode: providerResult.status === 'ACCEPTED'
+        ? 'PROVIDER_ACCEPTED'
+        : providerResult.reasonCode,
+      reason: providerResult.status === 'ACCEPTED'
+        ? null
+        : providerResult.reason ?? null,
+      startedAt: providerAttemptAt,
+      completedAt,
+    });
 
     if (providerResult.status === 'ACCEPTED') {
       const applied = await finalizeClaim(client, {
@@ -551,10 +586,28 @@ export async function runCommunicationDeliveryWorkerOnce(
         reason: null,
         providerMessageId: providerResult.providerMessageId,
       });
+      if (applied) {
+        return {
+          status: 'ACCEPTED',
+          deliveryId: claim.deliveryId,
+          reasonCode: 'PROVIDER_ACCEPTED',
+        };
+      }
+
+      const reconciled = await reconcileAcceptedCommunicationProviderAttempt(client, {
+        attempt: providerAttempt,
+        reconciledAt: input.options.now?.() ?? new Date(),
+      });
       return {
-        status: applied ? 'ACCEPTED' : 'STALE_CLAIM',
+        status: reconciled === 'RECONCILED' || reconciled === 'ALREADY_ACCEPTED'
+          ? 'ACCEPTED'
+          : 'STALE_CLAIM',
         deliveryId: claim.deliveryId,
-        reasonCode: applied ? 'PROVIDER_ACCEPTED' : 'DELIVERY_CLAIM_LOST',
+        reasonCode: reconciled === 'RECONCILED'
+          ? 'PROVIDER_ACCEPTED_RECONCILED'
+          : reconciled === 'ALREADY_ACCEPTED'
+            ? 'PROVIDER_ACCEPTED'
+            : 'DELIVERY_CLAIM_LOST',
       };
     }
 
