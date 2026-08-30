@@ -15,6 +15,7 @@ export type IndustryPackDefinitionValidationCode =
   | 'PACK_TERMINOLOGY_INVALID'
   | 'PACK_CASE_SCHEMA_INVALID'
   | 'PACK_CASE_WORKFLOW_INVALID'
+  | 'PACK_CASE_STAGE_SEMANTICS_INVALID'
   | 'PACK_ONTOLOGY_ROLE_INVALID';
 
 export interface IndustryPackDefinitionValidationIssue {
@@ -119,6 +120,12 @@ export function validateIndustryPackDefinition(
   if (input.caseOntologyRoles !== undefined && !validOntologyRoles(input.caseOntologyRoles)) {
     issues.push({ code: 'PACK_ONTOLOGY_ROLE_INVALID', path: 'caseOntologyRoles' });
   }
+  if (
+    input.caseStageSemantics !== undefined
+    && !validCaseStageSemantics(input.caseStageSemantics, input.caseSchema)
+  ) {
+    issues.push({ code: 'PACK_CASE_STAGE_SEMANTICS_INVALID', path: 'caseStageSemantics' });
+  }
 
   if (issues.length > 0 || profile === null || terminology === null) {
     return { valid: false, issues };
@@ -137,6 +144,9 @@ export function validateIndustryPackDefinition(
       ...(input.caseOntologyRoles === undefined
         ? {}
         : { caseOntologyRoles: input.caseOntologyRoles as NonNullable<IndustryPack['caseOntologyRoles']> }),
+      ...(input.caseStageSemantics === undefined
+        ? {}
+        : { caseStageSemantics: input.caseStageSemantics as NonNullable<IndustryPack['caseStageSemantics']> }),
     },
   };
 }
@@ -253,6 +263,56 @@ function validCaseWorkflow(input: unknown): boolean {
     }
   }
   return true;
+}
+
+function validCaseStageSemantics(input: unknown, caseSchema: unknown): boolean {
+  if (!isRecord(input) || !Array.isArray(input.requirements)) return false;
+
+  const stageKeys = new Set<string>(CASE_STAGE_KEYS);
+  const relationshipKeys = new Set<string>(CASE_RELATIONSHIP_KEYS);
+  const schemaFieldKeys = new Set<string>();
+  if (validCaseSchema(caseSchema) && isRecord(caseSchema) && Array.isArray(caseSchema.fields)) {
+    for (const field of caseSchema.fields) {
+      if (isRecord(field) && typeof field.key === 'string') schemaFieldKeys.add(field.key);
+    }
+  }
+
+  for (const requirement of input.requirements) {
+    if (!isRecord(requirement)) return false;
+    if (
+      typeof requirement.stageKey !== 'string'
+      || !stageKeys.has(requirement.stageKey)
+      || !['ENTRY', 'EXIT'].includes(String(requirement.phase))
+      || typeof requirement.message !== 'string'
+      || requirement.message.trim() === ''
+    ) return false;
+
+    const attributes = optionalUniqueStringArray(requirement.requiredAttributeKeys);
+    const relationships = optionalUniqueStringArray(requirement.requiredRelationships);
+    const outcomes = optionalUniqueStringArray(requirement.requiredDecisionOutcomes);
+    if (attributes === null || relationships === null || outcomes === null) return false;
+
+    if (attributes.some((key) => !CASE_FIELD_KEY.test(key) || !schemaFieldKeys.has(key))) {
+      return false;
+    }
+    if (relationships.some((key) => !relationshipKeys.has(key))) return false;
+    if (attributes.length === 0 && relationships.length === 0 && outcomes.length === 0) return false;
+  }
+
+  return true;
+}
+
+function optionalUniqueStringArray(input: unknown): readonly string[] | null {
+  if (input === undefined) return [];
+  if (!Array.isArray(input) || input.length === 0) return null;
+  const values: string[] = [];
+  const seen = new Set<string>();
+  for (const value of input) {
+    if (typeof value !== 'string' || value.trim() === '' || seen.has(value)) return null;
+    seen.add(value);
+    values.push(value);
+  }
+  return values;
 }
 
 function validOntologyRoles(input: unknown): boolean {
