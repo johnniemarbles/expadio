@@ -132,10 +132,11 @@ test('bounded runner processes up to limit and returns metrics', async () => {
     const second = await seedCaseEvent(c, { tenantId, hasEmail: true, subject: 'B' });
     const third = await seedCaseEvent(c, { tenantId, hasEmail: false, subject: 'C' });
 
+    const workerNow = new Date(Date.now() + 60_000);
     const limited = await runDomainEventActionWorkerBatch(c, {
       tenantId,
       limit: 2,
-      now: () => new Date('2026-08-30T15:31:00.000Z'),
+      now: () => workerNow,
     });
 
     assert.equal(limited.processed, 2);
@@ -148,7 +149,7 @@ test('bounded runner processes up to limit and returns metrics', async () => {
     const remaining = await runDomainEventActionWorkerBatch(c, {
       tenantId,
       limit: 5,
-      now: () => new Date('2026-08-30T15:32:00.000Z'),
+      now: () => new Date(workerNow.getTime() + 60_000),
       maxAttempts: 2,
     });
 
