@@ -18,18 +18,6 @@ const allowedDirectDbPoolQueryFiles = new Set([
   "apps/platform-web/lib/iam-adapter.ts",
 ]);
 
-const knownTenantDataAccessDebt = [
-  "apps/platform-web/app/api/agent/runs/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/agents/bindings/route.ts: opens a pooled client without an explicit tenant session boundary",
-  "apps/platform-web/app/api/agents/bindings/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/brain/corrections/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/brain/history/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/brain/provenance/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/brain/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/brain/slices/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/brain/sources/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-];
-
 const ignoredSegments = new Set([
   "node_modules",
   ".next",
@@ -55,7 +43,7 @@ function walk(path: string): string[] {
   return readdirSync(path).flatMap((entry) => walk(join(path, entry)));
 }
 
-test("tenant data access bypass debt is tracked and cannot grow", () => {
+test("tenant data access does not bypass the shared RLS context boundary", () => {
   const files = productionRoots.flatMap((root) => walk(join(repoRoot.pathname, root)));
   const violations: string[] = [];
 
@@ -75,5 +63,5 @@ test("tenant data access bypass debt is tracked and cannot grow", () => {
     }
   }
 
-  assert.deepEqual(violations.sort(), knownTenantDataAccessDebt.sort());
+  assert.deepEqual(violations.sort(), []);
 });

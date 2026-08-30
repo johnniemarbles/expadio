@@ -1,31 +1,32 @@
 import { NextResponse } from 'next/server';
 import type { ProvenanceEntry } from '../../../../lib/brain-contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const [docsResult, proposalsResult] = await Promise.all([
-      dbPool.query(
-        `SELECT document_reference, source_reference, collection_reference,
-                document_version, indexed_by_subject_id, indexed_at, correlation_id
-         FROM platform.knowledge_documents
-         WHERE tenant_id = $1
-         ORDER BY indexed_at DESC LIMIT 50`,
-        [effectiveContext.tenantId]
-      ),
-      dbPool.query(
-        `SELECT proposal_reference, target_reference, proposer_subject_id,
-                created_at, reason_key, correlation_id
-         FROM platform.company_brain_correction_proposals
-         WHERE tenant_id = $1
-         ORDER BY created_at DESC LIMIT 50`,
-        [effectiveContext.tenantId]
-      )
-    ]);
+    const [docsResult, proposalsResult] = await withTenantClient(effectiveContext, (client) =>
+      Promise.all([
+        client.query(
+          `SELECT document_reference, source_reference, collection_reference,
+                  document_version, indexed_by_subject_id, indexed_at, correlation_id
+           FROM platform.knowledge_documents
+           WHERE tenant_id = $1
+           ORDER BY indexed_at DESC LIMIT 50`,
+          [effectiveContext.tenantId]
+        ),
+        client.query(
+          `SELECT proposal_reference, target_reference, proposer_subject_id,
+                  created_at, reason_key, correlation_id
+           FROM platform.company_brain_correction_proposals
+           WHERE tenant_id = $1
+           ORDER BY created_at DESC LIMIT 50`,
+          [effectiveContext.tenantId]
+        )
+      ])
+    );
 
     const docEntries: ProvenanceEntry[] = docsResult.rows.map((row: any) => ({
       id: 'prov_' + row.document_reference,

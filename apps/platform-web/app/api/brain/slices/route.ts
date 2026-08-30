@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import type { ContextSlice } from '../../../../lib/brain-contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const result = await dbPool.query(
-      `SELECT collection_reference as purpose, count(*)::int as count, max(indexed_at) as last_resolved
-       FROM platform.knowledge_documents 
-       WHERE tenant_id = $1
-       GROUP BY collection_reference`, 
-      [effectiveContext.tenantId]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `SELECT collection_reference as purpose, count(*)::int as count, max(indexed_at) as last_resolved
+         FROM platform.knowledge_documents 
+         WHERE tenant_id = $1
+         GROUP BY collection_reference`,
+        [effectiveContext.tenantId]
+      )
     );
 
     const slices: ContextSlice[] = result.rows.map((row: any) => ({

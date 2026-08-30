@@ -1,38 +1,39 @@
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const result = await dbPool.query(
-      `SELECT 
-         r.run_id AS session_id,
-         r.created_at,
-         COALESCE(
-           (
-             SELECT event_type 
-             FROM platform.agent_run_events e 
-             WHERE e.run_id = r.run_id AND e.tenant_id = r.tenant_id 
-             ORDER BY e.sequence DESC LIMIT 1
-           ), 
-           'STARTED'
-         ) AS status,
-         COALESCE(
-           (
-             SELECT occurred_at 
-             FROM platform.agent_run_events e 
-             WHERE e.run_id = r.run_id AND e.tenant_id = r.tenant_id 
-             ORDER BY e.sequence DESC LIMIT 1
-           ), 
-           r.created_at
-         ) AS updated_at
-       FROM platform.agent_runs r
-       WHERE r.tenant_id = $1
-       ORDER BY r.created_at DESC LIMIT 50`,
-      [effectiveContext.tenantId]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `SELECT 
+           r.run_id AS session_id,
+           r.created_at,
+           COALESCE(
+             (
+               SELECT event_type 
+               FROM platform.agent_run_events e 
+               WHERE e.run_id = r.run_id AND e.tenant_id = r.tenant_id 
+               ORDER BY e.sequence DESC LIMIT 1
+             ), 
+             'STARTED'
+           ) AS status,
+           COALESCE(
+             (
+               SELECT occurred_at 
+               FROM platform.agent_run_events e 
+               WHERE e.run_id = r.run_id AND e.tenant_id = r.tenant_id 
+               ORDER BY e.sequence DESC LIMIT 1
+             ), 
+             r.created_at
+           ) AS updated_at
+         FROM platform.agent_runs r
+         WHERE r.tenant_id = $1
+         ORDER BY r.created_at DESC LIMIT 50`,
+        [effectiveContext.tenantId]
+      )
     );
 
     return NextResponse.json(result.rows);

@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import type { CorrectionProposal } from '../../../../lib/brain-contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const result = await dbPool.query(
-      `SELECT proposal_reference, status, category, proposer_subject_id, created_at 
-       FROM platform.company_brain_correction_proposals 
-       WHERE tenant_id = $1
-       ORDER BY created_at DESC`,
-      [effectiveContext.tenantId]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `SELECT proposal_reference, status, category, proposer_subject_id, created_at 
+         FROM platform.company_brain_correction_proposals 
+         WHERE tenant_id = $1
+         ORDER BY created_at DESC`,
+        [effectiveContext.tenantId]
+      )
     );
 
     const corrections: CorrectionProposal[] = result.rows.map((row: any) => ({
