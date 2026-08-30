@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import test from 'node:test';
 
-const freezeDoc = readFileSync('docs/platform/FOUNDATION_FREEZE.md', 'utf8');
-const checklist = readFileSync('docs/platform/PLATFORM_COMPLETION_CHECKLIST.md', 'utf8');
+const repoRoot = resolve(process.cwd(), '../..');
+const freezeDoc = readFileSync(resolve(repoRoot, 'docs/platform/FOUNDATION_FREEZE.md'), 'utf8');
+const checklist = readFileSync(resolve(repoRoot, 'docs/platform/PLATFORM_COMPLETION_CHECKLIST.md'), 'utf8');
 
 test('platform foundation freeze protects canonical execution primitives', () => {
   for (const required of [
