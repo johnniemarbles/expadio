@@ -100,6 +100,18 @@ export async function runDomainEventOutboxBatch(
 
   for (const item of claimed) {
     try {
+      // A batch is claimed up front but processed sequentially. Revalidate and
+      // renew this specific claim immediately before the external side effect so
+      // an item that expired while earlier items were slow cannot still publish
+      // after another worker has reclaimed it.
+      await extendDomainEventOutboxClaim(client, {
+        tenantId: item.tenantId,
+        outboxId: item.outboxId,
+        claimToken: item.claimToken,
+        leaseSeconds,
+        now: now(),
+      });
+
       await input.publisher.publish({
         item,
         renewLease: async (renewSeconds = leaseSeconds) => {
