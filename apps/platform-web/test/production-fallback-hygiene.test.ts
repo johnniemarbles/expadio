@@ -24,6 +24,16 @@ const textExtensions = new Set([
 const forbiddenContent = [
   "00000000-0000-0000-0000-000000000001",
   "default-resend",
+  "default-twilio",
+  "default connector",
+  "default provider",
+  "demo tenant",
+  "dummy data",
+  "mock data",
+  "sample data",
+  "simulated empty-state",
+  "Fallback if empty",
+  "fallback if empty",
 ];
 
 const ignoredSegments = new Set([
@@ -66,7 +76,7 @@ test("production request/runtime paths do not contain demo fallbacks", () => {
     const content = readFileSync(file, "utf8");
     for (const forbidden of forbiddenContent) {
       if (content.includes(forbidden)) {
-        violations.push(`${rel}: contains forbidden production fallback ${forbidden}`);
+        violations.push(`${rel}: contains forbidden production fallback marker ${forbidden}`);
       }
     }
   }

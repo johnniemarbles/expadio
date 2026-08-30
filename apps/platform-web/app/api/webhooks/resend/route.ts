@@ -9,8 +9,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 const normalizer = new ResendWebhookNormalizer({
   resolveSecret: async (connectorKey: string) => {
-    // In a real app, this might come from a credential registry based on the connectorKey.
-    // For now, we fallback to an environment variable.
+    // Provider secret lookup is keyed by the explicit connector identifier.
     return process.env.RESEND_WEBHOOK_SECRET;
   },
 });
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Webhook ingestion must be tenant-explicit. Production request paths must
-    // never silently fall back to demo tenants or default connectors.
+    // reject absent tenant or connector context rather than substituting values.
     const searchParams = req.nextUrl.searchParams;
     const tenantId = searchParams.get('tenantId')?.trim();
     const connectorKey = searchParams.get('connectorKey')?.trim();

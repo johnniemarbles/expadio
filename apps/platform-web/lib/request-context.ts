@@ -16,7 +16,7 @@ import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
  * proof of access.
  *
  * Cold requests with no selected workspace now fail closed instead of silently
- * resolving to a bootstrap/demo tenant.
+ * resolving to a bootstrap workspace.
  */
 
 export interface ResolvedRequestContext {
@@ -41,7 +41,7 @@ export class ContextDenied extends Error {
 }
 
 /**
- * Resolves the caller's real tenant. Never falls back to a demo tenant.
+ * Resolves the caller's real tenant. Never substitutes a scaffold tenant.
  *
  * Tenant selection comes from an explicit header the shell sets from the
  * active workspace; membership is then verified against the IAM spine, so a
