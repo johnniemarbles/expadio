@@ -83,7 +83,30 @@ test('createOrGet uses tenant idempotency and maps the durable record', async ()
   assert.equal(result.state, 'PENDING');
   assert.match(client.calls[0]?.text ?? '', /ON CONFLICT \(tenant_id, idempotency_key\)/);
   assert.match(client.calls[0]?.text ?? '', /dispatch_snapshot/);
+  assert.match(client.calls[0]?.text ?? '', /IS NOT DISTINCT FROM EXCLUDED\.dispatch_snapshot/);
   assert.equal(result.dispatchSnapshot?.dispatch.triggerKey, 'patient.follow_up');
+});
+
+test('createOrGet fails closed when an idempotency key maps to different execution input', async () => {
+  const client = new ScriptedClient();
+  client.responses.push(
+    { rows: [], rowCount: 0 },
+    { rows: [row], rowCount: 1 },
+  );
+
+  await assert.rejects(
+    () => new PostgresCommunicationDeliveryRepository(client).createOrGet({
+      tenantId: row.tenant_id,
+      idempotencyKey: row.idempotency_key,
+      channel: 'email',
+      connectorKey: 'different-connector',
+      adapterKey: row.adapter_key,
+      requestedAt: row.requested_at,
+      dispatchSnapshot: row.dispatch_snapshot,
+    }),
+    /COMMUNICATION_DELIVERY_IDEMPOTENCY_CONFLICT/,
+  );
+  assert.equal(client.calls.length, 2);
 });
 
 test('applyTransition locks, updates, and appends an event', async () => {
