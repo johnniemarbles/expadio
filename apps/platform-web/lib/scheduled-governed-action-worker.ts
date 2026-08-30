@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import {
   claimDueScheduledGovernedAction,
   completeScheduledGovernedAction,
+  retryOrFailScheduledGovernedAction,
   type PersistedScheduledGovernedAction,
 } from '@expadio/postgres-runtime/scheduled-governed-action';
 import {
@@ -16,7 +17,7 @@ import {
 export type ScheduledGovernedActionWorkerResult =
   | { readonly status: 'IDLE' }
   | {
-      readonly status: 'MATERIALIZED' | 'STALE_CLAIM';
+      readonly status: 'MATERIALIZED' | 'RETRY_SCHEDULED' | 'FAILED' | 'STALE_CLAIM';
       readonly scheduled: PersistedScheduledGovernedAction;
       readonly childActionIntentId: string | null;
       readonly communication: GovernedCommunicateExecutionResult | null;
@@ -29,6 +30,7 @@ export async function runScheduledGovernedActionWorkerOnce(
     readonly tenantId: string;
     readonly now?: () => Date;
     readonly leaseMs?: number;
+    readonly maxAttempts?: number;
   },
 ): Promise<ScheduledGovernedActionWorkerResult> {
   const now = input.now?.() ?? new Date();
@@ -39,13 +41,17 @@ export async function runScheduledGovernedActionWorkerOnce(
   });
   if (scheduled === null) return { status: 'IDLE' };
 
-  const parent = await findGovernedActionIntentById(client, {
-    tenantId: scheduled.tenantId,
-    actionIntentId: scheduled.parentActionIntentId,
-  });
-  if (parent === null) throw new Error('SCHEDULED_ACTION_PARENT_INTENT_NOT_FOUND');
+  try {
+    const parent = await findGovernedActionIntentById(client, {
+      tenantId: scheduled.tenantId,
+      actionIntentId: scheduled.parentActionIntentId,
+    });
+    if (parent === null) throw new Error('SCHEDULED_ACTION_PARENT_INTENT_NOT_FOUND');
+    if (scheduled.targetExecutorClass !== 'COMMUNICATE') {
+      throw new Error(`SCHEDULED_ACTION_EXECUTOR_NOT_IMPLEMENTED:${scheduled.targetExecutorClass}`);
+    }
 
-  const child = await persistGovernedActionIntent(client, {
+    const child = await persistGovernedActionIntent(client, {
     tenantId: parent.tenantId,
     sourceEventId: parent.sourceEventId,
     sourceEventType: parent.sourceEventType,
@@ -77,25 +83,43 @@ export async function runScheduledGovernedActionWorkerOnce(
     },
   });
 
-  let communication: GovernedCommunicateExecutionResult | null = null;
-  if (child.executorClass === 'COMMUNICATE') {
-    communication = await executeGovernedCommunicateAction(client, {
+    const communication = await executeGovernedCommunicateAction(client, {
       intent: child,
       now: () => (input.now?.() ?? new Date()).toISOString(),
     });
+
+    const completed = await completeScheduledGovernedAction(client, {
+      scheduled,
+      childActionIntentId: child.actionIntentId,
+      completedAt: input.now?.() ?? new Date(),
+    });
+
+    return {
+      status: completed ? 'MATERIALIZED' : 'STALE_CLAIM',
+      scheduled,
+      childActionIntentId: completed ? child.actionIntentId : null,
+      communication,
+      reasonCode: completed ? 'CHILD_ACTION_MATERIALIZED' : 'SCHEDULE_CLAIM_LOST',
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown scheduled action execution failure.';
+    const status = await retryOrFailScheduledGovernedAction(client, {
+      scheduled,
+      failedAt: input.now?.() ?? new Date(),
+      maxAttempts: input.maxAttempts ?? 8,
+      reasonCode: 'SCHEDULED_ACTION_EXECUTION_FAILED',
+      reason,
+    });
+    return {
+      status,
+      scheduled,
+      childActionIntentId: null,
+      communication: null,
+      reasonCode: status === 'FAILED'
+        ? 'SCHEDULED_ACTION_RETRIES_EXHAUSTED'
+        : status === 'STALE_CLAIM'
+          ? 'SCHEDULE_CLAIM_LOST'
+          : 'SCHEDULED_ACTION_EXECUTION_FAILED',
+    };
   }
-
-  const completed = await completeScheduledGovernedAction(client, {
-    scheduled,
-    childActionIntentId: child.actionIntentId,
-    completedAt: input.now?.() ?? new Date(),
-  });
-
-  return {
-    status: completed ? 'MATERIALIZED' : 'STALE_CLAIM',
-    scheduled,
-    childActionIntentId: completed ? child.actionIntentId : null,
-    communication,
-    reasonCode: completed ? 'CHILD_ACTION_MATERIALIZED' : 'SCHEDULE_CLAIM_LOST',
-  };
 }
