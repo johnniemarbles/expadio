@@ -44,12 +44,16 @@ CREATE POLICY domain_event_scheduler_targets_control_plane
   ON platform.domain_event_scheduler_targets
   FOR ALL
   USING (
-    tenant_id = platform.current_tenant_id()
-    OR current_setting('app.scheduler_control_plane', true) = 'on'
+    CASE
+      WHEN current_setting('app.scheduler_control_plane', true) = 'on' THEN true
+      ELSE tenant_id = platform.current_tenant_id()
+    END
   )
   WITH CHECK (
-    tenant_id = platform.current_tenant_id()
-    OR current_setting('app.scheduler_control_plane', true) = 'on'
+    CASE
+      WHEN current_setting('app.scheduler_control_plane', true) = 'on' THEN true
+      ELSE tenant_id = platform.current_tenant_id()
+    END
   );
 
 COMMIT;
