@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   deniedResponse,
   requireStepUp,
+  stepUpReverificationResponse,
   resolveRequestContext,
   withTenantTransaction,
 } from '../../../../../../lib/request-context';
@@ -59,6 +60,8 @@ export async function POST(
       ...result,
     });
   } catch (error) {
+    const reverification = stepUpReverificationResponse(error);
+    if (reverification !== null) return reverification;
     const known = error as Error;
     if (known.message === 'GOVERNANCE_WRITE_FORBIDDEN') {
       return NextResponse.json(
