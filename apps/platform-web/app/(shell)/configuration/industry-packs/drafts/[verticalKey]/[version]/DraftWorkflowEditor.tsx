@@ -47,8 +47,11 @@ const inputStyle: React.CSSProperties = {
 
 const errorStyle: React.CSSProperties = { color: '#b91c1c', fontSize: 12, marginTop: 4 };
 
-interface EditableDraftDefinition
-  extends DraftWorkflowDefinitionShape, DraftTerminologyDefinitionShape, DraftCaseSchemaDefinitionShape, DraftCaseSemanticsDefinitionShape {}
+type EditableDraftDefinition =
+  Omit<DraftWorkflowDefinitionShape, 'terminology'>
+  & DraftTerminologyDefinitionShape
+  & DraftCaseSchemaDefinitionShape
+  & DraftCaseSemanticsDefinitionShape;
 
 interface DraftSaveResponse {
   readonly draft?: {
