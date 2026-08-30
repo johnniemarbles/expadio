@@ -23,15 +23,12 @@ export interface DraftWorkflowDefinitionShape {
   readonly terminology: {
     readonly defaultLocale: string;
     readonly concepts: readonly unknown[];
-    readonly [key: string]: unknown;
   };
   readonly caseWorkflow?: {
     readonly workType: string;
     readonly stages: Readonly<Record<string, string>>;
     readonly stageGuidance?: Readonly<Record<string, string>>;
-    readonly [key: string]: unknown;
   };
-  readonly [key: string]: unknown;
 }
 
 export function validateDraftWorkflowEditorState(
