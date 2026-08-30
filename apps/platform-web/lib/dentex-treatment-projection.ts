@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 import {
   DENTEX_TREATMENT_URGENCIES,
+  type DentexTreatmentAttributes,
   type DentexTreatmentStage,
   type DentexTreatmentUrgency,
   type DentexTreatmentWorkspace,
@@ -203,14 +204,12 @@ export async function loadDentexTreatmentWorkspace(
 
   const attributes = row.attributes ?? {};
   const currentStage = treatmentStage(row.workflow_current_stage_key ?? row.stage_key);
-  const treatmentAttributes = {
+  const tooth = optionalText(attributes, 'tooth');
+  const procedureCode = optionalText(attributes, 'procedureCode');
+  const treatmentAttributes: DentexTreatmentAttributes = {
     urgency: urgency(attributes),
-    ...(optionalText(attributes, 'tooth') === undefined
-      ? {}
-      : { tooth: optionalText(attributes, 'tooth') }),
-    ...(optionalText(attributes, 'procedureCode') === undefined
-      ? {}
-      : { procedureCode: optionalText(attributes, 'procedureCode') }),
+    ...(tooth === undefined ? {} : { tooth }),
+    ...(procedureCode === undefined ? {} : { procedureCode }),
   };
 
   return {
