@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@expadio/business-config": "workspace:*"
+    "@expadio/business-config": "workspace:*",
+    "@expadio/relationship": "workspace:*"
   }
 }
