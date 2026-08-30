@@ -42,6 +42,8 @@
     "./domain-events": "./src/domain-events.ts",
     "./domain-event-outbox": "./src/domain-event-outbox.ts",
     "./domain-event-outbox-runner": "./src/domain-event-outbox-runner.ts",
+    "./domain-event-inbox": "./src/domain-event-inbox.ts",
+    "./domain-event-inbox-runner": "./src/domain-event-inbox-runner.ts",
     "./governed-action-intent": "./src/governed-action-intent.ts",
     "./governed-action-execution": "./src/governed-action-execution.ts",
     "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts"
