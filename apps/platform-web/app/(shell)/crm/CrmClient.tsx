@@ -469,7 +469,20 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                 const tone = CASE_STATUS_TONE[c.status] ?? CASE_STATUS_TONE.OPEN;
                 return (
                   <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
-                    <td style={td}><strong>{c.subject}</strong><CaseAttrChips fields={caseSchema.fields} attributes={c.attributes} /></td>
+                    <td style={td}>
+                      {verticalKey === "dentex" ? (
+                        <a
+                          href={`/dentex/treatments/${encodeURIComponent(c.caseId)}${queryString}`}
+                          style={{ color: "inherit", textDecoration: "none", fontWeight: 800 }}
+                          title="Open the DENTEX Treatment workspace"
+                        >
+                          {c.subject}
+                        </a>
+                      ) : (
+                        <strong>{c.subject}</strong>
+                      )}
+                      <CaseAttrChips fields={caseSchema.fields} attributes={c.attributes} />
+                    </td>
                     <td style={td}>
                       {c.accountName ? c.accountName : (
                         <select
