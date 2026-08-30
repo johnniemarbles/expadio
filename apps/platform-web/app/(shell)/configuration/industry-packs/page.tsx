@@ -210,6 +210,7 @@ function VersionTable({
                 <th>Revision</th>
                 <th>Updated</th>
                 <th>Published</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -225,6 +226,15 @@ function VersionTable({
                   <td>{version.revision}</td>
                   <td>{new Date(version.updatedAt).toLocaleString()}</td>
                   <td>{version.publishedAt ? new Date(version.publishedAt).toLocaleString() : '—'}</td>
+                  <td>
+                    {version.scope === 'TENANT' && version.state === 'DRAFT' ? (
+                      <Link
+                        href={`/configuration/industry-packs/drafts/${encodeURIComponent(version.verticalKey)}/${version.version}`}
+                      >
+                        Open draft
+                      </Link>
+                    ) : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
