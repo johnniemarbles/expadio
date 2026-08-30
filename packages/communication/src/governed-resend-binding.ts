@@ -129,3 +129,5 @@ function stable(value: string, label: string): string {
   }
   return value;
 }
+
+export type { SecretResolver } from '@expadio/provider-registry/repository';
