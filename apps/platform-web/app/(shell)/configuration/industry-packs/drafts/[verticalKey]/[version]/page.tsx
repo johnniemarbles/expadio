@@ -4,6 +4,7 @@ import { isDenied } from '@expadio/ui/contracts';
 import { fetchApi } from '../../../../../../../lib/live-adapter';
 import styles from '../../../page.module.css';
 import { DraftWorkflowEditor } from './DraftWorkflowEditor';
+import { DraftSubmitReviewAction } from './DraftSubmitReviewAction';
 
 interface DraftDefinition {
   readonly verticalKey: string;
@@ -111,6 +112,11 @@ export default async function IndustryPackDraftPage({
         verticalKey={draft.identity.verticalKey}
         version={draft.identity.version}
         initialRevision={draft.revision}
+      />
+
+      <DraftSubmitReviewAction
+        verticalKey={draft.identity.verticalKey}
+        version={draft.identity.version}
       />
 
       <section className={styles.summaryGrid} aria-label="Draft summary">
