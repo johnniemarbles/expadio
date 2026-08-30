@@ -253,42 +253,7 @@ BEGIN
   END IF;
 END $$;
 
-SELECT set_config('app.tenant_id', '76767676-7676-7676-7676-767676767676', false);
-
-DELETE FROM platform.communication_provider_webhook_events WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.communication_delivery_events WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.communication_deliveries WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.scheduled_governed_actions WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.governed_action_execution_attempts WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.governed_action_intents WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.domain_event_outbox WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.domain_events WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
-DELETE FROM platform.tenants WHERE tenant_id IN (
-  '76767676-7676-7676-7676-767676767676',
-  '87878787-8787-8787-8787-878787878787'
-);
+-- The database contract job runs against an ephemeral database. Do not delete
+-- communication_provider_webhook_events here: provider webhook evidence is
+-- intentionally append-only and protected by a mutation-rejection trigger.
 RESET app.tenant_id;
