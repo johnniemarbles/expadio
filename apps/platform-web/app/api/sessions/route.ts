@@ -1,31 +1,11 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
+import { dbPool } from '../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
 import crypto from 'node:crypto';
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'UNAUTHENTICATED',
-      message: 'User is not authenticated'
-    };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: '00000000-0000-0000-0000-000000000001',
-        organizationId: '00000000-0000-0000-0000-000000000002'
-      }
-    );
+    const contextState = await resolveRequestContext(request);
 
     let body: any = {};
     try {
@@ -50,7 +30,7 @@ export async function POST(request: Request) {
     const client = await dbPool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('SET LOCAL app.tenant_id = $1', [effectiveContext.tenantId]);
+      await client.query('SET LOCAL app.tenant_id = $1', [contextState.tenantId]);
 
       const query = `
         INSERT INTO platform.agent_runs (
@@ -68,13 +48,13 @@ export async function POST(request: Request) {
 
       const values = [
         runId,
-        effectiveContext.tenantId,
+        contextState.tenantId,
         agentId,
         purpose,
         contextBundleReference,
         budgetPolicyReference,
         idempotencyKey,
-        userId,
+        contextState.subjectId,
         requestedAt,
         createdAt,
         reason,
@@ -99,12 +79,8 @@ export async function POST(request: Request) {
       client.release();
     }
   } catch (error) {
-    console.error("IAM Resolution Error:", error);
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'UNAUTHORIZED_OR_UNMAPPED',
-      message: 'Could not resolve internal EXPADIO identity for this user.'
-    };
-    return NextResponse.json(denied, { status: 403 });
+    console.error("Session API Error:", error);
+    const denied = deniedResponse(error);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
