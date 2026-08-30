@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { apiError } from "../../../lib/api-error";
+import { credentialReferenceFromIntake } from "../../../lib/credential-intake-response";
 import { wrapSecret, type PublishedWrappingKey } from "../../../lib/custody-wrap";
 
 type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () => void };
@@ -139,11 +140,12 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
       setWarnings(intakeBody.warnings.map((w: any) => (typeof w === "string" ? w : w.message)).filter(Boolean));
     }
     if (!intakeRes.ok) throw new Error(apiError(intakeBody, "The credential could not be verified."));
+    const credentialRef = credentialReferenceFromIntake(intakeBody);
 
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
     // Probe capabilities ('sms.send') are provider-scope; the connector is
     // registered against the platform capability key for its channel.
-    return { reference: intakeBody.reference, capabilities: [capabilityKey], connectorKey: effectiveConnectorKey };
+    return { reference: credentialRef, capabilities: [capabilityKey], connectorKey: effectiveConnectorKey };
   }
 
   async function submit(event: React.FormEvent) {
