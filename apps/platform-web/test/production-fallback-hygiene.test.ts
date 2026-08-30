@@ -27,7 +27,6 @@ const forbiddenContent = [
 ];
 
 const knownCurrentBaselineDebt = [
-  "apps/platform-web/app/api/activity/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/agent/runs/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/agents/bindings/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/brain/corrections/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
@@ -36,12 +35,6 @@ const knownCurrentBaselineDebt = [
   "apps/platform-web/app/api/brain/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/brain/slices/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/brain/sources/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/context-engine/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/data/pipelines/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/usage/summary/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/webhooks/twilio/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/workflows/blueprints/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/app/api/workflows/instances/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
 ].sort();
 
 const ignoredSegments = new Set([
