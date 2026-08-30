@@ -11,11 +11,11 @@ test('business execution trace helper reads the tenant-scoped trace view', () =>
   assert.match(helper, /listBusinessExecutionTrace/);
   assert.match(helper, /FROM platform\.business_execution_trace/);
   assert.match(helper, /tenant_id = \$1::uuid/);
-  assert.match(helper, /root_event_id = \$\{params\.length\}::uuid/);
-  assert.match(helper, /correlation_id = \$\{params\.length\}/);
-  assert.match(helper, /aggregate_type = \$\{params\.length\}/);
-  assert.match(helper, /aggregate_id = \$\{params\.length\}/);
-  assert.match(helper, /LIMIT \$\{params\.length\}/);
+  assert.match(helper, /root_event_id = \$\$\{params\.length\}::uuid/);
+  assert.match(helper, /correlation_id = \$\$\{params\.length\}/);
+  assert.match(helper, /aggregate_type = \$\$\{params\.length\}/);
+  assert.match(helper, /aggregate_id = \$\$\{params\.length\}/);
+  assert.match(helper, /LIMIT \$\$\{params\.length\}/);
 });
 
 test('business execution trace route is governed and bounded', () => {
