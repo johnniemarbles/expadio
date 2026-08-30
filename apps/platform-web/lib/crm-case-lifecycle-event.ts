@@ -26,7 +26,7 @@ interface PublishedPackRow {
   readonly definition: IndustryPack;
 }
 
-async function loadPinnedPack(
+export async function loadPinnedCrmCaseIndustryPack(
   client: PoolClient,
   input: {
     readonly tenantId: string;
@@ -109,7 +109,7 @@ export async function appendCrmCaseLifecycleEvent(
   const toStageKey = canonicalCaseStage(input.toStageKey);
   if (toStageKey === null) return null;
 
-  const pack = await loadPinnedPack(client, {
+  const pack = await loadPinnedCrmCaseIndustryPack(client, {
     tenantId: input.tenantId,
     provenance: input.provenance,
   });
