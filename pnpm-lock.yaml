@@ -32,6 +32,9 @@ importers:
       '@expadio/communication':
         specifier: workspace:*
         version: link:../../packages/communication
+      '@expadio/dentex':
+        specifier: workspace:*
+        version: link:../../verticals/dentex
       '@expadio/credential-custody':
         specifier: workspace:*
         version: link:../../packages/credential-custody
@@ -90,6 +93,9 @@ importers:
 
   verticals/dentex:
     dependencies:
+      '@expadio/case':
+        specifier: workspace:*
+        version: link:../../packages/case
       '@expadio/industry-packs':
         specifier: workspace:*
         version: link:../../packages/industry-packs
