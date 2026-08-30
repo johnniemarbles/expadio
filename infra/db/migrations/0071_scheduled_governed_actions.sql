@@ -1,5 +1,9 @@
 BEGIN;
 
+ALTER TABLE platform.governed_action_intents
+  ADD CONSTRAINT governed_action_intents_id_tenant_unique
+  UNIQUE (action_intent_id, tenant_id);
+
 CREATE TABLE platform.scheduled_governed_actions (
   scheduled_action_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE RESTRICT,
