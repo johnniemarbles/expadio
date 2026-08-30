@@ -123,6 +123,31 @@ export const NEUTRAL_CASE_SCHEMA: CaseSchema = { fields: [], version: 0 };
 export const CASE_RELATIONSHIP_CONCEPTS = ['crm.account', 'crm.contact', 'crm.agreement'] as const;
 export type CaseRelationshipConcept = (typeof CASE_RELATIONSHIP_CONCEPTS)[number];
 
+/**
+ * A vertical semantic gate attached to a canonical crm.case stage. Unlike
+ * vocabulary, these requirements are intended to become executable policy:
+ * the horizontal workflow runtime can evaluate them without knowing DENTEX,
+ * LEXFLOW, or any other vertical by name.
+ */
+export interface CaseStageSemanticRequirement {
+  readonly stageKey: CrmCaseStage;
+  readonly phase: 'ENTRY' | 'EXIT';
+  /** Pack-declared case attributes that must contain a non-empty value. */
+  readonly requiredAttributeKeys?: readonly string[];
+  /** Canonical CRM relationships that must exist for the case. */
+  readonly requiredRelationships?: readonly CaseRelationshipConcept[];
+  /** If supplied, the current stage must have one of these recorded outcomes. */
+  readonly requiredDecisionOutcomes?: readonly string[];
+  /** Domain-facing explanation surfaced when the semantic gate blocks. */
+  readonly message: string;
+}
+
+export interface CaseWorkflowSemantics {
+  readonly requirements: readonly CaseStageSemanticRequirement[];
+}
+
+export const NEUTRAL_CASE_WORKFLOW_SEMANTICS: CaseWorkflowSemantics = { requirements: [] };
+
 /** One typed edge of a case's domain model — a canonical relation, in the pack's words. */
 export interface CaseOntologyRelationship {
   /** The canonical CRM concept this edge points at. */
@@ -177,6 +202,12 @@ export interface IndustryPack {
    * unchanged; this names them. Unspecified relations fall back to neutral roles.
    */
   readonly caseOntologyRoles?: Partial<Readonly<Record<CaseRelationshipConcept, string>>>;
+  /**
+   * Optional executable domain semantics over the canonical case lifecycle.
+   * The pack declares facts the horizontal workflow gate can enforce; the
+   * Decision Fabric remains the only transition engine.
+   */
+  readonly caseStageSemantics?: CaseWorkflowSemantics;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +270,36 @@ const DENTEX_CASE_SCHEMA: CaseSchema = {
   ],
 };
 
+// DENTEX now declares process semantics, not only labels. These are expressed
+// entirely in canonical case concepts so the horizontal gate runtime can apply
+// them without a DENTEX branch:
+//   Consultation -> In treatment: a Patient and Practice must be linked.
+//   In treatment -> Clinical review: the performed procedure must be recorded.
+//   Clinical review -> Discharged: clinician approval + Care plan are required.
+const DENTEX_CASE_STAGE_SEMANTICS: CaseWorkflowSemantics = {
+  requirements: [
+    {
+      stageKey: 'INTAKE',
+      phase: 'EXIT',
+      requiredRelationships: ['crm.contact', 'crm.account'],
+      message: 'A patient and practice must be linked before treatment begins.',
+    },
+    {
+      stageKey: 'IN_PROGRESS',
+      phase: 'EXIT',
+      requiredAttributeKeys: ['procedureCode'],
+      message: 'Record the performed procedure before clinical review.',
+    },
+    {
+      stageKey: 'REVIEW',
+      phase: 'EXIT',
+      requiredRelationships: ['crm.agreement'],
+      requiredDecisionOutcomes: ['APPROVE'],
+      message: 'Clinical approval and a care plan are required before discharge.',
+    },
+  ],
+};
+
 export const DENTEX_PACK: IndustryPack = {
   verticalKey: 'dentex',
   label: 'DENTEX — Dental practice',
@@ -246,6 +307,7 @@ export const DENTEX_PACK: IndustryPack = {
   terminology: DENTEX_TERMINOLOGY,
   caseWorkflow: DENTEX_CASE_WORKFLOW,
   caseSchema: DENTEX_CASE_SCHEMA,
+  caseStageSemantics: DENTEX_CASE_STAGE_SEMANTICS,
   // A Treatment concerns a Patient, is performed at a Practice, under a Care plan.
   caseOntologyRoles: {
     'crm.contact': 'Patient treated',
@@ -436,6 +498,13 @@ export function resolveStageLabel(
 /** The domain fields the active pack adds to a case — empty for the neutral engine. */
 export function resolveCaseSchema(pack: IndustryPack | null | undefined): CaseSchema {
   return pack?.caseSchema ?? NEUTRAL_CASE_SCHEMA;
+}
+
+/** Executable case-stage semantics declared by the active pack; neutral = none. */
+export function resolveCaseStageSemantics(
+  pack: IndustryPack | null | undefined,
+): CaseWorkflowSemantics {
+  return pack?.caseStageSemantics ?? NEUTRAL_CASE_WORKFLOW_SEMANTICS;
 }
 
 /**
