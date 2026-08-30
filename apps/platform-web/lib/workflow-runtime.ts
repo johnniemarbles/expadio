@@ -25,6 +25,7 @@ import { resolveAuthorityGrants } from './workflow-authority-grants';
 import { deriveAuthorityRequirements } from './workflow-authority-derivation';
 import { PostgresParticipantAssignmentProvider, listAssignments, type AssignmentSummary } from './workflow-participants';
 import { CrmCaseConditionEvaluator } from './workflow-conditions';
+import { evaluateCrmCaseSemanticTransition } from './crm-case-semantic-gate';
 
 /**
  * The Decision Fabric transition runtime, wired for application routes.
@@ -436,6 +437,21 @@ export async function transitionWorkflow(
     }
     if (conditionBlockers.length > 0) {
       return { ok: false, reason: 'GATE_BLOCKED', blockers: conditionBlockers };
+    }
+
+    // Industry Pack semantic gate: CRM storage is projected into canonical
+    // case facts by the app adapter, then evaluated by the vertical-neutral
+    // @expadio/industry-packs evaluator. No vertical rule enters workflow core.
+    const semanticBlockers = await evaluateCrmCaseSemanticTransition(client, {
+      tenantId: input.tenantId,
+      instanceId: input.instanceId,
+      caseId: instance.subject.id,
+      workTypeKey: instance.workTypeKey,
+      ...(fromStage === undefined ? {} : { fromStageKey: fromStage.stageKey }),
+      toStageKey: toStage.stageKey,
+    });
+    if (semanticBlockers.length > 0) {
+      return { ok: false, reason: 'GATE_BLOCKED', blockers: semanticBlockers };
     }
 
     const decisionGate = new WorkflowStageDecisionGateEvaluator(new PostgresWorkflowStageDecisionRepository(client));
