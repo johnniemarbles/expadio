@@ -32,7 +32,8 @@ async function tenant(client: pg.PoolClient): Promise<string> {
 }
 
 async function event(client: pg.PoolClient, tenantId: string, eventType = 'Treatment.Discharged') {
-  return appendDomainEventWithOutbox(client, {
+  const occurredAt = new Date('2026-08-30T14:00:00.000Z');
+  const appended = await appendDomainEventWithOutbox(client, {
     event: {
       eventId: randomUUID(),
       tenantId,
@@ -40,13 +41,23 @@ async function event(client: pg.PoolClient, tenantId: string, eventType = 'Treat
       aggregateId: randomUUID(),
       eventType,
       eventVersion: 1,
-      occurredAt: new Date('2026-08-30T14:00:00.000Z'),
+      occurredAt,
       actorSubjectId: 'worker-itest',
       correlationId: randomUUID(),
       packKey: 'dentex',
       payload: {},
     },
   });
+
+  await client.query(
+    `UPDATE platform.domain_event_outbox
+        SET available_at = $3
+      WHERE tenant_id = $1::uuid
+        AND outbox_id = $2::uuid`,
+    [tenantId, appended.outboxId, occurredAt],
+  );
+
+  return appended;
 }
 
 test('two workers cannot claim the same available event', async () => {
