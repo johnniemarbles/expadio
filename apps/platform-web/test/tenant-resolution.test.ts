@@ -4,6 +4,7 @@ import test from "node:test";
 
 const middleware = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const requestContext = readFileSync(new URL("../lib/request-context.ts", import.meta.url), "utf8");
+const iamAdapter = readFileSync(new URL("../lib/iam-adapter.ts", import.meta.url), "utf8");
 
 test("middleware propagates the shell's workspace selection into tenant headers", () => {
   // The active workspace arrives as ?account=<tenantId>&org=<organizationId>.
@@ -36,4 +37,19 @@ test("tenant resolution verifies membership rather than trusting the header", ()
   assert.match(requestContext, /authenticateAndResolveContext/);
   // A membership failure resolves to a denial, not another tenant's data.
   assert.match(requestContext, /TENANT_ACCESS_DENIED/);
+});
+
+test("tenant resolution fails closed when no workspace is selected", () => {
+  assert.match(requestContext, /WORKSPACE_REQUIRED/);
+  assert.match(requestContext, /Select a workspace to continue/);
+  assert.doesNotMatch(requestContext, /DEMO_TENANT/);
+  assert.doesNotMatch(requestContext, /requestedTenant\s*=\s*requestedTenant\s*\|\|/);
+  assert.doesNotMatch(requestContext, /00000000-0000-0000-0000-000000000001/);
+});
+
+test("membership lookup does not auto-provision a demo tenant", () => {
+  assert.match(iamAdapter, /new PostgresMembershipRepository\(dbPool\)/);
+  assert.doesNotMatch(iamAdapter, /AutoProvisioningMembershipRepository/);
+  assert.doesNotMatch(iamAdapter, /INSERT INTO platform\.memberships/);
+  assert.doesNotMatch(iamAdapter, /00000000-0000-0000-0000-000000000001/);
 });
