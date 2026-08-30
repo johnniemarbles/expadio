@@ -122,7 +122,7 @@ async function seedDentexFollowupCase(c: pg.PoolClient) {
   return { tenantId, eventId: appended.event.eventId };
 }
 
-test('worker claims discharge event, queues follow-up, then publishes outbox', async () => {
+test('worker claims discharge event, schedules follow-up, then publishes outbox', async () => {
   const p = pool();
   const c = await p.connect();
   try {
@@ -137,22 +137,25 @@ test('worker claims discharge event, queues follow-up, then publishes outbox', a
     if (result.status !== 'PUBLISHED') throw new Error('expected worker publish');
     assert.equal(result.actions.length, 1);
     assert.equal(result.actions[0]?.status, 'PERSISTED');
-    assert.equal(result.communications.length, 1);
-    assert.equal(result.communications[0]?.attempt.status, 'QUEUED');
+    assert.equal(result.communications.length, 0);
+    assert.equal(result.schedules.length, 1);
+    assert.equal(result.schedules[0]?.attempt.status, 'QUEUED');
+    assert.equal(result.schedules[0]?.scheduled?.dueAt.toISOString(), '2026-09-06T14:30:00.000Z');
 
     const row = (await c.query(
       `SELECT
          outbox.status AS outbox_status,
          intent.action_key,
-         delivery.state AS delivery_state,
+         schedule.state AS schedule_state,
+         schedule.due_at,
          attempt.status AS execution_status
        FROM platform.domain_event_outbox outbox
        JOIN platform.governed_action_intents intent
          ON intent.tenant_id = outbox.tenant_id
         AND intent.source_event_id = outbox.event_id
-       JOIN platform.communication_deliveries delivery
-         ON delivery.tenant_id = intent.tenant_id
-        AND delivery.idempotency_key = intent.idempotency_key
+       JOIN platform.scheduled_governed_actions schedule
+         ON schedule.tenant_id = intent.tenant_id
+        AND schedule.parent_action_intent_id = intent.action_intent_id
        JOIN platform.governed_action_execution_attempts attempt
          ON attempt.tenant_id = intent.tenant_id
         AND attempt.action_intent_id = intent.action_intent_id
@@ -163,8 +166,9 @@ test('worker claims discharge event, queues follow-up, then publishes outbox', a
 
     assert.deepEqual(row, {
       outbox_status: 'PUBLISHED',
-      action_key: 'patient.follow_up',
-      delivery_state: 'PENDING',
+      action_key: 'patient.follow_up.schedule',
+      schedule_state: 'PENDING',
+      due_at: new Date('2026-09-06T14:30:00.000Z'),
       execution_status: 'QUEUED',
     });
 
