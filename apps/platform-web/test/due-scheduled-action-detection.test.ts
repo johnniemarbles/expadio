@@ -14,7 +14,8 @@ test('scheduler health read model detects due unmaterialized scheduled actions',
   assert.match(schedulerHealthMigration, /child_action_intent_id IS NULL/);
   assert.match(schedulerHealthMigration, /COALESCE\(next_attempt_at, due_at\) <= clock_timestamp\(\)/);
   assert.match(schedulerHealthMigration, /state NOT IN \('MATERIALIZED', 'CANCELLED'\)/);
-  assert.match(schedulerHealthMigration, /target_executor_class/);
+  assert.match(schedulerHealthMigration, /'sourceTable', 'platform\.scheduled_governed_actions'/);
+  assert.match(schedulerHealthMigration, /'states', jsonb_object_agg\(scheduled\.state/);
 });
 
 test('scheduler health API vocabulary exposes the due scheduled action detector', () => {
