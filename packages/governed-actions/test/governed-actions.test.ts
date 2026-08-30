@@ -179,3 +179,14 @@ test('required bindings fail closed and top-level keys forbid JSONPath syntax', 
     /No value is available/,
   );
 });
+
+
+test('required aggregate bindings reject explicit null values', () => {
+  assert.throws(
+    () => materializeGovernedActionConfiguration(
+      { email: { kind: 'AGGREGATE_FIELD', key: 'contactEmail' } },
+      { event, aggregateFields: { contactEmail: null } },
+    ),
+    /No value is available/,
+  );
+});
