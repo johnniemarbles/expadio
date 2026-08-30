@@ -100,8 +100,10 @@ function optionalText(attributes: Record<string, unknown>, key: string): string 
  * platform authorities. This is a read model only; no second Treatment store is
  * introduced.
  *
- * Care Plan selection intentionally follows the current semantic-gate rule:
- * the latest ACTIVE crm.agreement for the Treatment's Practice/account.
+ * Care Plan identity is explicit: the Treatment must carry an active
+ * Relationship Fabric `care_plan` edge to a crm.agreement. This prevents a
+ * different active agreement at the same Practice from being misidentified as
+ * this Treatment's Care Plan.
  */
 export async function loadDentexTreatmentWorkspace(
   client: PoolClient,
@@ -166,6 +168,7 @@ export async function loadDentexTreatmentWorkspace(
           AND relationship.source_entity_type = 'crm.case'
           AND relationship.source_entity_id = c.case_id::text
           AND relationship.relationship_key = 'provider'
+          AND relationship.target_entity_type = 'iam.subject'
           AND relationship.status = 'ACTIVE'
           AND relationship.valid_until IS NULL
         ORDER BY relationship.valid_from DESC, relationship.relationship_id DESC
@@ -177,13 +180,19 @@ export async function loadDentexTreatmentWorkspace(
               agreement.status,
               agreement.starts_on,
               agreement.ends_on
-         FROM platform.crm_agreements agreement
-        WHERE agreement.tenant_id = c.tenant_id
-          AND agreement.account_id = c.account_id
+         FROM platform.entity_relationships relationship
+         JOIN platform.crm_agreements agreement
+           ON agreement.tenant_id = relationship.tenant_id
+          AND agreement.agreement_id::text = relationship.target_entity_id
+        WHERE relationship.tenant_id = c.tenant_id
+          AND relationship.source_entity_type = 'crm.case'
+          AND relationship.source_entity_id = c.case_id::text
+          AND relationship.relationship_key = 'care_plan'
+          AND relationship.target_entity_type = 'crm.agreement'
+          AND relationship.status = 'ACTIVE'
+          AND relationship.valid_until IS NULL
           AND agreement.status = 'ACTIVE'
-        ORDER BY agreement.starts_on DESC NULLS LAST,
-                 agreement.created_at DESC,
-                 agreement.agreement_id DESC
+        ORDER BY relationship.valid_from DESC, relationship.relationship_id DESC
         LIMIT 1
      ) care_plan ON true
     WHERE c.tenant_id = $1::uuid
