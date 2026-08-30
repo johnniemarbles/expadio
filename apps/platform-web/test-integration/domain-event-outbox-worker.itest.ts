@@ -57,7 +57,7 @@ test('two workers cannot claim the same available event', async () => {
     const tenantId = await tenant(c1);
     await c2.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
     const appended = await event(c1, tenantId);
-    const now = new Date('2026-08-30T14:01:00.000Z');
+    const now = new Date(Date.now() + 60_000);
 
     const [first, second] = await Promise.all([
       claimDomainEventOutbox(c1, { tenantId, now }),
@@ -80,23 +80,23 @@ test('failed work retries after available_at and stale claim tokens cannot compl
   try {
     const tenantId = await tenant(c);
     await event(c, tenantId);
-    const firstAt = new Date('2026-08-30T14:10:00.000Z');
+    const firstAt = new Date(Date.now() + 60_000);
     const first = await claimDomainEventOutbox(c, { tenantId, now: firstAt });
     assert.ok(first);
 
-    const retryAt = new Date('2026-08-30T14:12:00.000Z');
+    const retryAt = new Date(firstAt.getTime() + 120_000);
     assert.equal(await failDomainEventOutbox(c, {
       tenantId,
       outboxId: first.outboxId,
       claimedAt: first.claimedAt,
       error: 'temporary action runtime failure',
-      failedAt: new Date('2026-08-30T14:10:30.000Z'),
+      failedAt: new Date(firstAt.getTime() + 30_000),
       retryAt,
     }), 'FAILED');
 
     assert.equal(await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T14:11:00.000Z'),
+      now: new Date(firstAt.getTime() + 60_000),
     }), null);
 
     const second = await claimDomainEventOutbox(c, { tenantId, now: retryAt });
@@ -106,13 +106,13 @@ test('failed work retries after available_at and stale claim tokens cannot compl
       tenantId,
       outboxId: second.outboxId,
       claimedAt: first.claimedAt,
-      completedAt: new Date('2026-08-30T14:12:10.000Z'),
+      completedAt: new Date(retryAt.getTime() + 10_000),
     }), false);
     assert.equal(await completeDomainEventOutbox(c, {
       tenantId,
       outboxId: second.outboxId,
       claimedAt: second.claimedAt,
-      completedAt: new Date('2026-08-30T14:12:10.000Z'),
+      completedAt: new Date(retryAt.getTime() + 10_000),
     }), true);
 
     const row = (await c.query(
@@ -134,9 +134,10 @@ test('expired claims are recovered and max attempts terminate as DEAD', async ()
   try {
     const tenantId = await tenant(c);
     await event(c, tenantId);
+    const firstAt = new Date(Date.now() + 60_000);
     const first = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T15:00:00.000Z'),
+      now: firstAt,
       leaseMs: 60_000,
       maxAttempts: 2,
     });
@@ -144,7 +145,7 @@ test('expired claims are recovered and max attempts terminate as DEAD', async ()
 
     const recovered = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T15:02:00.000Z'),
+      now: new Date(firstAt.getTime() + 120_000),
       leaseMs: 60_000,
       maxAttempts: 2,
     });
@@ -157,13 +158,13 @@ test('expired claims are recovered and max attempts terminate as DEAD', async ()
       outboxId: recovered.outboxId,
       claimedAt: recovered.claimedAt,
       error: 'permanent failure',
-      failedAt: new Date('2026-08-30T15:02:10.000Z'),
+      failedAt: new Date(firstAt.getTime() + 130_000),
       maxAttempts: 2,
     }), 'DEAD');
 
     assert.equal(await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T16:00:00.000Z'),
+      now: new Date(firstAt.getTime() + 3_600_000),
       maxAttempts: 2,
     }), null);
   } finally {
@@ -179,9 +180,10 @@ test('a crash on the final allowed attempt is swept to DEAD after lease expiry',
   try {
     const tenantId = await tenant(c);
     await event(c, tenantId);
+    const firstAt = new Date(Date.now() + 60_000);
     const first = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T17:00:00.000Z'),
+      now: firstAt,
       leaseMs: 60_000,
       maxAttempts: 1,
     });
@@ -190,7 +192,7 @@ test('a crash on the final allowed attempt is swept to DEAD after lease expiry',
 
     assert.equal(await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T17:02:00.000Z'),
+      now: new Date(firstAt.getTime() + 120_000),
       leaseMs: 60_000,
       maxAttempts: 1,
     }), null);
@@ -215,9 +217,10 @@ test('an expired lease cannot complete or fail even before another worker reclai
   try {
     const tenantId = await tenant(c);
     await event(c, tenantId);
+    const firstAt = new Date(Date.now() + 60_000);
     const claim = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T18:00:00.000Z'),
+      now: firstAt,
       leaseMs: 60_000,
     });
     assert.ok(claim);
@@ -226,7 +229,7 @@ test('an expired lease cannot complete or fail even before another worker reclai
       tenantId,
       outboxId: claim.outboxId,
       claimedAt: claim.claimedAt,
-      completedAt: new Date('2026-08-30T18:02:00.000Z'),
+      completedAt: new Date(firstAt.getTime() + 120_000),
       leaseMs: 60_000,
     }), false);
 
@@ -235,13 +238,13 @@ test('an expired lease cannot complete or fail even before another worker reclai
       outboxId: claim.outboxId,
       claimedAt: claim.claimedAt,
       error: 'stale worker must not mutate',
-      failedAt: new Date('2026-08-30T18:02:00.000Z'),
+      failedAt: new Date(firstAt.getTime() + 120_000),
       leaseMs: 60_000,
     }), 'STALE_CLAIM');
 
     const recovered = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T18:02:00.000Z'),
+      now: new Date(firstAt.getTime() + 120_000),
       leaseMs: 60_000,
     });
     assert.ok(recovered);
@@ -291,28 +294,29 @@ test('later events in one partition remain blocked until the earlier event is PU
     });
     assert.equal(first.partitionKey, second.partitionKey);
 
+    const firstAt = new Date(Date.now() + 60_000);
     const firstClaim = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T19:01:00.000Z'),
+      now: firstAt,
     });
     assert.ok(firstClaim);
     assert.equal(firstClaim.eventId, first.event.eventId);
 
     assert.equal(await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T19:01:10.000Z'),
+      now: new Date(firstAt.getTime() + 10_000),
     }), null);
 
     assert.equal(await completeDomainEventOutbox(c, {
       tenantId,
       outboxId: firstClaim.outboxId,
       claimedAt: firstClaim.claimedAt,
-      completedAt: new Date('2026-08-30T19:01:20.000Z'),
+      completedAt: new Date(firstAt.getTime() + 20_000),
     }), true);
 
     const secondClaim = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T19:01:21.000Z'),
+      now: new Date(firstAt.getTime() + 21_000),
     });
     assert.ok(secondClaim);
     assert.equal(secondClaim.eventId, second.event.eventId);
