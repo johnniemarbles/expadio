@@ -214,7 +214,6 @@ test('failed work waits until available_at and final failure becomes DEAD', asyn
       tenantId,
       outboxId: first[0]!.outboxId,
       claimToken: first[0]!.claimToken,
-      attempts: first[0]!.attempts,
       error: 'temporary downstream error',
       maxAttempts: 2,
       retryDelaySeconds: 30,
@@ -245,7 +244,6 @@ test('failed work waits until available_at and final failure becomes DEAD', asyn
       tenantId,
       outboxId: second[0]!.outboxId,
       claimToken: second[0]!.claimToken,
-      attempts: second[0]!.attempts,
       error: 'still failing',
       maxAttempts: 2,
       retryDelaySeconds: 30,
@@ -348,6 +346,80 @@ test('generic batch runner publishes successes and retries failures independentl
     assert.equal(domainEventOutboxRetryDelaySeconds({ attempts: 20 }), 900);
   } finally {
     c.release();
+    await p.end();
+  }
+});
+
+
+test('partition ordering prevents a later event for the same aggregate from being claimed early', async () => {
+  const p = pool();
+  const c1 = await p.connect();
+  const c2 = await p.connect();
+  try {
+    const tenantId = randomUUID();
+    const aggregateId = randomUUID();
+    await c1.query(
+      `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
+       VALUES ($1::uuid, 'Outbox ordered partition tenant', 'dentex')`,
+      [tenantId],
+    );
+    await Promise.all([bindTenant(c1, tenantId), bindTenant(c2, tenantId)]);
+
+    const first = await appendEvent(c1, {
+      tenantId,
+      aggregateId,
+      eventType: 'Treatment.ClinicalReviewEntered',
+      occurredAt: new Date('2026-08-30T14:40:00.000Z'),
+    });
+    const second = await appendEvent(c1, {
+      tenantId,
+      aggregateId,
+      eventType: 'Treatment.Discharged',
+      occurredAt: new Date('2026-08-30T14:40:01.000Z'),
+    });
+    assert.equal(first.partitionKey, second.partitionKey);
+
+    const now = new Date('2026-08-30T14:41:00.000Z');
+    const [a, b] = await Promise.all([
+      claimDomainEventOutboxBatch(c1, {
+        tenantId,
+        batchSize: 10,
+        leaseSeconds: 60,
+        maxAttempts: 3,
+        now,
+      }),
+      claimDomainEventOutboxBatch(c2, {
+        tenantId,
+        batchSize: 10,
+        leaseSeconds: 60,
+        maxAttempts: 3,
+        now,
+      }),
+    ]);
+
+    const claimed = [...a, ...b];
+    assert.equal(claimed.length, 1);
+    assert.equal(claimed[0]?.eventId, first.event.eventId);
+
+    await publishDomainEventOutboxClaim(claimed[0] === a[0] ? c1 : c2, {
+      tenantId,
+      outboxId: claimed[0]!.outboxId,
+      claimToken: claimed[0]!.claimToken,
+      publishedAt: new Date('2026-08-30T14:41:01.000Z'),
+    });
+
+    const later = await claimDomainEventOutboxBatch(c1, {
+      tenantId,
+      batchSize: 10,
+      leaseSeconds: 60,
+      maxAttempts: 3,
+      now: new Date('2026-08-30T14:41:02.000Z'),
+    });
+    assert.equal(later.length, 1);
+    assert.equal(later[0]?.eventId, second.event.eventId);
+  } finally {
+    c1.release();
+    c2.release();
     await p.end();
   }
 });
