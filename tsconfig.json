@@ -33,6 +33,8 @@
       "@expadio/postgres-runtime/workflow-decision": ["packages/postgres-runtime/src/workflow-decision.ts"],
       "@expadio/postgres-runtime/entity-relationship": ["packages/postgres-runtime/src/entity-relationship.ts"],
       "@expadio/postgres-runtime/domain-events": ["packages/postgres-runtime/src/domain-events.ts"],
+      "@expadio/postgres-runtime/domain-event-outbox": ["packages/postgres-runtime/src/domain-event-outbox.ts"],
+      "@expadio/postgres-runtime/domain-event-outbox-runner": ["packages/postgres-runtime/src/domain-event-outbox-runner.ts"],
       "@expadio/postgres-runtime/governed-action-intent": ["packages/postgres-runtime/src/governed-action-intent.ts"],
       "@expadio/postgres-runtime/governed-action-execution": ["packages/postgres-runtime/src/governed-action-execution.ts"],
       "@expadio/access-control": ["packages/access-control/src/index.ts"],
