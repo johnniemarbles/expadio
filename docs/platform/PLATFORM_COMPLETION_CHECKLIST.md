@@ -102,7 +102,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 
 ### Governed recovery
 
-- [ ] Add governed recovery command model.
+- [x] Add governed recovery command model.
 - [ ] Add recovery queue API.
 - [ ] Add recovery command center.
 - [ ] Add retry command.
