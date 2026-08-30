@@ -126,11 +126,17 @@ export async function runDomainEventActionWorkerForTenants(
             limit: input.perTenantLimit,
             ...(input.now === undefined ? {} : { now: input.now }),
           });
-          scheduledSummary = await runScheduledGovernedActionWorkerBatch(client, {
-            tenantId,
-            limit: input.perTenantLimit,
-            ...(input.now === undefined ? {} : { now: input.now }),
-          });
+          const remainingTenantBudget = Math.max(
+            0,
+            input.perTenantLimit - summary.processed,
+          );
+          if (remainingTenantBudget > 0) {
+            scheduledSummary = await runScheduledGovernedActionWorkerBatch(client, {
+              tenantId,
+              limit: remainingTenantBudget,
+              ...(input.now === undefined ? {} : { now: input.now }),
+            });
+          }
         } catch (cause) {
           error = cause instanceof Error
             ? cause.message
