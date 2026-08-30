@@ -26,3 +26,9 @@ test('Treatment workspace composes existing horizontal authorities', () => {
   assert.match(projection, /platform\.workflow_instances/);
   assert.match(projection, /platform\.crm_agreements/);
 });
+
+test('Treatment Care Plan is explicitly related to the Treatment, not inferred from Practice agreements', () => {
+  assert.match(projection, /relationship_key = 'care_plan'/);
+  assert.match(projection, /target_entity_type = 'crm\.agreement'/);
+  assert.doesNotMatch(projection, /agreement\.account_id = c\.account_id/);
+});
