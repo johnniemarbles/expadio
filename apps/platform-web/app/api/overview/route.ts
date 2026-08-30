@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbPool } from '../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
@@ -8,32 +7,54 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('organizationId')?.trim() || contextState.organizationId || '';
 
-    // Aggregate real metrics from database tables
-    const [orgResult, capResult, corrResult, runResult] = await Promise.all([
-      orgId
-        ? dbPool.query(
-            'SELECT organization_id, name, status FROM platform.organizations WHERE organization_id = $1 AND tenant_id = $2',
-            [orgId, contextState.tenantId]
-          )
-        : Promise.resolve({ rows: [] }),
-      dbPool.query(
-        'SELECT state, COUNT(*)::int AS cnt FROM platform.capability_state WHERE tenant_id = $1 GROUP BY state',
+    const overviewData = await withTenantClient(contextState, async (client) => {
+      const [orgResult, capResult, corrResult, runResult] = await Promise.all([
+        orgId
+          ? client.query(
+              'SELECT organization_id, name, status FROM platform.organizations WHERE organization_id = $1 AND tenant_id = $2',
+              [orgId, contextState.tenantId]
+            )
+          : Promise.resolve({ rows: [] }),
+        client.query(
+          'SELECT state, COUNT(*)::int AS cnt FROM platform.capability_state WHERE tenant_id = $1 GROUP BY state',
+          [contextState.tenantId]
+        ),
+        client.query(
+          `SELECT COUNT(*)::int AS cnt FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND status = 'UNREVIEWED'`,
+          [contextState.tenantId]
+        ),
+        client.query(
+          'SELECT COUNT(*)::int AS cnt FROM platform.agent_runs WHERE tenant_id = $1',
+          [contextState.tenantId]
+        )
+      ]);
+
+      const topCaps = await client.query(
+        `SELECT binding_id, state, resolved_at FROM platform.capability_state WHERE tenant_id = $1 ORDER BY resolved_at DESC LIMIT 3`,
         [contextState.tenantId]
-      ),
-      dbPool.query(
-        `SELECT COUNT(*)::int AS cnt FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND status = 'UNREVIEWED'`,
+      );
+
+      const topReviewsRes = await client.query(
+        `SELECT proposal_reference, proposer_subject_id, created_at FROM platform.company_brain_correction_proposals 
+         WHERE tenant_id = $1 AND status = 'UNREVIEWED' ORDER BY created_at DESC LIMIT 3`,
         [contextState.tenantId]
-      ),
-      dbPool.query(
-        'SELECT COUNT(*)::int AS cnt FROM platform.agent_runs WHERE tenant_id = $1',
+      );
+
+      const topActivityRes = await client.query(
+        `SELECT event_id, event_type, event_reference, occurred_at, actor_subject_id, reason
+         FROM platform.agent_run_events 
+         WHERE tenant_id = $1 ORDER BY occurred_at DESC LIMIT 3`,
         [contextState.tenantId]
-      )
-    ]);
+      );
+
+      return { orgResult, capResult, corrResult, runResult, topCaps, topReviewsRes, topActivityRes };
+    });
+
+    const { orgResult, capResult, corrResult, runResult, topCaps, topReviewsRes, topActivityRes } = overviewData;
 
     const org = orgResult.rows[0];
     const orgName = org ? org.name : 'Selected Workspace';
 
-    // Build metrics from aggregated counts
     const activeCount = capResult.rows.find((r: any) => r.state === 'ACTIVE')?.cnt || 0;
     const totalCapabilities = capResult.rows.reduce((sum: number, r: any) => sum + r.cnt, 0);
     const unreviewedCorrections = corrResult.rows[0]?.cnt || 0;
@@ -46,11 +67,6 @@ export async function GET(request: Request) {
       { label: 'System health', value: 'Operational', detail: 'All adapters connected', tone: 'positive' }
     ];
 
-    // Fetch top capabilities
-    const topCaps = await dbPool.query(
-      `SELECT binding_id, state, resolved_at FROM platform.capability_state WHERE tenant_id = $1 ORDER BY resolved_at DESC LIMIT 3`,
-      [contextState.tenantId]
-    );
     const capabilities = topCaps.rows.map((row: any) => ({
       id: row.binding_id,
       name: 'Governed Capability',
@@ -61,11 +77,6 @@ export async function GET(request: Request) {
       updated: row.resolved_at || new Date().toISOString(),
     }));
 
-    const topReviewsRes = await dbPool.query(
-      `SELECT proposal_reference, proposer_subject_id, created_at FROM platform.company_brain_correction_proposals 
-       WHERE tenant_id = $1 AND status = 'UNREVIEWED' ORDER BY created_at DESC LIMIT 3`,
-      [contextState.tenantId]
-    );
     const reviews = topReviewsRes.rows.map((row: any) => ({
       id: row.proposal_reference,
       title: 'Review Correction Proposal',
@@ -75,12 +86,6 @@ export async function GET(request: Request) {
       risk: 'Medium'
     }));
 
-    const topActivityRes = await dbPool.query(
-      `SELECT event_id, event_type, event_reference, occurred_at, actor_subject_id, reason
-       FROM platform.agent_run_events 
-       WHERE tenant_id = $1 ORDER BY occurred_at DESC LIMIT 3`,
-      [contextState.tenantId]
-    );
     const activity = topActivityRes.rows.map((row: any) => ({
       id: row.event_id,
       actor: row.actor_subject_id || 'System',

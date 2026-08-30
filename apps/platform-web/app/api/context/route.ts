@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { PlatformWorkspaceContext } from '../../../lib/contracts';
-import { dbPool } from '../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const contextState = await resolveRequestContext(request);
 
-    const result = await dbPool.query(
-      'SELECT organization_id, name, status FROM platform.organizations WHERE tenant_id = $1 ORDER BY name ASC',
-      [contextState.tenantId]
+    const result = await withTenantClient(contextState, (client) =>
+      client.query(
+        'SELECT organization_id, name, status FROM platform.organizations WHERE tenant_id = $1 ORDER BY name ASC',
+        [contextState.tenantId]
+      )
     );
 
     const organizations = result.rows.map((row: any) => ({

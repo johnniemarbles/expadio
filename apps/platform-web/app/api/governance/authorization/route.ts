@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
     
-    const [assignments, restrictions] = await Promise.all([
-      dbPool.query('SELECT * FROM platform.authorization_assignments WHERE tenant_id = $1 AND subject_id = $2 AND status = $3', [effectiveContext.tenantId, effectiveContext.subjectId, 'ACTIVE']),
-      dbPool.query('SELECT * FROM platform.authorization_restrictions WHERE tenant_id = $1 AND subject_id = $2 AND status = $3', [effectiveContext.tenantId, effectiveContext.subjectId, 'ACTIVE'])
-    ]);
+    const [assignments, restrictions] = await withTenantClient(effectiveContext, async (client) => Promise.all([
+      client.query('SELECT * FROM platform.authorization_assignments WHERE tenant_id = $1 AND subject_id = $2 AND status = $3', [effectiveContext.tenantId, effectiveContext.subjectId, 'ACTIVE']),
+      client.query('SELECT * FROM platform.authorization_restrictions WHERE tenant_id = $1 AND subject_id = $2 AND status = $3', [effectiveContext.tenantId, effectiveContext.subjectId, 'ACTIVE'])
+    ]));
 
     const hasAssignments = assignments.rows.length > 0;
     const hasRestrictions = restrictions.rows.length > 0;

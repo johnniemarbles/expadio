@@ -28,18 +28,6 @@ const knownTenantDataAccessDebt = [
   "apps/platform-web/app/api/brain/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
   "apps/platform-web/app/api/brain/slices/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
   "apps/platform-web/app/api/brain/sources/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/capabilities/route.ts: opens a pooled client without an explicit tenant session boundary",
-  "apps/platform-web/app/api/capabilities/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/configuration/credentials/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/configuration/route.ts: opens a pooled client without an explicit tenant session boundary",
-  "apps/platform-web/app/api/configuration/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/context/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/governance/authorization/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/governance/reviews/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/organizations/list/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/organizations/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/overview/route.ts: uses dbPool.query directly instead of shared tenant context helpers",
-  "apps/platform-web/app/api/sessions/route.ts: opens a pooled client without an explicit tenant session boundary",
 ];
 
 const ignoredSegments = new Set([
