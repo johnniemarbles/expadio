@@ -7,6 +7,7 @@ import {
 import {
   resolveRequestContext,
   requireStepUp,
+  stepUpReverificationResponse,
   withTenantClient,
   deniedResponse,
 } from '../../../../../../lib/request-context';
@@ -177,6 +178,8 @@ export async function POST(
         await client.query('COMMIT');
         return built;
       } catch (error) {
+    const reverification = stepUpReverificationResponse(error);
+    if (reverification !== null) return reverification;
         await client.query('ROLLBACK');
         throw error;
       }
