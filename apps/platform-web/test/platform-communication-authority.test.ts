@@ -24,24 +24,14 @@ test('authority lookup binds verified subject, tenant and organization and fails
 });
 
 test('automatic admin grants default off and demo opt-in cannot grant in production', () => {
-  const previous = { NODE_ENV: process.env.NODE_ENV, DEMO_OPEN_ADMIN: process.env.DEMO_OPEN_ADMIN, PLATFORM_ADMIN_SUBJECTS: process.env.PLATFORM_ADMIN_SUBJECTS };
-  try {
-    delete process.env.PLATFORM_ADMIN_SUBJECTS;
-    delete process.env.DEMO_OPEN_ADMIN;
-    process.env.NODE_ENV = 'development';
-    assert.equal(shouldGrantPlatformAdmin('brand-user'), false);
-    process.env.DEMO_OPEN_ADMIN = 'true';
-    assert.equal(shouldGrantPlatformAdmin('brand-user'), true);
-    process.env.NODE_ENV = 'production';
-    assert.equal(shouldGrantPlatformAdmin('brand-user'), false);
-    process.env.PLATFORM_ADMIN_SUBJECTS = ' platform-admin ';
-    assert.equal(shouldGrantPlatformAdmin('platform-admin'), true);
-    assert.equal(shouldGrantPlatformAdmin('brand-user'), false);
-  } finally {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[key]; else process.env[key] = value;
-    }
-  }
+  assert.equal(shouldGrantPlatformAdmin('brand-user', {}), false);
+  assert.equal(shouldGrantPlatformAdmin('brand-user', { NODE_ENV: 'development' }), false);
+  assert.equal(shouldGrantPlatformAdmin('brand-user', { NODE_ENV: 'development', DEMO_OPEN_ADMIN: 'true' }), true);
+  const production = { NODE_ENV: 'production', DEMO_OPEN_ADMIN: 'true' };
+  assert.equal(shouldGrantPlatformAdmin('brand-user', production), false);
+  const allowlisted = { ...production, PLATFORM_ADMIN_SUBJECTS: ' platform-admin ' };
+  assert.equal(shouldGrantPlatformAdmin('platform-admin', allowlisted), true);
+  assert.equal(shouldGrantPlatformAdmin('brand-user', allowlisted), false);
 });
 
 test('every provider and custody HTTP handler gates administration before work', () => {

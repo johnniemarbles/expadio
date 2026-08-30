@@ -1,3 +1,4 @@
+import { setFixtureOutboxAvailableAt } from './outbox-fixture-clock.ts';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -32,7 +33,7 @@ async function tenant(client: pg.PoolClient): Promise<string> {
 }
 
 async function event(client: pg.PoolClient, tenantId: string, eventType = 'Treatment.Discharged') {
-  return appendDomainEventWithOutbox(client, {
+  const appended = await appendDomainEventWithOutbox(client, {
     event: {
       eventId: randomUUID(),
       tenantId,
@@ -47,7 +48,29 @@ async function event(client: pg.PoolClient, tenantId: string, eventType = 'Treat
       payload: {},
     },
   });
+  await setFixtureOutboxAvailableAt(client, tenantId, appended.outboxId, new Date('2026-08-30T14:00:00.000Z'));
+  return appended;
 }
+
+test('a fixture remains ineligible until its explicit availability time', async () => {
+  const p = pool(1);
+  const c = await p.connect();
+  try {
+    const tenantId = await tenant(c);
+    const appended = await event(c, tenantId);
+    const availableAt = new Date('2026-08-30T14:05:00.000Z');
+    await setFixtureOutboxAvailableAt(c, tenantId, appended.outboxId, availableAt);
+    assert.equal(await claimDomainEventOutbox(c, {
+      tenantId, now: new Date(availableAt.getTime() - 1),
+    }), null);
+    const claim = await claimDomainEventOutbox(c, { tenantId, now: availableAt });
+    assert.ok(claim);
+    assert.equal(claim.eventId, appended.event.eventId);
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
 
 test('two workers cannot claim the same available event', async () => {
   const p = pool(2);
@@ -289,6 +312,8 @@ test('later events in one partition remain blocked until the earlier event is PU
         payload: {},
       },
     });
+    await setFixtureOutboxAvailableAt(c, tenantId, first.outboxId, new Date('2026-08-30T19:00:00.000Z'));
+    await setFixtureOutboxAvailableAt(c, tenantId, second.outboxId, new Date('2026-08-30T19:00:01.000Z'));
     assert.equal(first.partitionKey, second.partitionKey);
 
     const firstClaim = await claimDomainEventOutbox(c, {

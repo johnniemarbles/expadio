@@ -1,3 +1,4 @@
+import { setFixtureOutboxAvailableAt } from './outbox-fixture-clock.ts';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -120,6 +121,7 @@ async function seedCaseEvent(
     occurredAt: new Date('2026-08-30T15:30:00.000Z'),
   });
   assert.ok(appended);
+  await setFixtureOutboxAvailableAt(c, input.tenantId, appended.outboxId, new Date('2026-08-30T15:30:00.000Z'));
   return appended.event.eventId;
 }
 

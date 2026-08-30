@@ -1,3 +1,4 @@
+import { setFixtureOutboxAvailableAt } from './outbox-fixture-clock.ts';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -122,6 +123,7 @@ async function seedDentexFollowupCase(c: pg.PoolClient) {
     occurredAt: new Date('2026-08-30T14:30:00.000Z'),
   });
   assert.ok(appended);
+  await setFixtureOutboxAvailableAt(c, tenantId, appended.outboxId, new Date('2026-08-30T14:30:00.000Z'));
   return { tenantId, eventId: appended.event.eventId };
 }
 
@@ -282,6 +284,7 @@ test('worker retries materialization failures without creating an intent', async
       provenance: { verticalKey: 'dentex', version: null, runtimeSource: 'CODE_BASELINE' },
     });
     assert.ok(appended);
+    await setFixtureOutboxAvailableAt(c, tenantId, appended.outboxId, new Date('2026-08-30T14:30:00.000Z'));
 
     const result = await processOneDomainEventActionWorkItem(c, {
       tenantId,

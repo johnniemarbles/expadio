@@ -6,12 +6,15 @@
  * its own dependency-free module so it is unit-testable without loading the DB
  * pool or Clerk.
  */
-export function shouldGrantPlatformAdmin(subjectId: string): boolean {
-  const allowlist = (process.env.PLATFORM_ADMIN_SUBJECTS ?? '')
+export function shouldGrantPlatformAdmin(
+  subjectId: string,
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  const allowlist = (environment.PLATFORM_ADMIN_SUBJECTS ?? '')
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
   if (allowlist.includes(subjectId)) return true;
-  return process.env.NODE_ENV !== 'production'
-    && process.env.DEMO_OPEN_ADMIN?.toLowerCase() === 'true';
+  return environment.NODE_ENV !== 'production'
+    && environment.DEMO_OPEN_ADMIN?.toLowerCase() === 'true';
 }

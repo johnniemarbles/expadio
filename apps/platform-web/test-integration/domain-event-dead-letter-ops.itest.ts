@@ -1,3 +1,4 @@
+import { setFixtureOutboxAvailableAt } from './outbox-fixture-clock.ts';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -50,6 +51,8 @@ test('DEAD Domain Event outbox can start a new audited retry cycle', async () =>
         payload: {},
       },
     });
+
+    await setFixtureOutboxAvailableAt(c, tenantId, appended.outboxId, new Date('2026-08-30T17:00:00.000Z'));
 
     const claim = await claimDomainEventOutbox(c, {
       tenantId,
