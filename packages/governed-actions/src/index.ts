@@ -130,21 +130,24 @@ export function resolveGovernedAction(
   const evaluatedPolicyKeys = new Set(
     policyDecision.policyKeys.map((key) => required(key, 'policyDecision.policyKey')),
   );
-  const missingPolicyKeys = requiredPolicyKeys.filter((key) => !evaluatedPolicyKeys.has(key));
 
-  if (missingPolicyKeys.length > 0) {
-    return {
-      matched: true,
-      allowed: false,
-      reasonCode: 'POLICY_EVALUATION_INCOMPLETE',
-    };
-  }
-
+  // A denial may short-circuit as soon as one policy blocks the action.
+  // An allow decision is different: it must prove every policy required by the
+  // rule was evaluated, otherwise an omitted policy could be bypassed.
   if (!policyDecision.allowed) {
     return {
       matched: true,
       allowed: false,
       reasonCode,
+    };
+  }
+
+  const missingPolicyKeys = requiredPolicyKeys.filter((key) => !evaluatedPolicyKeys.has(key));
+  if (missingPolicyKeys.length > 0) {
+    return {
+      matched: true,
+      allowed: false,
+      reasonCode: 'POLICY_EVALUATION_INCOMPLETE',
     };
   }
 
