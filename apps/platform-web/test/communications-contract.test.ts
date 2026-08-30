@@ -120,7 +120,11 @@ test("connector actions surface the governed custody endpoints", () => {
   assert.match(connectorActionsModal, /\/attestation/);
   assert.match(connectorActionsModal, /\/revoke/);
   assert.match(connectorActionsModal, /method:\s*"POST"/);
-  // Step-up (§3.4) rides with the destructive action.
+  // Test send is also a governed connector action rather than a dashboard shortcut.
+  assert.match(connectorActionsModal, /\/test-send/);
+  assert.match(connectorActionsModal, /Send test/);
+  assert.match(connectorActionsModal, /idempotencyKey:\s*`test-\$\{crypto\.randomUUID\(\)\}`/);
+  // Step-up (§3.4) rides with destructive and external-send actions.
   assert.match(connectorActionsModal, /x-expadio-reauth-at/);
 });
 
