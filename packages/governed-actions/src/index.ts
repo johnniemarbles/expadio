@@ -183,3 +183,5 @@ export function resolveGovernedAction(
     },
   };
 }
+
+export * from './communicate-executor.ts';
