@@ -300,8 +300,8 @@ test('generic batch runner publishes successes and retries failures independentl
       baseRetryDelaySeconds: 10,
       maxRetryDelaySeconds: 60,
       now: () => times[Math.min(clockIndex++, times.length - 1)]!,
-      handler: {
-        async handle({ item }) {
+      publisher: {
+        async publish({ item }) {
           if (item.event.eventType === 'Treatment.ClinicalReviewEntered') {
             throw new Error('review consumer unavailable');
           }
