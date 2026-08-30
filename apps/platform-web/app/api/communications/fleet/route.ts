@@ -36,7 +36,7 @@ export async function GET(request: Request) {
          MAX(updated_at) AS last_event_at
        FROM platform.communication_deliveries
        WHERE requested_at >= NOW() - INTERVAL '7 days'
-         AND (tenant_id = $1::uuid OR tenant_id IS NOT NULL)
+         AND tenant_id = $1::uuid
        GROUP BY connector_key, channel
        ORDER BY connector_key, channel`,
       [effectiveContext.tenantId]
