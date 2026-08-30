@@ -91,6 +91,7 @@ test('CRM case stage mutation, Domain Event, and outbox commit and roll back ato
 
     await c.query('BEGIN');
     let committedEventId = '';
+    let committedRevision = -1;
     try {
       const moved = await transitionWorkflow(c, {
         tenantId,
@@ -124,6 +125,7 @@ test('CRM case stage mutation, Domain Event, and outbox commit and roll back ato
         },
       });
       committedEventId = appended.event.eventId;
+      committedRevision = moved.instance.revision;
       await c.query('COMMIT');
     } catch (error) {
       await c.query('ROLLBACK');
@@ -167,7 +169,7 @@ test('CRM case stage mutation, Domain Event, and outbox commit and roll back ato
     assert.equal(committed.correlation_id, 'treatment-journey-1');
     assert.equal(
       committed.causation_id,
-      `workflow:${started.instance.instanceId}:revision:1`,
+      `workflow:${started.instance.instanceId}:revision:${committedRevision}`,
     );
     assert.equal(committed.pack_key, 'dentex');
     assert.equal(committed.pack_version, null);
@@ -175,7 +177,7 @@ test('CRM case stage mutation, Domain Event, and outbox commit and roll back ato
       previousStageKey: 'INTAKE',
       currentStageKey: 'IN_PROGRESS',
       workflowInstanceId: started.instance.instanceId,
-      workflowRevision: 1,
+      workflowRevision: committedRevision,
     });
     assert.deepEqual(committed.metadata, {
       source: 'decision-fabric.crm-case-transition',
