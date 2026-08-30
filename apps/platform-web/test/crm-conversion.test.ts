@@ -56,3 +56,15 @@ test("converted Treatment case is bound to the canonical crm.case workflow key",
   assert.match(convertRoute, /blueprint_key, owner_subject_id/);
   assert.match(convertRoute, /'OPEN', 'crm\.case'/);
 });
+
+
+test("converted Treatment starts and binds the existing crm.case workflow atomically", () => {
+  assert.match(convertRoute, /startWorkflow\(client/);
+  assert.match(convertRoute, /subjectType: 'crm\.case'/);
+  assert.match(convertRoute, /blueprintKey: 'crm\.case'/);
+  assert.match(convertRoute, /industryPackProvenance: workflowPackProvenance\(runtimePack\.provenance\)/);
+  assert.match(convertRoute, /workflow_instance_id = \$2::uuid/);
+  assert.match(convertRoute, /stage_key = \$3/);
+  assert.match(convertRoute, /noWorkflowBlueprint/);
+  assert.match(convertRoute, /ROLLBACK/);
+});
