@@ -51,6 +51,8 @@ export interface GovernedCommunicateQueuePorts {
     readonly providerKey: string;
     readonly channel: CommunicationChannel;
   }) => string | null;
+  /** Execution-time clock for consent/suppression evaluation and queue evidence. */
+  readonly now?: () => string;
 }
 
 export type GovernedCommunicateQueueResult =
@@ -264,7 +266,7 @@ export async function queueGovernedCommunicateAction(
     };
   }
 
-  const evaluatedAt = actionIntent.requestedAt.toISOString();
+  const evaluatedAt = ports.now?.() ?? new Date().toISOString();
   const preflight = await evaluatePersistedCommunicationPreflight({
     intent: communicationIntent,
     repositories: ports.compliance,
@@ -330,7 +332,7 @@ export async function queueGovernedCommunicateAction(
         ? {}
         : { requiredComplianceTags: config.requiredComplianceTags }),
     },
-    requestedAt: evaluatedAt,
+    requestedAt: actionIntent.requestedAt.toISOString(),
   };
 
   const routed = routePreparedCommunicationDispatch(
