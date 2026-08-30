@@ -70,13 +70,15 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     );
   }
 
+  const tenantIdRequest = requestedTenant;
+
   let effective;
   try {
     effective = await authenticateAndResolveContext(
       { identityVerifier, membershipRepository },
       {
         credential: userId,
-        tenantId: requestedTenant,
+        tenantId: tenantIdRequest,
         organizationId: requestedOrganization,
       },
     );
@@ -153,10 +155,16 @@ export function deniedResponse(error: unknown): { body: DeniedResult; status: nu
 
 export type RouteSearchParams = { [key: string]: string | string[] | undefined };
 
-export function requestedOrganizationId(request?: Request): string | null {
-  if (request) {
-    const value = new URL(request.url).searchParams.get('org')?.trim();
-    if (value) return value;
+type OrganizationSelectionSource = Request | RouteSearchParams | undefined;
+
+function firstRouteParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0]?.trim() ?? '';
+  return value?.trim() ?? '';
+}
+
+export function requestedOrganizationId(source?: OrganizationSelectionSource): string {
+  if (source instanceof Request) {
+    return new URL(source.url).searchParams.get('org')?.trim() ?? '';
   }
-  return null;
+  return firstRouteParam(source?.org);
 }
