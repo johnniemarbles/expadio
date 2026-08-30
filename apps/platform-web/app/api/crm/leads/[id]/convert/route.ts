@@ -6,6 +6,8 @@ import { toCase } from '../../../cases/route';
 import { resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
 import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 import { startWorkflow } from '../../../../../../lib/workflow-runtime';
+import { assignParticipant } from '../../../../../../lib/workflow-participants';
+import { resolveTreatmentOwnerSubjectId } from '../../../../../../lib/crm-owner-resolution';
 import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
 
 /**
@@ -101,6 +103,13 @@ export async function POST(
           return { lost: true } as const;
         }
 
+        // Ownership is a business relationship, distinct from the conversion actor.
+        // Preserve the Lead owner when present; otherwise the converter becomes owner.
+        const treatmentOwnerSubjectId = resolveTreatmentOwnerSubjectId({
+          leadOwnerSubjectId: leadRow.owner_subject_id,
+          conversionActorSubjectId: context.subjectId,
+        });
+
         // Resolve the customer account: reuse the lead's account if present
         // (promoting it to CUSTOMER), else create one named after the lead.
         let accountRow;
@@ -168,7 +177,7 @@ export async function POST(
               accountRow.account_id,
               leadRow.contact_id,
               subject,
-              context.subjectId,
+              treatmentOwnerSubjectId,
               JSON.stringify(validated.attributes),
               schemaVersion,
               runtimePack.provenance.verticalKey,
@@ -187,6 +196,18 @@ export async function POST(
           if (!started.ok) {
             await client.query('ROLLBACK');
             return { noWorkflowBlueprint: true } as const;
+          }
+
+          if (started.instance.currentStageKey !== undefined) {
+            await assignParticipant(client, {
+              tenantId: context.tenantId,
+              instanceId: started.instance.instanceId,
+              stageKey: started.instance.currentStageKey,
+              participantKey: 'owner',
+              targetKind: 'USER',
+              targetKey: createdCase.owner_subject_id,
+              assignedBySubjectId: context.subjectId,
+            });
           }
 
           const boundCase = await client.query(
