@@ -154,7 +154,7 @@ test('DENTEX discharge event materializes patient follow-up and queues through C
     const persisted = materialized[0];
     assert.equal(persisted?.status, 'PERSISTED');
     if (persisted?.status !== 'PERSISTED') {
-      throw new Error(`expected persisted follow-up action, got ${persisted?.reasonCode}`);
+      throw new Error('expected persisted follow-up action');
     }
 
     assert.equal(persisted.ruleKey, 'dentex.treatment.discharge.patient-follow-up');
