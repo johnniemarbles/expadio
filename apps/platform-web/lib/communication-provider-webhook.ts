@@ -146,7 +146,7 @@ export async function ingestVerifiedCommunicationProviderWebhook(
       return toResult('DUPLICATE', existing);
     }
 
-    let outcome = normalizeCommunicationProviderWebhook(webhook);
+    const providerOutcome = normalizeCommunicationProviderWebhook(webhook);
     let delivery: DeliveryRow | undefined;
     if (providerMessageId !== null) {
       const deliveryResult = await client.query<DeliveryRow>(
@@ -163,12 +163,14 @@ export async function ingestVerifiedCommunicationProviderWebhook(
       delivery = deliveryResult.rows[0];
     }
 
-    if (delivery === undefined) outcome = 'UNMATCHED';
+    const outcome: CommunicationProviderWebhookOutcome = delivery === undefined
+      ? 'UNMATCHED'
+      : providerOutcome;
 
     const previousState = delivery?.state ?? null;
     const nextState = delivery === undefined
       ? null
-      : targetState(delivery.state, outcome as Exclude<CommunicationProviderWebhookOutcome, 'UNMATCHED'>);
+      : targetState(delivery.state, providerOutcome);
     const reasonCode = reasonFor(outcome, previousState, nextState);
     const processedAt = new Date();
 
