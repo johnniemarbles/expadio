@@ -5,7 +5,7 @@ import {
   parseFingerprintKey,
   type WrappedSecretEnvelope,
 } from '@expadio/credential-custody';
-import { resolveRequestContext, requireStepUp, deniedResponse } from '../../../../lib/request-context';
+import { resolveRequestContext, requireStepUp, stepUpReverificationResponse, deniedResponse } from '../../../../lib/request-context';
 import { wrappingKeys } from '../wrapping-key/route';
 import { secretVault } from '../../../../lib/custody-adapter';
 
@@ -130,6 +130,8 @@ export async function POST(request: Request) {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
+    const reverification = stepUpReverificationResponse(error);
+    if (reverification !== null) return reverification;
     if (error instanceof CustodyError) {
       const recoverable =
         error.code === 'CUSTODY_WRAPPING_KEY_EXPIRED' || error.code === 'CUSTODY_WRAPPING_KEY_UNKNOWN';
