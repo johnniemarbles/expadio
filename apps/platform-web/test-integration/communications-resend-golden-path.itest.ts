@@ -192,6 +192,7 @@ test('governed Resend golden path persists lease + TEST_SEND_OK evidence', async
       channel: 'email',
       recipient: { email: 'recipient@example.test' },
       sender: {
+        senderKey: 'gp3b-verified-sender',
         address: 'verified@example.test',
         displayName: 'EXPADIO Test',
       },
