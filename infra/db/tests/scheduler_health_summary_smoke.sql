@@ -3,21 +3,21 @@
 BEGIN;
 
 INSERT INTO platform.tenants (tenant_id, name, vertical_key) VALUES
-  ('78787878-7878-7878-7878-787878787878', 'Scheduler Health Tenant A', 'dentex'),
-  ('89898989-8989-8989-8989-898989898989', 'Scheduler Health Tenant B', 'dentex');
+  ('a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7', 'Scheduler Health Tenant A', 'dentex'),
+  ('b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8', 'Scheduler Health Tenant B', 'dentex');
 
-SELECT set_config('app.tenant_id', '78787878-7878-7878-7878-787878787878', false);
+SELECT set_config('app.tenant_id', 'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7', false);
 
 INSERT INTO platform.domain_event_scheduler_targets (
   tenant_id, execution_enabled, cadence_seconds, next_scheduled_at,
   last_selected_at, last_invocation_id, last_result, created_at, updated_at
 ) VALUES (
-  '78787878-7878-7878-7878-787878787878',
+  'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
   true,
   300,
   '2026-08-30T14:00:00Z',
   '2026-08-30T13:55:00Z',
-  '78780000-0000-0000-0000-000000000001',
+  'a7a70000-0000-0000-0000-000000000001',
   'SUCCEEDED',
   '2026-08-30T13:00:00Z',
   '2026-08-30T14:00:00Z'
@@ -29,10 +29,10 @@ INSERT INTO platform.domain_event_tenant_execution_runs (
   started_at, finished_at, duration_ms, error
 ) VALUES
   (
-    '78780000-0000-0000-0000-000000000010',
-    '78787878-7878-7878-7878-787878787878',
-    '78780000-0000-0000-0000-000000000011',
-    '78780000-0000-0000-0000-000000000012',
+    'a7a70000-0000-0000-0000-000000000010',
+    'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
+    'a7a70000-0000-0000-0000-000000000011',
+    'a7a70000-0000-0000-0000-000000000012',
     'RUNNING',
     25,
     0,
@@ -46,10 +46,10 @@ INSERT INTO platform.domain_event_tenant_execution_runs (
     NULL
   ),
   (
-    '78780000-0000-0000-0000-000000000020',
-    '78787878-7878-7878-7878-787878787878',
-    '78780000-0000-0000-0000-000000000021',
-    '78780000-0000-0000-0000-000000000022',
+    'a7a70000-0000-0000-0000-000000000020',
+    'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
+    'a7a70000-0000-0000-0000-000000000021',
+    'a7a70000-0000-0000-0000-000000000022',
     'FAILED',
     25,
     3,
@@ -68,11 +68,11 @@ INSERT INTO platform.domain_event_tenant_execution_state (
   lease_expires_at, last_started_at, last_finished_at, last_success_at,
   last_failure_at, last_error, updated_at
 ) VALUES (
-  '78787878-7878-7878-7878-787878787878',
+  'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
   true,
   '2026-08-30T14:10:00Z',
-  '78780000-0000-0000-0000-000000000010',
-  '78780000-0000-0000-0000-000000000012',
+  'a7a70000-0000-0000-0000-000000000010',
+  'a7a70000-0000-0000-0000-000000000012',
   '2026-08-30T14:06:00Z',
   '2026-08-30T14:05:00Z',
   '2026-08-30T13:00:05Z',
@@ -87,8 +87,8 @@ INSERT INTO platform.domain_events (
   event_version, occurred_at, actor_subject_id, correlation_id,
   causation_id, pack_key, pack_version, payload, metadata
 ) VALUES (
-  '78780000-0000-0000-0000-000000000030',
-  '78787878-7878-7878-7878-787878787878',
+  'a7a70000-0000-0000-0000-000000000030',
+  'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
   'crm.case',
   'scheduler-health-treatment-1',
   'Treatment.Discharged',
@@ -109,9 +109,9 @@ INSERT INTO platform.governed_action_intents (
   idempotency_key, correlation_id, causation_id, requested_by_subject_id,
   requested_at, configuration, policy_decision
 ) VALUES (
-  '78780000-0000-0000-0000-000000000031',
-  '78787878-7878-7878-7878-787878787878',
-  '78780000-0000-0000-0000-000000000030',
+  'a7a70000-0000-0000-0000-000000000031',
+  'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
+  'a7a70000-0000-0000-0000-000000000030',
   'Treatment.Discharged',
   'crm.case',
   'scheduler-health-treatment-1',
@@ -120,7 +120,7 @@ INSERT INTO platform.governed_action_intents (
   'patient.follow_up.schedule',
   'scheduler-health:event:schedule',
   'scheduler-health-correlation-1',
-  '78780000-0000-0000-0000-000000000030',
+  'a7a70000-0000-0000-0000-000000000030',
   'scheduler-health-reviewer',
   '2026-08-30T13:30:01Z',
   '{"delaySeconds":604800}'::jsonb,
@@ -133,9 +133,9 @@ INSERT INTO platform.scheduled_governed_actions (
   target_configuration, target_idempotency_key, state,
   child_action_intent_id, attempt_count, last_attempt_at, last_reason_code
 ) VALUES (
-  '78780000-0000-0000-0000-000000000032',
-  '78787878-7878-7878-7878-787878787878',
-  '78780000-0000-0000-0000-000000000031',
+  'a7a70000-0000-0000-0000-000000000032',
+  'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
+  'a7a70000-0000-0000-0000-000000000031',
   '2026-08-29T14:00:00Z',
   '2026-08-29T14:00:00Z',
   'COMMUNICATE',
@@ -149,13 +149,13 @@ INSERT INTO platform.scheduled_governed_actions (
   NULL
 );
 
-SELECT set_config('app.tenant_id', '89898989-8989-8989-8989-898989898989', false);
+SELECT set_config('app.tenant_id', 'b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8', false);
 
 INSERT INTO platform.domain_event_scheduler_targets (
   tenant_id, execution_enabled, cadence_seconds, next_scheduled_at,
   last_result, created_at, updated_at
 ) VALUES (
-  '89898989-8989-8989-8989-898989898989',
+  'b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8',
   false,
   300,
   '2026-08-30T14:00:00Z',
@@ -164,7 +164,7 @@ INSERT INTO platform.domain_event_scheduler_targets (
   '2026-08-30T14:00:00Z'
 );
 
-SELECT set_config('app.tenant_id', '78787878-7878-7878-7878-787878787878', false);
+SELECT set_config('app.tenant_id', 'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7', false);
 
 DO $$
 DECLARE
@@ -214,14 +214,14 @@ BEGIN
   SELECT count(*)::integer
     INTO other_tenant_count
     FROM platform.scheduler_health_summary
-   WHERE tenant_id = '89898989-8989-8989-8989-898989898989'::uuid;
+   WHERE tenant_id = 'b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8'::uuid;
 
   IF other_tenant_count <> 0 THEN
     RAISE EXCEPTION 'scheduler health view leaked another tenant: %', other_tenant_count;
   END IF;
 END $$;
 
-SELECT set_config('app.tenant_id', '89898989-8989-8989-8989-898989898989', false);
+SELECT set_config('app.tenant_id', 'b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8', false);
 
 DO $$
 DECLARE
