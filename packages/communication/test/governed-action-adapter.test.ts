@@ -6,11 +6,13 @@ import {
 } from '@expadio/provider-registry';
 import type {
   CommunicationConsentRepository,
-  CommunicationDeliveryRecord,
-  CommunicationDeliveryRepository,
   CommunicationSuppressionRepository,
   CommunicationTemplateRepository,
 } from '../src/index.ts';
+import type {
+  CommunicationDeliveryRecord,
+  CommunicationDeliveryRepository,
+} from '../src/delivery-repository.ts';
 import type { GovernedActionIntent } from '@expadio/governed-actions';
 import {
   queueGovernedCommunicateAction,
