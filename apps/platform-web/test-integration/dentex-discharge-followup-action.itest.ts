@@ -8,9 +8,8 @@ import {
 import {
   materializeCrmCaseGovernedActionsForEvent,
 } from '../lib/crm-case-governed-actions';
-import {
-  executeGovernedCommunicateAction,
-} from '../lib/governed-communicate-executor';
+import { executeGovernedScheduleAction } from '../lib/governed-schedule-executor';
+import { runScheduledGovernedActionWorkerOnce } from '../lib/scheduled-governed-action-worker';
 
 const CAPABILITY_KEY = 'communication.email.send';
 
@@ -25,7 +24,7 @@ function pool(): pg.Pool {
   });
 }
 
-test('DENTEX discharge event materializes patient follow-up and queues through Communications', async () => {
+test('DENTEX discharge schedules a +7 day follow-up and queues it only when due', async () => {
   const p = pool();
   const c = await p.connect();
   try {
@@ -158,41 +157,62 @@ test('DENTEX discharge event materializes patient follow-up and queues through C
     }
 
     assert.equal(persisted.ruleKey, 'dentex.treatment.discharge.patient-follow-up');
-    assert.equal(persisted.intent.executorClass, 'COMMUNICATE');
-    assert.equal(persisted.intent.actionKey, 'patient.follow_up');
+    assert.equal(persisted.intent.executorClass, 'SCHEDULE');
+    assert.equal(persisted.intent.actionKey, 'patient.follow_up.schedule');
     assert.deepEqual(persisted.intent.configuration, {
-      triggerKey: 'patient.follow_up',
-      recipient: { email: patientEmail },
-      variables: {
-        patientName: 'Mira Patient',
-        treatmentSubject: 'Root canal — UR6',
+      delaySeconds: 604800,
+      target: {
+        executorClass: 'COMMUNICATE',
+        actionKey: 'patient.follow_up',
+        configuration: {
+          triggerKey: 'patient.follow_up',
+          recipient: { email: patientEmail },
+          variables: {
+            patientName: 'Mira Patient',
+            treatmentSubject: 'Root canal — UR6',
+          },
+          purpose: 'transactional',
+          consentRequired: false,
+          channel: 'email',
+          locale: 'en',
+          capabilityKey: CAPABILITY_KEY,
+        },
       },
-      purpose: 'transactional',
-      consentRequired: false,
-      channel: 'email',
-      locale: 'en',
-      capabilityKey: CAPABILITY_KEY,
     });
 
-    const execution = await executeGovernedCommunicateAction(c, {
+    const execution = await executeGovernedScheduleAction(c, {
       intent: persisted.intent,
-      now: () => '2026-08-30T13:00:02.000Z',
+      now: () => new Date('2026-08-30T13:00:02.000Z'),
     });
 
     assert.equal(execution.replayed, false);
-    assert.equal(execution.queue?.queued, true);
-    if (execution.queue === null || !execution.queue.queued) {
-      throw new Error('expected DENTEX follow-up to queue');
-    }
-
-    assert.equal(
-      execution.queue.delivery.idempotencyKey,
-      persisted.intent.idempotencyKey,
-    );
-    assert.equal(execution.queue.delivery.state, 'PENDING');
     assert.equal(execution.attempt.status, 'QUEUED');
+    assert.equal(execution.scheduled?.dueAt.toISOString(), '2026-09-06T13:00:00.000Z');
+
+    assert.deepEqual(
+      await runScheduledGovernedActionWorkerOnce(c, {
+        tenantId,
+        now: () => new Date('2026-09-06T12:59:59.000Z'),
+      }),
+      { status: 'IDLE' },
+    );
+
+    const due = await runScheduledGovernedActionWorkerOnce(c, {
+      tenantId,
+      now: () => new Date('2026-09-06T13:00:00.000Z'),
+    });
+    assert.equal(due.status, 'MATERIALIZED');
+    if (due.status !== 'MATERIALIZED' || due.communication === null) {
+      throw new Error('expected due DENTEX follow-up to materialize and queue');
+    }
+    assert.equal(due.communication.queue?.queued, true);
+    if (due.communication.queue === null || !due.communication.queue.queued) {
+      throw new Error('expected scheduled communication to queue');
+    }
+    assert.equal(due.communication.queue.delivery.state, 'PENDING');
+    assert.equal(due.communication.attempt.status, 'QUEUED');
     assert.equal(
-      execution.queue.preparedDispatch.rendered.body,
+      due.communication.queue.preparedDispatch.rendered.body,
       'Hello Mira Patient, your follow-up for Root canal — UR6 is ready.',
     );
 
