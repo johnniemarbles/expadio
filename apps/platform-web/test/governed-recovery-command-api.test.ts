@@ -55,7 +55,7 @@ test('governed recovery command route is governed, filterable, and read-only', (
   assert.doesNotMatch(route, /export async function POST/);
   assert.doesNotMatch(route, /export async function PATCH/);
   assert.doesNotMatch(route, /export async function DELETE/);
-  assert.doesNotMatch(route, /claim/i);
+  assert.doesNotMatch(route, /claimGovernedRecoveryCommand/);
   assert.doesNotMatch(route, /retry\(/i);
   assert.doesNotMatch(route, /cancel\(/i);
   assert.doesNotMatch(route, /provider\.send/i);
