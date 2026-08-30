@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import {
   runDomainEventActionWorkerForTenants,
   type MultiTenantDomainEventRunnerSummary,
@@ -25,8 +25,30 @@ function boundedTenantCount(value: number): number {
   return Math.min(value, MAX_TENANTS);
 }
 
-export async function listDueTenantExecutionTargets(
+async function withSchedulerControlPlane<T>(
   pool: Pool,
+  work: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  let released = false;
+  try {
+    await client.query(
+      "SELECT set_config('app.scheduler_control_plane', 'on', false)",
+    );
+    return await work(client);
+  } finally {
+    try {
+      await client.query('RESET app.scheduler_control_plane');
+    } catch {
+      client.release(true);
+      released = true;
+    }
+    if (!released) client.release();
+  }
+}
+
+export async function listDueTenantExecutionTargets(
+  client: PoolClient,
   input: {
     readonly limit: number;
     readonly now?: Date;
@@ -35,7 +57,7 @@ export async function listDueTenantExecutionTargets(
   const limit = boundedTenantCount(input.limit);
   const now = input.now ?? new Date();
 
-  const result = await pool.query<DueTenantRow>(
+  const result = await client.query<DueTenantRow>(
     `SELECT tenant_id, cadence_seconds, next_scheduled_at
        FROM platform.domain_event_scheduler_targets
       WHERE execution_enabled = true
@@ -55,7 +77,7 @@ export async function listDueTenantExecutionTargets(
 }
 
 async function recordCoordinatorResults(
-  pool: Pool,
+  client: PoolClient,
   input: {
     readonly targets: readonly DueTenantTarget[];
     readonly summary: MultiTenantDomainEventRunnerSummary;
@@ -73,7 +95,7 @@ async function recordCoordinatorResults(
     // BUSY means another scheduler already owns the execution lease. Do not
     // move this target's due time; the lease owner remains responsible for it.
     if (result.status === 'SKIPPED_BUSY') {
-      await pool.query(
+      await client.query(
         `UPDATE platform.domain_event_scheduler_targets
             SET last_selected_at = $2,
                 last_invocation_id = $3::uuid,
@@ -90,7 +112,7 @@ async function recordCoordinatorResults(
       continue;
     }
 
-    await pool.query(
+    await client.query(
       `UPDATE platform.domain_event_scheduler_targets
           SET next_scheduled_at = $2 + make_interval(secs => cadence_seconds),
               last_selected_at = $2,
@@ -120,37 +142,39 @@ export async function runDueTenantExecutionCoordinator(
   readonly dueTenantCount: number;
   readonly summary: MultiTenantDomainEventRunnerSummary | null;
 }> {
-  const selectedAt = input.now?.() ?? new Date();
-  const targets = await listDueTenantExecutionTargets(pool, {
-    limit: input.maxTenants,
-    now: selectedAt,
-  });
+  return withSchedulerControlPlane(pool, async (controlPlaneClient) => {
+    const selectedAt = input.now?.() ?? new Date();
+    const targets = await listDueTenantExecutionTargets(controlPlaneClient, {
+      limit: input.maxTenants,
+      now: selectedAt,
+    });
 
-  if (targets.length === 0) {
+    if (targets.length === 0) {
+      return {
+        dueTenantCount: 0,
+        summary: null,
+      };
+    }
+
+    const summary = await runDomainEventActionWorkerForTenants(pool, {
+      tenantIds: targets.map((target) => target.tenantId),
+      perTenantLimit: input.perTenantLimit,
+      ...(input.tenantLeaseMs === undefined
+        ? {}
+        : { tenantLeaseMs: input.tenantLeaseMs }),
+      ...(input.now === undefined ? {} : { now: input.now }),
+    });
+
+    const completedAt = input.now?.() ?? new Date();
+    await recordCoordinatorResults(controlPlaneClient, {
+      targets,
+      summary,
+      completedAt,
+    });
+
     return {
-      dueTenantCount: 0,
-      summary: null,
+      dueTenantCount: targets.length,
+      summary,
     };
-  }
-
-  const summary = await runDomainEventActionWorkerForTenants(pool, {
-    tenantIds: targets.map((target) => target.tenantId),
-    perTenantLimit: input.perTenantLimit,
-    ...(input.tenantLeaseMs === undefined
-      ? {}
-      : { tenantLeaseMs: input.tenantLeaseMs }),
-    ...(input.now === undefined ? {} : { now: input.now }),
   });
-
-  const completedAt = input.now?.() ?? new Date();
-  await recordCoordinatorResults(pool, {
-    targets,
-    summary,
-    completedAt,
-  });
-
-  return {
-    dueTenantCount: targets.length,
-    summary,
-  };
 }
