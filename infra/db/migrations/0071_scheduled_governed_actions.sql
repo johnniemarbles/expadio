@@ -9,6 +9,7 @@ CREATE TABLE platform.scheduled_governed_actions (
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE RESTRICT,
   parent_action_intent_id uuid NOT NULL,
   due_at timestamptz NOT NULL,
+  next_attempt_at timestamptz NOT NULL,
   target_executor_class text NOT NULL CHECK (
     target_executor_class IN (
       'COMMUNICATE','ASSIGN','CREATE_TASK','START_WORKFLOW','ADVANCE_WORKFLOW',
@@ -42,7 +43,7 @@ CREATE TABLE platform.scheduled_governed_actions (
 );
 
 CREATE INDEX scheduled_governed_actions_due_idx
-  ON platform.scheduled_governed_actions (tenant_id, due_at, scheduled_action_id)
+  ON platform.scheduled_governed_actions (tenant_id, next_attempt_at, due_at, scheduled_action_id)
   WHERE state = 'PENDING';
 
 ALTER TABLE platform.scheduled_governed_actions ENABLE ROW LEVEL SECURITY;
