@@ -293,10 +293,10 @@ export class PostgresEntityRelationshipRepository {
     const result = await this.#client.query<RelationshipRow>(
       `INSERT INTO platform.entity_relationships (
          tenant_id, source_entity_type, source_entity_id, relationship_key,
-         target_entity_type, target_entity_id, status, attributes,
+         target_entity_type, target_entity_id, status, valid_from, attributes,
          provenance_source, created_by_subject_id
        ) VALUES (
-         $1::uuid, $2, $3, $4, $5, $6, 'ACTIVE', $7::jsonb, $8, $9
+         $1::uuid, $2, $3, $4, $5, $6, 'ACTIVE', clock_timestamp(), $7::jsonb, $8, $9
        )
        RETURNING relationship_id, tenant_id, source_entity_type, source_entity_id,
                  relationship_key, target_entity_type, target_entity_id, status,
