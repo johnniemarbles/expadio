@@ -29,7 +29,7 @@ CREATE TABLE platform.domain_event_tenant_execution_runs (
     OR
     (status <> 'RUNNING' AND finished_at IS NOT NULL AND duration_ms IS NOT NULL)
   ),
-  UNIQUE (tenant_id, run_id)
+  UNIQUE (run_id, tenant_id)
 );
 
 CREATE INDEX domain_event_tenant_execution_runs_tenant_idx
