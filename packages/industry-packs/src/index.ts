@@ -22,6 +22,7 @@ import type {
   PresentationTerminologyCatalogue,
 } from '@expadio/business-config';
 import type { RelationshipDefinition } from '@expadio/relationship';
+import type { GovernedActionRule } from '@expadio/governed-actions';
 
 export const CRM_CONCEPTS = [
   'crm.account',
@@ -229,6 +230,12 @@ export interface IndustryPack {
    * the transition commits inside the caller's transaction.
    */
   readonly caseLifecycleEvents?: readonly CaseLifecycleEventMapping[];
+  /**
+   * Optional governed reactions to semantic Domain Events. Configuration may
+   * contain safe runtime bindings; concrete recipient/context values are
+   * materialized by the application from event + aggregate projections.
+   */
+  readonly governedActionRules?: readonly GovernedActionRule[];
 }
 
 // ---------------------------------------------------------------------------
@@ -328,6 +335,32 @@ const DENTEX_CASE_LIFECYCLE_EVENTS: readonly CaseLifecycleEventMapping[] = [
   { stageKey: 'RESOLVED', eventType: 'Treatment.Discharged', eventVersion: 1 },
 ];
 
+const DENTEX_GOVERNED_ACTION_RULES: readonly GovernedActionRule[] = [
+  {
+    ruleKey: 'dentex.treatment.discharge.patient-follow-up',
+    eventType: 'Treatment.Discharged',
+    executorClass: 'COMMUNICATE',
+    actionKey: 'patient.follow_up',
+    enabled: true,
+    policyKeys: [],
+    configuration: {
+      triggerKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+      recipient: {
+        email: { kind: 'AGGREGATE_FIELD', key: 'contactEmail' },
+      },
+      variables: {
+        patientName: { kind: 'AGGREGATE_FIELD', key: 'contactName' },
+        treatmentSubject: { kind: 'AGGREGATE_FIELD', key: 'subject' },
+      },
+      purpose: { kind: 'LITERAL', value: 'transactional' },
+      consentRequired: { kind: 'LITERAL', value: false },
+      channel: { kind: 'LITERAL', value: 'email' },
+      locale: { kind: 'LITERAL', value: 'en' },
+      capabilityKey: { kind: 'LITERAL', value: 'communication.email.send' },
+    },
+  },
+];
+
 const DENTEX_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
   {
     key: 'provider',
@@ -355,6 +388,7 @@ export const DENTEX_PACK: IndustryPack = {
   caseStageSemantics: DENTEX_CASE_STAGE_SEMANTICS,
   relationshipDefinitions: DENTEX_RELATIONSHIP_DEFINITIONS,
   caseLifecycleEvents: DENTEX_CASE_LIFECYCLE_EVENTS,
+  governedActionRules: DENTEX_GOVERNED_ACTION_RULES,
   // A Treatment concerns a Patient, is performed at a Practice, under a Care plan.
   caseOntologyRoles: {
     'crm.contact': 'Patient treated',
@@ -545,6 +579,16 @@ export function resolveStageLabel(
 /** The domain fields the active pack adds to a case — empty for the neutral engine. */
 export function resolveCaseSchema(pack: IndustryPack | null | undefined): CaseSchema {
   return pack?.caseSchema ?? NEUTRAL_CASE_SCHEMA;
+}
+
+export function resolveGovernedActionRules(
+  pack: IndustryPack | null | undefined,
+  eventType?: string | null,
+): readonly GovernedActionRule[] {
+  const rules = pack?.governedActionRules ?? [];
+  const type = eventType?.trim();
+  if (!type) return rules;
+  return rules.filter((rule) => rule.eventType === type);
 }
 
 export function resolveCaseLifecycleEvent(
