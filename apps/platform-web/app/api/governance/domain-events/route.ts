@@ -6,6 +6,7 @@ import {
 } from '../../../../lib/request-context';
 import {
   DOMAIN_EVENT_OPERATION_STATUSES,
+  loadDomainEventOperationCounts,
   loadDomainEventOperations,
   type DomainEventOperationStatus,
 } from '../../../../lib/domain-event-operations';
@@ -38,24 +39,18 @@ export async function GET(request: Request) {
     const status = parseStatus(url.searchParams.get('status'));
     const limit = parseLimit(url.searchParams.get('limit'));
 
-    const items = await withTenantTransaction(context, (client) =>
-      loadDomainEventOperations(client, {
-        ...(status === undefined ? {} : { status }),
-        limit,
-      }),
-    );
-
-    return NextResponse.json({
-      items,
-      counts: {
-        total: items.length,
-        dead: items.filter((item) => item.status === 'DEAD').length,
-        failed: items.filter((item) => item.status === 'FAILED').length,
-        claimed: items.filter((item) => item.status === 'CLAIMED').length,
-        pending: items.filter((item) => item.status === 'PENDING').length,
-        published: items.filter((item) => item.status === 'PUBLISHED').length,
-      },
+    const { items, counts } = await withTenantTransaction(context, async (client) => {
+      const [items, counts] = await Promise.all([
+        loadDomainEventOperations(client, {
+          ...(status === undefined ? {} : { status }),
+          limit,
+        }),
+        loadDomainEventOperationCounts(client),
+      ]);
+      return { items, counts };
     });
+
+    return NextResponse.json({ items, counts });
   } catch (error) {
     const known = error as Error & { status?: number };
     if (known.message === 'DOMAIN_EVENT_STATUS_INVALID') {
