@@ -41,7 +41,11 @@ export interface CreateCommunicationDeliveryInput {
   readonly connectorKey: string;
   readonly adapterKey: string;
   readonly requestedAt: string;
-  readonly dispatchSnapshot: CommunicationDeliveryDispatchSnapshot;
+  /**
+   * Required for autonomous provider-worker execution. Legacy synchronous send
+   * helpers may omit it; such rows remain non-worker-eligible.
+   */
+  readonly dispatchSnapshot?: CommunicationDeliveryDispatchSnapshot;
 }
 
 export interface RecordCommunicationDeliveryAttemptInput {
