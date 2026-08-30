@@ -16,6 +16,7 @@ import {
   resolveCaseSchema,
   resolveCaseOntology,
   resolveRelationshipDefinitions,
+  resolveCaseLifecycleEvent,
   describeIndustryPack,
   listIndustryPackCatalog,
   validateCaseAttributes,
@@ -238,4 +239,20 @@ test('DENTEX declares provider through the horizontal Relationship Fabric', () =
 test('management-plane pack description exposes Relationship Fabric declarations', () => {
   const dentex = describeIndustryPack(DENTEX_PACK);
   assert.equal(dentex.relationshipDefinitions.find((d) => d.key === 'provider')?.label, 'Treating provider');
+});
+
+
+test('DENTEX lifecycle Domain Events are Pack semantics, not workflow hardcoding', () => {
+  assert.deepEqual(resolveCaseLifecycleEvent(DENTEX_PACK, 'INTAKE'), {
+    stageKey: 'INTAKE',
+    eventType: 'Treatment.ConsultationEntered',
+    eventVersion: 1,
+  });
+  assert.deepEqual(resolveCaseLifecycleEvent(DENTEX_PACK, 'RESOLVED'), {
+    stageKey: 'RESOLVED',
+    eventType: 'Treatment.Discharged',
+    eventVersion: 1,
+  });
+  assert.equal(resolveCaseLifecycleEvent(LEXFLOW_PACK, 'RESOLVED'), null);
+  assert.equal(resolveCaseLifecycleEvent(null, 'RESOLVED'), null);
 });
