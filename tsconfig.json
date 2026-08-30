@@ -41,8 +41,11 @@
       "@expadio/storage": ["packages/storage/src/index.ts"],
       "@expadio/ui": ["packages/ui/src/index.ts"],
       "@expadio/ui/tokens": ["packages/ui/src/tokens/index.css"],
-      "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]
+      "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"],
+      "@expadio/vertical-dentex": ["verticals/dentex/src/index.ts"],
+      "@expadio/vertical-dentex/domain": ["verticals/dentex/src/domain.ts"],
+      "@expadio/vertical-dentex/events": ["verticals/dentex/src/events.ts"]
     }
   },
-  "include": ["packages/*/src/**/*.ts"]
+  "include": ["packages/*/src/**/*.ts", "verticals/*/src/**/*.ts"]
 }
