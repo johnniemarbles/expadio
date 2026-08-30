@@ -73,6 +73,17 @@ export async function runDomainEventInboxBatch(
 
   for (const item of claimed) {
     try {
+      // Revalidate/renew immediately before the consumer side effect. The batch
+      // was claimed up front and earlier items may have consumed most of this
+      // item's original lease.
+      await extendDomainEventInboxClaim(client, {
+        tenantId: item.tenantId,
+        inboxId: item.inboxId,
+        claimToken: item.claimToken,
+        leaseSeconds,
+        now: now(),
+      });
+
       await input.consumer.consume({
         item,
         renewLease: async (renewSeconds = leaseSeconds) => {
