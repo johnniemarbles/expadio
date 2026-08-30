@@ -54,6 +54,8 @@ export class DomainEventValidationError extends Error {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function required(value: string, field: string): string {
   const normalized = value.trim();
   if (normalized === '') {
@@ -82,6 +84,18 @@ function optionalText(value: string | null | undefined): string | null {
 }
 
 export function createDomainEvent(input: DomainEventInput): DomainEventEnvelope {
+  if (!UUID.test(input.eventId.trim())) {
+    throw new DomainEventValidationError(
+      'DOMAIN_EVENT_ID_INVALID',
+      'eventId must be a UUID.',
+    );
+  }
+  if (!UUID.test(input.tenantId.trim())) {
+    throw new DomainEventValidationError(
+      'DOMAIN_EVENT_TENANT_ID_INVALID',
+      'tenantId must be a UUID.',
+    );
+  }
   if (!Number.isInteger(input.eventVersion) || input.eventVersion <= 0) {
     throw new DomainEventValidationError(
       'DOMAIN_EVENT_VERSION_INVALID',
