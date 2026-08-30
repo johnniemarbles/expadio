@@ -53,6 +53,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] `platform.business_execution_trace` read model implemented.
 - [x] `GET /api/execution/trace` implemented.
 - [x] Read-only `/execution-trace` operator surface implemented.
+- [x] `platform.execution_health_summary` read model implemented.
 
 ### Foundation governance
 
@@ -73,7 +74,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 
 ### Execution health and monitoring
 
-- [ ] Add execution health read model.
+- [x] Add execution health read model.
 - [ ] Add communication health read model.
 - [ ] Add scheduler health read model.
 - [ ] Add outbox health read model.
