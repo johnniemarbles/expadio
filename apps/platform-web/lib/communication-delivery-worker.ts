@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
-import type { SecretResolver } from '@expadio/provider-registry/repository';
 import {
   evaluatePersistedCommunicationPreflight,
 } from '@expadio/communication/persisted-preflight';
@@ -12,6 +11,7 @@ import {
 } from '@expadio/communication/provider-send-request';
 import {
   governedResendApiTokenProvider,
+  type SecretResolver,
 } from '@expadio/communication/governed-resend-binding';
 import {
   ResendEmailAdapter,
@@ -386,25 +386,47 @@ export async function runCommunicationDeliveryWorkerOnce(
 
   const dispatch = claim.snapshot.dispatch;
   const preflightAt = input.options.now?.() ?? new Date();
-  const preflight = await evaluatePersistedCommunicationPreflight({
-    intent: {
-      triggerKey: dispatch.triggerKey,
-      tenantId: dispatch.tenantId,
-      ...(dispatch.organizationId === undefined ? {} : { organizationId: dispatch.organizationId }),
-      recipient: dispatch.recipient,
-      variables: dispatch.rendered.variables,
-      locale: dispatch.rendered.locale,
-      idempotencyKey: dispatch.idempotencyKey,
-      purpose: dispatch.purpose,
-      consentRequired: claim.snapshot.consentRequired,
-      channel: dispatch.channel,
-    },
-    repositories: {
-      consent: new PostgresCommunicationConsentRepository(client),
-      suppression: new PostgresCommunicationSuppressionRepository(client),
-    },
-    at: preflightAt.toISOString(),
-  });
+  let preflight;
+  try {
+    preflight = await evaluatePersistedCommunicationPreflight({
+      intent: {
+        triggerKey: dispatch.triggerKey,
+        tenantId: dispatch.tenantId,
+        ...(dispatch.organizationId === undefined ? {} : { organizationId: dispatch.organizationId }),
+        recipient: dispatch.recipient,
+        variables: dispatch.rendered.variables,
+        locale: dispatch.rendered.locale,
+        idempotencyKey: dispatch.idempotencyKey,
+        purpose: dispatch.purpose,
+        consentRequired: claim.snapshot.consentRequired,
+        channel: dispatch.channel,
+      },
+      repositories: {
+        consent: new PostgresCommunicationConsentRepository(client),
+        suppression: new PostgresCommunicationSuppressionRepository(client),
+      },
+      at: preflightAt.toISOString(),
+    });
+  } catch (error) {
+    const status = await rescheduleClaim(client, {
+      claim,
+      now: preflightAt,
+      reasonCode: 'COMPLIANCE_EVIDENCE_UNAVAILABLE',
+      reason: error instanceof Error
+        ? error.message
+        : 'Communication compliance evidence could not be resolved.',
+      maxAttempts,
+    });
+    return {
+      status,
+      deliveryId: claim.deliveryId,
+      reasonCode: status === 'FAILED'
+        ? 'DELIVERY_RETRIES_EXHAUSTED'
+        : status === 'STALE_CLAIM'
+          ? 'DELIVERY_CLAIM_LOST'
+          : 'COMPLIANCE_EVIDENCE_UNAVAILABLE',
+    };
+  }
 
   if (!preflight.allowed) {
     const applied = await finalizeClaim(client, {
