@@ -31,6 +31,11 @@ const row = {
   requested_at: '2026-08-25T05:00:00.000Z',
   accepted_at: null,
   updated_at: '2026-08-25T05:00:00.000Z',
+  dispatch_snapshot: null,
+  next_attempt_at: '2026-08-25T05:00:00.000Z',
+  last_attempt_at: null,
+  claim_token: null,
+  claim_expires_at: null,
 };
 
 test('recordAttempt increments attempt count and appends a same-state event', async () => {
