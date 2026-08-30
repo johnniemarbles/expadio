@@ -220,23 +220,34 @@ test('DENTEX discharge schedules a +7 day follow-up and queues it only when due'
       `SELECT
          event.event_type,
          outbox.status AS event_outbox_status,
-         intent.action_key,
-         intent.executor_class,
+         parent.action_key AS parent_action_key,
+         parent.executor_class AS parent_executor_class,
+         schedule.state AS schedule_state,
+         schedule.due_at,
+         child.action_key AS child_action_key,
+         child.executor_class AS child_executor_class,
          delivery.state AS delivery_state,
          attempt.status AS execution_status
        FROM platform.domain_events event
        JOIN platform.domain_event_outbox outbox
          ON outbox.tenant_id = event.tenant_id
         AND outbox.event_id = event.event_id
-       JOIN platform.governed_action_intents intent
-         ON intent.tenant_id = event.tenant_id
-        AND intent.source_event_id = event.event_id
+       JOIN platform.governed_action_intents parent
+         ON parent.tenant_id = event.tenant_id
+        AND parent.source_event_id = event.event_id
+        AND parent.executor_class = 'SCHEDULE'
+       JOIN platform.scheduled_governed_actions schedule
+         ON schedule.tenant_id = parent.tenant_id
+        AND schedule.parent_action_intent_id = parent.action_intent_id
+       JOIN platform.governed_action_intents child
+         ON child.tenant_id = schedule.tenant_id
+        AND child.action_intent_id = schedule.child_action_intent_id
        JOIN platform.governed_action_execution_attempts attempt
-         ON attempt.tenant_id = intent.tenant_id
-        AND attempt.action_intent_id = intent.action_intent_id
+         ON attempt.tenant_id = child.tenant_id
+        AND attempt.action_intent_id = child.action_intent_id
        JOIN platform.communication_deliveries delivery
-         ON delivery.tenant_id = intent.tenant_id
-        AND delivery.idempotency_key = intent.idempotency_key
+         ON delivery.tenant_id = child.tenant_id
+        AND delivery.idempotency_key = child.idempotency_key
       WHERE event.tenant_id = $1::uuid
         AND event.event_id = $2::uuid`,
       [tenantId, eventId],
@@ -245,8 +256,12 @@ test('DENTEX discharge schedules a +7 day follow-up and queues it only when due'
     assert.deepEqual(persistedPath, {
       event_type: 'Treatment.Discharged',
       event_outbox_status: 'PENDING',
-      action_key: 'patient.follow_up',
-      executor_class: 'COMMUNICATE',
+      parent_action_key: 'patient.follow_up.schedule',
+      parent_executor_class: 'SCHEDULE',
+      schedule_state: 'MATERIALIZED',
+      due_at: new Date('2026-09-06T13:00:00.000Z'),
+      child_action_key: 'patient.follow_up',
+      child_executor_class: 'COMMUNICATE',
       delivery_state: 'PENDING',
       execution_status: 'QUEUED',
     });
