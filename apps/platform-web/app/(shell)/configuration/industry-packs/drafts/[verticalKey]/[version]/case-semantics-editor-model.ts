@@ -56,7 +56,15 @@ export function validateDraftCaseSemanticsEditorState(
   const ruleErrors: Record<number, DraftCaseSemanticRuleErrors> = {};
 
   state.rules.forEach((rule, index) => {
-    const errors: DraftCaseSemanticRuleErrors = {};
+    const errors: {
+      stageKey?: string;
+      phase?: string;
+      requiredAttributeKeys?: string;
+      requiredRelationships?: string;
+      requiredDecisionOutcomes?: string;
+      requirement?: string;
+      message?: string;
+    } = {};
 
     if (!STAGES.has(rule.stageKey)) errors.stageKey = 'Choose a canonical case stage.';
     if (!['ENTRY', 'EXIT'].includes(rule.phase)) errors.phase = 'Choose ENTRY or EXIT.';
