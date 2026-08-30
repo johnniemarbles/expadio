@@ -80,7 +80,7 @@ test('tenant execution lease blocks overlap and expired runs become LEASE_LOST',
     assert.deepEqual(abandoned, {
       status: 'LEASE_LOST',
       finished: true,
-      error: 'TENANT_EXECUTION_LEASE_EXPIRED',
+      error: 'TENANT_EXECUTION_LEASE_LOST',
     });
 
     const terminal = await finishTenantExecutionRun(c, {
