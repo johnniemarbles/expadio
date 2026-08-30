@@ -42,6 +42,7 @@
     "./domain-events": "./src/domain-events.ts",
     "./governed-action-intent": "./src/governed-action-intent.ts",
     "./governed-action-execution-attempt": "./src/governed-action-execution-attempt.ts",
+    "./governed-communicate-action": "./src/governed-communicate-action.ts",
     "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts"
   },
   "dependencies": {
