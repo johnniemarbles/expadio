@@ -32,13 +32,17 @@ export interface DraftCaseSemanticsEditorErrors {
   readonly rules?: Readonly<Record<number, DraftCaseSemanticRuleErrors>>;
 }
 
+/**
+ * API/draft boundary shape is intentionally broad. Canonical stage and
+ * relationship vocabularies are enforced by editor validation before save.
+ */
 export interface DraftCaseSemanticsDefinitionShape {
   readonly caseStageSemantics?: {
     readonly requirements: readonly {
-      readonly stageKey: CrmCaseStage;
+      readonly stageKey: string;
       readonly phase: 'ENTRY' | 'EXIT';
       readonly requiredAttributeKeys?: readonly string[];
-      readonly requiredRelationships?: readonly CaseRelationshipConcept[];
+      readonly requiredRelationships?: readonly string[];
       readonly requiredDecisionOutcomes?: readonly string[];
       readonly message: string;
     }[];
