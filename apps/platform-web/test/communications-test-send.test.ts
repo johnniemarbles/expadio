@@ -29,3 +29,14 @@ test('test-send is explicitly test-only rather than production-dispatch masquera
   assert.doesNotMatch(route, /runEnforcementSpine/);
   assert.doesNotMatch(route, /GovernedCredentialLeaseService/);
 });
+
+
+test('accepted test send records an append-only decision trace inside the tenant transaction', () => {
+  assert.match(route, /DecisionTraceBuilder/);
+  assert.match(route, /TEST_SEND_OK/);
+  assert.match(route, /INSERT INTO platform\.communication_decision_traces/);
+  assert.match(route, /connectors_considered/);
+  assert.match(route, /traceId:\s*trace\.traceId/);
+  // This test-only path must not claim the production credential-lease gate passed.
+  assert.doesNotMatch(route, /pass\('CREDENTIAL_LEASE'/);
+});
