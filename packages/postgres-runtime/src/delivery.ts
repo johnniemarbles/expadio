@@ -58,6 +58,13 @@ export class PostgresCommunicationDeliveryRepository
        ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8::jsonb, $7)
        ON CONFLICT (tenant_id, idempotency_key)
        DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
+       WHERE platform.communication_deliveries.organization_id
+               IS NOT DISTINCT FROM EXCLUDED.organization_id
+         AND platform.communication_deliveries.channel = EXCLUDED.channel
+         AND platform.communication_deliveries.connector_key = EXCLUDED.connector_key
+         AND platform.communication_deliveries.adapter_key = EXCLUDED.adapter_key
+         AND platform.communication_deliveries.dispatch_snapshot
+               IS NOT DISTINCT FROM EXCLUDED.dispatch_snapshot
        RETURNING ${DELIVERY_COLUMNS}`,
       [
         input.tenantId,
@@ -72,7 +79,20 @@ export class PostgresCommunicationDeliveryRepository
           : JSON.stringify(input.dispatchSnapshot),
       ],
     );
-    return mapRequired(result.rows[0]);
+    const row = result.rows[0];
+    if (row !== undefined) return mapDelivery(row);
+
+    const existing = await this.#client.query<DeliveryRow>(
+      `SELECT ${DELIVERY_COLUMNS}
+         FROM platform.communication_deliveries
+        WHERE tenant_id = $1::uuid AND idempotency_key = $2
+        LIMIT 1`,
+      [input.tenantId, input.idempotencyKey],
+    );
+    if (existing.rows[0] !== undefined) {
+      throw new Error('COMMUNICATION_DELIVERY_IDEMPOTENCY_CONFLICT');
+    }
+    throw new Error('COMMUNICATION_DELIVERY_WRITE_FAILED');
   }
 
   async findByIdempotencyKey(input: {
