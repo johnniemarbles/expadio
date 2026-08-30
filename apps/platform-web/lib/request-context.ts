@@ -71,6 +71,7 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   }
 
   const tenantIdRequest = requestedTenant;
+  const organizationIdRequest = requestedOrganization ?? '';
 
   let effective;
   try {
@@ -79,7 +80,7 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
       {
         credential: userId,
         tenantId: tenantIdRequest,
-        organizationId: requestedOrganization,
+        organizationId: organizationIdRequest,
       },
     );
   } catch {
