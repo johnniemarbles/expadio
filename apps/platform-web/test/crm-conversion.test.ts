@@ -68,3 +68,12 @@ test("converted Treatment starts and binds the existing crm.case workflow atomic
   assert.match(convertRoute, /noWorkflowBlueprint/);
   assert.match(convertRoute, /ROLLBACK/);
 });
+
+
+test("converted Treatment owner is mirrored into the initial workflow assignment", () => {
+  assert.match(convertRoute, /assignParticipant\(client/);
+  assert.match(convertRoute, /participantKey: 'owner'/);
+  assert.match(convertRoute, /targetKind: 'USER'/);
+  assert.match(convertRoute, /targetKey: context\.subjectId/);
+  assert.match(convertRoute, /stageKey: started\.instance\.currentStageKey/);
+});
