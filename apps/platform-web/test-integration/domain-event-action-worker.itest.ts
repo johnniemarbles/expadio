@@ -6,6 +6,7 @@ import { appendCrmCaseLifecycleEvent } from '../lib/crm-case-lifecycle-event';
 import { processOneDomainEventActionWorkItem } from '../lib/domain-event-action-worker';
 import { executeGovernedCreateTaskAction } from '../lib/governed-create-task-executor';
 import { findGovernedActionIntentById } from '@expadio/postgres-runtime/governed-action-intent';
+import { loadExecutionTraceForEvent } from '../lib/execution-trace';
 
 const CAPABILITY_KEY = 'communication.email.send';
 
@@ -219,6 +220,18 @@ test('worker claims discharge event, schedules follow-up, creates review task, t
           AND source_event_id = $2::uuid`,
       [tenantId, eventId],
     )).rows[0].count, 1);
+
+    const trace = await loadExecutionTraceForEvent(c, { tenantId, eventId });
+    assert.ok(trace);
+    assert.equal(trace.event.eventType, 'Treatment.Discharged');
+    assert.equal(trace.event.outbox?.status, 'PUBLISHED');
+    assert.deepEqual(
+      trace.actions.map((action) => action.executorClass).sort(),
+      ['CREATE_TASK', 'SCHEDULE'],
+    );
+    assert.equal(trace.schedules.length, 1);
+    assert.equal(trace.tasks.length, 1);
+    assert.equal(trace.deliveries.length, 0);
 
     assert.deepEqual(await processOneDomainEventActionWorkItem(c, { tenantId }), {
       status: 'IDLE',
