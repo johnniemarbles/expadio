@@ -189,7 +189,7 @@ export async function claimDomainEventOutboxBatch(
               claimed_at = $5,
               claim_token = gen_random_uuid(),
               claim_expires_at = $5 + make_interval(secs => $3),
-              updated_at = $5
+              updated_at = $5::timestamptz
          FROM candidates
         WHERE outbox.outbox_id = candidates.outbox_id
        RETURNING
@@ -286,7 +286,7 @@ export async function extendDomainEventOutboxClaim(
     outboxId: input.outboxId,
     claimToken: input.claimToken,
     now,
-    sqlSet: `claim_expires_at = $5 + make_interval(secs => $6), updated_at = $5`,
+    sqlSet: `claim_expires_at = $5::timestamptz + make_interval(secs => $6::double precision), updated_at = $5::timestamptz`,
     values: [now, leaseSeconds],
   });
 }
@@ -311,7 +311,7 @@ export async function publishDomainEventOutboxClaim(
              claim_token = NULL,
              claim_expires_at = NULL,
              last_error = NULL,
-             updated_at = $5`,
+             updated_at = $5::timestamptz`,
     values: [publishedAt],
   });
 }
