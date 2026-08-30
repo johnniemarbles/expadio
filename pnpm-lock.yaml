@@ -195,6 +195,12 @@ importers:
 
   packages/domain-events: {}
 
+  packages/governed-actions:
+    dependencies:
+      '@expadio/domain-events':
+        specifier: workspace:*
+        version: link:../domain-events
+
   packages/iam:
     dependencies:
       '@expadio/tenancy':
@@ -263,6 +269,9 @@ importers:
       '@expadio/domain-events':
         specifier: workspace:*
         version: link:../domain-events
+      '@expadio/governed-actions':
+        specifier: workspace:*
+        version: link:../governed-actions
       '@expadio/knowledge':
         specifier: workspace:*
         version: link:../knowledge
