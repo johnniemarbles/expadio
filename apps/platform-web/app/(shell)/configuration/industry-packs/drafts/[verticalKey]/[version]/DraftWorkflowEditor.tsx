@@ -293,6 +293,9 @@ export function DraftWorkflowEditor({
               }));
             };
             const conceptPath = `concepts[${conceptIndex}]`;
+            const aliasInvalid = terminologyErrors.issues.some(
+              (issue) => issue.path.startsWith(`${conceptPath}.aliases[`),
+            );
             return (
               <fieldset
                 key={concept.conceptKey}
@@ -313,7 +316,7 @@ export function DraftWorkflowEditor({
                       aliases: event.target.value.split(',').map((value) => value.trim()),
                     })}
                   />
-                  {validated && terminologyIssueForPath(terminologyErrors, `${conceptPath}.aliases[0]`)
+                  {validated && aliasInvalid
                     ? <div style={errorStyle}>Aliases must be unique and non-empty.</div>
                     : null}
                 </label>
