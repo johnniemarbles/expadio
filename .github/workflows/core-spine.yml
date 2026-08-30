@@ -91,6 +91,9 @@ jobs:
           for attempt in {1..30}; do
             if docker exec "${DB_CONTAINER}" \
               pg_isready -U postgres -d expadio_test; then
+              sleep 2
+              psql -h localhost -U postgres -d expadio_test \
+                -v ON_ERROR_STOP=1 -c 'SELECT 1;'
               exit 0
             fi
             sleep 1
