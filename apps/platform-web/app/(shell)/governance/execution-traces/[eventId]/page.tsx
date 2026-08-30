@@ -1,3 +1,4 @@
+import type React from 'react';
 import { DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { fetchApi } from '../../../../../lib/live-adapter';
