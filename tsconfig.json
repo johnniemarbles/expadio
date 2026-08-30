@@ -34,6 +34,7 @@
       "@expadio/postgres-runtime/entity-relationship": ["packages/postgres-runtime/src/entity-relationship.ts"],
       "@expadio/postgres-runtime/domain-events": ["packages/postgres-runtime/src/domain-events.ts"],
       "@expadio/postgres-runtime/governed-action-intent": ["packages/postgres-runtime/src/governed-action-intent.ts"],
+      "@expadio/postgres-runtime/governed-action-execution-attempt": ["packages/postgres-runtime/src/governed-action-execution-attempt.ts"],
       "@expadio/access-control": ["packages/access-control/src/index.ts"],
       "@expadio/access-runtime": ["packages/access-runtime/src/index.ts"],
       "@expadio/communication": ["packages/communication/src/index.ts"],
