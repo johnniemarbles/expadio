@@ -3,9 +3,10 @@ import { ingestCommunicationProviderWebhook } from '@expadio/communication';
 import { TwilioWebhookNormalizer } from '@expadio/communication';
 import { PostgresCommunicationDeliveryRepository } from '@expadio/postgres-runtime';
 import { dbPool } from '../../../../lib/iam-adapter';
+import { resolveTwilioAuthToken } from '../../../../lib/provider-webhook-secrets';
 
 const deliveryRepository = new PostgresCommunicationDeliveryRepository(dbPool);
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/iu;
 
 function badRequest(error: string, reason: string) {
   return NextResponse.json({ error, reason }, { status: 400 });
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const normalizerWithUrl = new TwilioWebhookNormalizer({
       adapterKey: 'twilio-sms-whatsapp-v1',
-      resolveAuthToken: async () => process.env.TWILIO_AUTH_TOKEN,
+      resolveAuthToken: async () => resolveTwilioAuthToken(connectorKey),
       getWebhookUrl: () => req.url,
     });
 

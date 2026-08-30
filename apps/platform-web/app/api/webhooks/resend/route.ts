@@ -3,15 +3,13 @@ import { ingestCommunicationProviderWebhook } from '@expadio/communication';
 import { ResendWebhookNormalizer } from '@expadio/communication';
 import { PostgresCommunicationDeliveryRepository } from '@expadio/postgres-runtime';
 import { dbPool } from '../../../../lib/iam-adapter';
+import { resolveResendWebhookSecret } from '../../../../lib/provider-webhook-secrets';
 
 const deliveryRepository = new PostgresCommunicationDeliveryRepository(dbPool);
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 
 const normalizer = new ResendWebhookNormalizer({
-  resolveSecret: async (connectorKey: string) => {
-    // Provider secret lookup is keyed by the explicit connector identifier.
-    return process.env.RESEND_WEBHOOK_SECRET;
-  },
+  resolveSecret: async (connectorKey: string) => resolveResendWebhookSecret(connectorKey),
 });
 
 export async function POST(req: NextRequest) {
