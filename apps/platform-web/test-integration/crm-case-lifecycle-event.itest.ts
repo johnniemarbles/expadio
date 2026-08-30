@@ -60,16 +60,19 @@ test('case lifecycle event uses pinned Pack version and queues atomically', asyn
       ],
     };
 
-    for (const [version, definition] of [[2, v2], [3, v3]] as const) {
+    for (const [version, state, definition] of [
+      [2, 'SUPERSEDED', v2],
+      [3, 'PUBLISHED', v3],
+    ] as const) {
       await c.query(
         `INSERT INTO platform.industry_pack_versions (
            tenant_id, vertical_key, version, source, state, revision, definition,
            created_by_subject_id, updated_by_subject_id
          ) VALUES (
-           $1::uuid, 'dentex', $2, 'TENANT_AUTHORED', 'PUBLISHED', 1, $3::jsonb,
+           $1::uuid, 'dentex', $2, 'TENANT_AUTHORED', $3, 1, $4::jsonb,
            'itest-author', 'itest-author'
          )`,
-        [tenantId, version, JSON.stringify(definition)],
+        [tenantId, version, state, JSON.stringify(definition)],
       );
     }
 
