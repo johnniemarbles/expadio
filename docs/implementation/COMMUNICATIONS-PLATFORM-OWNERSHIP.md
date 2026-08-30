@@ -50,9 +50,10 @@ review until full application and deployment checks are complete.
    administrators and preserving their access.
 2. Replace client timestamp-based step-up with verified authentication-provider
    reverification. The existing header is not evidence of a second factor.
-3. Bind registration to persisted server-side credential-intake evidence.
-   Registration currently marks accepted references ACTIVE/VALID; this is not
-   sufficient proof of a successfully probed credential.
+3. Deploy and validate migration 0082 before the receipt-enabled routes.
+   Legacy credentials have no receipt and cannot be newly activated through
+   this API. Plan re-onboarding/rotation; existing enabled connectors are not
+   silently disabled or assigned fabricated proof.
 4. Complete platform credential namespace/custody lifecycle and prove a shared
    connection executes for two distinct brands with isolated senders and usage.
 5. Add channel entitlements, routing eligibility and quotas for each brand,
@@ -71,3 +72,36 @@ review until full application and deployment checks are complete.
 Acceptance: platform administrators integrate once; entitled brands configure
 only their identity/content/preferences; the platform executes securely and
 attributes every delivery to the correct brand without disclosing credentials.
+
+## Continuation: server-recorded intake and activation boundary
+
+- Successful probe/vault intake issues a 15-minute receipt, bound to the
+  authenticated subject, workspace, connector key, provider and secret reference.
+  Receipt storage contains metadata only, with forced tenant/admin RLS.
+- Registration atomically consumes the receipt alongside connector/credential
+  insertion. Replay, expiration and mismatched identity fail closed. Rollback
+  restores receipt availability if registration fails.
+- Fingerprint, version, probe time, warnings and detected capabilities come
+  from persisted evidence, never registration request claims. Requested
+  capabilities must be present in the recorded probe result.
+- New delegated connectors remain disabled until explicitly activated.
+  Activation rejects manual health updates, missing/legacy/expired/blocked
+  credentials and unsupported execution adapters. Only the existing Resend
+  email adapter is admitted by this gate. This is credential/adapter admission,
+  not proof of production sender/domain readiness or brand entitlement.
+- External-egress registration remains a disabled placeholder, clearly labeled
+  as unsupported for delivery. Other custody registration modes fail closed
+  until they have their own verified evidence path.
+- Probe/vault network work stays outside the short receipt transaction. Failed
+  receipt persistence can leave an unused vault version; lifecycle cleanup and
+  rotation/re-onboarding remain follow-on work. No automatic secret deletion.
+
+Additional validation: 13 focused unit tests; strict standalone helper/test
+typecheck; the committed PostgreSQL integration test executed against PGlite
+with the real migration (identity mismatch, expiry, replay and rollback).
+Actual POST/PATCH handlers also passed local PGlite checks for forged metadata,
+activation/disable behavior and blocking warnings; framework/auth were stubbed.
+Receipt SELECT RLS was checked under a non-superuser role for brand, platform
+admin and wrong-tenant contexts. This is not deployed RLS, concurrent-load,
+authenticated browser or live provider E2E validation. CI must pass on this
+continuation before review completion.

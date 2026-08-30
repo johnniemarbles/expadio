@@ -1,4 +1,5 @@
 import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
+import { consumeIntakeReceipt, IntakeReceiptRequired } from '../../../../lib/communication-intake-receipt';
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import {
@@ -130,7 +131,6 @@ export async function POST(request: Request) {
     const providerKey = typeof body.providerKey === 'string' ? body.providerKey.trim().toLowerCase() : '';
     const providerType = typeof body.providerType === 'string' ? body.providerType.trim().toLowerCase() : '';
     const credentialRef = body.credentialRef;
-    const fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.trim() : null;
 
     if (body.ownershipScope !== undefined && body.ownershipScope !== 'PLATFORM') {
       return NextResponse.json({ error: 'Communication providers must be platform-owned.' }, { status: 400 });
@@ -157,8 +157,8 @@ export async function POST(request: Request) {
     if (!CHANNELS.has(providerType)) {
       return NextResponse.json({ error: 'That communication channel is not supported.' }, { status: 400 });
     }
-    if (!['PLATFORM_MANAGED', 'DELEGATED', 'CUSTOMER_REFERENCED', 'CUSTOMER_EGRESS'].includes(custodyMode)) {
-      return NextResponse.json({ error: 'Unknown custody mode.' }, { status: 400 });
+    if (!['DELEGATED', 'CUSTOMER_EGRESS'].includes(custodyMode)) {
+      return NextResponse.json({ error: 'This registration flow requires verified delegated intake, or a disabled egress placeholder.' }, { status: 400 });
     }
     if (!['HOLD_AND_RETRY', 'FALLBACK_TRANSACTIONAL', 'REFUSE_IMMEDIATELY'].includes(failurePolicy)) {
       return NextResponse.json({ error: 'Unknown failure policy.' }, { status: 400 });
@@ -179,6 +179,15 @@ export async function POST(request: Request) {
     const created = await withTenantTransaction(context, async (client) => {
       await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       try {
+        const receipt = custodyMode === 'DELEGATED'
+          ? await consumeIntakeReceipt(client, {
+            receiptId: body.intakeReceiptId, tenantId: context.tenantId, subjectId: context.subjectId,
+            connectorKey, providerKey, credentialRef,
+          }) : null;
+        if (receipt && capabilityKeys.some(key => !key.startsWith(`communication.${providerType}.`)
+          || !receipt.detected_capabilities.includes(key.replace(/^communication\./, '')))) {
+          throw new IntakeReceiptRequired();
+        }
         const connector = await client.query(
           `INSERT INTO platform.connectors
              (connector_key, provider_type, provider_key, ownership_scope, tenant_id,
@@ -215,27 +224,27 @@ export async function POST(request: Request) {
           );
         }
 
-        if (custodyMode !== 'CUSTOMER_EGRESS') {
+        if (receipt) {
           await client.query(
             `INSERT INTO platform.connector_credentials
                (connector_id, credential_ref, key_version, custody_mode, fingerprint,
                 state, probe_status, probe_checked_at, probe_warnings,
                 detected_capabilities, failure_policy, hold_window_seconds,
-                external_secret_arn, external_assume_role_arn, rotated_at)
-             VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 'VALID', now(), $6::jsonb,
-                     $7::text[], $8, $9, $10, $11, now())`,
+                intake_receipt_id, rotated_at)
+             VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 'VALID', $11::timestamptz, $6::jsonb,
+                     $7::text[], $8, $9, $10::uuid, now())`,
             [
               connectorId,
-              credentialRef,
-              typeof body.keyVersion === 'string' ? body.keyVersion.trim() || null : null,
+              receipt.credential_ref,
+              receipt.key_version,
               custodyMode,
-              fingerprint,
-              JSON.stringify(Array.isArray(body.probeWarnings) ? body.probeWarnings : []),
-              Array.isArray(body.detectedCapabilities) ? body.detectedCapabilities : [],
+              receipt.fingerprint,
+              JSON.stringify(receipt.probe_warnings),
+              receipt.detected_capabilities,
               failurePolicy,
               Number.isInteger(body.holdWindowSeconds) ? body.holdWindowSeconds : 900,
-              custodyMode === 'CUSTOMER_REFERENCED' ? body.externalSecretArn ?? null : null,
-              custodyMode === 'CUSTOMER_REFERENCED' ? body.externalAssumeRoleArn ?? null : null,
+              receipt.receipt_id,
+              receipt.probed_at,
             ],
           );
         }
@@ -248,6 +257,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, connector: created }, { status: 201 });
   } catch (error) {
+    if (error instanceof IntakeReceiptRequired) {
+      return NextResponse.json({ error: error.message, reasonKey: 'VERIFIED_INTAKE_REQUIRED' }, { status: 409 });
+    }
     if (error instanceof Error && error.message.startsWith('Unknown or disabled capability')) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

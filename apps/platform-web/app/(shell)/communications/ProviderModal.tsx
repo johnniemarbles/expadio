@@ -60,7 +60,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   const [connectorKey, setConnectorKey] = useState("");
   const [region, setRegion] = useState("");
   const [priority, setPriority] = useState("100");
-  const [custodyMode, setCustodyMode] = useState<CustodyMode>("CUSTOMER_EGRESS");
+  const [custodyMode, setCustodyMode] = useState<CustodyMode>("DELEGATED");
 
   // BYOK credential fields.
   const [secret, setSecret] = useState("");
@@ -88,7 +88,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setStatus(null); setError(null); setWarnings([]);
   }
 
-  async function registerConnector(credentialRef: string | null, capabilityKeys: string[], effectiveConnectorKey = connectorKey.trim()) {
+  async function registerConnector(credentialRef: string | null, capabilityKeys: string[], effectiveConnectorKey = connectorKey.trim(), intakeReceiptId?: string) {
     const response = await fetch(`/api/communications/providers${window.location.search}`, {
       method: "POST",
       headers: reauthHeaders(),
@@ -101,6 +101,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
         priority: Number(priority) || 100,
         custodyMode,
         capabilityKeys,
+        intakeReceiptId,
         ...(credentialRef ? { credentialRef } : {}),
       }),
     });
@@ -108,7 +109,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     if (!response.ok) throw new Error(apiError(result, "Provider registration failed."));
   }
 
-  async function runByokIntake(): Promise<{ reference: string; capabilities: string[]; connectorKey: string }> {
+  async function runByokIntake(): Promise<{ reference: string; capabilities: string[]; connectorKey: string; intakeReceiptId: string }> {
     if (custodyBase === null) throw new Error("BYOK intake is not available for this provider.");
     if (!secret.trim()) throw new Error("Enter the API secret or token to store.");
     const effectiveConnectorKey = connectorKey.trim() || `comm-${registerKey}-${crypto.randomUUID().slice(0, 8)}`;
@@ -141,11 +142,14 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     }
     if (!intakeRes.ok) throw new Error(apiError(intakeBody, "The credential could not be verified."));
     const credentialRef = credentialReferenceFromIntake(intakeBody);
+    if (typeof intakeBody.intakeReceiptId !== 'string' || !intakeBody.intakeReceiptId) {
+      throw new Error('Credential verification did not return a registration receipt. Please try again.');
+    }
 
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
     // Probe capabilities ('sms.send') are provider-scope; the connector is
     // registered against the platform capability key for its channel.
-    return { reference: credentialRef, capabilities: [capabilityKey], connectorKey: effectiveConnectorKey };
+    return { reference: credentialRef, capabilities: [capabilityKey], connectorKey: effectiveConnectorKey, intakeReceiptId: intakeBody.intakeReceiptId };
   }
 
   async function submit(event: React.FormEvent) {
@@ -156,9 +160,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setStatus(null);
     try {
       if (custodyMode === "DELEGATED") {
-        const { reference, capabilities, connectorKey: registeredKey } = await runByokIntake();
+        const { reference, capabilities, connectorKey: registeredKey, intakeReceiptId } = await runByokIntake();
         setStatus("Registering the connector…");
-        await registerConnector(reference, capabilities, registeredKey);
+        await registerConnector(reference, capabilities, registeredKey, intakeReceiptId);
       } else {
         setStatus("Registering the connector…");
         await registerConnector(null, [capabilityKey]);
@@ -215,7 +219,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
           <legend style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: "#475569", padding: "0 6px" }}>Credential custody</legend>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, marginBottom: 8 }}>
             <input type="radio" name="custody" checked={custodyMode === "CUSTOMER_EGRESS"} onChange={() => setCustodyMode("CUSTOMER_EGRESS")} />
-            <span><strong>Customer egress</strong> — register the connector with no stored secret. You send through your own infrastructure.</span>
+            <span><strong>External egress placeholder</strong> — save a disabled connector without credentials. Delivery through this mode is not yet supported.</span>
           </label>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, opacity: byokAvailable ? 1 : 0.5 }}>
             <input type="radio" name="custody" disabled={!byokAvailable} checked={custodyMode === "DELEGATED"} onChange={() => setCustodyMode("DELEGATED")} />

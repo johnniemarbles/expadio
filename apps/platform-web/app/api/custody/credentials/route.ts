@@ -6,7 +6,8 @@ import {
   parseFingerprintKey,
   type WrappedSecretEnvelope,
 } from '@expadio/credential-custody';
-import { resolveRequestContext, requireStepUp, deniedResponse } from '../../../../lib/request-context';
+import { resolveRequestContext, requireStepUp, deniedResponse, withTenantTransaction } from '../../../../lib/request-context';
+import { intakeProviderKey } from '../../../../lib/communication-intake-receipt';
 import { wrappingKeys } from '../wrapping-key/route';
 import { secretVault } from '../../../../lib/custody-adapter';
 
@@ -127,7 +128,23 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(result, {
+    // Probe and vault I/O have completed before opening this short transaction.
+    const intakeReceiptId = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
+      const receipt = await client.query(
+        `INSERT INTO platform.communication_intake_receipts
+           (tenant_id, subject_id, connector_key, provider_key, credential_ref,
+            key_version, fingerprint, detected_capabilities, probe_warnings, probed_at)
+         VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::text[], $9::jsonb, $10::timestamptz)
+         RETURNING receipt_id`,
+        [context.tenantId, context.subjectId, connectorKey, intakeProviderKey(providerKey),
+          result.credentialRef, result.keyVersion, result.fingerprint,
+          result.detectedCapabilities, JSON.stringify(result.warnings), result.probedAt],
+      );
+      return receipt.rows[0].receipt_id;
+    });
+
+    return NextResponse.json({ ...result, intakeReceiptId }, {
       status: 201,
       headers: { 'Cache-Control': 'no-store' },
     });

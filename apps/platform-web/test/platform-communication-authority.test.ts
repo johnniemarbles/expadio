@@ -69,5 +69,5 @@ test('brand view does not fetch provider metadata and registration uses one plat
   assert.match(route, /body.ownershipScope !== 'PLATFORM'/);
   const modal = read('../app/(shell)/communications/ProviderModal.tsx');
   assert.match(modal, /ownershipScope: 'PLATFORM'/);
-  assert.match(modal, /registerConnector\(reference, capabilities, registeredKey\)/);
+  assert.match(modal, /registerConnector\(reference, capabilities, registeredKey, intakeReceiptId\)/);
 });
