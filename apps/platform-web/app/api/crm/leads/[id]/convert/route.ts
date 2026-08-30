@@ -32,7 +32,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const openCase = body?.openCase === true;
     const caseSubjectRaw = typeof body?.caseSubject === 'string' ? body.caseSubject.trim() : '';
     const caseAttributes = body?.caseAttributes && typeof body.caseAttributes === 'object' ? body.caseAttributes as Record<string, unknown> : {};
-    const explicitOwnerSubjectId = typeof body?.ownerSubjectId === 'string' && body.ownerSubjectId.trim() !== '' ? body.ownerSubjectId.trim() : null;
 
     const result = await withTenantClient(context, async (client) => {
       if (!(await hasCrmWriteRole(client, context.subjectId))) return { forbidden: true } as const;
@@ -47,7 +46,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // Ownership is a business relationship, not an audit actor. Explicit assignment wins;
         // otherwise preserve the lead owner; only then fall back to the converter.
         const treatmentOwnerSubjectId = resolveTreatmentOwnerSubjectId({
-          explicitOwnerSubjectId,
           leadOwnerSubjectId: leadRow.owner_subject_id,
           conversionActorSubjectId: context.subjectId,
         });
