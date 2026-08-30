@@ -1,3 +1,4 @@
+import { requireCommunicationReverification } from '../../../../lib/communication-reverification';
 import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import {
@@ -6,7 +7,7 @@ import {
   parseFingerprintKey,
   type WrappedSecretEnvelope,
 } from '@expadio/credential-custody';
-import { resolveRequestContext, requireStepUp, deniedResponse, withTenantTransaction } from '../../../../lib/request-context';
+import { resolveRequestContext, deniedResponse, withTenantTransaction } from '../../../../lib/request-context';
 import { intakeProviderKey } from '../../../../lib/communication-intake-receipt';
 import { wrappingKeys } from '../wrapping-key/route';
 import { secretVault } from '../../../../lib/custody-adapter';
@@ -65,7 +66,8 @@ export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
     await requireCommunicationAdmin(context);
-    await requireStepUp();
+    const challenge = await requireCommunicationReverification(context.subjectId);
+    if (challenge) return challenge;
 
     const body = (await request.json()) as IntakeBody;
 

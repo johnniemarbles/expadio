@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCommunicationFetch } from "../../../lib/use-communication-fetch";
 import { apiError } from "../../../lib/api-error";
 import { credentialReferenceFromIntake } from "../../../lib/credential-intake-response";
 import { wrapSecret, type PublishedWrappingKey } from "../../../lib/custody-wrap";
@@ -16,7 +17,8 @@ type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () 
  *     POST /custody/credentials to probe + vault it, then register with the
  *     returned reference. The plaintext secret never leaves the tab in the clear.
  *
- * Every custody and provider call carries a fresh step-up header (§3.4).
+ * Custody and registration requests handle Clerk's server-issued verification
+ * challenge before retrying the denied request.
  */
 
 // [registerKey, channel, label, custodyBaseKey|null]
@@ -48,14 +50,14 @@ const CHANNEL_CAPABILITY: Record<string, string> = {
 
 type CustodyMode = "CUSTOMER_EGRESS" | "DELEGATED";
 
-function reauthHeaders(json = true): HeadersInit {
+function requestHeaders(json = true): HeadersInit {
   return {
     ...(json ? { "Content-Type": "application/json" } : {}),
-    "x-expadio-reauth-at": new Date().toISOString(),
   };
 }
 
 export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps) {
+  const reverifiedFetch = useCommunicationFetch();
   const [registerKey, setRegisterKey] = useState<string>(PROVIDERS[0][0]);
   const [connectorKey, setConnectorKey] = useState("");
   const [region, setRegion] = useState("");
@@ -89,9 +91,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   }
 
   async function registerConnector(credentialRef: string | null, capabilityKeys: string[], effectiveConnectorKey = connectorKey.trim(), intakeReceiptId?: string) {
-    const response = await fetch(`/api/communications/providers${window.location.search}`, {
+    const response = await reverifiedFetch(`/api/communications/providers${window.location.search}`, {
       method: "POST",
-      headers: reauthHeaders(),
+      headers: requestHeaders(),
       body: JSON.stringify({
         providerKey: registerKey,
         providerType: channel,
@@ -115,7 +117,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     const effectiveConnectorKey = connectorKey.trim() || `comm-${registerKey}-${crypto.randomUUID().slice(0, 8)}`;
 
     setStatus("Requesting a one-time wrapping key…");
-    const keyRes = await fetch(`/api/custody/wrapping-key${window.location.search}`, { headers: reauthHeaders(false) });
+    const keyRes = await reverifiedFetch(`/api/custody/wrapping-key${window.location.search}`, { headers: requestHeaders(false) });
     const keyBody = await keyRes.json();
     if (!keyRes.ok) throw new Error(apiError(keyBody, "Could not obtain a wrapping key."));
 
@@ -131,9 +133,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     if (fromNumber.trim()) parameters.fromNumber = fromNumber.trim();
 
     setStatus("Probing the credential with the provider…");
-    const intakeRes = await fetch(`/api/custody/credentials${window.location.search}`, {
+    const intakeRes = await reverifiedFetch(`/api/custody/credentials${window.location.search}`, {
       method: "POST",
-      headers: reauthHeaders(),
+      headers: requestHeaders(),
       body: JSON.stringify({ connectorKey: effectiveConnectorKey, providerKey: custodyBase, envelope, parameters }),
     });
     const intakeBody = await intakeRes.json();

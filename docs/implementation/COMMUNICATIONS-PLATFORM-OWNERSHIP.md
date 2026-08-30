@@ -48,8 +48,11 @@ review until full application and deployment checks are complete.
    default auto-granted administrator roles. Changing the default does not
    revoke historical grants. Do not mass-revoke without identifying legitimate
    administrators and preserving their access.
-2. Replace client timestamp-based step-up with verified authentication-provider
-   reverification. The existing header is not evidence of a second factor.
+2. Validate the provider reverification flow against the deployed Clerk instance,
+   including stale sessions, supported factors and cancellation. Provider/custody
+   controls now use server-verified session evidence; other application routes
+   still using the legacy timestamp-based requireStepUp helper need a separate
+   migration. This change does not enforce MFA enrollment.
 3. Deploy and validate migration 0082 before the receipt-enabled routes.
    Legacy credentials have no receipt and cannot be newly activated through
    this API. Plan re-onboarding/rotation; existing enabled connectors are not
@@ -105,3 +108,37 @@ Receipt SELECT RLS was checked under a non-superuser role for brand, platform
 admin and wrong-tenant contexts. This is not deployed RLS, concurrent-load,
 authenticated browser or live provider E2E validation. CI must pass on this
 continuation before review completion.
+
+## Continuation: provider session reverification
+
+- All seven sensitive provider/custody handlers now require Clerk-authenticated
+  reverification after platform authority and before body parsing or work.
+  Registration, activation/disable, retirement, revocation, test send, wrapping
+  key issuance and intake are covered. Read-only provider metadata is unchanged.
+- The authenticated subject must match the resolved request subject. Freshness
+  is checked by auth().has(), using multi_factor with a five-minute window.
+  As documented by Clerk, users without an enrolled second factor fall back to
+  first-factor verification; mandatory MFA enrollment is a separate policy.
+- Server-issued challenges are returned without rewriting their protocol, with
+  no-store caching. Provider UI calls use useReverification, and no longer send
+  x-expadio-reauth-at. The existing generic requireStepUp helper is untouched for
+  non-provider callers; it must not be reused for provider administration.
+- Clerk unwraps raw Response objects into JSON. The client transport therefore
+  passes challenge objects directly, but envelopes ordinary responses to keep
+  status, headers and unread bodies available to existing error handling.
+- A denied HTTP request can be retried after verification; an entire successful
+  intake/registration chain is never replayed automatically. Cancellation or a
+  repeated challenge cannot be reported as success. A wrapping key that expires
+  while the user is verifying still requires restarting intake normally.
+
+Validation: 40 focused Node tests passed (new policy/transport regressions plus
+existing Communications, custody and authority contracts). Helpers typechecked
+against @clerk/nextjs 7.8.2 and its installed dependencies. Actual seven handlers
+were tested with authenticated-session stubs and Clerk's real factor-age checker:
+forged fresh timestamps did not bypass stale signed-session evidence, brand
+authority was checked first, and no downstream effect ran before challenge.
+A local harness using the installed SDK retry-handler source verified success,
+cancellation, bounded retry and ordinary denial; UI opening was stubbed.
+Authenticated browser/deployed Clerk verification and live sends were not run.
+
+Reference: https://clerk.com/docs/guides/secure/reverification

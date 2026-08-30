@@ -1,10 +1,10 @@
+import { requireCommunicationReverification } from '../../../../lib/communication-reverification';
 import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
 import { consumeIntakeReceipt, IntakeReceiptRequired } from '../../../../lib/communication-intake-receipt';
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import {
   resolveRequestContext,
-  requireStepUp,
   withTenantTransaction,
   deniedResponse,
 } from '../../../../lib/request-context';
@@ -124,7 +124,8 @@ export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
     await requireCommunicationAdmin(context);
-    await requireStepUp();
+    const challenge = await requireCommunicationReverification(context.subjectId);
+    if (challenge) return challenge;
 
     const body = await request.json();
 

@@ -85,7 +85,7 @@ test("provider registration is a real API-backed flow", () => {
   assert.match(providerRoute, /credentialRef must be an external secret reference/);
   assert.match(providerDetailRoute, /export async function DELETE/);
   assert.doesNotMatch(providerDetailRoute, /Mock connector status updated/);
-  assert.match(providerModal, /fetch\(`\/api\/communications\/providers\$\{window\.location\.search\}`/);
+  assert.match(providerModal, /reverifiedFetch\(`\/api\/communications\/providers\$\{window\.location\.search\}`/);
   assert.match(dashboard, /<ProviderModal/);
   assert.match(dashboard, /setIsProviderModalOpen\(true\)/);
 });
@@ -120,8 +120,9 @@ test("connector actions surface the governed custody endpoints", () => {
   assert.match(connectorActionsModal, /\/attestation/);
   assert.match(connectorActionsModal, /\/revoke/);
   assert.match(connectorActionsModal, /method:\s*"POST"/);
-  // Step-up (§3.4) rides with the destructive action.
-  assert.match(connectorActionsModal, /x-expadio-reauth-at/);
+  // Step-up (§3.4) is a server-issued Clerk challenge, never a timestamp claim.
+  assert.match(connectorActionsModal, /useCommunicationFetch/);
+  assert.doesNotMatch(connectorActionsModal, /x-expadio-reauth-at/);
 });
 
 test("capacity tab surfaces planes, quota and the spend breaker", () => {

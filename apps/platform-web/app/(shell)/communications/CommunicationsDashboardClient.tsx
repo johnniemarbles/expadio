@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCommunicationFetch } from "../../../lib/use-communication-fetch";
 import Link from "next/link";
 import styles from "./page.module.css";
 import { DomainConfigModal } from "./DomainConfigModal";
@@ -58,6 +59,7 @@ export function CommunicationsDashboardClient({
   fleet,
   queryString = "",
 }: CommunicationsDashboardClientProps) {
+  const reverifiedFetch = useCommunicationFetch();
   const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability" | "capacity" | "traces" | "recovery">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
@@ -100,7 +102,7 @@ export function CommunicationsDashboardClient({
     setUpdatingConnector(connectorKey);
     setToggleError(null);
     try {
-      const res = await fetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}${queryString}`, {
+      const res = await reverifiedFetch(`/api/communications/providers/${encodeURIComponent(connectorKey)}${queryString}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !currentEnabled }),

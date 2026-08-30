@@ -9,7 +9,7 @@ const route = readFileSync(
 
 test('test-send uses the fully governed credential lease path and never resolves a secret directly', () => {
   assert.match(route, /resolveRequestContext\(request\)/);
-  assert.match(route, /requireStepUp\(\)/);
+  assert.match(route, /requireCommunicationReverification\(context.subjectId\)/);
   assert.match(route, /withTenantTransaction/);
   assert.match(route, /PostgresProviderRegistryRepository/);
   assert.match(route, /routePreparedCommunicationDispatch/);

@@ -1,7 +1,8 @@
+import { requireCommunicationReverification } from '../../../../lib/communication-reverification';
 import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import { WrappingKeyStore } from '@expadio/credential-custody';
-import { resolveRequestContext, requireStepUp, deniedResponse } from '../../../../lib/request-context';
+import { resolveRequestContext, deniedResponse } from '../../../../lib/request-context';
 
 /**
  * Design spec §2.2 step 1–2 — GET /custody/wrapping-key.
@@ -36,7 +37,8 @@ export async function GET(request: Request) {
   try {
     const context = await resolveRequestContext(request);
     await requireCommunicationAdmin(context);
-    await requireStepUp();
+    const challenge = await requireCommunicationReverification(context.subjectId);
+    if (challenge) return challenge;
 
     wrappingKeys.evictExpired();
     const key = wrappingKeys.issue();

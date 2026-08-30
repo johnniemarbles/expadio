@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useCommunicationFetch } from "../../../lib/use-communication-fetch";
 import type { BlastRadius } from "@expadio/credential-custody";
 
 /**
@@ -11,7 +12,7 @@ import type { BlastRadius } from "@expadio/credential-custody";
  *   - GET  …/attestation    the signed revocation history an auditor downloads
  *   - POST …/revoke         provable, step-up-guarded, dual-controlled revocation
  *
- * Revocation carries a fresh `x-expadio-reauth-at` header (§3.4 step-up). A
+ * Revocation handles Clerk's server-issued reverification challenge. A
  * platform-scoped connector additionally requires a second admin's approval
  * reference (§3.4 dual control), which the API asks for with a 403.
  */
@@ -68,6 +69,7 @@ export function ConnectorActionsModal({
   queryString = "",
   onChanged,
 }: ConnectorActionsModalProps) {
+  const reverifiedFetch = useCommunicationFetch();
   const [radius, setRadius] = useState<BlastRadius | null>(null);
   const [health, setHealth] = useState<HealthRecord | null>(null);
   const [attestations, setAttestations] = useState<AttestationRow[]>([]);
@@ -120,12 +122,10 @@ export function ConnectorActionsModal({
     setError(null);
     setNotice(null);
     try {
-      const res = await fetch(`${base}/revoke${queryString}`, {
+      const res = await reverifiedFetch(`${base}/revoke${queryString}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // §3.4 — step-up: a fresh confirmation accompanies a destructive act.
-          "x-expadio-reauth-at": new Date().toISOString(),
         },
         body: JSON.stringify(approvalRef.trim() ? { approvalRef: approvalRef.trim() } : {}),
       });

@@ -1,3 +1,4 @@
+import { requireCommunicationReverification } from '../../../../../../lib/communication-reverification';
 import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import {
@@ -7,7 +8,6 @@ import {
 } from '@expadio/credential-custody';
 import {
   resolveRequestContext,
-  requireStepUp,
   withTenantTransaction,
   deniedResponse,
 } from '../../../../../../lib/request-context';
@@ -36,7 +36,8 @@ export async function POST(
   try {
     const context = await resolveRequestContext(request);
     await requireCommunicationAdmin(context);
-    await requireStepUp();
+    const challenge = await requireCommunicationReverification(context.subjectId);
+    if (challenge) return challenge;
 
     const connectorKey = decodeURIComponent((await params).key);
     const body = await request.json().catch(() => ({}));

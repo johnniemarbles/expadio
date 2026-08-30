@@ -1,3 +1,4 @@
+import { requireCommunicationReverification } from '../../../../../../lib/communication-reverification';
 import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import { DecisionTraceBuilder } from '@expadio/communication';
@@ -18,7 +19,6 @@ import {
 } from '@expadio/postgres-runtime/governed-credential-lease-runtime';
 import {
   deniedResponse,
-  requireStepUp,
   resolveRequestContext,
   withTenantTransaction,
 } from '../../../../../../lib/request-context';
@@ -41,7 +41,8 @@ export async function POST(
   try {
     const context = await resolveRequestContext(request);
     await requireCommunicationAdmin(context);
-    await requireStepUp();
+    const challenge = await requireCommunicationReverification(context.subjectId);
+    if (challenge) return challenge;
 
     const connectorKey = decodeURIComponent((await params).key).trim();
     const body = (await request.json()) as TestSendBody;
