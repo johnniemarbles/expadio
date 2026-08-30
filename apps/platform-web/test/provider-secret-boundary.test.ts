@@ -6,9 +6,8 @@ import test from "node:test";
 const repoRoot = new URL("../../..", import.meta.url);
 const productionRoots = ["apps/platform-web/app/api", "apps/platform-web/lib"];
 const textExtensions = new Set([".ts", ".tsx"]);
-const allowedProviderSecretFiles = new Set([
-  "apps/platform-web/lib/provider-webhook-secrets.ts",
-]);
+const resolverBoundary = "apps/platform-web/lib/provider-webhook-secrets.ts";
+const allowedProviderSecretFiles = new Set([resolverBoundary]);
 const providerSecretEnvPattern = /process\.env\.(?:RESEND_WEBHOOK_SECRET|TWILIO_AUTH_TOKEN)\b/u;
 
 function walk(path: string): string[] {
@@ -35,4 +34,16 @@ test("provider webhook secrets are read only through the resolver boundary", () 
   }
 
   assert.deepEqual(violations, []);
+});
+
+test("provider webhook secret resolver fails closed on missing signing material", () => {
+  const resolver = readFileSync(join(repoRoot.pathname, resolverBoundary), "utf8");
+
+  assert.match(resolver, /function\s+requireProviderWebhookSecret\s*\(/u);
+  assert.match(resolver, /process\.env\[name\]\?\.trim\(\)/u);
+  assert.match(resolver, /throw\s+new\s+Error\(`\$\{name\}_MISSING`\)/u);
+  assert.match(resolver, /resolveResendWebhookSecret\([^)]*\):\s*string/u);
+  assert.match(resolver, /resolveTwilioAuthToken\([^)]*\):\s*string/u);
+  assert.doesNotMatch(resolver, /:\s*string\s*\|\s*undefined/u);
+  assert.doesNotMatch(resolver, /return\s+process\.env\.(?:RESEND_WEBHOOK_SECRET|TWILIO_AUTH_TOKEN)\b/u);
 });
