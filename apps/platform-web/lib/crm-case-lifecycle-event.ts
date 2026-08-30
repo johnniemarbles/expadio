@@ -57,7 +57,7 @@ async function loadPinnedPack(
        FROM platform.industry_pack_versions
       WHERE lower(vertical_key) = $2
         AND version = $3
-        AND state = 'PUBLISHED'
+        AND state IN ('PUBLISHED','SUPERSEDED','ARCHIVED')
         AND (
           ($4 = 'TENANT_PUBLISHED' AND tenant_id = $1::uuid)
           OR
