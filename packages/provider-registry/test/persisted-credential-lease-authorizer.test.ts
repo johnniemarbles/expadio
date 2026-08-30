@@ -38,7 +38,12 @@ const query: CredentialLeaseAuthorizationQuery = {
 };
 
 class StaticContextProvider implements CredentialLeaseEffectiveContextProvider {
-  constructor(readonly value: EffectiveContext) {}
+  readonly value: EffectiveContext;
+
+  constructor(value: EffectiveContext) {
+    this.value = value;
+  }
+
   async resolve(): Promise<EffectiveContext> {
     return this.value;
   }
@@ -46,7 +51,12 @@ class StaticContextProvider implements CredentialLeaseEffectiveContextProvider {
 
 class StaticPolicyRepository implements AuthorizationPolicyRepository {
   readonly calls: EffectiveContext[] = [];
-  constructor(readonly policy: AuthorizationPolicy) {}
+  readonly policy: AuthorizationPolicy;
+
+  constructor(policy: AuthorizationPolicy) {
+    this.policy = policy;
+  }
+
   async loadPolicy(value: EffectiveContext): Promise<AuthorizationPolicy> {
     this.calls.push(value);
     return this.policy;
