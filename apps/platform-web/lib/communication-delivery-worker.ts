@@ -481,6 +481,8 @@ export async function runCommunicationDeliveryWorkerOnce(
 
     const authOrganizationId =
       dispatch.organizationId ?? NO_ORGANIZATION_AUTH_CONTEXT;
+    const credentialNow = () =>
+      (input.options.now?.() ?? new Date()).toISOString();
     const leaseService = createGovernedCredentialLeaseRuntime({
       client,
       contextProvider: {
@@ -493,6 +495,7 @@ export async function runCommunicationDeliveryWorkerOnce(
           };
         },
       },
+      now: credentialNow,
     });
     const adapter = new ResendEmailAdapter({
       apiToken: governedResendApiTokenProvider({
@@ -503,6 +506,7 @@ export async function runCommunicationDeliveryWorkerOnce(
         requestedBySubjectId: serviceSubjectId,
         requestId: () => randomUUID(),
         correlationId: () => randomUUID(),
+        now: credentialNow,
       }),
       ...(input.options.fetchImpl === undefined
         ? {}
