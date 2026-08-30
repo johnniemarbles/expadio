@@ -339,24 +339,31 @@ const DENTEX_GOVERNED_ACTION_RULES: readonly GovernedActionRule[] = [
   {
     ruleKey: 'dentex.treatment.discharge.patient-follow-up',
     eventType: 'Treatment.Discharged',
-    executorClass: 'COMMUNICATE',
-    actionKey: 'patient.follow_up',
+    executorClass: 'SCHEDULE',
+    actionKey: 'patient.follow_up.schedule',
     enabled: true,
     policyKeys: [],
     configuration: {
-      triggerKey: { kind: 'LITERAL', value: 'patient.follow_up' },
-      recipient: {
-        email: { kind: 'AGGREGATE_FIELD', key: 'contactEmail' },
+      delaySeconds: { kind: 'LITERAL', value: 604800 },
+      target: {
+        executorClass: { kind: 'LITERAL', value: 'COMMUNICATE' },
+        actionKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+        configuration: {
+          triggerKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+          recipient: {
+            email: { kind: 'AGGREGATE_FIELD', key: 'contactEmail' },
+          },
+          variables: {
+            patientName: { kind: 'AGGREGATE_FIELD', key: 'contactName' },
+            treatmentSubject: { kind: 'AGGREGATE_FIELD', key: 'subject' },
+          },
+          purpose: { kind: 'LITERAL', value: 'transactional' },
+          consentRequired: { kind: 'LITERAL', value: false },
+          channel: { kind: 'LITERAL', value: 'email' },
+          locale: { kind: 'LITERAL', value: 'en' },
+          capabilityKey: { kind: 'LITERAL', value: 'communication.email.send' },
+        },
       },
-      variables: {
-        patientName: { kind: 'AGGREGATE_FIELD', key: 'contactName' },
-        treatmentSubject: { kind: 'AGGREGATE_FIELD', key: 'subject' },
-      },
-      purpose: { kind: 'LITERAL', value: 'transactional' },
-      consentRequired: { kind: 'LITERAL', value: false },
-      channel: { kind: 'LITERAL', value: 'email' },
-      locale: { kind: 'LITERAL', value: 'en' },
-      capabilityKey: { kind: 'LITERAL', value: 'communication.email.send' },
     },
   },
 ];

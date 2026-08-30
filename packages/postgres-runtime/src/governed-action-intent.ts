@@ -176,3 +176,20 @@ export async function listGovernedActionIntentsForEvent(
   );
   return result.rows.map(mapRow);
 }
+
+
+export async function findGovernedActionIntentById(
+  client: GovernedActionIntentSqlClient,
+  input: { readonly tenantId: string; readonly actionIntentId: string },
+): Promise<PersistedGovernedActionIntent | null> {
+  const result = await client.query<IntentRow>(
+    `SELECT ${SELECT_COLUMNS}
+       FROM platform.governed_action_intents
+      WHERE tenant_id = $1::uuid
+        AND action_intent_id = $2::uuid
+      LIMIT 1`,
+    [input.tenantId, input.actionIntentId],
+  );
+  const row = result.rows[0];
+  return row === undefined ? null : mapRow(row);
+}

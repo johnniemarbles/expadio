@@ -264,15 +264,18 @@ test('DENTEX discharge follow-up is a governed Pack rule with runtime bindings',
   assert.equal(rules.length, 1);
   const rule = rules[0]!;
   assert.equal(rule.ruleKey, 'dentex.treatment.discharge.patient-follow-up');
-  assert.equal(rule.executorClass, 'COMMUNICATE');
-  assert.equal(rule.actionKey, 'patient.follow_up');
+  assert.equal(rule.executorClass, 'SCHEDULE');
+  assert.equal(rule.actionKey, 'patient.follow_up.schedule');
 
   const configuration = rule.configuration as any;
-  assert.deepEqual(configuration.recipient.email, {
+  assert.deepEqual(configuration.delaySeconds, { kind: 'LITERAL', value: 604800 });
+  assert.deepEqual(configuration.target.executorClass, { kind: 'LITERAL', value: 'COMMUNICATE' });
+  assert.equal(configuration.target.actionKey.value, 'patient.follow_up');
+  assert.deepEqual(configuration.target.configuration.recipient.email, {
     kind: 'AGGREGATE_FIELD',
     key: 'contactEmail',
   });
-  assert.deepEqual(configuration.variables.patientName, {
+  assert.deepEqual(configuration.target.configuration.variables.patientName, {
     kind: 'AGGREGATE_FIELD',
     key: 'contactName',
   });

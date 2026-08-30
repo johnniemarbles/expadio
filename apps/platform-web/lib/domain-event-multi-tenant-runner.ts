@@ -8,6 +8,10 @@ import {
   acquireTenantExecutionLease,
   finishTenantExecutionRun,
 } from './domain-event-tenant-execution';
+import {
+  runScheduledGovernedActionWorkerBatch,
+  type ScheduledGovernedActionRunnerSummary,
+} from './scheduled-governed-action-runner';
 
 export interface MultiTenantDomainEventRunnerTenantResult {
   readonly tenantId: string;
@@ -22,6 +26,7 @@ export interface MultiTenantDomainEventRunnerTenantResult {
   readonly finishedAt: string | null;
   readonly durationMs: number | null;
   readonly summary: DomainEventActionRunnerSummary | null;
+  readonly scheduledSummary: ScheduledGovernedActionRunnerSummary | null;
   readonly error: string | null;
 }
 
@@ -38,6 +43,9 @@ export interface MultiTenantDomainEventRunnerSummary {
   readonly failed: number;
   readonly dead: number;
   readonly staleClaim: number;
+  readonly scheduledProcessed: number;
+  readonly scheduledMaterialized: number;
+  readonly scheduledStaleClaim: number;
   readonly tenants: readonly MultiTenantDomainEventRunnerTenantResult[];
 }
 
@@ -75,6 +83,7 @@ export async function runDomainEventActionWorkerForTenants(
   for (const tenantId of input.tenantIds) {
     let client: PoolClient | null = null;
     let summary: DomainEventActionRunnerSummary | null = null;
+    let scheduledSummary: ScheduledGovernedActionRunnerSummary | null = null;
     let error: string | null = null;
     let result: MultiTenantDomainEventRunnerTenantResult | null = null;
 
@@ -107,6 +116,7 @@ export async function runDomainEventActionWorkerForTenants(
           finishedAt: null,
           durationMs: null,
           summary: null,
+          scheduledSummary: null,
           error: null,
         };
       } else {
@@ -116,6 +126,17 @@ export async function runDomainEventActionWorkerForTenants(
             limit: input.perTenantLimit,
             ...(input.now === undefined ? {} : { now: input.now }),
           });
+          const remainingTenantBudget = Math.max(
+            0,
+            input.perTenantLimit - summary.processed,
+          );
+          if (remainingTenantBudget > 0) {
+            scheduledSummary = await runScheduledGovernedActionWorkerBatch(client, {
+              tenantId,
+              limit: remainingTenantBudget,
+              ...(input.now === undefined ? {} : { now: input.now }),
+            });
+          }
         } catch (cause) {
           error = cause instanceof Error
             ? cause.message
@@ -144,6 +165,7 @@ export async function runDomainEventActionWorkerForTenants(
           finishedAt: finishedAt.toISOString(),
           durationMs,
           summary: terminal === 'SUCCEEDED' ? summary : null,
+          scheduledSummary: terminal === 'SUCCEEDED' ? scheduledSummary : null,
           error: terminal === 'LEASE_LOST'
             ? 'TENANT_EXECUTION_LEASE_LOST'
             : error,
@@ -161,6 +183,7 @@ export async function runDomainEventActionWorkerForTenants(
         finishedAt: null,
         durationMs: null,
         summary: null,
+        scheduledSummary: null,
         error,
       };
     } finally {
@@ -176,6 +199,7 @@ export async function runDomainEventActionWorkerForTenants(
             finishedAt: result?.finishedAt ?? null,
             durationMs: result?.durationMs ?? null,
             summary: null,
+            scheduledSummary: null,
             error: 'TENANT_CONTEXT_RESET_FAILED',
           };
         }
@@ -190,6 +214,7 @@ export async function runDomainEventActionWorkerForTenants(
       finishedAt: null,
       durationMs: null,
       summary: null,
+      scheduledSummary: null,
       error: 'TENANT_EXECUTION_RESULT_MISSING',
     });
   }
@@ -204,6 +229,9 @@ export async function runDomainEventActionWorkerForTenants(
   );
   const summaries = succeeded.flatMap((tenant) =>
     tenant.summary === null ? [] : [tenant.summary]
+  );
+  const scheduledSummaries = succeeded.flatMap((tenant) =>
+    tenant.scheduledSummary === null ? [] : [tenant.scheduledSummary]
   );
 
   return {
@@ -221,6 +249,9 @@ export async function runDomainEventActionWorkerForTenants(
     failed: summaries.reduce((sum, item) => sum + item.failed, 0),
     dead: summaries.reduce((sum, item) => sum + item.dead, 0),
     staleClaim: summaries.reduce((sum, item) => sum + item.staleClaim, 0),
+    scheduledProcessed: scheduledSummaries.reduce((sum, item) => sum + item.processed, 0),
+    scheduledMaterialized: scheduledSummaries.reduce((sum, item) => sum + item.materialized, 0),
+    scheduledStaleClaim: scheduledSummaries.reduce((sum, item) => sum + item.staleClaim, 0),
     tenants,
   };
 }
