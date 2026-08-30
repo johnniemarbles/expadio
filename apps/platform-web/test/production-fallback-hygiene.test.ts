@@ -36,6 +36,14 @@ const forbiddenContent = [
   "fallback if empty",
 ];
 
+const forbiddenPatterns: Array<[RegExp, string]> = [
+  [/\bTODO\b/u, "TODO marker"],
+  [/\bFIXME\b/u, "FIXME marker"],
+  [/\bHACK\b/u, "HACK marker"],
+  [/\bXXX\b/u, "XXX marker"],
+  [/\.tmp(?:\.|$)/u, "temporary file"],
+];
+
 const ignoredSegments = new Set([
   "node_modules",
   ".next",
@@ -61,22 +69,29 @@ function walk(path: string): string[] {
   return readdirSync(path).flatMap((entry) => walk(join(path, entry)));
 }
 
-test("production request/runtime paths do not contain demo fallbacks", () => {
+test("production request/runtime paths do not contain demo fallbacks or unresolved markers", () => {
   const files = productionRoots.flatMap((root) => walk(join(repoRoot.pathname, root)));
   const violations: string[] = [];
 
   for (const file of files) {
     const rel = relative(repoRoot.pathname, file);
     if (!textExtensions.has(extname(file))) continue;
-    if (/\.tmp(?:\.|$)/u.test(rel) || rel.endsWith(".tmp")) {
-      violations.push(`${rel}: temporary file must not live in production paths`);
-      continue;
+
+    for (const [pattern, label] of forbiddenPatterns) {
+      if (pattern.test(rel)) {
+        violations.push(`${rel}: contains forbidden production path marker ${label}`);
+      }
     }
 
     const content = readFileSync(file, "utf8");
     for (const forbidden of forbiddenContent) {
       if (content.includes(forbidden)) {
         violations.push(`${rel}: contains forbidden production fallback marker ${forbidden}`);
+      }
+    }
+    for (const [pattern, label] of forbiddenPatterns) {
+      if (pattern.test(content)) {
+        violations.push(`${rel}: contains forbidden production content marker ${label}`);
       }
     }
   }
