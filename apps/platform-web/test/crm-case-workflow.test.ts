@@ -6,6 +6,7 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 
 const route = read("../app/api/crm/cases/[id]/workflow/route.ts");
 const runtime = read("../lib/workflow-runtime.ts");
+const stageEvents = read("../lib/crm-case-stage-events.ts");
 const migration = read("../../../infra/db/migrations/0049_crm_case_blueprint.sql");
 const client = read("../app/(shell)/crm/CrmClient.tsx");
 
@@ -50,4 +51,23 @@ test("the Cases surface can start and advance a workflow", () => {
   assert.match(client, /advanceCase/);
   assert.match(client, /WorkflowCell/);
   assert.match(client, /Start workflow/);
+});
+
+
+test("case workflow transition appends a generic Domain Event before transaction commit", () => {
+  assert.match(route, /appendCrmCaseStageChangedEvent\(client/);
+  assert.match(route, /previousStageKey/);
+  assert.match(route, /currentStageKey: moved\.instance\.currentStageKey/);
+  assert.match(route, /revision: moved\.instance\.revision/);
+  assert.match(route, /correlationId: request\.headers\.get\('x-correlation-id'\)/);
+  assert.match(
+    route,
+    /appendCrmCaseStageChangedEvent\(client[\s\S]*await client\.query\('COMMIT'\)/,
+  );
+
+  assert.match(stageEvents, /eventType: 'crm\.case\.stage_changed'/);
+  assert.match(stageEvents, /appendDomainEventWithOutbox/);
+  assert.match(stageEvents, /aggregateType: 'crm\.case'/);
+  assert.match(stageEvents, /partitionKey: `crm\.case:\$\{input\.caseId\}`/);
+  assert.doesNotMatch(stageEvents, /dentex|lexflow/i);
 });
