@@ -18,7 +18,7 @@ function pool(): pg.Pool {
   });
 }
 
-test('PENDING delivery is claimed, rechecked, credential-leased and accepted by Resend', async () => {
+test('provider acceptance reconciles when the delivery claim expires before finalization', async () => {
   const db = pool();
   const client = await db.connect();
   const tenantId = randomUUID();
@@ -27,7 +27,8 @@ test('PENDING delivery is claimed, rechecked, credential-leased and accepted by 
   const idempotencyKey = `delivery-${randomUUID()}`;
   const providerMessageId = `resend-${randomUUID()}`;
   const roleKey = `communication-worker-role-${randomUUID()}`;
-  const now = new Date('2026-08-30T10:30:00.000Z');
+  const initialNow = new Date('2026-08-30T10:30:00.000Z');
+  let clock = initialNow;
 
   try {
     await client.query(
@@ -140,10 +141,10 @@ test('PENDING delivery is claimed, rechecked, credential-leased and accepted by 
           reasonCode: 'OK' as const,
           reason: 'Queue-time preflight passed.',
         },
-        evaluatedAt: new Date(now.getTime() - 60_000).toISOString(),
+        evaluatedAt: new Date(initialNow.getTime() - 60_000).toISOString(),
       },
       routing: { capabilityKey: 'communication.email.send' },
-      requestedAt: new Date(now.getTime() - 60_000).toISOString(),
+      requestedAt: new Date(initialNow.getTime() - 60_000).toISOString(),
     };
 
     const delivery = await new PostgresCommunicationDeliveryRepository(client)
@@ -165,13 +166,17 @@ test('PENDING delivery is claimed, rechecked, credential-leased and accepted by 
       tenantId,
       options: {
         serviceSubjectId,
-        now: () => now,
+        now: () => clock,
+        leaseMs: 1_000,
         secretResolver: {
           async resolve() {
             return { value: 're_worker_test_token', version: 'v1' };
           },
         },
         fetchImpl: async (input, init) => {
+          // The provider accepts after the renewed 1-second claim lease has expired.
+          // Claim-bound finalization must fail, then acceptance evidence reconciles.
+          clock = new Date(initialNow.getTime() + 2_000);
           const headers = new Headers(init?.headers);
           providerCalls.push({
             url: String(input),
@@ -190,7 +195,7 @@ test('PENDING delivery is claimed, rechecked, credential-leased and accepted by 
     assert.deepEqual(result, {
       status: 'ACCEPTED',
       deliveryId: delivery.deliveryId,
-      reasonCode: 'PROVIDER_ACCEPTED',
+      reasonCode: 'PROVIDER_ACCEPTED_RECONCILED',
     });
     assert.equal(providerCalls.length, 1);
     assert.equal(providerCalls[0]?.url, 'https://api.resend.com/emails');
@@ -209,7 +214,7 @@ test('PENDING delivery is claimed, rechecked, credential-leased and accepted by 
     assert.equal(persisted.attempt_count, 1);
     assert.equal(persisted.claim_token, null);
     assert.equal(persisted.claim_expires_at, null);
-    assert.equal(persisted.last_reason_code, 'PROVIDER_ACCEPTED');
+    assert.equal(persisted.last_reason_code, 'PROVIDER_ACCEPTED_RECONCILED');
 
     const evidence = await client.query(
       `SELECT reason_code, from_state, to_state, attempt_token
@@ -233,13 +238,35 @@ test('PENDING delivery is claimed, rechecked, credential-leased and accepted by 
           hasAttemptToken: true,
         },
         {
-          reason: 'PROVIDER_ACCEPTED',
+          reason: 'DELIVERY_CLAIM_RENEWED',
+          from: 'PENDING',
+          to: 'PENDING',
+          hasAttemptToken: true,
+        },
+        {
+          reason: 'PROVIDER_ACCEPTED_RECONCILED',
           from: 'PENDING',
           to: 'ACCEPTED',
           hasAttemptToken: true,
         },
       ],
     );
+
+
+    const providerEvidence = await client.query(
+      `SELECT outcome, provider_message_id, idempotency_key, attempt_token
+         FROM platform.communication_provider_attempts
+        WHERE tenant_id = $1::uuid AND delivery_id = $2::uuid`,
+      [tenantId, delivery.deliveryId],
+    );
+    assert.equal(providerEvidence.rowCount, 1);
+    assert.deepEqual(providerEvidence.rows[0], {
+      outcome: 'ACCEPTED',
+      provider_message_id: providerMessageId,
+      idempotency_key: idempotencyKey,
+      attempt_token: providerEvidence.rows[0].attempt_token,
+    });
+    assert.ok(providerEvidence.rows[0].attempt_token);
 
     const leaseEvidence = await client.query(
       `SELECT outcome, requested_by_subject_id, connector_key

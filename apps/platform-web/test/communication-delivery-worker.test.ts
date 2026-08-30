@@ -18,6 +18,14 @@ const adapter = readFileSync(
   new URL('../../../packages/communication/src/governed-action-adapter.ts', import.meta.url),
   'utf8',
 );
+const reconciliation = readFileSync(
+  new URL('../lib/communication-provider-reconciliation.ts', import.meta.url),
+  'utf8',
+);
+const reconciliationMigration = readFileSync(
+  new URL('../../../infra/db/migrations/0072_communication_provider_attempt_reconciliation.sql', import.meta.url),
+  'utf8',
+);
 
 test('delivery execution stays on the existing communication_deliveries queue', () => {
   assert.match(migration, /ALTER TABLE platform\.communication_deliveries/);
@@ -59,4 +67,16 @@ test('internal runner is machine authenticated, tenant bound and bounded', () =>
   assert.match(route, /MAX_LIMIT = 100/);
   assert.match(route, /set_config\('app\.tenant_id'/);
   assert.match(route, /RESET app\.tenant_id/);
+});
+
+
+test('provider side effects are heartbeat-protected and acceptance is reconcilable after claim loss', () => {
+  assert.match(worker, /renewCommunicationDeliveryClaim/);
+  assert.match(worker, /recordCommunicationProviderAttempt/);
+  assert.match(worker, /reconcileAcceptedCommunicationProviderAttempt/);
+  assert.match(reconciliation, /DELIVERY_CLAIM_RENEWED/);
+  assert.match(reconciliation, /PROVIDER_ACCEPTED_RECONCILED/);
+  assert.match(reconciliationMigration, /communication_provider_attempts/);
+  assert.match(reconciliationMigration, /provider attempts are append-only/);
+  assert.match(reconciliationMigration, /UNIQUE \(tenant_id, delivery_id, attempt_token\)/);
 });
