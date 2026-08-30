@@ -507,7 +507,11 @@ export async function runCommunicationDeliveryWorkerOnce(
         : { fetchImpl: input.options.fetchImpl }),
     });
 
-    const providerResult = await adapter.send(senderPrepared.request);
+    const providerAttemptAt = input.options.now?.() ?? new Date();
+    const providerResult = await adapter.send({
+      ...senderPrepared.request,
+      requestedAt: providerAttemptAt.toISOString(),
+    });
     const completedAt = input.options.now?.() ?? new Date();
 
     if (providerResult.status === 'ACCEPTED') {
