@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import {
-  DecisionTraceBuilder,
-  governedResendApiTokenProvider,
-} from '@expadio/communication';
+import { DecisionTraceBuilder } from '@expadio/communication';
+import { governedResendApiTokenProvider } from '@expadio/communication/governed-resend-binding';
 import { routePreparedCommunicationDispatch } from '@expadio/communication/dispatch-routing';
 import { prepareCommunicationProviderSendRequest } from '@expadio/communication/provider-send-request';
 import { ResendEmailAdapter } from '@expadio/communication/resend-email-adapter';
@@ -22,8 +20,8 @@ import {
   requireStepUp,
   resolveRequestContext,
   withTenantTransaction,
-} from '../../../../../../../lib/request-context';
-import { delegatedSecretResolver } from '../../../../../../../lib/vault-secret-resolver';
+} from '../../../../../../lib/request-context';
+import { delegatedSecretResolver } from '../../../../../../lib/vault-secret-resolver';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
