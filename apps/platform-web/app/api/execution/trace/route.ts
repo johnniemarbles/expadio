@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../lib/request-context';
-import { listBusinessExecutionTrace } from '../../../lib/business-execution-trace';
+import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
+import { listBusinessExecutionTrace } from '../../../../lib/business-execution-trace';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
