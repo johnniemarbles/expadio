@@ -90,7 +90,7 @@ export async function GET(request: Request) {
       const testSend = await client.query(
         `SELECT count(*)::int AS total
            FROM platform.communication_decision_traces
-          WHERE tenant_id = $1::uuid AND outcome IN ('SENT','QUEUED')`,
+          WHERE tenant_id = $1::uuid\n            AND outcome = 'SENT'\n            AND reason_code = 'TEST_SEND_OK'`,
         [context.tenantId],
       ).catch(() => ({ rows: [{ total: 0 }] }));
 
