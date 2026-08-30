@@ -238,8 +238,4 @@ export * from './domain-events.ts';
 
 export * from './governed-action-intent.ts';
 
-export * from './governed-action-execution-attempt.ts';
-
-export * from './governed-communicate-action.ts';
-
 export * from './governed-action-execution.ts';
