@@ -10,6 +10,9 @@ const route = read('../app/api/execution/trace/route.ts');
 test('business execution trace helper reads the tenant-scoped trace view', () => {
   assert.match(helper, /listBusinessExecutionTrace/);
   assert.match(helper, /FROM platform\.business_execution_trace/);
+  assert.match(helper, /root_event_type AS source_event_type/);
+  assert.match(helper, /trace_at AS occurred_at/);
+  assert.match(helper, /ORDER BY trace_at/);
   assert.match(helper, /tenant_id = \$1::uuid/);
   assert.match(helper, /root_event_id = \$\$\{params\.length\}::uuid/);
   assert.match(helper, /correlation_id = \$\$\{params\.length\}/);
