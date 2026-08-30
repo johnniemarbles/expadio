@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     const body: DeniedResult = {
       denied: true,
       reasonKey: 'INTERNAL_ERROR',
-      message: error.message || 'An unknown error occurred.'
+      message: 'An internal error occurred.'
     };
     return NextResponse.json(body, { status: 500 });
   }

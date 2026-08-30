@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
+const internalErrorBody = { denied: true, reasonKey: 'INTERNAL_ERROR', message: 'An internal error occurred.' };
+
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
@@ -21,7 +23,7 @@ export async function GET(request: Request) {
   } catch (err: any) {
     const denied = deniedResponse(err);
     return NextResponse.json(
-      denied.status === 500 ? { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message } : denied.body,
+      denied.status === 500 ? internalErrorBody : denied.body,
       { status: denied.status }
     );
   }
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
   } catch (err: any) {
     const denied = deniedResponse(err);
     return NextResponse.json(
-      denied.status === 500 ? { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message } : denied.body,
+      denied.status === 500 ? internalErrorBody : denied.body,
       { status: denied.status }
     );
   }
@@ -84,7 +86,7 @@ export async function DELETE(request: Request) {
   } catch (err: any) {
     const denied = deniedResponse(err);
     return NextResponse.json(
-      denied.status === 500 ? { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message } : denied.body,
+      denied.status === 500 ? internalErrorBody : denied.body,
       { status: denied.status }
     );
   }

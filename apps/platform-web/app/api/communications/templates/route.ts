@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import type { DeniedResult } from '@expadio/ui/contracts';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
 
 export const runtime = 'nodejs';
@@ -56,7 +55,7 @@ export async function GET() {
   } catch (err: any) {
     if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
     console.error('Communications template catalogue API error:', err);
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: 'An internal error occurred.' }, { status: 500 });
   }
 }
 
@@ -130,6 +129,6 @@ export async function POST(request: Request) {
   } catch (err: any) {
     if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
     console.error('Create platform communication template error:', err);
-    return NextResponse.json({ error: err.message || 'Template creation failed.' }, { status: 500 });
+    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: 'An internal error occurred.' }, { status: 500 });
   }
 }
