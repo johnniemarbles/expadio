@@ -6,10 +6,14 @@ const route = readFileSync(
   new URL('../app/api/internal/domain-events/run/route.ts', import.meta.url),
   'utf8',
 );
+const auth = readFileSync(
+  new URL('../lib/internal-worker-auth.ts', import.meta.url),
+  'utf8',
+);
 
 test('internal runner route is machine-authenticated and tenant scoped', () => {
   assert.match(route, /authenticateInternalWorkerRequest/);
-  assert.match(route, /x-expadio-tenant-id/);
+  assert.match(auth, /x-expadio-tenant-id/);
   assert.match(route, /runDomainEventActionWorkerBatch/);
   assert.doesNotMatch(route, /resolveRequestContext/);
   assert.doesNotMatch(route, /auth\(\)/);
