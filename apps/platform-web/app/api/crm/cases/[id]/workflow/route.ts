@@ -273,7 +273,7 @@ export async function PATCH(
         WORKFLOW_CONDITION_UNKNOWN: 'A blueprint condition on this stage could not be evaluated.',
       };
       const error = condition
-        ? (conditionMessages[condition.code] ?? `A "${condition.key ?? 'stage'}" condition is not met.`)
+        ? (condition.message ?? conditionMessages[condition.code] ?? `A "${condition.key ?? 'stage'}" condition is not met.`)
         : participant
           ? `This stage needs its "${participant.key ?? 'required'}" participant assigned before it can be entered.`
           : needsDecision
