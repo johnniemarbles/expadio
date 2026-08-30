@@ -294,7 +294,7 @@ export async function claimDomainEventInboxBatch(
               claimed_at = $6,
               claim_token = gen_random_uuid(),
               claim_expires_at = $6 + make_interval(secs => $4),
-              updated_at = $6
+              updated_at = $6::timestamptz
          FROM candidates
         WHERE inbox.inbox_id = candidates.inbox_id
        RETURNING ${INBOX_COLUMNS}
@@ -423,13 +423,13 @@ export async function failDomainEventInboxClaim(
         SET status = CASE WHEN attempts >= $5 THEN 'DEAD' ELSE 'FAILED' END,
             available_at = CASE
               WHEN attempts < $5
-              THEN $6 + make_interval(secs => $7)
+              THEN $6::timestamptz + make_interval(secs => $7::double precision)
               ELSE available_at
             END,
             claim_token = NULL,
             claim_expires_at = NULL,
             last_error = $8,
-            updated_at = $6
+            updated_at = $6::timestamptz
       WHERE tenant_id = $1::uuid
         AND inbox_id = $2::uuid
         AND status = 'CLAIMED'
