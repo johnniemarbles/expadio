@@ -205,3 +205,117 @@ test('out-of-order provider webhooks are recorded without stale state regression
     await db.end();
   }
 });
+
+test('replayed provider webhooks with distinct event ids do not duplicate delivery lifecycle mutations', async () => {
+  const db = pool();
+  const client = await db.connect();
+  const tenantId = randomUUID();
+  const connectorKey = `resend-replay-${randomUUID()}`;
+  const deliveryId = randomUUID();
+  const providerMessageId = `resend-${randomUUID()}`;
+
+  try {
+    await client.query(
+      `INSERT INTO platform.tenants (tenant_id, name)
+       VALUES ($1::uuid, 'Provider replay tenant')`,
+      [tenantId],
+    );
+    await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
+
+    await insertDelivery(client, {
+      tenantId,
+      deliveryId,
+      connectorKey,
+      providerMessageId,
+      state: 'ACCEPTED',
+    });
+
+    const firstDeliveredEventId = `evt-${randomUUID()}`;
+    const firstDelivered = await ingestVerifiedCommunicationProviderWebhook(client, {
+      tenantId,
+      providerKey: 'resend',
+      connectorKey,
+      providerEventId: firstDeliveredEventId,
+      providerMessageId,
+      eventType: 'email.delivered',
+      payload: { type: 'email.delivered', data: { email_id: providerMessageId } },
+      receivedAt: new Date('2026-08-30T12:05:00.000Z'),
+    });
+
+    assert.deepEqual(firstDelivered, {
+      status: 'RECORDED',
+      normalizedOutcome: 'DELIVERED',
+      deliveryId,
+      previousDeliveryState: 'ACCEPTED',
+      newDeliveryState: 'DELIVERED',
+      reasonCode: 'PROVIDER_WEBHOOK_DELIVERED',
+    });
+
+    const replayedDeliveredEventId = `evt-${randomUUID()}`;
+    const replayedDelivered = await ingestVerifiedCommunicationProviderWebhook(client, {
+      tenantId,
+      providerKey: 'resend',
+      connectorKey,
+      providerEventId: replayedDeliveredEventId,
+      providerMessageId,
+      eventType: 'email.delivered',
+      payload: { type: 'email.delivered', data: { email_id: providerMessageId } },
+      receivedAt: new Date('2026-08-30T12:05:05.000Z'),
+    });
+
+    assert.deepEqual(replayedDelivered, {
+      status: 'RECORDED',
+      normalizedOutcome: 'DELIVERED',
+      deliveryId,
+      previousDeliveryState: 'DELIVERED',
+      newDeliveryState: 'DELIVERED',
+      reasonCode: 'PROVIDER_WEBHOOK_STATE_ALREADY_APPLIED',
+    });
+
+    const persisted = (await client.query(
+      `SELECT state, last_reason_code
+         FROM platform.communication_deliveries
+        WHERE tenant_id = $1::uuid AND delivery_id = $2::uuid`,
+      [tenantId, deliveryId],
+    )).rows[0];
+    assert.deepEqual(persisted, {
+      state: 'DELIVERED',
+      last_reason_code: 'PROVIDER_WEBHOOK_DELIVERED',
+    });
+
+    const eventCounts = (await client.query(
+      `SELECT
+         (SELECT count(*)::int
+            FROM platform.communication_provider_webhook_events
+           WHERE tenant_id = $1::uuid
+             AND delivery_id = $2::uuid) AS webhook_events,
+         (SELECT count(*)::int
+            FROM platform.communication_delivery_events
+           WHERE tenant_id = $1::uuid
+             AND delivery_id = $2::uuid) AS delivery_events,
+         (SELECT count(*)::int
+            FROM platform.communication_delivery_events
+           WHERE tenant_id = $1::uuid
+             AND delivery_id = $2::uuid
+             AND provider_event_id = $3) AS first_delivery_events,
+         (SELECT count(*)::int
+            FROM platform.communication_delivery_events
+           WHERE tenant_id = $1::uuid
+             AND delivery_id = $2::uuid
+             AND provider_event_id = $4) AS replayed_delivery_events`,
+      [tenantId, deliveryId, firstDeliveredEventId, replayedDeliveredEventId],
+    )).rows[0];
+    assert.deepEqual(eventCounts, {
+      webhook_events: 2,
+      delivery_events: 1,
+      first_delivery_events: 1,
+      replayed_delivery_events: 0,
+    });
+  } finally {
+    await client.query('RESET app.tenant_id').catch(() => undefined);
+    await client.query(`DELETE FROM platform.tenants WHERE tenant_id = $1::uuid`, [tenantId])
+      .catch(() => undefined);
+    client.release();
+    await db.end();
+  }
+});
