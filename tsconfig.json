@@ -53,7 +53,8 @@
       "@expadio/workflow": ["packages/workflow/src/index.ts"],
       "@expadio/ui": ["packages/ui/src/index.ts"],
       "@expadio/ui/tokens": ["packages/ui/src/tokens/index.css"],
-      "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]
+      "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"],
+      "@expadio/dentex": ["verticals/dentex/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "verticals/*/src/**/*.ts"]
