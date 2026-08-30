@@ -1,5 +1,4 @@
 export interface TreatmentOwnerResolutionInput {
-  readonly explicitOwnerSubjectId?: string | null;
   readonly leadOwnerSubjectId?: string | null;
   readonly conversionActorSubjectId: string;
 }
@@ -14,20 +13,17 @@ function normalizedSubjectId(value: string | null | undefined): string | null {
  * Resolve the authoritative Treatment owner independently from the actor who
  * performs Lead conversion.
  *
- * Precedence is intentionally deterministic:
- *   1. explicit authorized owner requested for the conversion,
- *   2. existing Lead owner,
- *   3. conversion actor as the final fallback.
+ * Current conversion policy is deliberately narrow and safe:
+ *   1. preserve the existing Lead owner when present,
+ *   2. otherwise fall back to the conversion actor.
  *
- * The conversion actor remains the audit/assignment actor even when another
- * subject owns the resulting Treatment.
+ * Explicit reassignment is intentionally not accepted here. A future caller
+ * may only introduce that behavior behind the Relationship Fabric's
+ * authorization and audit policy.
  */
 export function resolveTreatmentOwnerSubjectId(
   input: TreatmentOwnerResolutionInput,
 ): string {
-  const explicitOwner = normalizedSubjectId(input.explicitOwnerSubjectId);
-  if (explicitOwner !== null) return explicitOwner;
-
   const leadOwner = normalizedSubjectId(input.leadOwnerSubjectId);
   if (leadOwner !== null) return leadOwner;
 
