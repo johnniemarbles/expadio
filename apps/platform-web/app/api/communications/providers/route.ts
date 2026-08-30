@@ -13,7 +13,7 @@ import {
  * G4: this route previously hardcoded ownership_scope = 'PLATFORM' and
  *     tenant_id = NULL, so a tenant could not own a connector through the API
  *     even though ConnectorOwnership already models 'TENANT'.
- * G5: it hardcoded the demo tenant UUID, making tenant isolation untestable.
+ * G5: it hardcoded bootstrap tenant context, making tenant isolation untestable.
  *
  * The response type below has no field capable of holding a secret. That is a
  * contract, not an implementation detail (§8).
