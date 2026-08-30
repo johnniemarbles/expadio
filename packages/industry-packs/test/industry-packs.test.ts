@@ -15,6 +15,7 @@ import {
   resolveStageLabel,
   resolveCaseSchema,
   resolveCaseOntology,
+  resolveRelationshipDefinitions,
   describeIndustryPack,
   listIndustryPackCatalog,
   validateCaseAttributes,
@@ -204,4 +205,30 @@ test('resolution never changes canonical keys — only display text', () => {
   // The concept keys are the stable identity; the pack only supplies labels.
   const keys = DENTEX_PACK.terminology.concepts.map((c) => c.conceptKey);
   assert.deepEqual(keys, ['crm.account', 'crm.contact', 'crm.lead', 'crm.case', 'crm.agreement']);
+});
+
+
+test('DENTEX declares provider through the horizontal Relationship Fabric', () => {
+  const definitions = resolveRelationshipDefinitions(DENTEX_PACK, 'crm.case');
+  const provider = definitions.find((definition) => definition.key === 'provider');
+  assert.deepEqual(provider, {
+    key: 'provider',
+    label: 'Treating provider',
+    sourceEntityType: 'crm.case',
+    targetEntityTypes: ['iam.subject'],
+    cardinality: 'ZERO_OR_ONE',
+  });
+
+  // The neutral engine and a pack that does not declare this relationship do
+  // not manufacture a provider role.
+  assert.deepEqual(resolveRelationshipDefinitions(null), []);
+  assert.equal(
+    resolveRelationshipDefinitions(LEXFLOW_PACK, 'crm.case').some((d) => d.key === 'provider'),
+    false,
+  );
+});
+
+test('management-plane pack description exposes Relationship Fabric declarations', () => {
+  const dentex = describeIndustryPack(DENTEX_PACK);
+  assert.equal(dentex.relationshipDefinitions.find((d) => d.key === 'provider')?.label, 'Treating provider');
 });
