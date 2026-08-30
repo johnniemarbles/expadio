@@ -4,6 +4,10 @@ BEGIN;
 -- Domain Events remain immutable; this table records each operator-authorized
 -- decision to start a new delivery retry cycle for a DEAD outbox row.
 
+ALTER TABLE platform.domain_event_outbox
+  ADD CONSTRAINT domain_event_outbox_outbox_tenant_uq
+  UNIQUE (outbox_id, tenant_id);
+
 CREATE TABLE platform.domain_event_outbox_requeue_events (
   requeue_event_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE RESTRICT,
