@@ -107,6 +107,10 @@ export default async function IndustryPackDraftPage({
             guidance: definition.caseWorkflow?.stageGuidance?.[key] ?? '',
           })),
         }}
+        definition={definition}
+        verticalKey={draft.identity.verticalKey}
+        version={draft.identity.version}
+        initialRevision={draft.revision}
       />
 
       <section className={styles.summaryGrid} aria-label="Draft summary">
