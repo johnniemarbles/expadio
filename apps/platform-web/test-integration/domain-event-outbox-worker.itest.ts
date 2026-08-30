@@ -171,3 +171,153 @@ test('expired claims are recovered and max attempts terminate as DEAD', async ()
     await p.end();
   }
 });
+
+
+test('a crash on the final allowed attempt is swept to DEAD after lease expiry', async () => {
+  const p = pool(1);
+  const c = await p.connect();
+  try {
+    const tenantId = await tenant(c);
+    await event(c, tenantId);
+    const first = await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T17:00:00.000Z'),
+      leaseMs: 60_000,
+      maxAttempts: 1,
+    });
+    assert.ok(first);
+    assert.equal(first.attempts, 1);
+
+    assert.equal(await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T17:02:00.000Z'),
+      leaseMs: 60_000,
+      maxAttempts: 1,
+    }), null);
+
+    const row = (await c.query(
+      `SELECT status, claimed_at
+         FROM platform.domain_event_outbox
+        WHERE tenant_id = $1::uuid AND outbox_id = $2::uuid`,
+      [tenantId, first.outboxId],
+    )).rows[0];
+    assert.equal(row.status, 'DEAD');
+    assert.equal(row.claimed_at, null);
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+test('an expired lease cannot complete or fail even before another worker reclaims it', async () => {
+  const p = pool(1);
+  const c = await p.connect();
+  try {
+    const tenantId = await tenant(c);
+    await event(c, tenantId);
+    const claim = await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T18:00:00.000Z'),
+      leaseMs: 60_000,
+    });
+    assert.ok(claim);
+
+    assert.equal(await completeDomainEventOutbox(c, {
+      tenantId,
+      outboxId: claim.outboxId,
+      claimedAt: claim.claimedAt,
+      completedAt: new Date('2026-08-30T18:02:00.000Z'),
+      leaseMs: 60_000,
+    }), false);
+
+    assert.equal(await failDomainEventOutbox(c, {
+      tenantId,
+      outboxId: claim.outboxId,
+      claimedAt: claim.claimedAt,
+      error: 'stale worker must not mutate',
+      failedAt: new Date('2026-08-30T18:02:00.000Z'),
+      leaseMs: 60_000,
+    }), 'STALE_CLAIM');
+
+    const recovered = await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T18:02:00.000Z'),
+      leaseMs: 60_000,
+    });
+    assert.ok(recovered);
+    assert.equal(recovered.outboxId, claim.outboxId);
+    assert.equal(recovered.attempts, 2);
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
+
+test('later events in one partition remain blocked until the earlier event is PUBLISHED', async () => {
+  const p = pool(1);
+  const c = await p.connect();
+  try {
+    const tenantId = await tenant(c);
+    const aggregateId = randomUUID();
+    const first = await appendDomainEventWithOutbox(c, {
+      event: {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'crm.case',
+        aggregateId,
+        eventType: 'Treatment.ClinicalReviewEntered',
+        eventVersion: 1,
+        occurredAt: new Date('2026-08-30T19:00:00.000Z'),
+        actorSubjectId: 'worker-itest',
+        correlationId: randomUUID(),
+        packKey: 'dentex',
+        payload: {},
+      },
+    });
+    const second = await appendDomainEventWithOutbox(c, {
+      event: {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'crm.case',
+        aggregateId,
+        eventType: 'Treatment.Discharged',
+        eventVersion: 1,
+        occurredAt: new Date('2026-08-30T19:00:01.000Z'),
+        actorSubjectId: 'worker-itest',
+        correlationId: randomUUID(),
+        packKey: 'dentex',
+        payload: {},
+      },
+    });
+    assert.equal(first.partitionKey, second.partitionKey);
+
+    const firstClaim = await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T19:01:00.000Z'),
+    });
+    assert.ok(firstClaim);
+    assert.equal(firstClaim.eventId, first.event.eventId);
+
+    assert.equal(await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T19:01:10.000Z'),
+    }), null);
+
+    assert.equal(await completeDomainEventOutbox(c, {
+      tenantId,
+      outboxId: firstClaim.outboxId,
+      claimedAt: firstClaim.claimedAt,
+      completedAt: new Date('2026-08-30T19:01:20.000Z'),
+    }), true);
+
+    const secondClaim = await claimDomainEventOutbox(c, {
+      tenantId,
+      now: new Date('2026-08-30T19:01:21.000Z'),
+    });
+    assert.ok(secondClaim);
+    assert.equal(secondClaim.eventId, second.event.eventId);
+  } finally {
+    c.release();
+    await p.end();
+  }
+});
