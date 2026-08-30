@@ -35,7 +35,7 @@ export interface GovernedCommunicateExecutionResult {
  * queue phase has an immutable execution attempt, redelivery returns that
  * attempt without re-running compliance, template, or routing work.
  */
-export async function executeGovernedCommunicateAction(
+async function executeGovernedCommunicateActionInTransaction(
   client: PoolClient,
   input: {
     readonly intent: PersistedGovernedActionIntent;
@@ -101,7 +101,7 @@ export async function executeGovernedCommunicateAction(
   }
 
   let queue: GovernedCommunicateQueueResult;
-  let config;
+  let config: ReturnType<typeof parseGovernedCommunicateConfiguration>;
   try {
     config = parseGovernedCommunicateConfiguration(input.intent.configuration);
   } catch (error) {
@@ -150,7 +150,7 @@ export async function executeGovernedCommunicateAction(
     delivery: new PostgresCommunicationDeliveryRepository(client),
     connectors,
     ...(routingPolicy === null ? {} : { routingPolicy }),
-    now: input.now,
+    ...(input.now === undefined ? {} : { now: input.now }),
   });
 
   const completedAtIso = input.now?.() ?? new Date().toISOString();
@@ -191,4 +191,28 @@ export async function executeGovernedCommunicateAction(
     attempt,
     queue,
   };
+}
+
+
+/**
+ * Public executor boundary. It owns the database transaction so the durable
+ * communication delivery and immutable execution-attempt evidence are atomic.
+ * Callers should not wrap this function in another PostgreSQL transaction.
+ */
+export async function executeGovernedCommunicateAction(
+  client: PoolClient,
+  input: {
+    readonly intent: PersistedGovernedActionIntent;
+    readonly now?: () => string;
+  },
+): Promise<GovernedCommunicateExecutionResult> {
+  await client.query('BEGIN');
+  try {
+    const result = await executeGovernedCommunicateActionInTransaction(client, input);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
 }
