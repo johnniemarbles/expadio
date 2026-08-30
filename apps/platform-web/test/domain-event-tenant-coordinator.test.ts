@@ -23,6 +23,8 @@ test('scheduler target registry is explicit control-plane metadata, not tenant d
   assert.doesNotMatch(coordinator, /FROM platform\.tenants/i);
   assert.doesNotMatch(migration, /payload jsonb/i);
   assert.doesNotMatch(migration, /event_type/i);
+  assert.match(migration, /FORCE ROW LEVEL SECURITY/);
+  assert.match(migration, /scheduler_control_plane/);
 });
 
 test('coordinator selects only explicitly enabled due targets', () => {
@@ -30,6 +32,8 @@ test('coordinator selects only explicitly enabled due targets', () => {
   assert.match(coordinator, /next_scheduled_at <= \$1/);
   assert.match(coordinator, /ORDER BY next_scheduled_at ASC/);
   assert.match(coordinator, /runDomainEventActionWorkerForTenants/);
+  assert.match(coordinator, /set_config\('app\.scheduler_control_plane', 'on', false\)/);
+  assert.match(coordinator, /RESET app\.scheduler_control_plane/);
 });
 
 test('busy overlap does not advance tenant schedule', () => {
