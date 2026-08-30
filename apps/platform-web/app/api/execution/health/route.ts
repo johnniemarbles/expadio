@@ -17,7 +17,7 @@ function singleParam(searchParams: URLSearchParams, key: string): string | undef
  * Tenant-scoped execution health summary.
  *
  * This is a bounded read-only operations API over platform.execution_health_summary.
- * It does not claim work, retry work, mutate state, or perform recovery.
+ * It reports operational state only and never mutates execution data.
  */
 export async function GET(request: Request) {
   try {
