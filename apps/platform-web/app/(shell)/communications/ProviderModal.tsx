@@ -87,14 +87,15 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setStatus(null); setError(null); setWarnings([]);
   }
 
-  async function registerConnector(credentialRef: string | null, capabilityKeys: string[]) {
+  async function registerConnector(credentialRef: string | null, capabilityKeys: string[], effectiveConnectorKey = connectorKey.trim()) {
     const response = await fetch(`/api/communications/providers${window.location.search}`, {
       method: "POST",
       headers: reauthHeaders(),
       body: JSON.stringify({
         providerKey: registerKey,
         providerType: channel,
-        connectorKey: connectorKey.trim() || undefined,
+        ownershipScope: 'PLATFORM',
+        connectorKey: effectiveConnectorKey || undefined,
         region: region.trim() || undefined,
         priority: Number(priority) || 100,
         custodyMode,
@@ -106,7 +107,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     if (!response.ok) throw new Error(apiError(result, "Provider registration failed."));
   }
 
-  async function runByokIntake(): Promise<{ reference: string; capabilities: string[] }> {
+  async function runByokIntake(): Promise<{ reference: string; capabilities: string[]; connectorKey: string }> {
     if (custodyBase === null) throw new Error("BYOK intake is not available for this provider.");
     if (!secret.trim()) throw new Error("Enter the API secret or token to store.");
     const effectiveConnectorKey = connectorKey.trim() || `comm-${registerKey}-${crypto.randomUUID().slice(0, 8)}`;
@@ -142,7 +143,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
     // Probe capabilities ('sms.send') are provider-scope; the connector is
     // registered against the platform capability key for its channel.
-    return { reference: intakeBody.reference, capabilities: [capabilityKey] };
+    return { reference: intakeBody.reference, capabilities: [capabilityKey], connectorKey: effectiveConnectorKey };
   }
 
   async function submit(event: React.FormEvent) {
@@ -153,9 +154,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setStatus(null);
     try {
       if (custodyMode === "DELEGATED") {
-        const { reference, capabilities } = await runByokIntake();
+        const { reference, capabilities, connectorKey: registeredKey } = await runByokIntake();
         setStatus("Registering the connector…");
-        await registerConnector(reference, capabilities);
+        await registerConnector(reference, capabilities, registeredKey);
       } else {
         setStatus("Registering the connector…");
         await registerConnector(null, [capabilityKey]);

@@ -1,3 +1,4 @@
+import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import { DecisionTraceBuilder } from '@expadio/communication';
 import { governedResendApiTokenProvider } from '@expadio/communication/governed-resend-binding';
@@ -39,6 +40,7 @@ export async function POST(
 ) {
   try {
     const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     await requireStepUp();
 
     const connectorKey = decodeURIComponent((await params).key).trim();
@@ -70,6 +72,7 @@ export async function POST(
     const requestedAt = new Date().toISOString();
 
     const result = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const providerRegistry = new PostgresProviderRegistryRepository(client);
       const connectors = await providerRegistry.listConnectors(
         context.tenantId,

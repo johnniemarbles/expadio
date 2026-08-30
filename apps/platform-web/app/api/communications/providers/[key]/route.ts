@@ -1,7 +1,8 @@
+import { requireCommunicationAdmin } from '../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import {
   resolveRequestContext,
-  withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../lib/request-context';
 
@@ -29,12 +30,14 @@ export async function PATCH(
 ) {
   try {
     const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     const connectorKey = decodeURIComponent((await params).key);
 
     const body = await request.json();
     const { enabled, health } = body;
 
-    const connector = await withTenantClient(context, async (client) => {
+    const connector = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const result = await client.query(
         `UPDATE platform.connectors
             SET enabled = COALESCE($1, enabled),
@@ -70,9 +73,11 @@ export async function DELETE(
 ) {
   try {
     const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     const connectorKey = decodeURIComponent((await params).key);
 
-    const connector = await withTenantClient(context, async (client) => {
+    const connector = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const result = await client.query(
         `UPDATE platform.connectors
             SET enabled = false, health = 'DEGRADED', updated_at = now()

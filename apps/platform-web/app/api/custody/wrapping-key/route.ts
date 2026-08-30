@@ -1,3 +1,4 @@
+import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import { WrappingKeyStore } from '@expadio/credential-custody';
 import { resolveRequestContext, requireStepUp, deniedResponse } from '../../../../lib/request-context';
@@ -31,9 +32,10 @@ declare global {
 export const wrappingKeys = globalThis._custodyWrappingKeys ?? new WrappingKeyStore(120);
 globalThis._custodyWrappingKeys = wrappingKeys;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     await requireStepUp();
 
     wrappingKeys.evictExpired();

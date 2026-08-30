@@ -1,0 +1,73 @@
+# Communications: platform integration, brand configuration
+
+## Scope of this first implementation slice
+
+Base inspected: `7dc9941cce0359397d479caa531df938b39e9a2b`.
+
+- New Communications connectors are PLATFORM-owned, not tenant-owned.
+- Provider collection, detail, health, blast-radius, attestation, revocation,
+  test-send and credential-intake endpoints require database-backed platform
+  authority before processing their requests.
+- Platform scope no longer trusts `x-expadio-scope`. It requires a current,
+  active platform role and assignment in the authenticated workspace.
+- Scoped assignments and active restrictions fail closed for this broad
+  infrastructure privilege. Fine-grained delegated administration is not
+  implemented by this guard.
+- Provider queries now run with tenant settings inside an explicit transaction.
+- Automatic admin grants default off; demo grants are forbidden in production.
+- The Communications page resolves access before fetching provider metadata.
+  Brands receive a separate activity/readiness view, without provider or
+  credential controls. Self-service brand configuration is explicitly pending.
+- Provider intake and connector registration retain the same generated key.
+
+Existing tenant-owned connectors, sender data and role grants are preserved.
+This change does not merge, migrate or delete them, send messages, configure
+live credentials, or activate providers.
+
+## Validation performed
+
+- 16 focused Node tests: existing Communications contracts plus new authority,
+  automatic-grant, route-guard and UI separation regressions.
+- 16 authority scenarios against embedded PostgreSQL (PGlite): legitimate
+  administrators, forged scope, wrong subject/tenant/organization, revoked,
+  future and expired assignments, inactive/tenant roles, scoped assignments,
+  active/inactive restrictions and super-admin access.
+- 11 actual HTTP handlers invoked with a mocked authenticated brand context
+  claiming platform scope. All returned 403 before downstream work. Framework,
+  authentication and provider dependencies were stubbed; this is not live E2E.
+- Strict standalone typecheck of the dependency-free authority module.
+- Full app build, authenticated browser QA, production PostgreSQL RLS tests
+  and real provider delivery have NOT been validated in this environment.
+
+## Rollout blockers and follow-on work
+
+This is not the completed provider integration project. Keep this slice in
+review until full application and deployment checks are complete.
+
+1. Review existing platform role assignments before rollout: the previous
+   default auto-granted administrator roles. Changing the default does not
+   revoke historical grants. Do not mass-revoke without identifying legitimate
+   administrators and preserving their access.
+2. Replace client timestamp-based step-up with verified authentication-provider
+   reverification. The existing header is not evidence of a second factor.
+3. Bind registration to persisted server-side credential-intake evidence.
+   Registration currently marks accepted references ACTIVE/VALID; this is not
+   sufficient proof of a successfully probed credential.
+4. Complete platform credential namespace/custody lifecycle and prove a shared
+   connection executes for two distinct brands with isolated senders and usage.
+5. Add channel entitlements, routing eligibility and quotas for each brand,
+   enforced at enqueue and send time. Provider visibility is not entitlement.
+6. Replace hardcoded DNS instructions in the current domains endpoint with
+   provider-issued records and authoritative verification. Do not expose that
+   legacy form as finished brand onboarding.
+7. Add brand sender, template, consent and preference configuration with backend
+   permissions. The new brand view intentionally offers no unfinished writes.
+8. Complete each chosen provider's adapter, verification, test send, webhook,
+   reconciliation and recovery path. A catalogue entry is not an integration;
+   the inspected worker/test-send path is Resend-specific.
+9. Audit revocation dual-control evidence, correct queue cancellation persistence
+   and cross-brand impact reporting before shared production revocation.
+
+Acceptance: platform administrators integrate once; entitled brands configure
+only their identity/content/preferences; the platform executes securely and
+attributes every delivery to the correct brand without disclosing credentials.

@@ -1,19 +1,17 @@
+import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import {
   resolveRequestContext,
   requireStepUp,
-  withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../lib/request-context';
 
 /**
- * Design spec §0.2 — fixes G4 and G5.
- *
- * G4: this route previously hardcoded ownership_scope = 'PLATFORM' and
- *     tenant_id = NULL, so a tenant could not own a connector through the API
- *     even though ConnectorOwnership already models 'TENANT'.
- * G5: it hardcoded the demo tenant UUID, making tenant isolation untestable.
+ * Platform-owned Communications: only verified platform administrators may
+ * inspect or register providers. Existing tenant connectors are retained for
+ * migration, but all new registrations are shared PLATFORM connections.
  *
  * The response type below has no field capable of holding a secret. That is a
  * contract, not an implementation detail (§8).
@@ -58,11 +56,13 @@ function isSecretReference(value: unknown): value is string {
     && value.length < 512;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
 
-    const connectors = await withTenantClient(context, async (client) => {
+    const connectors = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const result = await client.query(
         `SELECT
            c.connector_key, c.provider_type, c.provider_key, c.ownership_scope,
@@ -121,7 +121,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     await requireStepUp();
 
     const body = await request.json();
@@ -131,10 +132,10 @@ export async function POST(request: Request) {
     const credentialRef = body.credentialRef;
     const fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.trim() : null;
 
-    // G4 — a tenant may now own a connector. PLATFORM ownership additionally
-    // requires platform scope, so a tenant admin cannot create a shared connector.
-    const ownershipScope: 'PLATFORM' | 'TENANT' =
-      body.ownershipScope === 'PLATFORM' && context.platformScope ? 'PLATFORM' : 'TENANT';
+    if (body.ownershipScope !== undefined && body.ownershipScope !== 'PLATFORM') {
+      return NextResponse.json({ error: 'Communication providers must be platform-owned.' }, { status: 400 });
+    }
+    const ownershipScope = 'PLATFORM';
 
     const custodyMode = typeof body.custodyMode === 'string' ? body.custodyMode : 'DELEGATED';
     const failurePolicy = typeof body.failurePolicy === 'string' ? body.failurePolicy : 'HOLD_AND_RETRY';
@@ -175,8 +176,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'At least one capability is required.' }, { status: 400 });
     }
 
-    const created = await withTenantClient(context, async (client) => {
-      await client.query('BEGIN');
+    const created = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       try {
         const connector = await client.query(
           `INSERT INTO platform.connectors
@@ -190,7 +191,7 @@ export async function POST(request: Request) {
             providerType,
             providerKey,
             ownershipScope,
-            ownershipScope === 'TENANT' ? context.tenantId : null,
+            null,
             region,
             priority,
           ],
@@ -239,10 +240,8 @@ export async function POST(request: Request) {
           );
         }
 
-        await client.query('COMMIT');
         return connector.rows[0];
       } catch (error) {
-        await client.query('ROLLBACK');
         throw error;
       }
     });

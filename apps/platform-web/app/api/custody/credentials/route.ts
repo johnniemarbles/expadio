@@ -1,3 +1,4 @@
+import { requireCommunicationAdmin } from '../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import {
   CredentialIntakeService,
@@ -61,7 +62,8 @@ function isEnvelope(value: unknown): value is WrappedSecretEnvelope {
 
 export async function POST(request: Request) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     await requireStepUp();
 
     const body = (await request.json()) as IntakeBody;

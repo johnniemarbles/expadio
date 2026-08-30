@@ -81,9 +81,8 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
     // operator silently became PLATFORM_SUPER_ADMIN). Governance:
     //   - PLATFORM_ADMIN_SUBJECTS: an explicit allowlist of subject ids that get
     //     the platform-admin + tenant-owner grant. This is the production path.
-    //   - DEMO_OPEN_ADMIN (default "true"): when true, any provisioned operator
-    //     is granted, keeping the single-tenant demo console usable end to end.
-    //     Set DEMO_OPEN_ADMIN=false in production to require the allowlist.
+    //   - DEMO_OPEN_ADMIN: explicit non-production opt-in only. Production
+    //     always requires the allowlist for automatic grants.
     // Idempotent and cached per process so the decision runs once per operator.
     if (identity.subjectId && list.length > 0 && !this.grantedSubjects.has(identity.subjectId)) {
       this.grantedSubjects.add(identity.subjectId);

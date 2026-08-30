@@ -1,3 +1,4 @@
+import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import {
   buildRevocationAttestation,
@@ -7,7 +8,7 @@ import {
 import {
   resolveRequestContext,
   requireStepUp,
-  withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../../lib/request-context';
 
@@ -33,7 +34,8 @@ export async function POST(
   { params }: { params: Promise<{ key: string }> },
 ) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     await requireStepUp();
 
     const connectorKey = decodeURIComponent((await params).key);
@@ -41,8 +43,8 @@ export async function POST(
     const correlationId = crypto.randomUUID();
     const revokedAt = new Date().toISOString();
 
-    const attestation = await withTenantClient(context, async (client) => {
-      await client.query('BEGIN');
+    const attestation = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       try {
         const connector = await client.query(
           `SELECT c.connector_id, c.connector_key, c.ownership_scope, c.tenant_id
@@ -174,10 +176,8 @@ export async function POST(
           ],
         );
 
-        await client.query('COMMIT');
         return built;
       } catch (error) {
-        await client.query('ROLLBACK');
         throw error;
       }
     });

@@ -1,8 +1,9 @@
+import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import { describeBlastRadius } from '@expadio/credential-custody';
 import {
   resolveRequestContext,
-  withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../../lib/request-context';
 
@@ -18,14 +19,16 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ key: string }> },
 ) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     const connectorKey = decodeURIComponent((await params).key);
 
-    const radius = await withTenantClient(context, async (client) => {
+    const radius = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const usage = await client.query<{
         tenant_count: string;
         channels: string[];

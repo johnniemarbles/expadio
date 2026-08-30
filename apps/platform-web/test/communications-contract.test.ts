@@ -103,7 +103,7 @@ test("platform template creation requires governed platform authority", () => {
 test("connector detail mutations resolve the real tenant, not the demo scaffold", () => {
   // G5 — PATCH/DELETE must not hardcode the demo tenant or resolve via auth() directly.
   assert.match(providerDetailMutationRoute, /resolveRequestContext/);
-  assert.match(providerDetailMutationRoute, /withTenantClient/);
+  assert.match(providerDetailMutationRoute, /withTenantTransaction/);
   assert.doesNotMatch(providerDetailMutationRoute, /00000000-0000-0000-0000-000000000001/);
   assert.doesNotMatch(providerDetailMutationRoute, /@clerk\/nextjs\/server/);
 });

@@ -1,7 +1,8 @@
+import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import {
   resolveRequestContext,
-  withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../../lib/request-context';
 
@@ -16,14 +17,16 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ key: string }> },
 ) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     const connectorKey = decodeURIComponent((await params).key);
 
-    const rows = await withTenantClient(context, async (client) => {
+    const rows = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const result = await client.query(
         `SELECT attestation_id, connector_key, revoked_at, revoked_by,
                 last_lease_issued_at, last_lease_expired_at, leases_in_window,

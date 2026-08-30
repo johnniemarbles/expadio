@@ -6,6 +6,7 @@ import type { TemplateCatalogueItem } from "../../api/communications/templates/r
 import type { FleetHealthItem } from "../../api/communications/fleet/route";
 import { fetchApi } from "../../../lib/live-adapter";
 import { CommunicationsDashboardClient } from "./CommunicationsDashboardClient";
+import { BrandCommunications } from './BrandCommunications';
 
 export default async function CommunicationsPage({
   searchParams,
@@ -17,6 +18,14 @@ export default async function CommunicationsPage({
   if (typeof params.account === 'string') qs.set('account', params.account);
   if (typeof params.org === 'string') qs.set('org', params.org);
   const q = qs.toString() ? `?${qs.toString()}` : '';
+
+  const access = await fetchApi<{ canManageProviders: boolean }>(`/api/communications/access${q}`);
+  if (isDenied(access)) return <DeniedState result={access} />;
+  if (!access.canManageProviders) {
+    const overview = await fetchApi<CommunicationOverview>(`/api/communications/overview${q}`);
+    if (isDenied(overview)) return <DeniedState result={overview} />;
+    return <BrandCommunications overview={overview} />;
+  }
 
   // Capacity/spend and decision-trace data are fetched client-side by their
   // own panels (CapacityPanel, TracesPanel), so the page only prefetches the

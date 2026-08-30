@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
 import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
+import { hasPlatformCommunicationAuthority } from './platform-communication-authority.ts';
 
 /**
  * Design spec §0.2 G5 — un-scaffolding.
@@ -95,17 +96,20 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   const tenantId = effective.tenantId;
   const organizationId = effective.organizationId ?? null;
 
-  return {
+  const context: ResolvedRequestContext = {
     subjectId: userId,
     tenantId,
     organizationId: organizationId ?? '',
-    platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
+    platformScope: false,
     applyTo: async (client) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
       // Setting this is what makes platform.current_tenant_id() resolve.
       await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', tenantId]);
     },
   };
+  const platformScope = await withTenantTransaction(context, (client) =>
+    hasPlatformCommunicationAuthority(client, context));
+  return { ...context, platformScope };
 }
 
 /** Runs `work` with a pooled client that already has the tenant GUC applied. */

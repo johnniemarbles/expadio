@@ -1,8 +1,9 @@
+import { requireCommunicationAdmin } from '../../../../../../lib/communication-admin';
 import { NextResponse } from 'next/server';
 import { nextCredentialHealth } from '@expadio/credential-custody';
 import {
   resolveRequestContext,
-  withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../../lib/request-context';
 
@@ -22,14 +23,16 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ key: string }> },
 ) {
   try {
-    const context = await resolveRequestContext();
+    const context = await resolveRequestContext(request);
+    await requireCommunicationAdmin(context);
     const connectorKey = decodeURIComponent((await params).key);
 
-    const health = await withTenantClient(context, async (client) => {
+    const health = await withTenantTransaction(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', true)");
       const result = await client.query(
         `SELECT cred.state, cred.probe_status, cred.probe_checked_at, cred.probe_error,
                 cred.probe_warnings, cred.custody_mode, cred.failure_policy,
