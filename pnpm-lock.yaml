@@ -193,6 +193,8 @@ importers:
 
   packages/data-orchestrator: {}
 
+  packages/domain-events: {}
+
   packages/iam:
     dependencies:
       '@expadio/tenancy':
