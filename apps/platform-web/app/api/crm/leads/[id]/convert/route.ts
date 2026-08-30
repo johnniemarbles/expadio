@@ -6,6 +6,7 @@ import { toCase } from '../../../cases/route';
 import { resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
 import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 import { startWorkflow } from '../../../../../../lib/workflow-runtime';
+import { assignParticipant } from '../../../../../../lib/workflow-participants';
 import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
 
 /**
@@ -187,6 +188,18 @@ export async function POST(
           if (!started.ok) {
             await client.query('ROLLBACK');
             return { noWorkflowBlueprint: true } as const;
+          }
+
+          if (started.instance.currentStageKey !== undefined) {
+            await assignParticipant(client, {
+              tenantId: context.tenantId,
+              instanceId: started.instance.instanceId,
+              stageKey: started.instance.currentStageKey,
+              participantKey: 'owner',
+              targetKind: 'USER',
+              targetKey: context.subjectId,
+              assignedBySubjectId: context.subjectId,
+            });
           }
 
           const boundCase = await client.query(
