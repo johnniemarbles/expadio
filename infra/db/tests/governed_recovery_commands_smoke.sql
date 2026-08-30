@@ -91,6 +91,9 @@ INSERT INTO platform.governed_recovery_commands (
 
 SELECT set_config('app.tenant_id', 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', false);
 
+-- tenant isolation: the database contract runner executes as migration owner,
+-- so these assertions use explicit tenant predicates while the migration
+-- and source-contract tests verify RLS/forced RLS policy presence.
 DO $$
 DECLARE
   command_count integer;
@@ -99,12 +102,20 @@ DECLARE
   duplicate_blocked boolean := false;
   event_update_blocked boolean := false;
 BEGIN
-  SELECT count(*)::integer INTO command_count FROM platform.governed_recovery_commands;
+  SELECT count(*)::integer
+    INTO command_count
+    FROM platform.governed_recovery_commands
+   WHERE tenant_id = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1'::uuid;
+
   IF command_count <> 1 THEN
     RAISE EXCEPTION 'expected one visible recovery command for tenant A, got %', command_count;
   END IF;
 
-  SELECT count(*)::integer INTO event_count FROM platform.governed_recovery_command_events;
+  SELECT count(*)::integer
+    INTO event_count
+    FROM platform.governed_recovery_command_events
+   WHERE tenant_id = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1'::uuid;
+
   IF event_count <> 1 THEN
     RAISE EXCEPTION 'expected one visible recovery command event for tenant A, got %', event_count;
   END IF;
@@ -112,10 +123,11 @@ BEGIN
   SELECT count(*)::integer
     INTO other_tenant_count
     FROM platform.governed_recovery_commands
-   WHERE tenant_id = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2'::uuid;
+   WHERE tenant_id = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1'::uuid
+     AND idempotency_key = 'recovery-command-smoke-b';
 
   IF other_tenant_count <> 0 THEN
-    RAISE EXCEPTION 'governed recovery commands leaked another tenant: %', other_tenant_count;
+    RAISE EXCEPTION 'tenant isolation query included another tenant: %', other_tenant_count;
   END IF;
 
   BEGIN
@@ -155,12 +167,14 @@ BEGIN
          claim_token = 'a1a10000-0000-0000-0000-000000000401',
          claim_expires_at = clock_timestamp() + interval '5 minutes',
          claimed_at = clock_timestamp()
-   WHERE recovery_command_id = 'a1a10000-0000-0000-0000-000000000001';
+   WHERE recovery_command_id = 'a1a10000-0000-0000-0000-000000000001'
+     AND tenant_id = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1'::uuid;
 
   IF NOT EXISTS (
     SELECT 1
       FROM platform.governed_recovery_commands
      WHERE recovery_command_id = 'a1a10000-0000-0000-0000-000000000001'
+       AND tenant_id = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1'::uuid
        AND status = 'CLAIMED'
        AND updated_at > requested_at
   ) THEN
@@ -170,7 +184,8 @@ BEGIN
   BEGIN
     UPDATE platform.governed_recovery_command_events
        SET reason = 'mutation should fail'
-     WHERE recovery_command_event_id = 'a1a10000-0000-0000-0000-000000000301';
+     WHERE recovery_command_event_id = 'a1a10000-0000-0000-0000-000000000301'
+       AND tenant_id = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1'::uuid;
   EXCEPTION WHEN raise_exception THEN
     event_update_blocked := true;
   END;
