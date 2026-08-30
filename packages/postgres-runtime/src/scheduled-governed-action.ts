@@ -19,6 +19,7 @@ export interface PersistedScheduledGovernedAction {
   readonly tenantId: string;
   readonly parentActionIntentId: string;
   readonly dueAt: Date;
+  readonly nextAttemptAt: Date;
   readonly targetExecutorClass: Exclude<GovernedActionExecutorClass, 'SCHEDULE'>;
   readonly targetActionKey: string;
   readonly targetConfiguration: Readonly<Record<string, unknown>>;
@@ -35,6 +36,7 @@ interface ScheduledRow {
   readonly tenant_id: string;
   readonly parent_action_intent_id: string;
   readonly due_at: Date | string;
+  readonly next_attempt_at: Date | string;
   readonly target_executor_class: Exclude<GovernedActionExecutorClass, 'SCHEDULE'>;
   readonly target_action_key: string;
   readonly target_configuration: Record<string, unknown>;
@@ -56,6 +58,7 @@ function mapScheduled(row: ScheduledRow): PersistedScheduledGovernedAction {
     tenantId: row.tenant_id,
     parentActionIntentId: row.parent_action_intent_id,
     dueAt: date(row.due_at),
+    nextAttemptAt: date(row.next_attempt_at),
     targetExecutorClass: row.target_executor_class,
     targetActionKey: row.target_action_key,
     targetConfiguration: row.target_configuration,
@@ -69,7 +72,7 @@ function mapScheduled(row: ScheduledRow): PersistedScheduledGovernedAction {
 }
 
 const SELECT_COLUMNS = `
-  scheduled_action_id, tenant_id, parent_action_intent_id, due_at,
+  scheduled_action_id, tenant_id, parent_action_intent_id, due_at, next_attempt_at,
   target_executor_class, target_action_key, target_configuration,
   target_idempotency_key, state, child_action_intent_id, claim_token,
   claim_expires_at, attempt_count
@@ -94,10 +97,10 @@ export async function persistScheduledGovernedAction(
 
   const inserted = await client.query<ScheduledRow>(
     `INSERT INTO platform.scheduled_governed_actions (
-       tenant_id, parent_action_intent_id, due_at, target_executor_class,
+       tenant_id, parent_action_intent_id, due_at, next_attempt_at, target_executor_class,
        target_action_key, target_configuration, target_idempotency_key
      ) VALUES (
-       $1::uuid, $2::uuid, $3::timestamptz, $4, $5, $6::jsonb, $7
+       $1::uuid, $2::uuid, $3::timestamptz, $3::timestamptz, $4, $5, $6::jsonb, $7
      )
      ON CONFLICT (tenant_id, parent_action_intent_id) DO NOTHING
      RETURNING ${SELECT_COLUMNS}`,
@@ -142,9 +145,9 @@ export async function claimDueScheduledGovernedAction(
          FROM platform.scheduled_governed_actions
         WHERE tenant_id = $1::uuid
           AND state = 'PENDING'
-          AND due_at <= $2::timestamptz
+          AND next_attempt_at <= $2::timestamptz
           AND (claim_token IS NULL OR claim_expires_at <= $2::timestamptz)
-        ORDER BY due_at, scheduled_action_id
+        ORDER BY next_attempt_at, due_at, scheduled_action_id
         FOR UPDATE SKIP LOCKED
         LIMIT 1
      )
@@ -195,4 +198,74 @@ export async function completeScheduledGovernedAction(
     ],
   );
   return result.rowCount === 1;
+}
+
+
+export async function retryOrFailScheduledGovernedAction(
+  client: ScheduledGovernedActionSqlClient,
+  input: {
+    readonly scheduled: PersistedScheduledGovernedAction;
+    readonly failedAt?: Date;
+    readonly maxAttempts: number;
+    readonly reasonCode: string;
+    readonly reason: string | null;
+    readonly retryAfterMs?: number;
+  },
+): Promise<'RETRY_SCHEDULED' | 'FAILED' | 'STALE_CLAIM'> {
+  const failedAt = input.failedAt ?? new Date();
+  if (input.scheduled.claimToken === null) return 'STALE_CLAIM';
+
+  if (input.scheduled.attemptCount >= input.maxAttempts) {
+    const terminal = await client.query(
+      `UPDATE platform.scheduled_governed_actions
+          SET state = 'FAILED',
+              claim_token = NULL,
+              claim_expires_at = NULL,
+              last_reason_code = $4,
+              last_reason = $5,
+              updated_at = $6::timestamptz
+        WHERE tenant_id = $1::uuid
+          AND scheduled_action_id = $2::uuid
+          AND state = 'PENDING'
+          AND claim_token = $3::uuid
+          AND claim_expires_at > $6::timestamptz`,
+      [
+        input.scheduled.tenantId,
+        input.scheduled.scheduledActionId,
+        input.scheduled.claimToken,
+        input.reasonCode,
+        input.reason,
+        failedAt,
+      ],
+    );
+    return terminal.rowCount === 1 ? 'FAILED' : 'STALE_CLAIM';
+  }
+
+  const fallbackDelay = Math.min(15 * 60_000, 30_000 * Math.max(1, input.scheduled.attemptCount));
+  const retryAfterMs = Math.max(1_000, input.retryAfterMs ?? fallbackDelay);
+  const nextAttemptAt = new Date(failedAt.getTime() + retryAfterMs);
+  const retried = await client.query(
+    `UPDATE platform.scheduled_governed_actions
+        SET next_attempt_at = $4::timestamptz,
+            claim_token = NULL,
+            claim_expires_at = NULL,
+            last_reason_code = $5,
+            last_reason = $6,
+            updated_at = $7::timestamptz
+      WHERE tenant_id = $1::uuid
+        AND scheduled_action_id = $2::uuid
+        AND state = 'PENDING'
+        AND claim_token = $3::uuid
+        AND claim_expires_at > $7::timestamptz`,
+    [
+      input.scheduled.tenantId,
+      input.scheduled.scheduledActionId,
+      input.scheduled.claimToken,
+      nextAttemptAt,
+      input.reasonCode,
+      input.reason,
+      failedAt,
+    ],
+  );
+  return retried.rowCount === 1 ? 'RETRY_SCHEDULED' : 'STALE_CLAIM';
 }
