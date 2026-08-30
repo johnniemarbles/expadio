@@ -15,12 +15,12 @@ INSERT INTO platform.domain_event_scheduler_targets (
   'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
   true,
   300,
-  '2026-08-30T14:00:00Z',
-  '2026-08-30T13:55:00Z',
+  '2026-08-29T14:00:00Z',
+  '2026-08-29T13:55:00Z',
   'a7a70000-0000-0000-0000-000000000001',
   'SUCCEEDED',
-  '2026-08-30T13:00:00Z',
-  '2026-08-30T14:00:00Z'
+  '2026-08-29T13:00:00Z',
+  '2026-08-29T14:00:00Z'
 );
 
 INSERT INTO platform.domain_event_tenant_execution_runs (
@@ -40,7 +40,7 @@ INSERT INTO platform.domain_event_tenant_execution_runs (
     0,
     0,
     0,
-    '2026-08-30T14:05:00Z',
+    '2026-08-29T14:05:00Z',
     NULL,
     NULL,
     NULL
@@ -57,8 +57,8 @@ INSERT INTO platform.domain_event_tenant_execution_runs (
     1,
     0,
     0,
-    '2026-08-30T13:00:00Z',
-    '2026-08-30T13:00:05Z',
+    '2026-08-29T13:00:00Z',
+    '2026-08-29T13:00:05Z',
     5000,
     'scheduler health smoke forced failure'
   );
@@ -70,16 +70,16 @@ INSERT INTO platform.domain_event_tenant_execution_state (
 ) VALUES (
   'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7',
   true,
-  '2026-08-30T14:10:00Z',
+  '2026-08-29T14:10:00Z',
   'a7a70000-0000-0000-0000-000000000010',
   'a7a70000-0000-0000-0000-000000000012',
-  '2026-08-30T14:06:00Z',
-  '2026-08-30T14:05:00Z',
-  '2026-08-30T13:00:05Z',
+  '2026-08-29T14:06:00Z',
+  '2026-08-29T14:05:00Z',
+  '2026-08-29T13:00:05Z',
   NULL,
-  '2026-08-30T13:00:05Z',
+  '2026-08-29T13:00:05Z',
   'scheduler health smoke forced failure',
-  '2026-08-30T14:06:00Z'
+  '2026-08-29T14:06:00Z'
 );
 
 INSERT INTO platform.domain_events (
@@ -93,7 +93,7 @@ INSERT INTO platform.domain_events (
   'scheduler-health-treatment-1',
   'Treatment.Discharged',
   1,
-  '2026-08-30T13:30:00Z',
+  '2026-08-29T13:30:00Z',
   'scheduler-health-reviewer',
   'scheduler-health-correlation-1',
   'scheduler-health-causation-1',
@@ -122,9 +122,9 @@ INSERT INTO platform.governed_action_intents (
   'scheduler-health-correlation-1',
   'a7a70000-0000-0000-0000-000000000030',
   'scheduler-health-reviewer',
-  '2026-08-30T13:30:01Z',
+  '2026-08-29T13:30:01Z',
   '{"delaySeconds":604800}'::jsonb,
-  '{"allowed":true,"policyKeys":[],"evidenceRefs":["smoke"],"reasonCode":"ALLOWED","evaluatedAt":"2026-08-30T13:30:01.000Z"}'::jsonb
+  '{"allowed":true,"policyKeys":[],"evidenceRefs":["smoke"],"reasonCode":"ALLOWED","evaluatedAt":"2026-08-29T13:30:01.000Z"}'::jsonb
 );
 
 INSERT INTO platform.scheduled_governed_actions (
@@ -158,10 +158,10 @@ INSERT INTO platform.domain_event_scheduler_targets (
   'b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8',
   false,
   300,
-  '2026-08-30T14:00:00Z',
+  '2026-08-29T14:00:00Z',
   'SKIPPED_DISABLED',
-  '2026-08-30T13:00:00Z',
-  '2026-08-30T14:00:00Z'
+  '2026-08-29T13:00:00Z',
+  '2026-08-29T14:00:00Z'
 );
 
 SELECT set_config('app.tenant_id', 'a7a7a7a7-a7a7-a7a7-a7a7-a7a7a7a7a7a7', false);
