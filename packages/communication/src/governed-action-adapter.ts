@@ -275,7 +275,9 @@ export async function queueGovernedCommunicateAction(
   if (!preflight.allowed) {
     return {
       queued: false,
-      reasonCode: preflight.reasonCode,
+      reasonCode: preflight.reasonCode === 'OK'
+        ? 'INVALID_RECIPIENT'
+        : preflight.reasonCode,
       reason: preflight.reason,
     };
   }
@@ -317,7 +319,11 @@ export async function queueGovernedCommunicateAction(
     templateScope: rendered.matchedScope,
     rendered: rendered.rendered,
     compliance: {
-      preflight,
+      preflight: {
+        allowed: true,
+        reasonCode: 'OK',
+        reason: preflight.reason,
+      },
       evaluatedAt,
     },
     routing: {
