@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
 import type { PublicationEvent } from '../../../../lib/brain-contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const result = await dbPool.query(
-      `SELECT document_reference, source_reference, collection_reference,
-              document_version, indexed_by_subject_id, indexed_at
-       FROM platform.knowledge_documents
-       WHERE tenant_id = $1
-       ORDER BY indexed_at DESC LIMIT 50`,
-      [effectiveContext.tenantId]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `SELECT document_reference, source_reference, collection_reference,
+                document_version, indexed_by_subject_id, indexed_at
+         FROM platform.knowledge_documents
+         WHERE tenant_id = $1
+         ORDER BY indexed_at DESC LIMIT 50`,
+        [effectiveContext.tenantId]
+      )
     );
 
     const items: PublicationEvent[] = result.rows.map((row: any) => ({
