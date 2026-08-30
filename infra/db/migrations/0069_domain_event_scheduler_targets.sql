@@ -33,4 +33,23 @@ COMMENT ON TABLE platform.domain_event_scheduler_targets IS
 COMMENT ON COLUMN platform.domain_event_scheduler_targets.execution_enabled IS
   'Explicit authorization for the control-plane coordinator to schedule this tenant.';
 
+-- The schema-wide invariant requires FORCE-RLS on every platform table carrying
+-- tenant_id. Normal tenant context may inspect only its own scheduling record.
+-- Cross-tenant coordinator access is possible only while the machine boundary
+-- has explicitly bound the scheduler-control-plane GUC on its dedicated client.
+ALTER TABLE platform.domain_event_scheduler_targets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.domain_event_scheduler_targets FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY domain_event_scheduler_targets_control_plane
+  ON platform.domain_event_scheduler_targets
+  FOR ALL
+  USING (
+    tenant_id = platform.current_tenant_id()
+    OR current_setting('app.scheduler_control_plane', true) = 'on'
+  )
+  WITH CHECK (
+    tenant_id = platform.current_tenant_id()
+    OR current_setting('app.scheduler_control_plane', true) = 'on'
+  );
+
 COMMIT;
