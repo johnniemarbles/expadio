@@ -179,6 +179,12 @@ const NEUTRAL_CASE_RELATIONSHIP_ROLES: Readonly<Record<CaseRelationshipConcept, 
   'crm.agreement': 'Governed by',
 };
 
+export interface CaseLifecycleEventMapping {
+  readonly stageKey: CrmCaseStage;
+  readonly eventType: string;
+  readonly eventVersion: number;
+}
+
 export interface IndustryPack {
   readonly verticalKey: string;
   readonly label: string;
@@ -216,6 +222,13 @@ export interface IndustryPack {
    * but the relationship remains the source of truth.
    */
   readonly relationshipDefinitions?: readonly RelationshipDefinition[];
+  /**
+   * Optional semantic Domain Events emitted when a governed crm.case workflow
+   * successfully lands on a canonical stage. The workflow engine remains
+   * vertical-neutral; the application adapter resolves this Pack mapping after
+   * the transition commits inside the caller's transaction.
+   */
+  readonly caseLifecycleEvents?: readonly CaseLifecycleEventMapping[];
 }
 
 // ---------------------------------------------------------------------------
@@ -308,6 +321,13 @@ const DENTEX_CASE_STAGE_SEMANTICS: CaseWorkflowSemantics = {
   ],
 };
 
+const DENTEX_CASE_LIFECYCLE_EVENTS: readonly CaseLifecycleEventMapping[] = [
+  { stageKey: 'INTAKE', eventType: 'Treatment.ConsultationEntered', eventVersion: 1 },
+  { stageKey: 'IN_PROGRESS', eventType: 'Treatment.InTreatmentEntered', eventVersion: 1 },
+  { stageKey: 'REVIEW', eventType: 'Treatment.ClinicalReviewEntered', eventVersion: 1 },
+  { stageKey: 'RESOLVED', eventType: 'Treatment.Discharged', eventVersion: 1 },
+];
+
 const DENTEX_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
   {
     key: 'provider',
@@ -334,6 +354,7 @@ export const DENTEX_PACK: IndustryPack = {
   caseSchema: DENTEX_CASE_SCHEMA,
   caseStageSemantics: DENTEX_CASE_STAGE_SEMANTICS,
   relationshipDefinitions: DENTEX_RELATIONSHIP_DEFINITIONS,
+  caseLifecycleEvents: DENTEX_CASE_LIFECYCLE_EVENTS,
   // A Treatment concerns a Patient, is performed at a Practice, under a Care plan.
   caseOntologyRoles: {
     'crm.contact': 'Patient treated',
@@ -524,6 +545,27 @@ export function resolveStageLabel(
 /** The domain fields the active pack adds to a case — empty for the neutral engine. */
 export function resolveCaseSchema(pack: IndustryPack | null | undefined): CaseSchema {
   return pack?.caseSchema ?? NEUTRAL_CASE_SCHEMA;
+}
+
+export function resolveCaseLifecycleEvent(
+  pack: IndustryPack | null | undefined,
+  stageKey: CrmCaseStage,
+): CaseLifecycleEventMapping | null {
+  const matches = (pack?.caseLifecycleEvents ?? []).filter(
+    (mapping) => mapping.stageKey === stageKey,
+  );
+  if (matches.length > 1) {
+    throw new Error(`INDUSTRY_PACK_CASE_LIFECYCLE_EVENT_DUPLICATE:${stageKey}`);
+  }
+  const mapping = matches[0];
+  if (mapping === undefined) return null;
+  if (mapping.eventType.trim() === '') {
+    throw new Error(`INDUSTRY_PACK_CASE_LIFECYCLE_EVENT_TYPE_REQUIRED:${stageKey}`);
+  }
+  if (!Number.isInteger(mapping.eventVersion) || mapping.eventVersion <= 0) {
+    throw new Error(`INDUSTRY_PACK_CASE_LIFECYCLE_EVENT_VERSION_INVALID:${stageKey}`);
+  }
+  return mapping;
 }
 
 /** Relationship Fabric definitions declared by the active pack. */
