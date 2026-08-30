@@ -50,3 +50,9 @@ test("converted cases use the governed Industry Pack schema and provenance", () 
   assert.match(convertRoute, /industry_pack_runtime_source/);
   assert.match(convertRoute, /invalidCaseAttributes/);
 });
+
+
+test("converted Treatment case is bound to the canonical crm.case workflow key", () => {
+  assert.match(convertRoute, /blueprint_key, owner_subject_id/);
+  assert.match(convertRoute, /'OPEN', 'crm\.case'/);
+});
