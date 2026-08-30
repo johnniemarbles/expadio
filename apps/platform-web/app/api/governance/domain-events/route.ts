@@ -40,13 +40,11 @@ export async function GET(request: Request) {
     const limit = parseLimit(url.searchParams.get('limit'));
 
     const { items, counts } = await withTenantTransaction(context, async (client) => {
-      const [items, counts] = await Promise.all([
-        loadDomainEventOperations(client, {
-          ...(status === undefined ? {} : { status }),
-          limit,
-        }),
-        loadDomainEventOperationCounts(client),
-      ]);
+      const items = await loadDomainEventOperations(client, {
+        ...(status === undefined ? {} : { status }),
+        limit,
+      });
+      const counts = await loadDomainEventOperationCounts(client);
       return { items, counts };
     });
 
