@@ -52,11 +52,12 @@ export async function runDomainEventActionWorkerForTenants(
   const tenants: MultiTenantDomainEventRunnerTenantResult[] = [];
 
   for (const tenantId of input.tenantIds) {
-    let client: PoolClient | null = await pool.connect();
+    let client: PoolClient | null = null;
     let summary: DomainEventActionRunnerSummary | null = null;
     let error: string | null = null;
 
     try {
+      client = await pool.connect();
       await client.query(
         "SELECT set_config('app.tenant_id', $1, false)",
         [tenantId],
