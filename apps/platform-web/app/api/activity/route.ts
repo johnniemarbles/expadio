@@ -1,37 +1,40 @@
 import { NextResponse } from 'next/server';
 import type { ActivityItem } from '../../../lib/contracts';
-import { dbPool } from '../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    // Fetch Agent Run Events
-    const agentEventsRes = await dbPool.query(
-      `SELECT e.event_id as id, e.event_type as action, e.event_reference as target, e.occurred_at as time, 
-              COALESCE(r.agent_id, e.actor_subject_id, 'System') as actor
-       FROM platform.agent_run_events e
-       JOIN platform.agent_runs r ON e.run_id = r.run_id AND e.tenant_id = r.tenant_id
-       WHERE e.tenant_id = $1
-       ORDER BY e.occurred_at DESC LIMIT 25`,
-      [effectiveContext.tenantId]
-    );
+    const { agentEventsRows, readEventsRows } = await withTenantClient(effectiveContext, async (client) => {
+      // Fetch Agent Run Events
+      const agentEventsRes = await client.query(
+        `SELECT e.event_id as id, e.event_type as action, e.event_reference as target, e.occurred_at as time, 
+                COALESCE(r.agent_id, e.actor_subject_id, 'System') as actor
+         FROM platform.agent_run_events e
+         JOIN platform.agent_runs r ON e.run_id = r.run_id AND e.tenant_id = r.tenant_id
+         WHERE e.tenant_id = $1
+         ORDER BY e.occurred_at DESC LIMIT 25`,
+        [effectiveContext.tenantId]
+      );
 
-    // Fetch Sensitive Read Events
-    const readEventsRes = await dbPool.query(
-      `SELECT event_id as id, outcome, resource_type, resource_id, recorded_at as time, 
-              COALESCE(requested_by_subject_id, 'System') as actor
-       FROM platform.sensitive_read_events 
-       WHERE tenant_id = $1 
-       ORDER BY recorded_at DESC LIMIT 25`,
-      [effectiveContext.tenantId]
-    );
+      // Fetch Sensitive Read Events
+      const readEventsRes = await client.query(
+        `SELECT event_id as id, outcome, resource_type, resource_id, recorded_at as time, 
+                COALESCE(requested_by_subject_id, 'System') as actor
+         FROM platform.sensitive_read_events 
+         WHERE tenant_id = $1 
+         ORDER BY recorded_at DESC LIMIT 25`,
+        [effectiveContext.tenantId]
+      );
+
+      return { agentEventsRows: agentEventsRes.rows, readEventsRows: readEventsRes.rows };
+    });
 
     let items: ActivityItem[] = [];
 
     // Map Agent Events
-    agentEventsRes.rows.forEach((row: any) => {
+    agentEventsRows.forEach((row: any) => {
       items.push({
         id: row.id,
         actor: row.actor,
@@ -43,7 +46,7 @@ export async function GET(request: Request) {
     });
 
     // Map Sensitive Read Events
-    readEventsRes.rows.forEach((row: any) => {
+    readEventsRows.forEach((row: any) => {
       items.push({
         id: row.id,
         actor: row.actor,
