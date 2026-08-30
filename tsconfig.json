@@ -54,5 +54,5 @@
       "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]
     }
   },
-  "include": ["packages/*/src/**/*.ts"]
+  "include": ["packages/*/src/**/*.ts", "verticals/*/src/**/*.ts"]
 }
