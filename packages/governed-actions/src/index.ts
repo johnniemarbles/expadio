@@ -240,7 +240,7 @@ function materializeBinding(
     : context.aggregateFields;
   const value = source[key];
 
-  if (value === undefined && binding.required !== false) {
+  if (value == null && binding.required !== false) {
     throw new GovernedActionValidationError(
       'GOVERNED_ACTION_BINDING_VALUE_REQUIRED',
       `No value is available for ${binding.kind}:${key}.`,
@@ -273,4 +273,25 @@ export function materializeGovernedActionConfiguration(
     );
   }
   return template;
+}
+
+
+export function materializeGovernedActionRule(
+  rule: GovernedActionRule,
+  context: GovernedActionBindingContext,
+): GovernedActionRule {
+  const materialized = materializeGovernedActionConfiguration(
+    rule.configuration as GovernedActionConfigurationTemplateValue,
+    context,
+  );
+  if (typeof materialized !== 'object' || materialized === null || Array.isArray(materialized)) {
+    throw new GovernedActionValidationError(
+      'GOVERNED_ACTION_CONFIGURATION_OBJECT_REQUIRED',
+      'A materialized action configuration must be an object.',
+    );
+  }
+  return {
+    ...rule,
+    configuration: materialized as Readonly<Record<string, unknown>>,
+  };
 }
