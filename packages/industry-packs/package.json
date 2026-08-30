@@ -6,6 +6,7 @@
   "exports": "./src/index.ts",
   "dependencies": {
     "@expadio/business-config": "workspace:*",
+    "@expadio/governed-actions": "workspace:*",
     "@expadio/relationship": "workspace:*"
   }
 }
