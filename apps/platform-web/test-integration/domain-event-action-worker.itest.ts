@@ -4,6 +4,8 @@ import test from 'node:test';
 import pg from 'pg';
 import { appendCrmCaseLifecycleEvent } from '../lib/crm-case-lifecycle-event';
 import { processOneDomainEventActionWorkItem } from '../lib/domain-event-action-worker';
+import { executeGovernedCreateTaskAction } from '../lib/governed-create-task-executor';
+import { findGovernedActionIntentById } from '@expadio/postgres-runtime/governed-action-intent';
 
 const CAPABILITY_KEY = 'communication.email.send';
 
@@ -179,7 +181,8 @@ test('worker claims discharge event, schedules follow-up, creates review task, t
 
     const task = (await c.query(
       `SELECT task.title, task.status, task.assignee_subject_id,
-              intent.executor_class, attempt.status AS execution_status
+              intent.action_intent_id, intent.executor_class,
+              attempt.status AS execution_status
          FROM platform.operational_tasks task
          JOIN platform.governed_action_intents intent
            ON intent.tenant_id = task.tenant_id
@@ -192,13 +195,30 @@ test('worker claims discharge event, schedules follow-up, creates review task, t
       [tenantId, eventId],
     )).rows[0];
 
-    assert.deepEqual(task, {
-      title: 'Review discharged treatment follow-up',
-      status: 'OPEN',
-      assignee_subject_id: `${tenantId.slice(0, 8)}-reviewer`,
-      executor_class: 'CREATE_TASK',
-      execution_status: 'SUCCEEDED',
+    assert.equal(task.title, 'Review discharged treatment follow-up');
+    assert.equal(task.status, 'OPEN');
+    assert.equal(task.assignee_subject_id, `${tenantId.slice(0, 8)}-reviewer`);
+    assert.equal(task.executor_class, 'CREATE_TASK');
+    assert.equal(task.execution_status, 'SUCCEEDED');
+
+    const taskIntent = await findGovernedActionIntentById(c, {
+      tenantId,
+      actionIntentId: task.action_intent_id as string,
     });
+    assert.ok(taskIntent);
+    const replay = await executeGovernedCreateTaskAction(c, {
+      intent: taskIntent,
+      now: () => new Date('2026-08-30T14:32:00.000Z'),
+    });
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.task, null);
+    assert.equal((await c.query(
+      `SELECT count(*)::int AS count
+         FROM platform.operational_tasks
+        WHERE tenant_id = $1::uuid
+          AND source_event_id = $2::uuid`,
+      [tenantId, eventId],
+    )).rows[0].count, 1);
 
     assert.deepEqual(await processOneDomainEventActionWorkItem(c, { tenantId }), {
       status: 'IDLE',
