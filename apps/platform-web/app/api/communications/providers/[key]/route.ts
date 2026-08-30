@@ -8,9 +8,9 @@ import {
 /**
  * Design spec §0.2 G5 — un-scaffolding.
  *
- * PATCH and DELETE previously hardcoded the demo tenant and resolved context
- * with `auth()` directly, so a mutation always ran against tenant
- * 00000000-…-0001 regardless of the caller's workspace. They now resolve the
+ * PATCH and DELETE previously hardcoded bootstrap tenant context and resolved
+ * context with `auth()` directly, so a mutation could run against the wrong
+ * workspace regardless of the caller's selected account. They now resolve the
  * real tenant through `resolveRequestContext(request)` — which reads the
  * `?account/org` selection (proxy also injects it as headers) — exactly like
  * GET/POST on the collection route, so RLS applies and tenant isolation is
