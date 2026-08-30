@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   DentexTreatmentReadiness,
   DentexTreatmentRequirement,
@@ -390,7 +390,7 @@ function SectionCard({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className={styles.card}>
