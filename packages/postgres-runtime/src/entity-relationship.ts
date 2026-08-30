@@ -252,9 +252,9 @@ export class PostgresEntityRelationshipRepository {
     await this.#client.query(
       `UPDATE platform.entity_relationships
           SET status = 'INACTIVE',
-              valid_until = now(),
+              valid_until = clock_timestamp(),
               updated_by_subject_id = $5,
-              updated_at = now()
+              updated_at = clock_timestamp()
         WHERE tenant_id = $1::uuid
           AND source_entity_type = $2
           AND source_entity_id = $3
