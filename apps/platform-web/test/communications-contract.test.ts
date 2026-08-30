@@ -135,6 +135,16 @@ test("capacity tab surfaces planes, quota and the spend breaker", () => {
   assert.match(capacityPanel, /x-expadio-reauth-at/);
 });
 
+test("setup completion requires a successful governed test-send trace", () => {
+  const setupStateRoute = readFileSync(
+    new URL("../app/api/communications/setup/state/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(setupStateRoute, /reason_code = 'TEST_SEND_OK'/);
+  assert.match(setupStateRoute, /outcome = 'SENT'/);
+  assert.doesNotMatch(setupStateRoute, /outcome IN \('SENT','QUEUED'\)/);
+});
+
 test("decision traces tab surfaces the trace explorer", () => {
   assert.match(dashboard, /<TracesPanel/);
   assert.match(dashboard, /setActiveTab\("traces"\)/);
