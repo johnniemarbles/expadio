@@ -11,6 +11,15 @@ import {
   type DraftWorkflowEditorState,
 } from './draft-editor-model';
 import {
+  applyDraftCaseSchemaEditorState,
+  caseSchemaFieldKeys,
+  draftCaseSchemaStateFromDefinition,
+  hasDraftCaseSchemaEditorErrors,
+  validateDraftCaseSchemaEditorState,
+  type DraftCaseSchemaDefinitionShape,
+  type DraftCaseSchemaFieldState,
+} from './case-schema-editor-model';
+import {
   applyDraftCaseSemanticsEditorState,
   draftCaseSemanticsStateFromDefinition,
   hasDraftCaseSemanticsEditorErrors,
@@ -30,11 +39,7 @@ const inputStyle: React.CSSProperties = {
 const errorStyle: React.CSSProperties = { color: '#b91c1c', fontSize: 12, marginTop: 4 };
 
 interface EditableDraftDefinition
-  extends DraftWorkflowDefinitionShape, DraftCaseSemanticsDefinitionShape {
-  readonly caseSchema?: {
-    readonly fields: readonly { readonly key: string }[];
-  };
-}
+  extends DraftWorkflowDefinitionShape, DraftCaseSchemaDefinitionShape, DraftCaseSemanticsDefinitionShape {}
 
 interface DraftSaveResponse {
   readonly draft?: {
@@ -59,6 +64,7 @@ export function DraftWorkflowEditor({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<DraftWorkflowEditorState>(initial);
+  const [schemaState, setSchemaState] = useState(() => draftCaseSchemaStateFromDefinition(definition));
   const [semanticState, setSemanticState] = useState(() => draftCaseSemanticsStateFromDefinition(definition));
   const [revision, setRevision] = useState(initialRevision);
   const [validated, setValidated] = useState(false);
@@ -66,15 +72,14 @@ export function DraftWorkflowEditor({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const errors = useMemo(() => validateDraftWorkflowEditorState(state), [state]);
-  const availableAttributeKeys = useMemo(
-    () => definition.caseSchema?.fields.map((field) => field.key) ?? [],
-    [definition],
-  );
+  const schemaErrors = useMemo(() => validateDraftCaseSchemaEditorState(schemaState), [schemaState]);
+  const availableAttributeKeys = useMemo(() => caseSchemaFieldKeys(schemaState), [schemaState]);
   const semanticErrors = useMemo(
     () => validateDraftCaseSemanticsEditorState(semanticState, availableAttributeKeys),
     [semanticState, availableAttributeKeys],
   );
   const invalid = hasDraftWorkflowEditorErrors(errors)
+    || hasDraftCaseSchemaEditorErrors(schemaErrors)
     || hasDraftCaseSemanticsEditorErrors(semanticErrors);
 
   if (!editing) {
@@ -143,7 +148,10 @@ export function DraftWorkflowEditor({
           body: JSON.stringify({
             expectedRevision: revision,
             definition: applyDraftCaseSemanticsEditorState(
-              applyDraftWorkflowEditorState(definition, state),
+              applyDraftCaseSchemaEditorState(
+                applyDraftWorkflowEditorState(definition, state),
+                schemaState,
+              ),
               semanticState,
             ),
           }),
@@ -192,6 +200,7 @@ export function DraftWorkflowEditor({
           disabled={saving}
           onClick={() => {
             setState(initial);
+            setSchemaState(draftCaseSchemaStateFromDefinition(definition));
             setSemanticState(draftCaseSemanticsStateFromDefinition(definition));
             setEditing(false);
             setValidated(false);
@@ -274,6 +283,144 @@ export function DraftWorkflowEditor({
         ))}
       </div>
 
+
+      <section aria-labelledby="schema-editor-title" style={{ marginTop: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <div>
+            <h3 id="schema-editor-title" style={{ margin: 0 }}>Case schema</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>
+              Define Pack-owned case attributes that executable semantics may reference.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => {
+              setValidated(false);
+              setSchemaState((current) => ({
+                ...current,
+                fields: [...current.fields, {
+                  key: '',
+                  label: '',
+                  type: 'text',
+                  required: false,
+                  options: [],
+                }],
+              }));
+            }}
+          >
+            Add case field
+          </button>
+        </div>
+
+        <label style={{ display: 'block', maxWidth: 220, marginTop: 12 }}>
+          <span>Schema version</span>
+          <input
+            style={inputStyle}
+            type="number"
+            min={1}
+            value={schemaState.version}
+            onChange={(event) => {
+              setValidated(false);
+              setSchemaState({ ...schemaState, version: Number(event.target.value) });
+            }}
+          />
+          {validated && schemaErrors.version ? <div style={errorStyle}>{schemaErrors.version}</div> : null}
+        </label>
+
+        {schemaState.fields.length === 0 ? (
+          <p style={{ color: '#64748b', fontSize: 13 }}>No Pack-owned case fields are declared.</p>
+        ) : (
+          <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+            {schemaState.fields.map((field, index) => {
+              const fieldErrors = schemaErrors.fields?.[index];
+              const updateField = (patch: Partial<DraftCaseSchemaFieldState>) => {
+                setValidated(false);
+                setSaveError(null);
+                setSchemaState((current) => ({
+                  ...current,
+                  fields: current.fields.map((item, i) => i === index ? { ...item, ...patch } : item),
+                }));
+              };
+              return (
+                <fieldset
+                  key={index}
+                  disabled={saving}
+                  style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}
+                >
+                  <legend style={{ fontWeight: 700 }}>Field {index + 1}</legend>
+                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                    <label>
+                      <span>Field key</span>
+                      <input style={inputStyle} value={field.key} onChange={(event) => updateField({ key: event.target.value })} />
+                      {validated && fieldErrors?.key ? <div style={errorStyle}>{fieldErrors.key}</div> : null}
+                    </label>
+                    <label>
+                      <span>Label</span>
+                      <input style={inputStyle} value={field.label} onChange={(event) => updateField({ label: event.target.value })} />
+                      {validated && fieldErrors?.label ? <div style={errorStyle}>{fieldErrors.label}</div> : null}
+                    </label>
+                    <label>
+                      <span>Type</span>
+                      <select
+                        style={inputStyle}
+                        value={field.type}
+                        onChange={(event) => updateField({
+                          type: event.target.value,
+                          options: event.target.value === 'select' ? field.options : [],
+                        })}
+                      >
+                        <option value="text">text</option>
+                        <option value="number">number</option>
+                        <option value="select">select</option>
+                      </select>
+                      {validated && fieldErrors?.type ? <div style={errorStyle}>{fieldErrors.type}</div> : null}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 22 }}>
+                      <input
+                        type="checkbox"
+                        checked={field.required}
+                        onChange={(event) => updateField({ required: event.target.checked })}
+                      />
+                      Required
+                    </label>
+                  </div>
+
+                  {field.type === 'select' ? (
+                    <label style={{ display: 'block', marginTop: 10 }}>
+                      <span>Options (comma separated)</span>
+                      <input
+                        style={inputStyle}
+                        value={field.options.join(', ')}
+                        onChange={(event) => updateField({
+                          options: event.target.value.split(',').map((value) => value.trim()),
+                        })}
+                      />
+                      {validated && fieldErrors?.options ? <div style={errorStyle}>{fieldErrors.options}</div> : null}
+                    </label>
+                  ) : validated && fieldErrors?.options ? (
+                    <div style={errorStyle}>{fieldErrors.options}</div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    style={{ marginTop: 10 }}
+                    onClick={() => {
+                      setValidated(false);
+                      setSchemaState((current) => ({
+                        ...current,
+                        fields: current.fields.filter((_, i) => i !== index),
+                      }));
+                    }}
+                  >
+                    Remove field
+                  </button>
+                </fieldset>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <section aria-labelledby="semantic-editor-title" style={{ marginTop: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
