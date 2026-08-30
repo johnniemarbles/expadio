@@ -80,8 +80,8 @@ test('DENTEX intake exit blocks from canonical case relationships', async () => 
   assert.equal(blockers[0]?.message, 'A patient and practice must be linked before treatment begins.');
 });
 
-test('DENTEX review exit uses immutable decision and active agreement facts', async () => {
-  const { client } = scriptedClient({
+test('DENTEX review exit uses immutable decision and linked Care Plan facts', async () => {
+  const { client, calls } = scriptedClient({
     caseRow: {
       attributes: { procedureCode: 'D2740' },
       account_id: '55555555-5555-5555-5555-555555555555',
@@ -99,6 +99,10 @@ test('DENTEX review exit uses immutable decision and active agreement facts', as
   });
 
   assert.deepEqual(blockers, []);
+  const caseQuery = calls.find((call) => call.text.includes('FROM platform.crm_cases c'))?.text ?? '';
+  assert.match(caseQuery, /platform\.entity_relationships/);
+  assert.match(caseQuery, /relationship_key = 'care_plan'/);
+  assert.match(caseQuery, /target_entity_type = 'crm\.agreement'/);
 });
 
 test('non-CRM work types never resolve CRM or Industry Pack facts', async () => {
