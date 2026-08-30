@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "test": "node --experimental-strip-types --test test/*.test.ts",
-    "test:integration": "node --experimental-strip-types --import ./test-integration/register.mjs --test test-integration/*.itest.ts",
+    "test:integration": "node --experimental-strip-types --import ./test-integration/register.mjs --test --test-concurrency=1 test-integration/*.itest.ts",
     "seed:demo": "node --experimental-strip-types --import ./test-integration/register.mjs scripts/seed-demo.ts"
   },
   "dependencies": {
