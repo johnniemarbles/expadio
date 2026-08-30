@@ -231,3 +231,5 @@ export async function withEffectiveContextTransaction<Result>(
 export * from './delivery.ts';
 export * from './communication-throttle.ts';
 export * from './decision-trace.ts';
+
+export * from './entity-relationship.ts';
