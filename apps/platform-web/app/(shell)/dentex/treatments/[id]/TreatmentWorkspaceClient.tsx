@@ -176,16 +176,21 @@ export default function TreatmentWorkspaceClient({
               onClick={() => {
                 const [, stageKey, participantKey] = assignableRequirement.key.split(':');
                 if (!stageKey || !participantKey) return;
+                const isProvider = participantKey === 'provider';
                 void mutate(
                   'assign',
-                  `${workflowUrl}/participants`,
+                  isProvider ? `${treatmentUrl}/provider` : `${workflowUrl}/participants`,
                   'POST',
-                  { stageKey, participantKey },
+                  isProvider ? { stageKey } : { stageKey, participantKey },
                 );
               }}
               className={styles.secondaryButton}
             >
-              {busy === 'assign' ? 'Assigning…' : 'Assign me'}
+              {busy === 'assign'
+                ? 'Assigning…'
+                : assignableRequirement.key.endsWith(':provider')
+                  ? 'Assign me as Provider'
+                  : 'Assign me'}
             </button>
           ) : null}
           {decisionRequirement ? (
