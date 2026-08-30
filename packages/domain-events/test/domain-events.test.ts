@@ -9,8 +9,8 @@ test('canonical event envelope preserves correlation, causation, and Pack proven
   const occurredAt = new Date('2026-08-30T08:00:00.000Z');
   const recordedAt = new Date('2026-08-30T08:00:01.000Z');
   const event = createDomainEvent({
-    eventId: 'event-1',
-    tenantId: 'tenant-1',
+    eventId: '11111111-1111-4111-8111-111111111111',
+    tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     aggregateType: 'crm.case',
     aggregateId: 'treatment-1',
     eventType: 'Treatment.StageChanged',
@@ -39,8 +39,8 @@ test('canonical event envelope preserves correlation, causation, and Pack proven
 test('event version and Pack provenance fail closed', () => {
   assert.throws(
     () => createDomainEvent({
-      eventId: 'event-2',
-      tenantId: 'tenant-1',
+      eventId: '22222222-2222-4222-8222-222222222222',
+      tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       aggregateType: 'crm.case',
       aggregateId: 'treatment-1',
       eventType: 'Treatment.StageChanged',
@@ -56,8 +56,8 @@ test('event version and Pack provenance fail closed', () => {
 
   assert.throws(
     () => createDomainEvent({
-      eventId: 'event-3',
-      tenantId: 'tenant-1',
+      eventId: '33333333-3333-4333-8333-333333333333',
+      tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       aggregateType: 'crm.case',
       aggregateId: 'treatment-1',
       eventType: 'Treatment.StageChanged',
