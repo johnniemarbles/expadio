@@ -56,6 +56,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] `platform.execution_health_summary` read model implemented.
 - [x] `GET /api/execution/health` implemented.
 - [x] `platform.communication_health_summary` read model implemented.
+- [x] `GET /api/communications/health` implemented.
 - [x] `platform.scheduler_health_summary` read model implemented.
 - [x] `platform.outbox_health_summary` read model implemented.
 
@@ -83,7 +84,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Add scheduler health read model.
 - [x] Add outbox health read model.
 - [x] Add execution health API.
-- [ ] Add communications health API.
+- [x] Add communications health API.
 - [ ] Add scheduler health API.
 - [ ] Add platform health dashboard.
 - [ ] Add stuck delivery detection.
