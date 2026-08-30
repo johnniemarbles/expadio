@@ -39,5 +39,7 @@ test('tenant execution matures scheduled governed actions under the same tenant 
   assert.match(runner, /acquireTenantExecutionLease/);
   assert.match(runner, /runDomainEventActionWorkerBatch/);
   assert.match(runner, /runScheduledGovernedActionWorkerBatch/);
+  assert.match(runner, /input\.perTenantLimit - summary\.processed/);
+  assert.match(runner, /remainingTenantBudget > 0/);
   assert.match(runner, /finishTenantExecutionRun/);
 });
