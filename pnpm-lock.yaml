@@ -269,7 +269,17 @@ importers:
         specifier: ^8.23.0
         version: 8.23.0
 
-  packages/provider-registry: {}
+  packages/provider-registry:
+    dependencies:
+      '@expadio/authorization':
+        specifier: workspace:*
+        version: link:../authorization
+      '@expadio/authorization-persistence':
+        specifier: workspace:*
+        version: link:../authorization-persistence
+      '@expadio/tenancy':
+        specifier: workspace:*
+        version: link:../tenancy
 
   packages/storage:
     dependencies:
