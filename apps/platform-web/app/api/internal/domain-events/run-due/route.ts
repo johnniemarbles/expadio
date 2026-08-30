@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
-      ok: result.summary?.failedTenants === 0 ?? true,
+      ok: result.summary === null || result.summary.failedTenants === 0,
       ...result,
     });
   } catch (error) {
