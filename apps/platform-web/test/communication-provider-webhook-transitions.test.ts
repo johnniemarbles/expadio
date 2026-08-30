@@ -4,7 +4,7 @@ import {
   resolveCommunicationProviderWebhookTransition,
   type CommunicationDeliveryLifecycleState,
   type CommunicationProviderWebhookOutcome,
-} from '../lib/communication-provider-webhook';
+} from '../lib/communication-provider-webhook.ts';
 
 interface Case {
   readonly current: CommunicationDeliveryLifecycleState;
