@@ -21,9 +21,7 @@ function secureEqual(left: string, right: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-export function authenticateInternalWorkerRequest(
-  request: Request,
-): { readonly tenantId: string } {
+export function authenticateInternalWorkerToken(request: Request): void {
   const configuredToken = process.env.EXPADIO_INTERNAL_WORKER_TOKEN?.trim() ?? '';
   if (configuredToken === '') {
     throw new InternalWorkerAuthError(
@@ -46,8 +44,10 @@ export function authenticateInternalWorkerRequest(
       'Internal worker authentication failed.',
     );
   }
+}
 
-  const tenantId = request.headers.get('x-expadio-tenant-id')?.trim() ?? '';
+export function parseInternalWorkerTenantId(value: unknown): string {
+  const tenantId = typeof value === 'string' ? value.trim() : '';
   if (!UUID.test(tenantId)) {
     throw new InternalWorkerAuthError(
       400,
@@ -55,6 +55,16 @@ export function authenticateInternalWorkerRequest(
       'A valid tenant UUID is required.',
     );
   }
+  return tenantId;
+}
 
-  return { tenantId };
+export function authenticateInternalWorkerRequest(
+  request: Request,
+): { readonly tenantId: string } {
+  authenticateInternalWorkerToken(request);
+  return {
+    tenantId: parseInternalWorkerTenantId(
+      request.headers.get('x-expadio-tenant-id'),
+    ),
+  };
 }
