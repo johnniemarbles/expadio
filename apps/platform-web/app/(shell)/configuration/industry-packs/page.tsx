@@ -7,6 +7,7 @@ import styles from './page.module.css';
 import { CloneActiveDraftButton } from './CloneActiveDraftButton';
 import { ReturnIndustryPackToDraftButton } from './ReturnIndustryPackToDraftButton';
 import { PublishIndustryPackButton } from './PublishIndustryPackButton';
+import { ArchiveIndustryPackButton } from './ArchiveIndustryPackButton';
 
 interface IndustryPackCatalogItem {
   readonly verticalKey: string;
@@ -230,11 +231,17 @@ function VersionTable({
                   <td>{version.publishedAt ? new Date(version.publishedAt).toLocaleString() : '—'}</td>
                   <td>
                     {version.scope === 'TENANT' && version.state === 'DRAFT' ? (
-                      <Link
-                        href={`/configuration/industry-packs/drafts/${encodeURIComponent(version.verticalKey)}/${version.version}`}
-                      >
-                        Open draft
-                      </Link>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <Link
+                          href={`/configuration/industry-packs/drafts/${encodeURIComponent(version.verticalKey)}/${version.version}`}
+                        >
+                          Open draft
+                        </Link>
+                        <ArchiveIndustryPackButton
+                          verticalKey={version.verticalKey}
+                          version={version.version}
+                        />
+                      </div>
                     ) : version.scope === 'TENANT' && version.state === 'IN_REVIEW' ? (
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                         <ReturnIndustryPackToDraftButton
@@ -245,7 +252,16 @@ function VersionTable({
                           verticalKey={version.verticalKey}
                           version={version.version}
                         />
+                        <ArchiveIndustryPackButton
+                          verticalKey={version.verticalKey}
+                          version={version.version}
+                        />
                       </div>
+                    ) : version.scope === 'TENANT' && version.state === 'SUPERSEDED' ? (
+                      <ArchiveIndustryPackButton
+                        verticalKey={version.verticalKey}
+                        version={version.version}
+                      />
                     ) : '—'}
                   </td>
                 </tr>
