@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CASE_RELATIONSHIP_CONCEPTS } from '@expadio/industry-packs';
 import {
   applyDraftWorkflowEditorState,
   hasDraftWorkflowEditorErrors,
@@ -9,6 +10,14 @@ import {
   type DraftWorkflowDefinitionShape,
   type DraftWorkflowEditorState,
 } from './draft-editor-model';
+import {
+  applyDraftCaseSemanticsEditorState,
+  draftCaseSemanticsStateFromDefinition,
+  hasDraftCaseSemanticsEditorErrors,
+  validateDraftCaseSemanticsEditorState,
+  type DraftCaseSemanticsDefinitionShape,
+  type DraftCaseSemanticRuleState,
+} from './case-semantics-editor-model';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -19,6 +28,13 @@ const inputStyle: React.CSSProperties = {
 };
 
 const errorStyle: React.CSSProperties = { color: '#b91c1c', fontSize: 12, marginTop: 4 };
+
+interface EditableDraftDefinition
+  extends DraftWorkflowDefinitionShape, DraftCaseSemanticsDefinitionShape {
+  readonly caseSchema?: {
+    readonly fields: readonly { readonly key: string }[];
+  };
+}
 
 interface DraftSaveResponse {
   readonly draft?: {
@@ -35,7 +51,7 @@ export function DraftWorkflowEditor({
   initialRevision,
 }: {
   readonly initial: DraftWorkflowEditorState;
-  readonly definition: DraftWorkflowDefinitionShape;
+  readonly definition: EditableDraftDefinition;
   readonly verticalKey: string;
   readonly version: number;
   readonly initialRevision: number;
@@ -43,13 +59,23 @@ export function DraftWorkflowEditor({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<DraftWorkflowEditorState>(initial);
+  const [semanticState, setSemanticState] = useState(() => draftCaseSemanticsStateFromDefinition(definition));
   const [revision, setRevision] = useState(initialRevision);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const errors = useMemo(() => validateDraftWorkflowEditorState(state), [state]);
-  const invalid = hasDraftWorkflowEditorErrors(errors);
+  const availableAttributeKeys = useMemo(
+    () => definition.caseSchema?.fields.map((field) => field.key) ?? [],
+    [definition],
+  );
+  const semanticErrors = useMemo(
+    () => validateDraftCaseSemanticsEditorState(semanticState, availableAttributeKeys),
+    [semanticState, availableAttributeKeys],
+  );
+  const invalid = hasDraftWorkflowEditorErrors(errors)
+    || hasDraftCaseSemanticsEditorErrors(semanticErrors);
 
   if (!editing) {
     return (
@@ -78,6 +104,29 @@ export function DraftWorkflowEditor({
     }));
   };
 
+  const updateSemanticRule = (index: number, patch: Partial<DraftCaseSemanticRuleState>) => {
+    setValidated(false);
+    setSaveError(null);
+    setSemanticState((current) => ({
+      rules: current.rules.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)),
+    }));
+  };
+
+  const toggleSemanticValue = (
+    index: number,
+    field: 'requiredAttributeKeys' | 'requiredRelationships',
+    value: string,
+  ) => {
+    const rule = semanticState.rules[index];
+    if (rule === undefined) return;
+    const current = rule[field];
+    updateSemanticRule(index, {
+      [field]: current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
+    });
+  };
+
   const saveDraft = async () => {
     setValidated(true);
     setSaveError(null);
@@ -93,7 +142,10 @@ export function DraftWorkflowEditor({
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             expectedRevision: revision,
-            definition: applyDraftWorkflowEditorState(definition, state),
+            definition: applyDraftCaseSemanticsEditorState(
+              applyDraftWorkflowEditorState(definition, state),
+              semanticState,
+            ),
           }),
         },
       );
@@ -140,6 +192,7 @@ export function DraftWorkflowEditor({
           disabled={saving}
           onClick={() => {
             setState(initial);
+            setSemanticState(draftCaseSemanticsStateFromDefinition(definition));
             setEditing(false);
             setValidated(false);
             setSaveError(null);
@@ -220,6 +273,168 @@ export function DraftWorkflowEditor({
           </fieldset>
         ))}
       </div>
+
+
+      <section aria-labelledby="semantic-editor-title" style={{ marginTop: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <div>
+            <h3 id="semantic-editor-title" style={{ margin: 0 }}>Executable stage semantics</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>
+              Define business rules over canonical case facts. Server validation remains authoritative.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => {
+              setValidated(false);
+              setSemanticState((current) => ({
+                rules: [...current.rules, {
+                  stageKey: state.stages[0]?.key ?? 'INTAKE',
+                  phase: 'EXIT',
+                  requiredAttributeKeys: [],
+                  requiredRelationships: [],
+                  requiredDecisionOutcomes: [],
+                  message: '',
+                }],
+              }));
+            }}
+          >
+            Add semantic rule
+          </button>
+        </div>
+
+        {semanticState.rules.length === 0 ? (
+          <p style={{ color: '#64748b', fontSize: 13 }}>No executable semantic rules are declared.</p>
+        ) : (
+          <div style={{ marginTop: 12, display: 'grid', gap: 12 }}>
+            {semanticState.rules.map((rule, index) => {
+              const ruleErrors = semanticErrors.rules?.[index];
+              return (
+                <fieldset
+                  key={index}
+                  disabled={saving}
+                  style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}
+                >
+                  <legend style={{ fontWeight: 700 }}>Rule {index + 1}</legend>
+
+                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                    <label>
+                      <span>Stage</span>
+                      <select
+                        style={inputStyle}
+                        value={rule.stageKey}
+                        onChange={(event) => updateSemanticRule(index, { stageKey: event.target.value })}
+                      >
+                        {state.stages.map((stage) => (
+                          <option key={stage.key} value={stage.key}>{stage.key}</option>
+                        ))}
+                      </select>
+                      {validated && ruleErrors?.stageKey ? <div style={errorStyle}>{ruleErrors.stageKey}</div> : null}
+                    </label>
+                    <label>
+                      <span>Phase</span>
+                      <select
+                        style={inputStyle}
+                        value={rule.phase}
+                        onChange={(event) => updateSemanticRule(index, { phase: event.target.value as 'ENTRY' | 'EXIT' })}
+                      >
+                        <option value="ENTRY">ENTRY</option>
+                        <option value="EXIT">EXIT</option>
+                      </select>
+                      {validated && ruleErrors?.phase ? <div style={errorStyle}>{ruleErrors.phase}</div> : null}
+                    </label>
+                    <label>
+                      <span>Required decision outcomes</span>
+                      <input
+                        style={inputStyle}
+                        value={rule.requiredDecisionOutcomes.join(', ')}
+                        placeholder="APPROVE, VERIFIED"
+                        onChange={(event) => updateSemanticRule(index, {
+                          requiredDecisionOutcomes: event.target.value
+                            .split(',')
+                            .map((value) => value.trim())
+                            .filter(Boolean),
+                        })}
+                      />
+                      {validated && ruleErrors?.requiredDecisionOutcomes
+                        ? <div style={errorStyle}>{ruleErrors.requiredDecisionOutcomes}</div>
+                        : null}
+                    </label>
+                  </div>
+
+                  <div style={{ marginTop: 10 }}>
+                    <strong style={{ fontSize: 13 }}>Required case attributes</strong>
+                    {availableAttributeKeys.length === 0 ? (
+                      <span style={{ marginLeft: 8, color: '#64748b', fontSize: 13 }}>No case-schema fields available.</span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
+                        {availableAttributeKeys.map((key) => (
+                          <label key={key}>
+                            <input
+                              type="checkbox"
+                              checked={rule.requiredAttributeKeys.includes(key)}
+                              onChange={() => toggleSemanticValue(index, 'requiredAttributeKeys', key)}
+                            />{' '}{key}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {validated && ruleErrors?.requiredAttributeKeys
+                      ? <div style={errorStyle}>{ruleErrors.requiredAttributeKeys}</div>
+                      : null}
+                  </div>
+
+                  <div style={{ marginTop: 10 }}>
+                    <strong style={{ fontSize: 13 }}>Required canonical relationships</strong>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
+                      {CASE_RELATIONSHIP_CONCEPTS.map((key) => (
+                        <label key={key}>
+                          <input
+                            type="checkbox"
+                            checked={rule.requiredRelationships.includes(key)}
+                            onChange={() => toggleSemanticValue(index, 'requiredRelationships', key)}
+                          />{' '}{key}
+                        </label>
+                      ))}
+                    </div>
+                    {validated && ruleErrors?.requiredRelationships
+                      ? <div style={errorStyle}>{ruleErrors.requiredRelationships}</div>
+                      : null}
+                  </div>
+
+                  <label style={{ display: 'block', marginTop: 10 }}>
+                    <span>Blocking message</span>
+                    <textarea
+                      style={{ ...inputStyle, minHeight: 64 }}
+                      value={rule.message}
+                      onChange={(event) => updateSemanticRule(index, { message: event.target.value })}
+                    />
+                    {validated && ruleErrors?.message ? <div style={errorStyle}>{ruleErrors.message}</div> : null}
+                  </label>
+
+                  {validated && ruleErrors?.requirement
+                    ? <div style={errorStyle}>{ruleErrors.requirement}</div>
+                    : null}
+
+                  <button
+                    type="button"
+                    style={{ marginTop: 10 }}
+                    onClick={() => {
+                      setValidated(false);
+                      setSemanticState((current) => ({
+                        rules: current.rules.filter((_, i) => i !== index),
+                      }));
+                    }}
+                  >
+                    Remove rule
+                  </button>
+                </fieldset>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button type="button" disabled={saving} onClick={() => setValidated(true)}>
