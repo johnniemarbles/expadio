@@ -235,3 +235,5 @@ export * from './decision-trace.ts';
 export * from './entity-relationship.ts';
 
 export * from './domain-events.ts';
+
+export * from './governed-action-intent.ts';
