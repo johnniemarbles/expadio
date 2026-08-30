@@ -1,5 +1,5 @@
 {
-  "name": "@expadio/dentex",
+  "name": "@expadio/werealtors",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,6 +7,7 @@
   "dependencies": {
     "@expadio/case": "workspace:*",
     "@expadio/industry-packs": "workspace:*",
-    "@expadio/ai-gateway": "workspace:*"
+    "@expadio/workflow": "workspace:*",
+    "@expadio/governed-actions": "workspace:*"
   }
 }

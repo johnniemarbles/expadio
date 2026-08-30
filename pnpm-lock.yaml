@@ -32,21 +32,21 @@ importers:
       '@expadio/communication':
         specifier: workspace:*
         version: link:../../packages/communication
-      '@expadio/dentex':
-        specifier: workspace:*
-        version: link:../../verticals/dentex
       '@expadio/credential-custody':
         specifier: workspace:*
         version: link:../../packages/credential-custody
+      '@expadio/dentex':
+        specifier: workspace:*
+        version: link:../../verticals/dentex
+      '@expadio/governed-actions':
+        specifier: workspace:*
+        version: link:../../packages/governed-actions
       '@expadio/iam':
         specifier: workspace:*
         version: link:../../packages/iam
       '@expadio/industry-packs':
         specifier: workspace:*
         version: link:../../packages/industry-packs
-      '@expadio/governed-actions':
-        specifier: workspace:*
-        version: link:../../packages/governed-actions
       '@expadio/lead':
         specifier: workspace:*
         version: link:../../packages/lead
@@ -93,15 +93,6 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
-
-  verticals/dentex:
-    dependencies:
-      '@expadio/case':
-        specifier: workspace:*
-        version: link:../../packages/case
-      '@expadio/industry-packs':
-        specifier: workspace:*
-        version: link:../../packages/industry-packs
 
   packages/access-control:
     dependencies:
@@ -203,6 +194,9 @@ importers:
 
   packages/governed-actions:
     dependencies:
+      '@expadio/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
       '@expadio/domain-events':
         specifier: workspace:*
         version: link:../domain-events
@@ -238,8 +232,6 @@ importers:
 
   packages/party: {}
 
-  packages/relationship: {}
-
   packages/postgres-runtime:
     dependencies:
       '@expadio/access-runtime':
@@ -263,9 +255,6 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
-      '@expadio/industry-packs':
-        specifier: workspace:*
-        version: link:../industry-packs
       '@expadio/capabilities':
         specifier: workspace:*
         version: link:../capabilities
@@ -281,6 +270,9 @@ importers:
       '@expadio/governed-actions':
         specifier: workspace:*
         version: link:../governed-actions
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../industry-packs
       '@expadio/knowledge':
         specifier: workspace:*
         version: link:../knowledge
@@ -324,6 +316,8 @@ importers:
         specifier: workspace:*
         version: link:../tenancy
 
+  packages/relationship: {}
+
   packages/storage:
     dependencies:
       '@expadio/provider-registry':
@@ -366,6 +360,33 @@ importers:
         version: link:../provider-registry
 
   packages/workflow: {}
+
+  verticals/dentex:
+    dependencies:
+      '@expadio/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
+      '@expadio/case':
+        specifier: workspace:*
+        version: link:../../packages/case
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../../packages/industry-packs
+
+  verticals/werealtors:
+    dependencies:
+      '@expadio/case':
+        specifier: workspace:*
+        version: link:../../packages/case
+      '@expadio/governed-actions':
+        specifier: workspace:*
+        version: link:../../packages/governed-actions
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../../packages/industry-packs
+      '@expadio/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
 
 packages:
 

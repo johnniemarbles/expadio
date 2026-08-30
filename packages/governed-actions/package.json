@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@expadio/domain-events": "workspace:*"
+    "@expadio/domain-events": "workspace:*",
+    "@expadio/ai-gateway": "workspace:*"
   }
 }
