@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   InternalWorkerAuthError,
   authenticateInternalWorkerRequest,
-} from '../lib/internal-worker-auth';
+} from '../lib/internal-worker-auth.ts';
 
 const TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
