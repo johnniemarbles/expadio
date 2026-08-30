@@ -159,6 +159,13 @@ export function DomainEventOperationsClient({ initial }: { initial: Payload }) {
                   {item.lastError ?? '—'}
                 </td>
                 <td style={{ padding: 12 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <a
+                      href={`/governance/execution-traces/${encodeURIComponent(item.eventId)}`}
+                      style={{ color: '#4f46e5', fontWeight: 800, fontSize: 12 }}
+                    >
+                      Trace
+                    </a>
                   {item.status === 'DEAD' ? (
                     <button
                       type="button"
@@ -168,7 +175,8 @@ export function DomainEventOperationsClient({ initial }: { initial: Payload }) {
                     >
                       {busy === item.outboxId ? 'Requeueing…' : 'Requeue'}
                     </button>
-                  ) : '—'}
+                  ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
