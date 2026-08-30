@@ -10,6 +10,7 @@ import { ProviderModal } from "./ProviderModal";
 import { ConnectorActionsModal } from "./ConnectorActionsModal";
 import { CapacityPanel } from "./CapacityPanel";
 import { TracesPanel } from "./TracesPanel";
+import { LegacyDeliveryRecoveryPanel } from "./LegacyDeliveryRecoveryPanel";
 import type { ConnectorListItem } from "../../api/communications/providers/route";
 import type { TemplateCatalogueItem } from "../../api/communications/templates/route";
 import type { FleetHealthItem } from "../../api/communications/fleet/route";
@@ -57,7 +58,7 @@ export function CommunicationsDashboardClient({
   fleet,
   queryString = "",
 }: CommunicationsDashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability" | "capacity" | "traces">("fleet");
+  const [activeTab, setActiveTab] = useState<"fleet" | "tenant_health" | "providers" | "deliverability" | "capacity" | "traces" | "recovery">("fleet");
   const [providers, setProviders] = useState<ConnectorListItem[]>(initialProviders);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [isProviderModalOpen, setIsProviderModalOpen] = useState(false);
@@ -249,6 +250,15 @@ export function CommunicationsDashboardClient({
           onClick={() => setActiveTab("traces")}
         >
           Decision traces
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "recovery"}
+          className={[styles.tabItem, activeTab === "recovery" ? styles.tabItemActive : ""].join(" ")}
+          onClick={() => setActiveTab("recovery")}
+        >
+          Recovery
         </button>
       </div>
 
@@ -656,6 +666,7 @@ export function CommunicationsDashboardClient({
 
       {/* Tab Content: Decision traces */}
       {activeTab === "traces" && <TracesPanel queryString={queryString} />}
+      {activeTab === "recovery" && <LegacyDeliveryRecoveryPanel queryString={queryString} />}
 
       {/* Interactive Modals */}
       <ProviderModal
