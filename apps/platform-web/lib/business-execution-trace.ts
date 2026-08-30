@@ -110,8 +110,7 @@ export async function listBusinessExecutionTrace(
   }
 
   const limit = Math.min(Math.max(filter.limit ?? 100, 1), 200);
-  params.push(limit);
-
+ 
   const result = await client.query<BusinessExecutionTraceRow>(
     `SELECT
        trace_kind, trace_id, parent_trace_id, tenant_id, root_event_id,
@@ -123,7 +122,7 @@ export async function listBusinessExecutionTrace(
      FROM platform.business_execution_trace
      WHERE ${clauses.join(' AND ')}
      ORDER BY trace_at, trace_kind, trace_id
-     LIMIT ${params.length}`,
+     LIMIT ${limit}`,
     params,
   );
 
