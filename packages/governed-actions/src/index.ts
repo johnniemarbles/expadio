@@ -186,3 +186,91 @@ export function resolveGovernedAction(
 
 
 export * from './execution.ts';
+
+
+export type GovernedActionValueBinding =
+  | { readonly kind: 'LITERAL'; readonly value: unknown }
+  | { readonly kind: 'EVENT_PAYLOAD'; readonly key: string; readonly required?: boolean }
+  | { readonly kind: 'AGGREGATE_FIELD'; readonly key: string; readonly required?: boolean };
+
+export type GovernedActionConfigurationTemplateValue =
+  | null
+  | boolean
+  | number
+  | string
+  | GovernedActionValueBinding
+  | readonly GovernedActionConfigurationTemplateValue[]
+  | { readonly [key: string]: GovernedActionConfigurationTemplateValue };
+
+export interface GovernedActionBindingContext {
+  readonly event: DomainEventEnvelope;
+  /**
+   * Application-supplied flat aggregate projection. The generic action domain
+   * deliberately does not know how to query a Treatment, Shipment, Matter, etc.
+   */
+  readonly aggregateFields: Readonly<Record<string, unknown>>;
+}
+
+function bindingKey(value: string, field: string): string {
+  const key = value.trim();
+  if (key === '' || key.includes('.') || key.includes('[') || key.includes(']')) {
+    throw new GovernedActionValidationError(
+      'GOVERNED_ACTION_BINDING_KEY_INVALID',
+      `${field} must be one top-level field key.`,
+    );
+  }
+  return key;
+}
+
+function isBinding(value: unknown): value is GovernedActionValueBinding {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const kind = (value as { readonly kind?: unknown }).kind;
+  return kind === 'LITERAL' || kind === 'EVENT_PAYLOAD' || kind === 'AGGREGATE_FIELD';
+}
+
+function materializeBinding(
+  binding: GovernedActionValueBinding,
+  context: GovernedActionBindingContext,
+): unknown {
+  if (binding.kind === 'LITERAL') return binding.value;
+
+  const key = bindingKey(binding.key, 'binding.key');
+  const source = binding.kind === 'EVENT_PAYLOAD'
+    ? context.event.payload
+    : context.aggregateFields;
+  const value = source[key];
+
+  if (value === undefined && binding.required !== false) {
+    throw new GovernedActionValidationError(
+      'GOVERNED_ACTION_BINDING_VALUE_REQUIRED',
+      `No value is available for ${binding.kind}:${key}.`,
+    );
+  }
+  return value ?? null;
+}
+
+/**
+ * Materialize a governed Action configuration from a Domain Event and an
+ * application-provided aggregate projection.
+ *
+ * Bindings deliberately address only top-level keys. This keeps Pack rules
+ * inspectable and avoids introducing a generic JSONPath/expression engine.
+ */
+export function materializeGovernedActionConfiguration(
+  template: GovernedActionConfigurationTemplateValue,
+  context: GovernedActionBindingContext,
+): unknown {
+  if (isBinding(template)) return materializeBinding(template, context);
+  if (Array.isArray(template)) {
+    return template.map((value) => materializeGovernedActionConfiguration(value, context));
+  }
+  if (typeof template === 'object' && template !== null) {
+    return Object.fromEntries(
+      Object.entries(template).map(([key, value]) => [
+        key,
+        materializeGovernedActionConfiguration(value, context),
+      ]),
+    );
+  }
+  return template;
+}

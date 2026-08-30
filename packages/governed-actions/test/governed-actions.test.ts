@@ -4,6 +4,7 @@ import { createDomainEvent } from '@expadio/domain-events';
 import {
   governedActionIdempotencyKey,
   resolveGovernedAction,
+  materializeGovernedActionConfiguration,
 } from '../src/index.ts';
 
 const event = createDomainEvent({
@@ -127,4 +128,54 @@ test('an allowed decision cannot omit a policy required by the rule', () => {
     allowed: false,
     reasonCode: 'POLICY_EVALUATION_INCOMPLETE',
   });
+});
+
+
+test('action configuration materializes event and aggregate bindings without JSONPath', () => {
+  const materialized = materializeGovernedActionConfiguration(
+    {
+      triggerKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+      recipient: {
+        email: { kind: 'AGGREGATE_FIELD', key: 'patientEmail' },
+      },
+      variables: {
+        patientName: { kind: 'AGGREGATE_FIELD', key: 'patientName' },
+        stage: { kind: 'EVENT_PAYLOAD', key: 'stage' },
+      },
+    },
+    {
+      event,
+      aggregateFields: {
+        patientEmail: 'patient@example.test',
+        patientName: 'Jane',
+      },
+    },
+  );
+
+  assert.deepEqual(materialized, {
+    triggerKey: 'patient.follow_up',
+    recipient: { email: 'patient@example.test' },
+    variables: {
+      patientName: 'Jane',
+      stage: 'RESOLVED',
+    },
+  });
+});
+
+test('required bindings fail closed and top-level keys forbid JSONPath syntax', () => {
+  assert.throws(
+    () => materializeGovernedActionConfiguration(
+      { email: { kind: 'AGGREGATE_FIELD', key: 'patient.email' } },
+      { event, aggregateFields: { patientEmail: 'patient@example.test' } },
+    ),
+    /one top-level field key/,
+  );
+
+  assert.throws(
+    () => materializeGovernedActionConfiguration(
+      { email: { kind: 'AGGREGATE_FIELD', key: 'patientEmail' } },
+      { event, aggregateFields: {} },
+    ),
+    /No value is available/,
+  );
 });
