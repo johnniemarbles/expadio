@@ -149,12 +149,24 @@ test('DENTEX discharge schedules a +7 day follow-up and queues it only when due'
       now: () => new Date('2026-08-30T13:00:01.000Z'),
     });
 
-    assert.equal(materialized.length, 1);
-    const persisted = materialized[0];
+    assert.equal(materialized.length, 2);
+    const persisted = materialized.find((result) =>
+      result.ruleKey === 'dentex.treatment.discharge.patient-follow-up'
+    );
     assert.equal(persisted?.status, 'PERSISTED');
     if (persisted?.status !== 'PERSISTED') {
-      throw new Error('expected persisted follow-up action');
+      throw new Error('expected persisted scheduled follow-up action');
     }
+
+    const taskIntent = materialized.find((result) =>
+      result.ruleKey === 'dentex.treatment.discharge.follow-up-review-task'
+    );
+    assert.equal(taskIntent?.status, 'PERSISTED');
+    if (taskIntent?.status !== 'PERSISTED') {
+      throw new Error('expected persisted follow-up review task action');
+    }
+    assert.equal(taskIntent.intent.executorClass, 'CREATE_TASK');
+    assert.equal(taskIntent.intent.actionKey, 'patient.follow_up.review_task');
 
     assert.equal(persisted.ruleKey, 'dentex.treatment.discharge.patient-follow-up');
     assert.equal(persisted.intent.executorClass, 'SCHEDULE');
@@ -327,12 +339,24 @@ test('DENTEX discharge follow-up fails closed when Patient email is missing', as
       tenantId,
       eventId: appended.event.eventId,
     });
-    assert.equal(materialized.length, 1);
-    assert.equal(materialized[0]?.status, 'SKIPPED');
-    if (materialized[0]?.status !== 'SKIPPED') {
-      throw new Error('expected binding failure');
+    assert.equal(materialized.length, 2);
+    const followup = materialized.find((result) =>
+      result.ruleKey === 'dentex.treatment.discharge.patient-follow-up'
+    );
+    assert.equal(followup?.status, 'SKIPPED');
+    if (followup?.status !== 'SKIPPED') {
+      throw new Error('expected scheduled follow-up binding failure');
     }
-    assert.equal(materialized[0].reasonCode, 'BINDING_FAILED');
+    assert.equal(followup.reasonCode, 'BINDING_FAILED');
+
+    const reviewTask = materialized.find((result) =>
+      result.ruleKey === 'dentex.treatment.discharge.follow-up-review-task'
+    );
+    assert.equal(reviewTask?.status, 'PERSISTED');
+    if (reviewTask?.status !== 'PERSISTED') {
+      throw new Error('expected review task intent to remain independently materializable');
+    }
+    assert.equal(reviewTask.intent.executorClass, 'CREATE_TASK');
 
     const intents = (await c.query(
       `SELECT count(*)::int AS count
@@ -341,7 +365,7 @@ test('DENTEX discharge follow-up fails closed when Patient email is missing', as
           AND source_event_id = $2::uuid`,
       [tenantId, appended.event.eventId],
     )).rows[0]?.count;
-    assert.equal(intents, 0);
+    assert.equal(intents, 1);
   } finally {
     c.release();
     await p.end();
