@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP on
+BEGIN;
 
 INSERT INTO platform.tenants (tenant_id, name, vertical_key) VALUES
   ('97979797-9797-9797-9797-979797979797', 'Communication Health Tenant A', 'dentex'),
@@ -214,6 +215,7 @@ BEGIN
   END IF;
 END $$;
 
--- The database contract job runs against an ephemeral database. Do not delete
--- provider attempts or webhook events here: both are append-only evidence.
+-- Provider attempts and webhook events are append-only evidence in production.
+-- Roll back this smoke fixture instead of deleting protected evidence rows.
+ROLLBACK;
 RESET app.tenant_id;
