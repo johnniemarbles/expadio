@@ -110,9 +110,13 @@ test('DENTEX Treatment workspace hydrates CRM, relationship, workflow, and Care 
       [treatmentId, started.instance.instanceId, started.instance.currentStageKey],
     );
 
-    const providerDefinition = resolveRelationshipDefinitions(DENTEX_PACK, 'crm.case')
+    const relationshipDefinitions = resolveRelationshipDefinitions(DENTEX_PACK, 'crm.case');
+    const providerDefinition = relationshipDefinitions
       .find((definition) => definition.key === 'provider');
+    const carePlanDefinition = relationshipDefinitions
+      .find((definition) => definition.key === 'care_plan');
     assert.ok(providerDefinition);
+    assert.ok(carePlanDefinition);
 
     await c.query('BEGIN');
     try {
@@ -124,6 +128,16 @@ test('DENTEX Treatment workspace hydrates CRM, relationship, workflow, and Care 
         target: {
           entityType: 'iam.subject',
           entityId: provider,
+        },
+        actorSubjectId: owner,
+      });
+      await relationships.replaceSingle({
+        tenantId,
+        definition: carePlanDefinition,
+        sourceEntityId: treatmentId,
+        target: {
+          entityType: 'crm.agreement',
+          entityId: agreementId,
         },
         actorSubjectId: owner,
       });
