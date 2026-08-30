@@ -18,6 +18,19 @@ export interface DraftWorkflowEditorErrors {
   readonly stages?: Readonly<Record<string, { readonly label?: string }>>;
 }
 
+export interface DraftWorkflowDefinitionShape {
+  readonly label: string;
+  readonly terminology: {
+    readonly defaultLocale: string;
+    readonly concepts: readonly unknown[];
+  };
+  readonly caseWorkflow?: {
+    readonly workType: string;
+    readonly stages: Readonly<Record<string, string>>;
+    readonly stageGuidance?: Readonly<Record<string, string>>;
+  };
+}
+
 export function validateDraftWorkflowEditorState(
   input: DraftWorkflowEditorState,
 ): DraftWorkflowEditorErrors {
@@ -42,4 +55,42 @@ export function validateDraftWorkflowEditorState(
 
 export function hasDraftWorkflowEditorErrors(errors: DraftWorkflowEditorErrors): boolean {
   return Boolean(errors.label || errors.defaultLocale || errors.workType || errors.stages);
+}
+
+/**
+ * Applies only the fields exposed by the current editor while preserving every
+ * other Industry Pack section verbatim. The server remains the authority that
+ * validates the complete definition before persisting the optimistic update.
+ */
+export function applyDraftWorkflowEditorState<T extends DraftWorkflowDefinitionShape>(
+  definition: T,
+  state: DraftWorkflowEditorState,
+): T {
+  const stages = Object.fromEntries(
+    state.stages.map((stage) => [stage.key, stage.label.trim()]),
+  );
+  const stageGuidance = Object.fromEntries(
+    state.stages
+      .filter((stage) => stage.guidance.trim() !== '')
+      .map((stage) => [stage.key, stage.guidance.trim()]),
+  );
+  const workflow = definition.caseWorkflow ?? {
+    workType: 'Case',
+    stages: {},
+  };
+
+  return {
+    ...definition,
+    label: state.label.trim(),
+    terminology: {
+      ...definition.terminology,
+      defaultLocale: state.defaultLocale.trim(),
+    },
+    caseWorkflow: {
+      ...workflow,
+      workType: state.workType.trim(),
+      stages,
+      stageGuidance,
+    },
+  } as T;
 }
