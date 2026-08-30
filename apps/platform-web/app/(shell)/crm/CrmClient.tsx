@@ -315,6 +315,11 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--ink-600, #475569)" }}>{vocab.account.plural} and {lc(vocab.contact.plural)} for this workspace, isolated by tenant.</p>
         </div>
         <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+          {verticalKey === "dentex" ? (
+            <a href="/dentex" style={{ fontSize: 12, fontWeight: 800, color: "var(--brand, #4f46e5)", textDecoration: "none" }}>
+              Open DENTEX Operations →
+            </a>
+          ) : null}
           <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: "var(--ink-600, #475569)" }}>
             Industry pack
             <select
