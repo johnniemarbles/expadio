@@ -23,6 +23,7 @@ CREATE TABLE platform.domain_events (
   payload jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(payload) = 'object'),
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(metadata) = 'object'),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE (event_id, tenant_id),
   CHECK (pack_version IS NULL OR pack_version > 0),
   CHECK (pack_version IS NULL OR (pack_key IS NOT NULL AND btrim(pack_key) <> ''))
 );
@@ -62,10 +63,6 @@ CREATE TABLE platform.domain_event_outbox (
     ON DELETE CASCADE,
   UNIQUE (event_id)
 );
-
--- Required for the composite outbox FK while event_id remains the event PK.
-ALTER TABLE platform.domain_events
-  ADD CONSTRAINT domain_events_event_tenant_uq UNIQUE (event_id, tenant_id);
 
 CREATE INDEX domain_event_outbox_dispatch_idx
   ON platform.domain_event_outbox (status, available_at, created_at)
