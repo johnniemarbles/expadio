@@ -80,7 +80,7 @@ export async function GET(request: Request) {
     if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
 
     console.error('Domains API error:', err);
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message };
+    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: 'An internal error occurred.' };
     return NextResponse.json(denied, { status: 500 });
   }
 }
@@ -113,6 +113,6 @@ export async function POST(request: Request) {
     if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
 
     console.error('Create domain identity error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: 'An internal error occurred.' }, { status: 500 });
   }
 }
