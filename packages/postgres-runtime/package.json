@@ -40,6 +40,7 @@
     "./industry-pack-runtime": "./src/industry-pack-runtime.ts",
     "./entity-relationship": "./src/entity-relationship.ts",
     "./domain-events": "./src/domain-events.ts",
+    "./domain-event-outbox": "./src/domain-event-outbox.ts",
     "./governed-action-intent": "./src/governed-action-intent.ts",
     "./governed-action-execution": "./src/governed-action-execution.ts",
     "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts"
