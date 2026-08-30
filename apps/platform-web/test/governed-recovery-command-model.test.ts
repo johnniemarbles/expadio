@@ -19,6 +19,19 @@ test('governed recovery commands are tenant-scoped platform command queue record
   assert.match(migration, /FORCE ROW LEVEL SECURITY/);
 });
 
+test('governed recovery command targets include provider evidence without mutating it', () => {
+  for (const targetKind of [
+    'DOMAIN_EVENT_OUTBOX',
+    'GOVERNED_ACTION',
+    'SCHEDULED_GOVERNED_ACTION',
+    'COMMUNICATION_DELIVERY',
+    'COMMUNICATION_PROVIDER_ATTEMPT',
+    'COMMUNICATION_PROVIDER_WEBHOOK_EVENT',
+  ]) {
+    assert.match(migration, new RegExp(targetKind));
+  }
+});
+
 test('governed recovery command events are append-only lifecycle evidence', () => {
   assert.match(migration, /CREATE TABLE platform\.governed_recovery_command_events/);
   assert.match(migration, /FOREIGN KEY \(recovery_command_id, tenant_id\)/);
@@ -30,15 +43,16 @@ test('governed recovery command events are append-only lifecycle evidence', () =
 test('governed recovery model does not execute recovery side effects in the schema slice', () => {
   assert.doesNotMatch(migration, /UPDATE platform\.communication_deliveries/);
   assert.doesNotMatch(migration, /UPDATE platform\.domain_event_outbox/);
+  assert.doesNotMatch(migration, /UPDATE platform\.communication_provider_attempts/);
+  assert.doesNotMatch(migration, /UPDATE platform\.communication_provider_webhook_events/);
   assert.doesNotMatch(migration, /DELETE FROM platform\./);
   assert.doesNotMatch(migration, /PERFORM .*retry/i);
-  assert.doesNotMatch(migration, /provider/i);
 });
 
 test('governed recovery smoke validates isolation, idempotency, lifecycle, and append-only events', () => {
   assert.match(smoke, /INSERT INTO platform\.governed_recovery_commands/);
   assert.match(smoke, /INSERT INTO platform\.governed_recovery_command_events/);
-  assert.match(smoke, /UNIQUE_VIOLATION/);
+  assert.match(smoke, /unique_violation/);
   assert.match(smoke, /tenant isolation/);
   assert.match(smoke, /append-only/);
   assert.match(smoke, /UPDATE platform\.governed_recovery_commands/);
