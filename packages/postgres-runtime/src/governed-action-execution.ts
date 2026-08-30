@@ -135,3 +135,25 @@ export async function listGovernedActionExecutionAttempts(
   );
   return result.rows.map(mapRow);
 }
+
+
+export async function findGovernedActionExecutionAttempt(
+  client: GovernedActionExecutionSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly actionIntentId: string;
+    readonly attemptKey: string;
+  },
+): Promise<PersistedGovernedActionExecutionAttempt | null> {
+  const result = await client.query<ExecutionRow>(
+    `SELECT ${COLUMNS}
+       FROM platform.governed_action_execution_attempts
+      WHERE tenant_id = $1::uuid
+        AND action_intent_id = $2::uuid
+        AND attempt_key = $3
+      LIMIT 1`,
+    [input.tenantId, input.actionIntentId, input.attemptKey],
+  );
+  const row = result.rows[0];
+  return row === undefined ? null : mapRow(row);
+}
