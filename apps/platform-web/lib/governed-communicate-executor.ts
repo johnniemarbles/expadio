@@ -60,6 +60,40 @@ export async function executeGovernedCommunicateAction(
     };
   }
 
+  if (input.intent.executorClass !== 'COMMUNICATE') {
+    const attemptedAtIso = input.now?.() ?? new Date().toISOString();
+    const attemptedAt = new Date(attemptedAtIso);
+    if (Number.isNaN(attemptedAt.getTime())) {
+      throw new Error('GOVERNED_COMMUNICATE_EXECUTION_CLOCK_INVALID');
+    }
+    const attempt = await persistGovernedActionExecutionAttempt(client, {
+      tenantId: input.intent.tenantId,
+      actionIntentId: input.intent.actionIntentId,
+      executorClass: 'COMMUNICATE',
+      attemptKey,
+      status: 'REFUSED',
+      startedAt: attemptedAt,
+      completedAt: attemptedAt,
+      reasonCode: 'WRONG_EXECUTOR_CLASS',
+      reason: 'This runtime only executes COMMUNICATE Action Intents.',
+      outputReference: null,
+      metadata: {
+        sourceEventId: input.intent.sourceEventId,
+        actionKey: input.intent.actionKey,
+        suppliedExecutorClass: input.intent.executorClass,
+      },
+    });
+    return {
+      replayed: false,
+      attempt,
+      queue: {
+        queued: false,
+        reasonCode: 'WRONG_EXECUTOR_CLASS',
+        reason: 'This runtime only executes COMMUNICATE Action Intents.',
+      },
+    };
+  }
+
   const startedAtIso = input.now?.() ?? new Date().toISOString();
   const startedAt = new Date(startedAtIso);
   if (Number.isNaN(startedAt.getTime())) {
