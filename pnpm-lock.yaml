@@ -258,6 +258,9 @@ importers:
       '@expadio/communication':
         specifier: workspace:*
         version: link:../communication
+      '@expadio/domain-events':
+        specifier: workspace:*
+        version: link:../domain-events
       '@expadio/knowledge':
         specifier: workspace:*
         version: link:../knowledge
