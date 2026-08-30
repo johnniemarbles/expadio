@@ -17,6 +17,7 @@ import {
   resolveCaseOntology,
   resolveRelationshipDefinitions,
   resolveCaseLifecycleEvent,
+  resolveGovernedActionRules,
   describeIndustryPack,
   listIndustryPackCatalog,
   validateCaseAttributes,
@@ -255,4 +256,33 @@ test('DENTEX lifecycle Domain Events are Pack semantics, not workflow hardcoding
   });
   assert.equal(resolveCaseLifecycleEvent(LEXFLOW_PACK, 'RESOLVED'), null);
   assert.equal(resolveCaseLifecycleEvent(null, 'RESOLVED'), null);
+});
+
+
+test('DENTEX discharge follow-up is a governed Pack rule with runtime bindings', () => {
+  const rules = resolveGovernedActionRules(DENTEX_PACK, 'Treatment.Discharged');
+  assert.equal(rules.length, 1);
+  const rule = rules[0]!;
+  assert.equal(rule.ruleKey, 'dentex.treatment.discharge.patient-follow-up');
+  assert.equal(rule.executorClass, 'COMMUNICATE');
+  assert.equal(rule.actionKey, 'patient.follow_up');
+
+  const configuration = rule.configuration as any;
+  assert.deepEqual(configuration.recipient.email, {
+    kind: 'AGGREGATE_FIELD',
+    key: 'contactEmail',
+  });
+  assert.deepEqual(configuration.variables.patientName, {
+    kind: 'AGGREGATE_FIELD',
+    key: 'contactName',
+  });
+  assert.equal(
+    JSON.stringify(configuration).includes('patient@example'),
+    false,
+  );
+
+  assert.deepEqual(
+    resolveGovernedActionRules(LEXFLOW_PACK, 'Treatment.Discharged'),
+    [],
+  );
 });
