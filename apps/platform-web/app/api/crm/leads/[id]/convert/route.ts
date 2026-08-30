@@ -125,10 +125,10 @@ export async function POST(
           const subject = (caseSubjectRaw || `Onboarding — ${accountRow.name}`).slice(0, 200);
           const insertedCase = await client.query(
             `INSERT INTO platform.crm_cases
-               (tenant_id, account_id, contact_id, subject, priority, status, owner_subject_id,
+               (tenant_id, account_id, contact_id, subject, priority, status, blueprint_key, owner_subject_id,
                 attributes, attributes_schema_version,
                 industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source)
-             VALUES ($1::uuid, $2::uuid, $3, $4, 'NORMAL', 'OPEN', $5,
+             VALUES ($1::uuid, $2::uuid, $3, $4, 'NORMAL', 'OPEN', 'crm.case', $5,
                      $6::jsonb, $7, $8, $9, $10)
              RETURNING case_id, tenant_id, account_id, contact_id, subject, description, priority, status,
                        blueprint_key, workflow_instance_id, stage_key, owner_subject_id,
