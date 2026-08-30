@@ -200,6 +200,9 @@ importers:
 
   packages/governed-actions:
     dependencies:
+      '@expadio/communication':
+        specifier: workspace:*
+        version: link:../communication
       '@expadio/domain-events':
         specifier: workspace:*
         version: link:../domain-events
