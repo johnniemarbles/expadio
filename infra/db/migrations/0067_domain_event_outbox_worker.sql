@@ -8,6 +8,15 @@ ALTER TABLE platform.domain_event_outbox
   ADD COLUMN claim_token uuid,
   ADD COLUMN claim_expires_at timestamptz;
 
+-- Legacy rows could only record claimed_at, not ownership. Return them to a
+-- retryable state rather than pretending the old claim is still authoritative.
+UPDATE platform.domain_event_outbox
+   SET status = 'FAILED',
+       available_at = clock_timestamp(),
+       last_error = COALESCE(last_error, 'Legacy claim released during worker migration.'),
+       updated_at = clock_timestamp()
+ WHERE status = 'CLAIMED';
+
 ALTER TABLE platform.domain_event_outbox
   ADD CONSTRAINT domain_event_outbox_claim_state_check CHECK (
     (
