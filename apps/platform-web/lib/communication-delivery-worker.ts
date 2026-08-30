@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
+import type { SecretResolver } from '@expadio/provider-registry/repository';
 import {
   evaluatePersistedCommunicationPreflight,
 } from '@expadio/communication/persisted-preflight';
@@ -84,6 +85,7 @@ export interface CommunicationDeliveryWorkerOptions {
   readonly leaseMs?: number;
   readonly maxAttempts?: number;
   readonly fetchImpl?: typeof fetch;
+  readonly secretResolver?: SecretResolver;
 }
 
 function stableServiceSubject(value: string): string {
@@ -497,7 +499,7 @@ export async function runCommunicationDeliveryWorkerOnce(
         connector: selected,
         credentialRepository: new PostgresConnectorCredentialRepository(client),
         leaseService,
-        secretResolver: delegatedSecretResolver,
+        secretResolver: input.options.secretResolver ?? delegatedSecretResolver,
         requestedBySubjectId: serviceSubjectId,
         requestId: () => randomUUID(),
         correlationId: () => randomUUID(),
