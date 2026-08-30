@@ -39,6 +39,7 @@
     "./industry-pack-authoring": "./src/industry-pack-authoring.ts",
     "./industry-pack-runtime": "./src/industry-pack-runtime.ts",
     "./entity-relationship": "./src/entity-relationship.ts",
+    "./domain-events": "./src/domain-events.ts",
     "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts"
   },
   "dependencies": {
@@ -52,6 +53,7 @@
     "@expadio/capabilities": "workspace:*",
     "@expadio/capability-persistence": "workspace:*",
     "@expadio/communication": "workspace:*",
+    "@expadio/domain-events": "workspace:*",
     "@expadio/knowledge": "workspace:*",
     "@expadio/provider-registry": "workspace:*",
     "@expadio/relationship": "workspace:*",

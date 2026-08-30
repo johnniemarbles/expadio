@@ -233,3 +233,5 @@ export * from './communication-throttle.ts';
 export * from './decision-trace.ts';
 
 export * from './entity-relationship.ts';
+
+export * from './domain-events.ts';
