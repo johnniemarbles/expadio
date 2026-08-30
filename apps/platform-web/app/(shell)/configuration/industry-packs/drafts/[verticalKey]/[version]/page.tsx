@@ -46,6 +46,16 @@ interface DraftDefinition {
     }[];
   };
   readonly caseOntologyRoles?: Readonly<Record<string, string>>;
+  readonly caseStageSemantics?: {
+    readonly requirements: readonly {
+      readonly stageKey: string;
+      readonly phase: 'ENTRY' | 'EXIT';
+      readonly requiredAttributeKeys?: readonly string[];
+      readonly requiredRelationships?: readonly string[];
+      readonly requiredDecisionOutcomes?: readonly string[];
+      readonly message: string;
+    }[];
+  };
 }
 
 interface DraftResponse {
@@ -81,6 +91,7 @@ export default async function IndustryPackDraftPage({
   const workflowEntries = Object.entries(definition.caseWorkflow?.stages ?? {});
   const schemaFields = definition.caseSchema?.fields ?? [];
   const ontologyEntries = Object.entries(definition.caseOntologyRoles ?? {});
+  const semanticRequirements = definition.caseStageSemantics?.requirements ?? [];
 
   return (
     <>
@@ -159,6 +170,40 @@ export default async function IndustryPackDraftPage({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className={styles.panel} aria-labelledby="semantics-title">
+        <div className={styles.panelHeading}>
+          <div>
+            <h2 id="semantics-title">Executable stage semantics</h2>
+            <p>Governed Pack rules evaluated against canonical case facts before workflow transitions.</p>
+          </div>
+        </div>
+        {semanticRequirements.length === 0 ? (
+          <p>No executable case-stage semantics are declared by this Pack revision.</p>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Stage</th><th>Phase</th><th>Attributes</th><th>Relationships</th><th>Outcomes</th><th>Blocking message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {semanticRequirements.map((requirement, index) => (
+                  <tr key={`${requirement.stageKey}:${requirement.phase}:${index}`}>
+                    <td><span className={styles.code}>{requirement.stageKey}</span></td>
+                    <td>{requirement.phase}</td>
+                    <td>{requirement.requiredAttributeKeys?.join(', ') || '—'}</td>
+                    <td>{requirement.requiredRelationships?.join(', ') || '—'}</td>
+                    <td>{requirement.requiredDecisionOutcomes?.join(', ') || '—'}</td>
+                    <td>{requirement.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className={styles.panel} aria-labelledby="schema-title">
