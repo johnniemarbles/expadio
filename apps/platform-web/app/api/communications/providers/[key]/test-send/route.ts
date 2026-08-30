@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { DecisionTraceBuilder } from '@expadio/communication';
 import { routePreparedCommunicationDispatch } from '@expadio/communication/dispatch-routing';
 import { prepareCommunicationProviderSendRequest } from '@expadio/communication/provider-send-request';
 import { ResendEmailAdapter } from '@expadio/communication/resend-email-adapter';
@@ -139,10 +140,72 @@ export async function POST(
       const adapter = new ResendEmailAdapter({ apiToken: async () => resolved.value });
       const providerResult = await adapter.send(senderPrepared.request);
 
+      const traceBuilder = new DecisionTraceBuilder();
+      traceBuilder
+        .pass('INTENT_VALIDATION', 'explicit step-up authenticated test recipient')
+        .pass('SENDER_DOMAIN', `verified sender scope ${senderPrepared.senderScope}`);
+      traceBuilder.routing({
+        considered: routed.considered,
+        rejected: routed.rejected,
+      });
+      traceBuilder
+        .pass('CONNECTOR_ROUTING', `selected ${connectorKey}`)
+        .pass('DISPATCH', 'test message handed to Resend');
+
+      if (providerResult.status === 'ACCEPTED') {
+        traceBuilder.pass('OUTCOME_CLASSIFICATION', 'provider accepted test message');
+      } else {
+        traceBuilder.fail(
+          'OUTCOME_CLASSIFICATION',
+          providerResult.reason ?? providerResult.reasonCode,
+        );
+      }
+
+      const trace = traceBuilder.build({
+        traceId: crypto.randomUUID(),
+        tenantId: context.tenantId,
+        ...(context.organizationId === null || context.organizationId === ''
+          ? {}
+          : { organizationId: context.organizationId }),
+        kind: 'DISPATCH',
+        outcome: providerResult.status === 'ACCEPTED' ? 'SENT' : 'FAILED',
+        reasonCode: providerResult.status === 'ACCEPTED'
+          ? 'TEST_SEND_OK'
+          : `TEST_SEND_${providerResult.reasonCode}`,
+        correlationId: crypto.randomUUID(),
+        createdAt: requestedAt,
+      });
+
+      await client.query(
+        `INSERT INTO platform.communication_decision_traces
+           (trace_id, tenant_id, organization_id, message_id, kind, outcome, reason_code,
+            stopped_at_gate, gates, connectors_considered, connectors_rejected,
+            compliance_pack_versions, correlation_id, expires_at, created_at)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, NULL, $4, $5, $6, $7,
+                 $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12, $13::timestamptz, $14::timestamptz)`,
+        [
+          trace.traceId,
+          trace.tenantId,
+          trace.organizationId ?? null,
+          trace.kind,
+          trace.outcome,
+          trace.reasonCode ?? null,
+          trace.stoppedAtGate ?? null,
+          JSON.stringify(trace.gates),
+          JSON.stringify(trace.connectorsConsidered),
+          JSON.stringify(trace.connectorsRejected),
+          JSON.stringify(trace.compliancePackVersions),
+          trace.correlationId,
+          trace.expiresAt,
+          trace.createdAt,
+        ],
+      );
+
       return {
         status: providerResult.status === 'ACCEPTED' ? 200 as const : 502 as const,
         body: {
           connectorKey,
+          traceId: trace.traceId,
           senderScope: senderPrepared.senderScope,
           outcome: providerResult.status,
           reasonCode: providerResult.reasonCode,
