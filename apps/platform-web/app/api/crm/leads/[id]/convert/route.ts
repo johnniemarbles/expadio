@@ -7,6 +7,7 @@ import { resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-pac
 import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 import { startWorkflow } from '../../../../../../lib/workflow-runtime';
 import { assignParticipant } from '../../../../../../lib/workflow-participants';
+import { resolveTreatmentOwnerSubjectId } from '../../../../../../lib/crm-owner-resolution';
 import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
 
 export const runtime = 'nodejs';
@@ -45,7 +46,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         // Ownership is a business relationship, not an audit actor. Explicit assignment wins;
         // otherwise preserve the lead owner; only then fall back to the converter.
-        const treatmentOwnerSubjectId = explicitOwnerSubjectId ?? leadRow.owner_subject_id ?? context.subjectId;
+        const treatmentOwnerSubjectId = resolveTreatmentOwnerSubjectId({
+          explicitOwnerSubjectId,
+          leadOwnerSubjectId: leadRow.owner_subject_id,
+          conversionActorSubjectId: context.subjectId,
+        });
 
         let accountRow;
         if (leadRow.account_id) {
