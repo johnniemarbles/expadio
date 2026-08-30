@@ -93,6 +93,9 @@ export async function POST(
         targetKey: provider.target.entityId,
         assignedBySubjectId: context.subjectId,
       });
+      if (!participant.ok) {
+        throw new Error('DENTEX_PROVIDER_WORKFLOW_STAGE_INVALID');
+      }
 
       return {
         providerSubjectId: provider.target.entityId,
