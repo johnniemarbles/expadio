@@ -78,8 +78,10 @@ const COLUMNS = `
 /**
  * Creates a new operational execution attempt.
  *
- * The advisory lock serializes retries for one Action Intent so concurrent
- * workers cannot allocate the same attempt number.
+ * Per-intent attempt numbers are protected by the database UNIQUE constraint.
+ * Concurrent allocators may race on MAX+1; a bounded retry converts that race
+ * into the next available attempt number without requiring a caller-held
+ * transaction or a session advisory lock.
  */
 export async function beginGovernedActionExecutionAttempt(
   client: GovernedActionExecutionAttemptSqlClient,
@@ -89,36 +91,42 @@ export async function beginGovernedActionExecutionAttempt(
     readonly executorClass: GovernedActionExecutorClass;
   },
 ): Promise<GovernedActionExecutionAttempt> {
-  await client.query(
-    `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-    [`${input.tenantId}|${input.actionIntentId}`],
-  );
+  for (let retry = 0; retry < 4; retry += 1) {
+    const next = await client.query<{ readonly next_attempt_number: number }>(
+      `SELECT COALESCE(MAX(attempt_number), 0)::int + 1 AS next_attempt_number
+         FROM platform.governed_action_execution_attempts
+        WHERE tenant_id = $1::uuid
+          AND action_intent_id = $2::uuid`,
+      [input.tenantId, input.actionIntentId],
+    );
+    const attemptNumber = next.rows[0]?.next_attempt_number ?? 1;
 
-  const next = await client.query<{ readonly next_attempt_number: number }>(
-    `SELECT COALESCE(MAX(attempt_number), 0)::int + 1 AS next_attempt_number
-       FROM platform.governed_action_execution_attempts
-      WHERE tenant_id = $1::uuid
-        AND action_intent_id = $2::uuid`,
-    [input.tenantId, input.actionIntentId],
-  );
-  const attemptNumber = next.rows[0]?.next_attempt_number ?? 1;
+    try {
+      const result = await client.query<AttemptRow>(
+        `INSERT INTO platform.governed_action_execution_attempts (
+           tenant_id, action_intent_id, attempt_number, executor_class
+         ) VALUES ($1::uuid, $2::uuid, $3, $4)
+         RETURNING ${COLUMNS}`,
+        [
+          input.tenantId,
+          input.actionIntentId,
+          attemptNumber,
+          input.executorClass,
+        ],
+      );
 
-  const result = await client.query<AttemptRow>(
-    `INSERT INTO platform.governed_action_execution_attempts (
-       tenant_id, action_intent_id, attempt_number, executor_class
-     ) VALUES ($1::uuid, $2::uuid, $3, $4)
-     RETURNING ${COLUMNS}`,
-    [
-      input.tenantId,
-      input.actionIntentId,
-      attemptNumber,
-      input.executorClass,
-    ],
-  );
+      const row = result.rows[0];
+      if (row === undefined) {
+        throw new Error('GOVERNED_ACTION_EXECUTION_ATTEMPT_CREATE_FAILED');
+      }
+      return mapAttempt(row);
+    } catch (error: any) {
+      if (error?.code === '23505' && retry < 3) continue;
+      throw error;
+    }
+  }
 
-  const row = result.rows[0];
-  if (row === undefined) throw new Error('GOVERNED_ACTION_EXECUTION_ATTEMPT_CREATE_FAILED');
-  return mapAttempt(row);
+  throw new Error('GOVERNED_ACTION_EXECUTION_ATTEMPT_ALLOCATION_FAILED');
 }
 
 export async function completeGovernedActionExecutionAttempt(
