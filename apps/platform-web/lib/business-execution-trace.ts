@@ -115,13 +115,15 @@ export async function listBusinessExecutionTrace(
   const result = await client.query<BusinessExecutionTraceRow>(
     `SELECT
        trace_kind, trace_id, parent_trace_id, tenant_id, root_event_id,
-       correlation_id, aggregate_type, aggregate_id, source_event_type,
-       action_intent_id, executor_class, action_key, state, reason_code,
-       occurred_at, summary, metadata
+       correlation_id, aggregate_type, aggregate_id,
+       root_event_type AS source_event_type,
+       NULLIF(metadata ->> 'actionIntentId', '') AS action_intent_id,
+       executor_class, action_key, state, reason_code,
+       trace_at AS occurred_at, summary, metadata
      FROM platform.business_execution_trace
      WHERE ${clauses.join(' AND ')}
-     ORDER BY occurred_at, trace_kind, trace_id
-     LIMIT $${params.length}`,
+     ORDER BY trace_at, trace_kind, trace_id
+     LIMIT ${params.length}`,
     params,
   );
 
