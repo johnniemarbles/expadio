@@ -202,7 +202,8 @@ export async function finishTenantExecutionRun(
               updated_at = $4
         WHERE tenant_id = $1::uuid
           AND current_run_id = $2::uuid
-          AND lease_token = $3::uuid`,
+          AND lease_token = $3::uuid
+          AND lease_expires_at > $4`,
       [
         input.lease.tenantId,
         input.lease.runId,
