@@ -68,9 +68,9 @@ test("Treatment ownership is resolved independently from the conversion actor", 
   assert.match(convertRoute, /resolveTreatmentOwnerSubjectId/);
   assert.match(convertRoute, /leadOwnerSubjectId: leadRow\.owner_subject_id/);
   assert.match(convertRoute, /conversionActorSubjectId: context\.subjectId/);
-  assert.match(ownerResolution, /explicitOwnerSubjectId/);
   assert.match(ownerResolution, /leadOwnerSubjectId/);
   assert.match(ownerResolution, /conversionActorSubjectId/);
+  assert.doesNotMatch(convertRoute, /body\?\.ownerSubjectId/);
 });
 
 test("persisted Treatment owner is mirrored into the initial workflow assignment", () => {
