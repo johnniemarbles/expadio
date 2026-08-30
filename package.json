@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --experimental-strip-types --test packages/*/test/*.test.ts",
+    "test": "node --experimental-strip-types --test packages/*/test/*.test.ts verticals/*/test/*.test.ts",
     "check": "pnpm run typecheck && pnpm run test"
   },
   "devDependencies": {
