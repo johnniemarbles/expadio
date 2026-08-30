@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { BrainSource } from '../../../../lib/brain-contracts';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const result = await dbPool.query('SELECT * FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId]);
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query('SELECT * FROM platform.knowledge_documents WHERE tenant_id = $1', [effectiveContext.tenantId])
+    );
     
     const sources: BrainSource[] = result.rows.map((row: any) => ({
       id: row.document_reference,
