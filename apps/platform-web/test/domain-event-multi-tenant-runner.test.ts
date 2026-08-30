@@ -33,3 +33,11 @@ test('multi-tenant runtime binds and resets each tenant independently', () => {
   assert.match(runner, /client\.release\(true\)/);
   assert.match(runner, /for \(const tenantId of input\.tenantIds\)/);
 });
+
+
+test('tenant execution matures scheduled governed actions under the same tenant lease', () => {
+  assert.match(runner, /acquireTenantExecutionLease/);
+  assert.match(runner, /runDomainEventActionWorkerBatch/);
+  assert.match(runner, /runScheduledGovernedActionWorkerBatch/);
+  assert.match(runner, /finishTenantExecutionRun/);
+});
