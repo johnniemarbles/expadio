@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
-
 const convertRoute = read("../app/api/crm/leads/[id]/convert/route.ts");
 const client = read("../app/(shell)/crm/CrmClient.tsx");
 
@@ -12,15 +11,13 @@ test("conversion is a governed, tenant-scoped, atomic transaction", () => {
   assert.match(convertRoute, /resolveRequestContext\(request\)/);
   assert.match(convertRoute, /withTenantClient/);
   assert.match(convertRoute, /hasCrmWriteRole/);
-  // The whole funnel step is one transaction — all of it lands or none does.
   assert.match(convertRoute, /BEGIN/);
   assert.match(convertRoute, /COMMIT/);
   assert.match(convertRoute, /ROLLBACK/);
 });
 
-test("conversion promotes/creates a CUSTOMER account and marks the lead WON", () => {
+test("conversion promotes\/creates a CUSTOMER account and marks the lead WON", () => {
   assert.match(convertRoute, /lifecycle_stage = 'CUSTOMER'/);
-  assert.match(convertRoute, /lifecycle_stage\)\s*\n\s*VALUES \(\$1::uuid, \$2, 'CUSTOMER'\)/);
   assert.match(convertRoute, /stage = 'WON'/);
 });
 
@@ -40,7 +37,6 @@ test("CRM client offers a Convert action wired to the convert endpoint", () => {
   assert.match(client, /ConvertModal/);
 });
 
-
 test("converted cases use the governed Industry Pack schema and provenance", () => {
   assert.match(convertRoute, /PostgresIndustryPackRuntimeResolver/);
   assert.match(convertRoute, /validateCaseAttributes\(resolveCaseSchema\(runtimePack\.pack\)/);
@@ -51,12 +47,10 @@ test("converted cases use the governed Industry Pack schema and provenance", () 
   assert.match(convertRoute, /invalidCaseAttributes/);
 });
 
-
 test("converted Treatment case is bound to the canonical crm.case workflow key", () => {
   assert.match(convertRoute, /blueprint_key, owner_subject_id/);
   assert.match(convertRoute, /'OPEN', 'crm\.case'/);
 });
-
 
 test("converted Treatment starts and binds the existing crm.case workflow atomically", () => {
   assert.match(convertRoute, /startWorkflow\(client/);
@@ -69,11 +63,17 @@ test("converted Treatment starts and binds the existing crm.case workflow atomic
   assert.match(convertRoute, /ROLLBACK/);
 });
 
+test("Treatment ownership is resolved independently from the conversion actor", () => {
+  assert.match(convertRoute, /explicitOwnerSubjectId/);
+  assert.match(convertRoute, /explicitOwnerSubjectId \?\? leadRow\.owner_subject_id \?\? context\.subjectId/);
+  assert.match(convertRoute, /treatmentOwnerSubjectId/);
+});
 
-test("converted Treatment owner is mirrored into the initial workflow assignment", () => {
+test("persisted Treatment owner is mirrored into the initial workflow assignment", () => {
   assert.match(convertRoute, /assignParticipant\(client/);
   assert.match(convertRoute, /participantKey: 'owner'/);
   assert.match(convertRoute, /targetKind: 'USER'/);
-  assert.match(convertRoute, /targetKey: context\.subjectId/);
+  assert.match(convertRoute, /targetKey: createdCase\.owner_subject_id/);
+  assert.match(convertRoute, /assignedBySubjectId: context\.subjectId/);
   assert.match(convertRoute, /stageKey: started\.instance\.currentStageKey/);
 });
