@@ -1,35 +1,15 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
 import type { PlatformWorkspaceContext } from '../../../lib/contracts';
+import { dbPool } from '../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'UNAUTHENTICATED',
-      message: 'User is not authenticated'
-    };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: '00000000-0000-0000-0000-000000000001',
-        organizationId: '00000000-0000-0000-0000-000000000002'
-      }
-    );
+    const contextState = await resolveRequestContext(request);
 
     const result = await dbPool.query(
       'SELECT organization_id, name, status FROM platform.organizations WHERE tenant_id = $1 ORDER BY name ASC',
-      [effectiveContext.tenantId]
+      [contextState.tenantId]
     );
 
     const organizations = result.rows.map((row: any) => ({
@@ -43,7 +23,7 @@ export async function GET(request: Request) {
     const context: PlatformWorkspaceContext = {
       accounts: [
         {
-          id: effectiveContext.tenantId,
+          id: contextState.tenantId,
           name: 'Live Account',
           role: 'Platform owner',
           initials: 'LA',
@@ -56,11 +36,7 @@ export async function GET(request: Request) {
     return NextResponse.json(context);
   } catch (error: any) {
     console.error("Workspace Context API Error:", error);
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'INTERNAL_ERROR',
-      message: error.message || 'An unknown error occurred.'
-    };
-    return NextResponse.json(denied, { status: 500 });
+    const denied = deniedResponse(error);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
