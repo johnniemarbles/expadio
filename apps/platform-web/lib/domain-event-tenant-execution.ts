@@ -14,6 +14,7 @@ export interface TenantExecutionLease {
 
 export interface TenantExecutionBusy {
   readonly acquired: false;
+  readonly reason: 'BUSY' | 'DISABLED';
   readonly activeRunId: string | null;
   readonly leaseExpiresAt: Date | null;
 }
@@ -28,6 +29,7 @@ export type TenantExecutionAcquisition =
   | TenantExecutionAcquired;
 
 interface LeaseStateRow {
+  readonly enabled: boolean;
   readonly current_run_id: string | null;
   readonly lease_expires_at: Date | string | null;
 }
@@ -61,6 +63,59 @@ export async function acquireTenantExecutionLease(
 
   await client.query('BEGIN');
   try {
+    const existing = await client.query<LeaseStateRow>(
+      `SELECT enabled, current_run_id, lease_expires_at
+         FROM platform.domain_event_tenant_execution_state
+        WHERE tenant_id = $1::uuid
+        FOR UPDATE`,
+      [input.tenantId],
+    );
+    const state = existing.rows[0];
+
+    if (state !== undefined && !state.enabled) {
+      await client.query('ROLLBACK');
+      return {
+        acquired: false,
+        reason: 'DISABLED',
+        activeRunId: state.current_run_id,
+        leaseExpiresAt: state.lease_expires_at === null
+          ? null
+          : date(state.lease_expires_at),
+      };
+    }
+
+    if (
+      state?.current_run_id != null
+      && state.lease_expires_at != null
+      && date(state.lease_expires_at).getTime() > now.getTime()
+    ) {
+      await client.query('ROLLBACK');
+      return {
+        acquired: false,
+        reason: 'BUSY',
+        activeRunId: state.current_run_id,
+        leaseExpiresAt: date(state.lease_expires_at),
+      };
+    }
+
+    if (state?.current_run_id != null) {
+      await client.query(
+        `UPDATE platform.domain_event_tenant_execution_runs
+            SET status = 'LEASE_LOST',
+                finished_at = $3,
+                duration_ms = GREATEST(
+                  0,
+                  floor(extract(epoch FROM ($3 - started_at)) * 1000)::bigint
+                ),
+                error = COALESCE(error, 'TENANT_EXECUTION_LEASE_EXPIRED'),
+                updated_at = $3
+          WHERE tenant_id = $1::uuid
+            AND run_id = $2::uuid
+            AND status = 'RUNNING'`,
+        [input.tenantId, state.current_run_id, now],
+      );
+    }
+
     await client.query(
       `INSERT INTO platform.domain_event_tenant_execution_runs (
          run_id, tenant_id, invocation_id, lease_token, status,
@@ -79,7 +134,7 @@ export async function acquireTenantExecutionLease(
       ],
     );
 
-    const acquired = await client.query<LeaseStateRow>(
+    await client.query(
       `INSERT INTO platform.domain_event_tenant_execution_state (
          tenant_id, current_run_id, lease_token, lease_expires_at,
          last_started_at, updated_at
@@ -91,33 +146,9 @@ export async function acquireTenantExecutionLease(
               lease_token = EXCLUDED.lease_token,
               lease_expires_at = EXCLUDED.lease_expires_at,
               last_started_at = EXCLUDED.last_started_at,
-              updated_at = EXCLUDED.updated_at
-        WHERE platform.domain_event_tenant_execution_state.enabled = true
-          AND (
-            platform.domain_event_tenant_execution_state.current_run_id IS NULL
-            OR platform.domain_event_tenant_execution_state.lease_expires_at <= $5
-          )
-       RETURNING current_run_id, lease_expires_at`,
+              updated_at = EXCLUDED.updated_at`,
       [input.tenantId, runId, leaseToken, leaseExpiresAt, now],
     );
-
-    if (acquired.rowCount !== 1) {
-      await client.query('ROLLBACK');
-      const state = await client.query<LeaseStateRow>(
-        `SELECT current_run_id, lease_expires_at
-           FROM platform.domain_event_tenant_execution_state
-          WHERE tenant_id = $1::uuid`,
-        [input.tenantId],
-      );
-      const row = state.rows[0];
-      return {
-        acquired: false,
-        activeRunId: row?.current_run_id ?? null,
-        leaseExpiresAt: row?.lease_expires_at == null
-          ? null
-          : date(row.lease_expires_at),
-      };
-    }
 
     await client.query('COMMIT');
     return {
@@ -189,7 +220,7 @@ export async function finishTenantExecutionRun(
           ? 'SUCCEEDED'
           : 'FAILED';
 
-    await client.query(
+    const run = await client.query(
       `UPDATE platform.domain_event_tenant_execution_runs
           SET status = $4,
               processed = $5,
@@ -222,6 +253,9 @@ export async function finishTenantExecutionRun(
           : input.error,
       ],
     );
+    if (run.rowCount !== 1 && status !== 'LEASE_LOST') {
+      throw new Error('TENANT_EXECUTION_RUN_FINALIZE_FAILED');
+    }
 
     await client.query('COMMIT');
     return status;
