@@ -18,7 +18,7 @@ test('business execution trace helper reads the tenant-scoped trace view', () =>
   assert.match(helper, /correlation_id = \$\$\{params\.length\}/);
   assert.match(helper, /aggregate_type = \$\$\{params\.length\}/);
   assert.match(helper, /aggregate_id = \$\$\{params\.length\}/);
-  assert.match(helper, /LIMIT \$\$\{params\.length\}/);
+  assert.match(helper, /LIMIT \$\{limit\}/);
 });
 
 test('business execution trace route is governed and bounded', () => {
