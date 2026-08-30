@@ -1,27 +1,12 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import { dbPool } from '../../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: '00000000-0000-0000-0000-000000000001',
-        organizationId: '00000000-0000-0000-0000-000000000002'
-      }
-    );
+    const effectiveContext = await resolveRequestContext(request);
 
-    // Query platform.agent_runs for run history, joining with events to derive status and updated_at
     const result = await dbPool.query(
       `SELECT 
          r.run_id AS session_id,
@@ -50,21 +35,18 @@ export async function GET(request: Request) {
       [effectiveContext.tenantId]
     );
 
-    if (result.rows.length === 0) {
-      return NextResponse.json([
-        { session_id: 'run_live_101', status: 'SUCCEEDED', created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date().toISOString() },
-        { session_id: 'run_live_102', status: 'FAILED', created_at: new Date(Date.now() - 7200000).toISOString(), updated_at: new Date(Date.now() - 7100000).toISOString() }
-      ]);
-    }
-
     return NextResponse.json(result.rows);
   } catch (error: any) {
     console.error("Agent Runs API Error:", error);
-    const denied: DeniedResult = {
+    const denied = deniedResponse(error);
+    if (denied.status !== 500) {
+      return NextResponse.json(denied.body, { status: denied.status });
+    }
+    const body: DeniedResult = {
       denied: true,
       reasonKey: 'INTERNAL_ERROR',
       message: error.message || 'An unknown error occurred.'
     };
-    return NextResponse.json(denied, { status: 500 });
+    return NextResponse.json(body, { status: 500 });
   }
 }

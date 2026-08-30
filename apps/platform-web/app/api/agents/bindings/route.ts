@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import { dbPool } from '../../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED' }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
 
     const result = await dbPool.query(
       `SELECT b.binding_id, c.capability_key, b.mode as mapped_to_resource, COALESCE(s.state, 'NOT_CONFIGURED') as status, b.created_at
@@ -25,19 +18,17 @@ export async function GET(request: Request) {
     
     return NextResponse.json(result.rows);
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(
+      denied.status === 500 ? { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message } : denied.body,
+      { status: denied.status }
+    );
   }
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
     
     const { capability_key, mode = 'A' } = await request.json();
     if (!capability_key) return NextResponse.json({ error: 'capability_key required' }, { status: 400 });
@@ -64,19 +55,17 @@ export async function POST(request: Request) {
       client.release();
     }
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(
+      denied.status === 500 ? { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message } : denied.body,
+      { status: denied.status }
+    );
   }
 }
 
 export async function DELETE(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
     
     const url = new URL(request.url);
     const binding_id = url.searchParams.get('id');
@@ -89,6 +78,10 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(
+      denied.status === 500 ? { denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message } : denied.body,
+      { status: denied.status }
+    );
   }
 }
