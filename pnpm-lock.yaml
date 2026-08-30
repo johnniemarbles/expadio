@@ -178,6 +178,9 @@ importers:
       '@expadio/credential-custody':
         specifier: workspace:*
         version: link:../credential-custody
+      '@expadio/governed-actions':
+        specifier: workspace:*
+        version: link:../governed-actions
       '@expadio/provider-registry':
         specifier: workspace:*
         version: link:../provider-registry
@@ -200,9 +203,6 @@ importers:
 
   packages/governed-actions:
     dependencies:
-      '@expadio/communication':
-        specifier: workspace:*
-        version: link:../communication
       '@expadio/domain-events':
         specifier: workspace:*
         version: link:../domain-events
