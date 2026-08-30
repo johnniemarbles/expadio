@@ -176,7 +176,7 @@ test('governed Resend golden path persists lease evidence and TEST_SEND_OK trace
       platformFallback: 'DENY',
     });
     assert.equal(senderPrepared.ok, true);
-    if (!senderPrepared.ok) throw new Error(senderPrepared.reasonCode);
+    if (!senderPrepared.ok) throw new Error('expected verified sender preparation');
 
     const leaseService = createGovernedCredentialLeaseRuntime({
       client,
