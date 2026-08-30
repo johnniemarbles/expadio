@@ -14,6 +14,7 @@ const TOOLS: { href: string; title: string; blurb: string }[] = [
   { href: '/governance/decisions', title: 'Governed decisions', blurb: 'The append-only log of who approved what, with evidence.' },
   { href: '/governance/analytics', title: 'Decision analytics', blurb: 'Approval rate and time to decision, per vertical.' },
   { href: '/governance/authorization', title: 'Auth inspector', blurb: 'Trace how an authorization decision is reached, gate by gate.' },
+  { href: '/governance/domain-events', title: 'Domain Event delivery', blurb: 'Inspect retries, failures and terminal dead letters — and requeue with audit evidence.' },
 ];
 
 const card: React.CSSProperties = {
