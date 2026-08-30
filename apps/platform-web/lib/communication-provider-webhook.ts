@@ -9,6 +9,8 @@ export type CommunicationProviderWebhookOutcome =
   | 'IGNORED'
   | 'UNMATCHED';
 
+type ProviderLifecycleOutcome = Exclude<CommunicationProviderWebhookOutcome, 'IGNORED' | 'UNMATCHED'>;
+
 export type CommunicationDeliveryLifecycleState =
   | 'PENDING'
   | 'ACCEPTED'
@@ -39,6 +41,14 @@ export interface CommunicationProviderWebhookIngestionResult {
   readonly reasonCode: string;
 }
 
+export interface CommunicationProviderWebhookTransition {
+  readonly previousState: CommunicationDeliveryLifecycleState;
+  readonly outcome: Exclude<CommunicationProviderWebhookOutcome, 'UNMATCHED'>;
+  readonly nextState: CommunicationDeliveryLifecycleState;
+  readonly applied: boolean;
+  readonly reasonCode: string;
+}
+
 interface DeliveryRow {
   readonly delivery_id: string;
   readonly state: CommunicationDeliveryLifecycleState;
@@ -52,6 +62,63 @@ interface WebhookEventRow {
   readonly new_delivery_state: CommunicationDeliveryLifecycleState | null;
   readonly reason_code: string;
 }
+
+/**
+ * Canonical provider lifecycle semantics.
+ *
+ * Provider callbacks may be duplicated, replayed, delayed or delivered out of
+ * order. This matrix is the only place where provider evidence is allowed to
+ * change the canonical delivery state. Missing entries are intentionally
+ * treated as recorded-but-not-applied evidence.
+ *
+ * Important policy choices:
+ * - CANCELLED is local-terminal; provider callbacks after cancellation are
+ *   evidence only.
+ * - DELIVERED may be superseded by BOUNCED or COMPLAINED because providers can
+ *   report delayed negative outcomes after initial delivery.
+ * - BOUNCED and COMPLAINED are not superseded by later DELIVERED/SENT events.
+ * - FAILED is allowed to recover to DELIVERED/BOUNCED/COMPLAINED because the
+ *   current Resend mapping uses FAILED for delivery_delayed webhooks.
+ */
+const PROVIDER_LIFECYCLE_TRANSITIONS: Record<
+  CommunicationDeliveryLifecycleState,
+  Partial<Record<ProviderLifecycleOutcome, CommunicationDeliveryLifecycleState>>
+> = {
+  PENDING: {
+    SENT: 'SENT',
+    DELIVERED: 'DELIVERED',
+    FAILED: 'FAILED',
+    BOUNCED: 'BOUNCED',
+    COMPLAINED: 'COMPLAINED',
+  },
+  ACCEPTED: {
+    SENT: 'SENT',
+    DELIVERED: 'DELIVERED',
+    FAILED: 'FAILED',
+    BOUNCED: 'BOUNCED',
+    COMPLAINED: 'COMPLAINED',
+  },
+  SENT: {
+    DELIVERED: 'DELIVERED',
+    FAILED: 'FAILED',
+    BOUNCED: 'BOUNCED',
+    COMPLAINED: 'COMPLAINED',
+  },
+  FAILED: {
+    DELIVERED: 'DELIVERED',
+    BOUNCED: 'BOUNCED',
+    COMPLAINED: 'COMPLAINED',
+  },
+  DELIVERED: {
+    BOUNCED: 'BOUNCED',
+    COMPLAINED: 'COMPLAINED',
+  },
+  BOUNCED: {
+    COMPLAINED: 'COMPLAINED',
+  },
+  COMPLAINED: {},
+  CANCELLED: {},
+};
 
 function nonBlank(value: string, code: string): string {
   const normalized = value.trim();
@@ -79,32 +146,48 @@ export function normalizeCommunicationProviderWebhook(
   }
 }
 
-function targetState(
+function outcomeAlreadyReflected(
   current: CommunicationDeliveryLifecycleState,
   outcome: Exclude<CommunicationProviderWebhookOutcome, 'UNMATCHED'>,
-): CommunicationDeliveryLifecycleState {
-  if (outcome === 'IGNORED') return current;
-  if (current === 'CANCELLED') return current;
-  if (outcome === 'SENT') {
-    return current === 'PENDING' || current === 'ACCEPTED' ? 'SENT' : current;
-  }
-  if (outcome === 'DELIVERED') {
-    return current === 'PENDING' || current === 'ACCEPTED' || current === 'SENT'
-      ? 'DELIVERED'
-      : current;
-  }
-  return outcome;
+): boolean {
+  if (outcome === 'IGNORED') return true;
+  return current === outcome;
 }
 
-function reasonFor(
-  outcome: CommunicationProviderWebhookOutcome,
-  previous: CommunicationDeliveryLifecycleState | null,
-  next: CommunicationDeliveryLifecycleState | null,
-): string {
-  if (outcome === 'UNMATCHED') return 'PROVIDER_WEBHOOK_UNMATCHED';
-  if (outcome === 'IGNORED') return 'PROVIDER_WEBHOOK_IGNORED';
-  if (previous !== null && next !== null && previous === next) return 'PROVIDER_WEBHOOK_STATE_ALREADY_APPLIED';
-  return `PROVIDER_WEBHOOK_${outcome}`;
+export function resolveCommunicationProviderWebhookTransition(
+  current: CommunicationDeliveryLifecycleState,
+  outcome: Exclude<CommunicationProviderWebhookOutcome, 'UNMATCHED'>,
+): CommunicationProviderWebhookTransition {
+  if (outcome === 'IGNORED') {
+    return {
+      previousState: current,
+      outcome,
+      nextState: current,
+      applied: false,
+      reasonCode: 'PROVIDER_WEBHOOK_IGNORED',
+    };
+  }
+
+  const nextState = PROVIDER_LIFECYCLE_TRANSITIONS[current][outcome];
+  if (nextState === undefined) {
+    return {
+      previousState: current,
+      outcome,
+      nextState: current,
+      applied: false,
+      reasonCode: outcomeAlreadyReflected(current, outcome)
+        ? 'PROVIDER_WEBHOOK_STATE_ALREADY_APPLIED'
+        : 'PROVIDER_WEBHOOK_STATE_TRANSITION_IGNORED',
+    };
+  }
+
+  return {
+    previousState: current,
+    outcome,
+    nextState,
+    applied: nextState !== current,
+    reasonCode: `PROVIDER_WEBHOOK_${outcome}`,
+  };
 }
 
 function toResult(status: 'RECORDED' | 'DUPLICATE', row: WebhookEventRow): CommunicationProviderWebhookIngestionResult {
@@ -167,14 +250,15 @@ export async function ingestVerifiedCommunicationProviderWebhook(
       ? 'UNMATCHED'
       : providerOutcome;
 
-    const previousState = delivery?.state ?? null;
-    const nextState = delivery === undefined
+    const transition = delivery === undefined
       ? null
-      : targetState(delivery.state, providerOutcome);
-    const reasonCode = reasonFor(outcome, previousState, nextState);
+      : resolveCommunicationProviderWebhookTransition(delivery.state, providerOutcome);
+    const previousState = transition?.previousState ?? null;
+    const nextState = transition?.nextState ?? null;
+    const reasonCode = transition?.reasonCode ?? 'PROVIDER_WEBHOOK_UNMATCHED';
     const processedAt = new Date();
 
-    if (delivery !== undefined && nextState !== null && nextState !== previousState) {
+    if (delivery !== undefined && transition?.applied === true) {
       const updated = await client.query(
         `UPDATE platform.communication_deliveries
             SET state = $4,
@@ -189,8 +273,8 @@ export async function ingestVerifiedCommunicationProviderWebhook(
         [
           tenantId,
           delivery.delivery_id,
-          previousState,
-          nextState,
+          transition.previousState,
+          transition.nextState,
           reasonCode,
           `Provider webhook ${eventType} applied.`,
           processedAt,
@@ -206,8 +290,8 @@ export async function ingestVerifiedCommunicationProviderWebhook(
         [
           delivery.delivery_id,
           tenantId,
-          previousState,
-          nextState,
+          transition.previousState,
+          transition.nextState,
           providerEventId,
           reasonCode,
           `Provider webhook ${eventType} applied.`,
