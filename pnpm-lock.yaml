@@ -134,9 +134,6 @@ importers:
       '@expadio/provider-registry':
         specifier: workspace:*
         version: link:../provider-registry
-      '@expadio/relationship':
-        specifier: workspace:*
-        version: link:../relationship
 
   packages/audit: {}
 
