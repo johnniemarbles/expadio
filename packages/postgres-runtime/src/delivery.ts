@@ -5,6 +5,7 @@ import {
 import type {
   ApplyCommunicationDeliveryTransitionInput,
   ApplyCommunicationDeliveryTransitionResult,
+  CommunicationDeliveryDispatchSnapshot,
   CommunicationDeliveryRecord,
   CommunicationDeliveryRepository,
   CreateCommunicationDeliveryInput,
@@ -29,11 +30,17 @@ interface DeliveryRow {
   readonly requested_at: Date | string;
   readonly accepted_at: Date | string | null;
   readonly updated_at: Date | string;
+  readonly dispatch_snapshot: CommunicationDeliveryDispatchSnapshot | null;
+  readonly next_attempt_at: Date | string | null;
+  readonly last_attempt_at: Date | string | null;
+  readonly claim_token: string | null;
+  readonly claim_expires_at: Date | string | null;
 }
 
 const DELIVERY_COLUMNS = `delivery_id, tenant_id, organization_id, idempotency_key,
   channel, connector_key, adapter_key, provider_message_id, state, attempt_count,
-  last_reason_code, last_reason, requested_at, accepted_at, updated_at`;
+  last_reason_code, last_reason, requested_at, accepted_at, updated_at,
+  dispatch_snapshot, next_attempt_at, last_attempt_at, claim_token, claim_expires_at`;
 
 export class PostgresCommunicationDeliveryRepository
   implements CommunicationDeliveryRepository {
@@ -60,6 +67,7 @@ export class PostgresCommunicationDeliveryRepository
         input.connectorKey,
         input.adapterKey,
         input.requestedAt,
+        JSON.stringify(input.dispatchSnapshot),
       ],
     );
     return mapRequired(result.rows[0]);
@@ -112,6 +120,7 @@ export class PostgresCommunicationDeliveryRepository
           SET attempt_count = attempt_count + 1,
               last_reason_code = $3,
               last_reason = $4,
+              last_attempt_at = $5,
               updated_at = $5
         WHERE tenant_id = $1::uuid AND delivery_id = $2::uuid
         RETURNING ${DELIVERY_COLUMNS}`,
@@ -121,14 +130,16 @@ export class PostgresCommunicationDeliveryRepository
         input.reasonCode,
         input.reason ?? null,
         input.occurredAt,
+        input.attemptToken ?? null,
       ],
     );
     const updated = mapRequired(updatedResult.rows[0]);
 
     await this.#client.query(
       `INSERT INTO platform.communication_delivery_events (
-         delivery_id, tenant_id, from_state, to_state, reason_code, reason, occurred_at
-       ) VALUES ($1::uuid, $2::uuid, $3, $3, $4, $5, $6)`,
+         delivery_id, tenant_id, from_state, to_state, reason_code, reason,
+         occurred_at, attempt_token
+       ) VALUES ($1::uuid, $2::uuid, $3, $3, $4, $5, $6, $7::uuid)`,
       [
         input.deliveryId,
         input.tenantId,
@@ -183,6 +194,7 @@ export class PostgresCommunicationDeliveryRepository
               last_reason_code = $6,
               last_reason = $7,
               accepted_at = CASE WHEN $3 = 'ACCEPTED' THEN COALESCE(accepted_at, $8) ELSE accepted_at END,
+              last_attempt_at = CASE WHEN $5 = 1 THEN $8 ELSE last_attempt_at END,
               updated_at = $8
         WHERE tenant_id = $1::uuid AND delivery_id = $2::uuid
         RETURNING ${DELIVERY_COLUMNS}`,
@@ -195,6 +207,7 @@ export class PostgresCommunicationDeliveryRepository
         input.transition.reasonCode ?? null,
         input.transition.reason ?? null,
         input.transition.occurredAt,
+        input.attemptToken ?? null,
       ],
     );
     const updated = mapRequired(updatedResult.rows[0]);
@@ -202,8 +215,8 @@ export class PostgresCommunicationDeliveryRepository
     await this.#client.query(
       `INSERT INTO platform.communication_delivery_events (
          delivery_id, tenant_id, from_state, to_state, provider_event_id,
-         reason_code, reason, occurred_at
-       ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8)`,
+         reason_code, reason, occurred_at, attempt_token
+       ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9::uuid)`,
       [
         input.deliveryId,
         input.tenantId,
@@ -242,6 +255,11 @@ function mapDelivery(row: DeliveryRow): CommunicationDeliveryRecord {
     requestedAt: toIso(row.requested_at),
     ...(row.accepted_at === null ? {} : { acceptedAt: toIso(row.accepted_at) }),
     updatedAt: toIso(row.updated_at),
+    ...(row.dispatch_snapshot === null ? {} : { dispatchSnapshot: row.dispatch_snapshot }),
+    ...(row.next_attempt_at === null ? {} : { nextAttemptAt: toIso(row.next_attempt_at) }),
+    ...(row.last_attempt_at === null ? {} : { lastAttemptAt: toIso(row.last_attempt_at) }),
+    ...(row.claim_token === null ? {} : { claimToken: row.claim_token }),
+    ...(row.claim_expires_at === null ? {} : { claimExpiresAt: toIso(row.claim_expires_at) }),
   };
 }
 
