@@ -6,6 +6,7 @@ import type { RouteSearchParams } from '../../../../lib/request-context';
 import styles from './page.module.css';
 import { CloneActiveDraftButton } from './CloneActiveDraftButton';
 import { ReturnIndustryPackToDraftButton } from './ReturnIndustryPackToDraftButton';
+import { PublishIndustryPackButton } from './PublishIndustryPackButton';
 
 interface IndustryPackCatalogItem {
   readonly verticalKey: string;
@@ -235,10 +236,16 @@ function VersionTable({
                         Open draft
                       </Link>
                     ) : version.scope === 'TENANT' && version.state === 'IN_REVIEW' ? (
-                      <ReturnIndustryPackToDraftButton
-                        verticalKey={version.verticalKey}
-                        version={version.version}
-                      />
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <ReturnIndustryPackToDraftButton
+                          verticalKey={version.verticalKey}
+                          version={version.version}
+                        />
+                        <PublishIndustryPackButton
+                          verticalKey={version.verticalKey}
+                          version={version.version}
+                        />
+                      </div>
                     ) : '—'}
                   </td>
                 </tr>
