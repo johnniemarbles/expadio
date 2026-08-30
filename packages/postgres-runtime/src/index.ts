@@ -241,3 +241,5 @@ export * from './governed-action-intent.ts';
 export * from './governed-action-execution.ts';
 
 export * from './domain-event-outbox.ts';
+
+export * from './domain-event-outbox-runner.ts';
