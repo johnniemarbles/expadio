@@ -67,7 +67,9 @@ export class PostgresCommunicationDeliveryRepository
         input.connectorKey,
         input.adapterKey,
         input.requestedAt,
-        JSON.stringify(input.dispatchSnapshot),
+        input.dispatchSnapshot === undefined
+          ? null
+          : JSON.stringify(input.dispatchSnapshot),
       ],
     );
     return mapRequired(result.rows[0]);
