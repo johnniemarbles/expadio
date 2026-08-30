@@ -11,6 +11,15 @@ import {
   type DraftWorkflowEditorState,
 } from './draft-editor-model';
 import {
+  applyDraftTerminologyEditorState,
+  draftTerminologyStateFromDefinition,
+  hasDraftTerminologyEditorErrors,
+  terminologyIssueForPath,
+  validateDraftTerminologyEditorState,
+  type DraftTerminologyConceptState,
+  type DraftTerminologyDefinitionShape,
+} from './terminology-editor-model';
+import {
   applyDraftCaseSchemaEditorState,
   caseSchemaFieldKeys,
   draftCaseSchemaStateFromDefinition,
@@ -39,7 +48,7 @@ const inputStyle: React.CSSProperties = {
 const errorStyle: React.CSSProperties = { color: '#b91c1c', fontSize: 12, marginTop: 4 };
 
 interface EditableDraftDefinition
-  extends DraftWorkflowDefinitionShape, DraftCaseSchemaDefinitionShape, DraftCaseSemanticsDefinitionShape {}
+  extends DraftWorkflowDefinitionShape, DraftTerminologyDefinitionShape, DraftCaseSchemaDefinitionShape, DraftCaseSemanticsDefinitionShape {}
 
 interface DraftSaveResponse {
   readonly draft?: {
@@ -64,6 +73,7 @@ export function DraftWorkflowEditor({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<DraftWorkflowEditorState>(initial);
+  const [terminologyState, setTerminologyState] = useState(() => draftTerminologyStateFromDefinition(definition));
   const [schemaState, setSchemaState] = useState(() => draftCaseSchemaStateFromDefinition(definition));
   const [semanticState, setSemanticState] = useState(() => draftCaseSemanticsStateFromDefinition(definition));
   const [revision, setRevision] = useState(initialRevision);
@@ -72,6 +82,10 @@ export function DraftWorkflowEditor({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const errors = useMemo(() => validateDraftWorkflowEditorState(state), [state]);
+  const terminologyErrors = useMemo(
+    () => validateDraftTerminologyEditorState(terminologyState, state.defaultLocale),
+    [terminologyState, state.defaultLocale],
+  );
   const schemaErrors = useMemo(() => validateDraftCaseSchemaEditorState(schemaState), [schemaState]);
   const availableAttributeKeys = useMemo(() => caseSchemaFieldKeys(schemaState), [schemaState]);
   const semanticErrors = useMemo(
@@ -79,6 +93,7 @@ export function DraftWorkflowEditor({
     [semanticState, availableAttributeKeys],
   );
   const invalid = hasDraftWorkflowEditorErrors(errors)
+    || hasDraftTerminologyEditorErrors(terminologyErrors)
     || hasDraftCaseSchemaEditorErrors(schemaErrors)
     || hasDraftCaseSemanticsEditorErrors(semanticErrors);
 
@@ -149,7 +164,10 @@ export function DraftWorkflowEditor({
             expectedRevision: revision,
             definition: applyDraftCaseSemanticsEditorState(
               applyDraftCaseSchemaEditorState(
-                applyDraftWorkflowEditorState(definition, state),
+                applyDraftTerminologyEditorState(
+                  applyDraftWorkflowEditorState(definition, state),
+                  terminologyState,
+                ),
                 schemaState,
               ),
               semanticState,
@@ -200,6 +218,7 @@ export function DraftWorkflowEditor({
           disabled={saving}
           onClick={() => {
             setState(initial);
+            setTerminologyState(draftTerminologyStateFromDefinition(definition));
             setSchemaState(draftCaseSchemaStateFromDefinition(definition));
             setSemanticState(draftCaseSemanticsStateFromDefinition(definition));
             setEditing(false);
@@ -255,6 +274,137 @@ export function DraftWorkflowEditor({
           {validated && errors.workType ? <div style={errorStyle}>{errors.workType}</div> : null}
         </label>
       </div>
+
+      <section aria-labelledby="terminology-editor-title" style={{ marginTop: 20 }}>
+        <div>
+          <h3 id="terminology-editor-title" style={{ margin: 0 }}>Industry terminology</h3>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>
+            Customize vocabulary without changing canonical concept identity, authorization, or persisted keys.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+          {terminologyState.concepts.map((concept, conceptIndex) => {
+            const updateConcept = (patch: Partial<DraftTerminologyConceptState>) => {
+              setValidated(false);
+              setSaveError(null);
+              setTerminologyState((current) => ({
+                concepts: current.concepts.map((item, i) => i === conceptIndex ? { ...item, ...patch } : item),
+              }));
+            };
+            const conceptPath = `concepts[${conceptIndex}]`;
+            return (
+              <fieldset
+                key={concept.conceptKey}
+                disabled={saving}
+                style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}
+              >
+                <legend style={{ fontWeight: 700 }}>{concept.conceptKey}</legend>
+                <div style={{ color: '#64748b', fontSize: 12 }}>
+                  Canonical concept key — stable and not editable.
+                </div>
+
+                <label style={{ display: 'block', marginTop: 10 }}>
+                  <span>Aliases (comma separated)</span>
+                  <input
+                    style={inputStyle}
+                    value={concept.aliases.join(', ')}
+                    onChange={(event) => updateConcept({
+                      aliases: event.target.value.split(',').map((value) => value.trim()),
+                    })}
+                  />
+                  {validated && terminologyIssueForPath(terminologyErrors, `${conceptPath}.aliases[0]`)
+                    ? <div style={errorStyle}>Aliases must be unique and non-empty.</div>
+                    : null}
+                </label>
+
+                <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                  {concept.labels.map((label, labelIndex) => {
+                    const labelPath = `${conceptPath}.labels[${labelIndex}]`;
+                    const updateLabel = (
+                      patch: Partial<{ locale: string; singular: string; plural: string }>,
+                    ) => {
+                      updateConcept({
+                        labels: concept.labels.map((item, i) => i === labelIndex ? { ...item, ...patch } : item),
+                      });
+                    };
+                    return (
+                      <fieldset
+                        key={labelIndex}
+                        style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 10 }}
+                      >
+                        <legend>Locale label {labelIndex + 1}</legend>
+                        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                          <label>
+                            <span>Locale</span>
+                            <input
+                              style={inputStyle}
+                              value={label.locale}
+                              onChange={(event) => updateLabel({ locale: event.target.value })}
+                            />
+                            {validated && terminologyIssueForPath(terminologyErrors, `${labelPath}.locale`)
+                              ? <div style={errorStyle}>Use a valid, unique locale.</div>
+                              : null}
+                          </label>
+                          <label>
+                            <span>Singular</span>
+                            <input
+                              style={inputStyle}
+                              value={label.singular}
+                              onChange={(event) => updateLabel({ singular: event.target.value })}
+                            />
+                            {validated && terminologyIssueForPath(terminologyErrors, `${labelPath}.singular`)
+                              ? <div style={errorStyle}>Singular label is required.</div>
+                              : null}
+                          </label>
+                          <label>
+                            <span>Plural</span>
+                            <input
+                              style={inputStyle}
+                              value={label.plural}
+                              onChange={(event) => updateLabel({ plural: event.target.value })}
+                            />
+                            {validated && terminologyIssueForPath(terminologyErrors, `${labelPath}.plural`)
+                              ? <div style={errorStyle}>Plural label is required.</div>
+                              : null}
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          style={{ marginTop: 8 }}
+                          onClick={() => updateConcept({
+                            labels: concept.labels.filter((_, i) => i !== labelIndex),
+                          })}
+                        >
+                          Remove locale
+                        </button>
+                      </fieldset>
+                    );
+                  })}
+                </div>
+
+                {validated && terminologyIssueForPath(terminologyErrors, `${conceptPath}.labels`)
+                  ? <div style={errorStyle}>A label for the default locale is required.</div>
+                  : null}
+
+                <button
+                  type="button"
+                  style={{ marginTop: 10 }}
+                  onClick={() => updateConcept({
+                    labels: [...concept.labels, {
+                      locale: state.defaultLocale,
+                      singular: '',
+                      plural: '',
+                    }],
+                  })}
+                >
+                  Add locale label
+                </button>
+              </fieldset>
+            );
+          })}
+        </div>
+      </section>
 
       <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
         {state.stages.map((stage, index) => (
