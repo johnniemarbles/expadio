@@ -75,7 +75,6 @@ test('DENTEX Lead conversion preserves Lead owner and projects it to workflow ow
       )).rows[0];
 
       const treatmentOwnerSubjectId = resolveTreatmentOwnerSubjectId({
-        explicitOwnerSubjectId: null,
         leadOwnerSubjectId: lead.owner_subject_id,
         conversionActorSubjectId: converter,
       });
