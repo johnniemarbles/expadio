@@ -44,6 +44,8 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Internal verified provider webhook ingestion implemented.
 - [x] Verified Resend webhook HTTP route implemented.
 - [x] Demo/default webhook fallbacks removed from production route.
+- [x] Provider webhook lifecycle transition matrix implemented.
+- [x] Out-of-order provider lifecycle events recorded without stale state regression.
 
 ### Observability
 
@@ -60,13 +62,13 @@ This checklist is the durable project memory for autonomous execution. Update it
 
 ### Provider lifecycle transition hardening
 
-- [ ] Define explicit communication delivery state transition matrix.
-- [ ] Add database-level or application-level allowed transition guard.
-- [ ] Add tests for duplicate provider webhooks.
+- [x] Define explicit communication delivery state transition matrix.
+- [x] Add database-level or application-level allowed transition guard.
+- [x] Add tests for duplicate provider webhooks.
 - [ ] Add tests for replayed provider webhooks.
-- [ ] Add tests for out-of-order lifecycle events.
-- [ ] Add tests for terminal-state behavior.
-- [ ] Confirm canonical semantics for `DELIVERED -> BOUNCED` and `BOUNCED -> DELIVERED`.
+- [x] Add tests for out-of-order lifecycle events.
+- [x] Add tests for terminal-state behavior.
+- [x] Confirm canonical semantics for `DELIVERED -> BOUNCED` and `BOUNCED -> DELIVERED`.
 
 ### Execution health and monitoring
 
