@@ -163,6 +163,21 @@ export async function claimDomainEventOutboxBatch(
             OR
             (status = 'CLAIMED' AND claim_expires_at <= $5)
           )
+          AND NOT EXISTS (
+            SELECT 1
+              FROM platform.domain_event_outbox earlier
+             WHERE earlier.tenant_id = platform.domain_event_outbox.tenant_id
+               AND earlier.partition_key = platform.domain_event_outbox.partition_key
+               AND earlier.outbox_id <> platform.domain_event_outbox.outbox_id
+               AND earlier.status <> 'PUBLISHED'
+               AND (
+                 earlier.created_at < platform.domain_event_outbox.created_at
+                 OR (
+                   earlier.created_at = platform.domain_event_outbox.created_at
+                   AND earlier.outbox_id < platform.domain_event_outbox.outbox_id
+                 )
+               )
+          )
         ORDER BY available_at, created_at, outbox_id
         FOR UPDATE SKIP LOCKED
         LIMIT $2
@@ -307,7 +322,6 @@ export async function failDomainEventOutboxClaim(
     readonly tenantId: string;
     readonly outboxId: string;
     readonly claimToken: string;
-    readonly attempts: number;
     readonly error: string;
     readonly maxAttempts?: number;
     readonly retryDelaySeconds?: number;
@@ -324,23 +338,38 @@ export async function failDomainEventOutboxClaim(
   const error = input.error.trim();
   if (error === '') throw new Error('DOMAIN_EVENT_OUTBOX_ERROR_REQUIRED');
 
-  const state = input.attempts >= maxAttempts ? 'DEAD' : 'FAILED';
-  await updateClaimedRow(client, {
-    tenantId: input.tenantId,
-    outboxId: input.outboxId,
-    claimToken: input.claimToken,
-    now: failedAt,
-    sqlSet: `status = $5,
-             available_at = CASE
-               WHEN $5 = 'FAILED'
-               THEN $6 + make_interval(secs => $7)
-               ELSE available_at
-             END,
-             claim_token = NULL,
-             claim_expires_at = NULL,
-             last_error = $8,
-             updated_at = $6`,
-    values: [state, failedAt, retryDelaySeconds, error],
-  });
-  return state;
+  const result = await client.query<{ readonly status: 'FAILED' | 'DEAD' }>(
+    `UPDATE platform.domain_event_outbox
+        SET status = CASE WHEN attempts >= $5 THEN 'DEAD' ELSE 'FAILED' END,
+            available_at = CASE
+              WHEN attempts < $5
+              THEN $6 + make_interval(secs => $7)
+              ELSE available_at
+            END,
+            claim_token = NULL,
+            claim_expires_at = NULL,
+            last_error = $8,
+            updated_at = $6
+      WHERE tenant_id = $1::uuid
+        AND outbox_id = $2::uuid
+        AND status = 'CLAIMED'
+        AND claim_token = $3::uuid
+        AND claim_expires_at > $4
+      RETURNING status`,
+    [
+      input.tenantId,
+      input.outboxId,
+      input.claimToken,
+      failedAt,
+      maxAttempts,
+      failedAt,
+      retryDelaySeconds,
+      error,
+    ],
+  );
+  const row = result.rows[0];
+  if (row === undefined) {
+    throw new Error('DOMAIN_EVENT_OUTBOX_CLAIM_LOST');
+  }
+  return row.status;
 }
