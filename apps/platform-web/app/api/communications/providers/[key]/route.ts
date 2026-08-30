@@ -6,7 +6,7 @@ import {
 } from '../../../../../lib/request-context';
 
 /**
- * Design spec §0.2 G5 — un-scaffolding.
+ * Design spec §0.2 G5 — remove hardcoded tenant context.
  *
  * PATCH and DELETE previously hardcoded bootstrap tenant context and resolved
  * context with `auth()` directly, so a mutation could run against the wrong

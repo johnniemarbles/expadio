@@ -5,15 +5,15 @@ import { authenticateAndResolveContext } from '@expadio/iam';
 import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
 
 /**
- * Design spec §0.2 G5 — un-scaffolding.
+ * Design spec §0.2 G5 — remove hardcoded tenant context.
  *
  * Communications API routes used to hardcode tenant and organization
- * identifiers. That was scaffolding presenting as wiring. Tenant selection now
- * arrives on the `x-expadio-tenant-id` / `x-expadio-organization-id` request
- * headers, which `proxy.ts` injects from the shell's active workspace
- * (`?account=<tenantId>&org=<organizationId>`, with a cookie fallback).
- * Membership is verified below, so the header is a *request* for a tenant, not
- * proof of access.
+ * identifiers. That made wiring appear complete when requests were not yet
+ * using the caller's selected workspace. Tenant selection now arrives on the
+ * `x-expadio-tenant-id` / `x-expadio-organization-id` request headers, which
+ * `proxy.ts` injects from the shell's active workspace (`?account=<tenantId>&org=<organizationId>`,
+ * with a cookie fallback). Membership is verified below, so the header is a
+ * *request* for a tenant, not proof of access.
  *
  * Cold requests with no selected workspace now fail closed instead of silently
  * resolving to a bootstrap workspace.
@@ -41,7 +41,7 @@ export class ContextDenied extends Error {
 }
 
 /**
- * Resolves the caller's real tenant. Never substitutes a scaffold tenant.
+ * Resolves the caller's real tenant. Never substitutes a bootstrap tenant.
  *
  * Tenant selection comes from an explicit header the shell sets from the
  * active workspace; membership is then verified against the IAM spine, so a
