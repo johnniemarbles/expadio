@@ -34,6 +34,8 @@ test('communication health route is governed, tenant-scoped, and read-only', () 
 test('communication health key vocabulary covers the P0 communication rollups', () => {
   for (const required of [
     'communication_deliveries_in_flight',
+    'communication_deliveries_stuck_pending',
+    'communication_deliveries_expired_claims',
     'communication_deliveries_negative_terminal',
     'communication_provider_attempt_failures',
     'communication_provider_webhooks_negative',

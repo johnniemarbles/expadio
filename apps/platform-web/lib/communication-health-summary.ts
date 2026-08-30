@@ -4,6 +4,8 @@ export type CommunicationHealthStatus = 'WATCH' | 'DEGRADED' | 'CRITICAL';
 
 export type CommunicationHealthKey =
   | 'communication_deliveries_in_flight'
+  | 'communication_deliveries_stuck_pending'
+  | 'communication_deliveries_expired_claims'
   | 'communication_deliveries_negative_terminal'
   | 'communication_provider_attempt_failures'
   | 'communication_provider_webhooks_negative'
@@ -36,6 +38,8 @@ export interface CommunicationHealthSummaryFilter {
 
 export const COMMUNICATION_HEALTH_KEYS: readonly CommunicationHealthKey[] = [
   'communication_deliveries_in_flight',
+  'communication_deliveries_stuck_pending',
+  'communication_deliveries_expired_claims',
   'communication_deliveries_negative_terminal',
   'communication_provider_attempt_failures',
   'communication_provider_webhooks_negative',

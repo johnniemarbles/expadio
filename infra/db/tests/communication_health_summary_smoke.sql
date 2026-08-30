@@ -10,7 +10,8 @@ SELECT set_config('app.tenant_id', '97979797-9797-9797-9797-979797979797', false
 INSERT INTO platform.communication_deliveries (
   delivery_id, tenant_id, idempotency_key, channel, connector_key,
   adapter_key, provider_message_id, state, attempt_count,
-  requested_at, accepted_at, updated_at, last_reason_code
+  requested_at, accepted_at, updated_at, last_reason_code,
+  next_attempt_at, claim_token, claim_expires_at
 ) VALUES
   (
     '97970000-0000-0000-0000-000000000001',
@@ -25,7 +26,46 @@ INSERT INTO platform.communication_deliveries (
     '2026-08-30T15:00:00Z',
     '2026-08-30T15:00:01Z',
     '2026-08-30T15:00:02Z',
-    'PROVIDER_ACCEPTED'
+    'PROVIDER_ACCEPTED',
+    clock_timestamp() + interval '10 minutes',
+    NULL,
+    NULL
+  ),
+  (
+    '97970000-0000-0000-0000-000000000004',
+    '97979797-9797-9797-9797-979797979797',
+    'communication-health-stuck-pending',
+    'email',
+    'resend-health-a',
+    'resend-email-v1',
+    NULL,
+    'PENDING',
+    2,
+    '2026-08-30T14:00:00Z',
+    NULL,
+    '2026-08-30T14:00:02Z',
+    'DELIVERY_RETRY_DUE',
+    clock_timestamp() - interval '30 minutes',
+    NULL,
+    NULL
+  ),
+  (
+    '97970000-0000-0000-0000-000000000005',
+    '97979797-9797-9797-9797-979797979797',
+    'communication-health-expired-claim',
+    'email',
+    'resend-health-a',
+    'resend-email-v1',
+    'provider-health-expired-claim',
+    'SENT',
+    1,
+    '2026-08-30T14:10:00Z',
+    '2026-08-30T14:10:01Z',
+    '2026-08-30T14:10:02Z',
+    'CLAIM_EXPIRED',
+    clock_timestamp() + interval '10 minutes',
+    '97970000-0000-0000-0000-000000000099',
+    clock_timestamp() - interval '5 minutes'
   ),
   (
     '97970000-0000-0000-0000-000000000002',
@@ -40,7 +80,10 @@ INSERT INTO platform.communication_deliveries (
     '2026-08-30T15:01:00Z',
     '2026-08-30T15:01:01Z',
     '2026-08-30T15:01:02Z',
-    'PROVIDER_WEBHOOK_BOUNCED'
+    'PROVIDER_WEBHOOK_BOUNCED',
+    clock_timestamp() + interval '10 minutes',
+    NULL,
+    NULL
   ),
   (
     '97970000-0000-0000-0000-000000000003',
@@ -55,7 +98,10 @@ INSERT INTO platform.communication_deliveries (
     '2026-08-30T15:02:00Z',
     '2026-08-30T15:02:01Z',
     '2026-08-30T15:02:02Z',
-    'PROVIDER_ACCEPTED'
+    'PROVIDER_ACCEPTED',
+    clock_timestamp() + interval '10 minutes',
+    NULL,
+    NULL
   );
 
 INSERT INTO platform.communication_provider_attempts (
@@ -125,7 +171,7 @@ SELECT set_config('app.tenant_id', '98989898-9898-9898-9898-989898989898', false
 INSERT INTO platform.communication_deliveries (
   delivery_id, tenant_id, idempotency_key, channel, connector_key,
   adapter_key, provider_message_id, state, attempt_count,
-  requested_at, accepted_at, updated_at, last_reason_code
+  requested_at, accepted_at, updated_at, last_reason_code, next_attempt_at
 ) VALUES (
   '98980000-0000-0000-0000-000000000001',
   '98989898-9898-9898-9898-989898989898',
@@ -139,7 +185,8 @@ INSERT INTO platform.communication_deliveries (
   '2026-08-30T15:00:00Z',
   '2026-08-30T15:00:01Z',
   '2026-08-30T15:00:02Z',
-  'PROVIDER_ACCEPTED'
+  'PROVIDER_ACCEPTED',
+  clock_timestamp() + interval '10 minutes'
 );
 
 SELECT set_config('app.tenant_id', '97979797-9797-9797-9797-979797979797', false);
@@ -148,14 +195,17 @@ DO $$
 DECLARE
   actual_keys text[];
   other_tenant_count integer;
+  in_flight_count integer;
 BEGIN
   SELECT array_agg(health_key ORDER BY health_key)
     INTO actual_keys
     FROM platform.communication_health_summary;
 
   IF actual_keys IS DISTINCT FROM ARRAY[
+    'communication_deliveries_expired_claims',
     'communication_deliveries_in_flight',
     'communication_deliveries_negative_terminal',
+    'communication_deliveries_stuck_pending',
     'communication_provider_attempt_failures',
     'communication_provider_webhooks_negative',
     'communication_provider_webhooks_unmatched'
@@ -163,12 +213,35 @@ BEGIN
     RAISE EXCEPTION 'unexpected communication health keys: %', actual_keys;
   END IF;
 
-  IF EXISTS (
+  SELECT item_count
+    INTO in_flight_count
+    FROM platform.communication_health_summary
+   WHERE health_key = 'communication_deliveries_in_flight';
+
+  IF in_flight_count <> 3 THEN
+    RAISE EXCEPTION 'expected three in-flight rows including stuck open rows, got %', in_flight_count;
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1
       FROM platform.communication_health_summary
-     WHERE item_count <> 1
+     WHERE health_key = 'communication_deliveries_stuck_pending'
+       AND health_status = 'DEGRADED'
+       AND item_count = 1
+       AND metadata ->> 'condition' = 'next_attempt_at older than 15 minutes'
   ) THEN
-    RAISE EXCEPTION 'expected one item per communication health key for tenant A';
+    RAISE EXCEPTION 'stuck pending delivery health row missing or malformed';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM platform.communication_health_summary
+     WHERE health_key = 'communication_deliveries_expired_claims'
+       AND health_status = 'CRITICAL'
+       AND item_count = 1
+       AND metadata -> 'states' ? 'SENT'
+  ) THEN
+    RAISE EXCEPTION 'expired claim delivery health row missing or malformed';
   END IF;
 
   IF NOT EXISTS (
