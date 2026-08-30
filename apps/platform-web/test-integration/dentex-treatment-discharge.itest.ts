@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
+import { DENTEX_PACK, resolveRelationshipDefinitions } from '@expadio/industry-packs';
+import { PostgresEntityRelationshipRepository } from '@expadio/postgres-runtime/entity-relationship';
 import {
   makerForStage,
   recordCaseDecision,
@@ -154,12 +156,36 @@ test('DENTEX Treatment requires Care plan + APPROVE before discharge', async () 
     // The active Agreement is the canonical CRM object that DENTEX names a
     // Care plan. A null monetary value keeps this test focused on clinical
     // decision authority rather than threshold/delegation policy.
-    await c.query(
+    const carePlanId = (await c.query(
       `INSERT INTO platform.crm_agreements
          (tenant_id, account_id, title, status, value_minor_units, currency)
-       VALUES ($1::uuid, $2::uuid, 'Crown care plan', 'ACTIVE', NULL, 'USD')`,
+       VALUES ($1::uuid, $2::uuid, 'Crown care plan', 'ACTIVE', NULL, 'USD')
+       RETURNING agreement_id`,
       [tenantId, practiceId],
-    );
+    )).rows[0].agreement_id as string;
+
+    const carePlanDefinition = resolveRelationshipDefinitions(DENTEX_PACK, 'crm.case')
+      .find((definition) => definition.key === 'care_plan');
+    assert.ok(carePlanDefinition);
+
+    await c.query('BEGIN');
+    try {
+      const relationships = new PostgresEntityRelationshipRepository(c);
+      await relationships.replaceSingle({
+        tenantId,
+        definition: carePlanDefinition,
+        sourceEntityId: treatmentId,
+        target: {
+          entityType: 'crm.agreement',
+          entityId: carePlanId,
+        },
+        actorSubjectId: mover,
+      });
+      await c.query('COMMIT');
+    } catch (error) {
+      await c.query('ROLLBACK');
+      throw error;
+    }
 
     const maker = await makerForStage(c, {
       tenantId,

@@ -45,9 +45,17 @@ export async function evaluateCrmCaseSemanticTransition(
     `SELECT c.attributes, c.account_id, c.contact_id, c.industry_pack_vertical_key,
             EXISTS (
               SELECT 1
-                FROM platform.crm_agreements agreement
-               WHERE agreement.tenant_id = c.tenant_id
-                 AND agreement.account_id = c.account_id
+                FROM platform.entity_relationships relationship
+                JOIN platform.crm_agreements agreement
+                  ON agreement.tenant_id = relationship.tenant_id
+                 AND agreement.agreement_id::text = relationship.target_entity_id
+               WHERE relationship.tenant_id = c.tenant_id
+                 AND relationship.source_entity_type = 'crm.case'
+                 AND relationship.source_entity_id = c.case_id::text
+                 AND relationship.relationship_key = 'care_plan'
+                 AND relationship.target_entity_type = 'crm.agreement'
+                 AND relationship.status = 'ACTIVE'
+                 AND relationship.valid_until IS NULL
                  AND agreement.status = 'ACTIVE'
             ) AS has_active_agreement
        FROM platform.crm_cases c

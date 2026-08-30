@@ -316,6 +316,13 @@ const DENTEX_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
     targetEntityTypes: ['iam.subject'],
     cardinality: 'ZERO_OR_ONE',
   },
+  {
+    key: 'care_plan',
+    label: 'Care plan',
+    sourceEntityType: 'crm.case',
+    targetEntityTypes: ['crm.agreement'],
+    cardinality: 'ZERO_OR_ONE',
+  },
 ];
 
 export const DENTEX_PACK: IndustryPack = {

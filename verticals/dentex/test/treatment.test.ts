@@ -53,6 +53,6 @@ test('Treatment remains a typed projection over canonical CRM identities', () =>
   };
 
   assert.equal(treatment.attributes.urgency, 'Priority');
-  assert.equal(treatment.practiceId.startsWith('3333'), true);
-  assert.equal(treatment.patientId.startsWith('4444'), true);
+  assert.equal(treatment.practiceId?.startsWith('3333'), true);
+  assert.equal(treatment.patientId?.startsWith('4444'), true);
 });

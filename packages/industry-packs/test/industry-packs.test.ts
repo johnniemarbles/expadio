@@ -218,6 +218,13 @@ test('DENTEX declares provider through the horizontal Relationship Fabric', () =
     targetEntityTypes: ['iam.subject'],
     cardinality: 'ZERO_OR_ONE',
   });
+  assert.deepEqual(definitions.find((definition) => definition.key === 'care_plan'), {
+    key: 'care_plan',
+    label: 'Care plan',
+    sourceEntityType: 'crm.case',
+    targetEntityTypes: ['crm.agreement'],
+    cardinality: 'ZERO_OR_ONE',
+  });
 
   // The neutral engine and a pack that does not declare this relationship do
   // not manufacture a provider role.
