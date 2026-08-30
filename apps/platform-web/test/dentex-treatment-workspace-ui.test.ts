@@ -34,8 +34,9 @@ test('Treatment readiness is generated from executable Pack semantics and workfl
 });
 
 test('workspace actions reuse governed workflow APIs', () => {
-  assert.match(client, /\/workflow\/participants/);
-  assert.match(client, /\/workflow\/decision/);
+  assert.match(client, /const workflowUrl =/);
+  assert.match(client, /\$\{workflowUrl\}\/participants/);
+  assert.match(client, /\$\{workflowUrl\}\/decision/);
   assert.match(client, /expectedRevision/);
   assert.match(client, /toStageKey/);
   assert.match(client, /Record approval/);
