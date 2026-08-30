@@ -1,40 +1,37 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
+import { dbPool } from '../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
 import type { PlatformOrganization } from '../../../lib/contracts';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
-  const resolve = () =>
-    authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
-
   try {
-    const effectiveContext = await resolve();
+    const effectiveContext = await resolveRequestContext(request);
+    const organizationId = effectiveContext.organizationId;
+
+    if (!organizationId) {
+      const denied: DeniedResult = {
+        denied: true,
+        reasonKey: 'ORGANIZATION_REQUIRED',
+        message: 'Select an organization to continue.'
+      };
+      return NextResponse.json(denied, { status: 400 });
+    }
+
     const result = await dbPool.query(
       `SELECT organization_id, name, parent_organization_id, organization_kind, status 
        FROM platform.organizations 
        WHERE tenant_id = $1 AND organization_id = $2`,
-      [effectiveContext.tenantId, effectiveContext.organizationId]
+      [effectiveContext.tenantId, organizationId]
     );
 
     if (result.rowCount === 0) {
-      return NextResponse.json({
-        id: effectiveContext.organizationId,
-        name: 'Unknown Organization',
-        environment: 'production',
-        level: 'platform',
-        parentId: null
-      } as PlatformOrganization);
+      const denied: DeniedResult = {
+        denied: true,
+        reasonKey: 'ORGANIZATION_NOT_FOUND',
+        message: 'The selected organization was not found in this workspace.'
+      };
+      return NextResponse.json(denied, { status: 404 });
     }
 
     const row = result.rows[0];
@@ -49,7 +46,7 @@ export async function GET(request: Request) {
     return NextResponse.json(org);
   } catch (error: any) {
     console.error("Organizations API Error:", error);
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: error.message || 'Unknown error' };
-    return NextResponse.json(denied, { status: 500 });
+    const denied = deniedResponse(error);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
