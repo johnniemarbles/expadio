@@ -17,6 +17,6 @@ test('domain event runner is bounded and scheduler neutral', () => {
 });
 
 test('runner rejects invalid limits before processing', () => {
-  assert.match(runner, /DOMAIN_EVENT_ACTION_RUNNER_LIMIT_MUST_BE_POSITIVE_INTEGER/);
-  assert.match(runner, /positiveInteger\(input\.limit/);
+  assert.match(runner, /throw new Error\(`\$\{field\}_MUST_BE_POSITIVE_INTEGER`\)/);
+  assert.match(runner, /positiveInteger\(input\.limit, 'DOMAIN_EVENT_ACTION_RUNNER_LIMIT'\)/);
 });
