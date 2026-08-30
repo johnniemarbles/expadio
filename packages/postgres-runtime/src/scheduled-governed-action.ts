@@ -78,6 +78,14 @@ const SELECT_COLUMNS = `
   claim_expires_at, attempt_count
 `;
 
+const TARGET_SELECT_COLUMNS = `
+  target.scheduled_action_id, target.tenant_id, target.parent_action_intent_id,
+  target.due_at, target.next_attempt_at, target.target_executor_class,
+  target.target_action_key, target.target_configuration, target.target_idempotency_key,
+  target.state, target.child_action_intent_id, target.claim_token,
+  target.claim_expires_at, target.attempt_count
+`;
+
 export async function persistScheduledGovernedAction(
   client: ScheduledGovernedActionSqlClient,
   input: {
@@ -159,7 +167,7 @@ export async function claimDueScheduledGovernedAction(
             updated_at = $2::timestamptz
        FROM candidate
       WHERE target.scheduled_action_id = candidate.scheduled_action_id
-      RETURNING ${SELECT_COLUMNS}`,
+      RETURNING ${TARGET_SELECT_COLUMNS}`,
     [input.tenantId, now, claimToken, claimExpiresAt],
   );
   const row = result.rows[0];
