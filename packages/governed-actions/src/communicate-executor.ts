@@ -115,7 +115,6 @@ function parsePurpose(value: unknown): CommunicationPurpose {
     'transactional',
     'marketing',
     'system',
-    'security',
   ];
   if (!(allowed as readonly string[]).includes(purpose)) {
     throw new Error('COMMUNICATE_ACTION_CONFIGURATION_PURPOSE_INVALID');
@@ -155,27 +154,26 @@ export function parseCommunicateActionConfiguration(
     throw new Error('COMMUNICATE_ACTION_CONFIGURATION_CONSENT_REQUIRED_INVALID');
   }
 
+  const channel = parseChannel(raw.channel);
+  const locale = optionalText(raw.locale);
+  const organizationId = optionalText(raw.organizationId);
+  const requiredRegions = stringArray(raw.requiredRegions);
+  const requiredResidencyTags = stringArray(raw.requiredResidencyTags);
+  const requiredComplianceTags = stringArray(raw.requiredComplianceTags);
+
   return {
     triggerKey: requiredText(raw.triggerKey, 'triggerKey'),
     recipient: parseRecipient(raw.recipient),
     variables: variables as Readonly<Record<string, unknown>>,
     purpose: parsePurpose(raw.purpose),
     consentRequired: raw.consentRequired,
-    ...(parseChannel(raw.channel) === undefined ? {} : { channel: parseChannel(raw.channel) }),
-    ...(optionalText(raw.locale) === undefined ? {} : { locale: optionalText(raw.locale) }),
-    ...(optionalText(raw.organizationId) === undefined
-      ? {}
-      : { organizationId: optionalText(raw.organizationId) }),
+    ...(channel === undefined ? {} : { channel }),
+    ...(locale === undefined ? {} : { locale }),
+    ...(organizationId === undefined ? {} : { organizationId }),
     capabilityKey: requiredText(raw.capabilityKey, 'capabilityKey'),
-    ...(stringArray(raw.requiredRegions) === undefined
-      ? {}
-      : { requiredRegions: stringArray(raw.requiredRegions) }),
-    ...(stringArray(raw.requiredResidencyTags) === undefined
-      ? {}
-      : { requiredResidencyTags: stringArray(raw.requiredResidencyTags) }),
-    ...(stringArray(raw.requiredComplianceTags) === undefined
-      ? {}
-      : { requiredComplianceTags: stringArray(raw.requiredComplianceTags) }),
+    ...(requiredRegions === undefined ? {} : { requiredRegions }),
+    ...(requiredResidencyTags === undefined ? {} : { requiredResidencyTags }),
+    ...(requiredComplianceTags === undefined ? {} : { requiredComplianceTags }),
   };
 }
 
