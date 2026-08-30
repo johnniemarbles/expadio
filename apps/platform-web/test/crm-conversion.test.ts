@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const convertRoute = read("../app/api/crm/leads/[id]/convert/route.ts");
 const client = read("../app/(shell)/crm/CrmClient.tsx");
+const ownerResolution = read("../lib/crm-owner-resolution.ts");
 
 test("conversion is a governed, tenant-scoped, atomic transaction", () => {
   assert.match(convertRoute, /export async function POST/);
@@ -64,9 +65,12 @@ test("converted Treatment starts and binds the existing crm.case workflow atomic
 });
 
 test("Treatment ownership is resolved independently from the conversion actor", () => {
-  assert.match(convertRoute, /explicitOwnerSubjectId/);
-  assert.match(convertRoute, /explicitOwnerSubjectId \?\? leadRow\.owner_subject_id \?\? context\.subjectId/);
-  assert.match(convertRoute, /treatmentOwnerSubjectId/);
+  assert.match(convertRoute, /resolveTreatmentOwnerSubjectId/);
+  assert.match(convertRoute, /leadOwnerSubjectId: leadRow\.owner_subject_id/);
+  assert.match(convertRoute, /conversionActorSubjectId: context\.subjectId/);
+  assert.match(ownerResolution, /explicitOwnerSubjectId/);
+  assert.match(ownerResolution, /leadOwnerSubjectId/);
+  assert.match(ownerResolution, /conversionActorSubjectId/);
 });
 
 test("persisted Treatment owner is mirrored into the initial workflow assignment", () => {
