@@ -52,6 +52,13 @@ test('tenant execution lease blocks overlap and expired runs become LEASE_LOST',
       ['BUSY', first.lease.runId],
     );
 
+    assert.equal(await finishTenantExecutionRun(c, {
+      lease: first.lease,
+      summary: null,
+      error: null,
+      finishedAt: new Date('2026-08-30T20:01:30.000Z'),
+    }), 'LEASE_LOST');
+
     const recovered = await acquireTenantExecutionLease(c, {
       tenantId,
       invocationId: randomUUID(),
