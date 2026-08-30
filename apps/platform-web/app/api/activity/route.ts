@@ -1,31 +1,11 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import type { ActivityItem } from '../../../lib/contracts';
-import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
+import { dbPool } from '../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'UNAUTHENTICATED',
-      message: 'User is not authenticated'
-    };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: '00000000-0000-0000-0000-000000000001',
-        organizationId: '00000000-0000-0000-0000-000000000002'
-      }
-    );
+    const effectiveContext = await resolveRequestContext(request);
 
     // Fetch Agent Run Events
     const agentEventsRes = await dbPool.query(
@@ -78,13 +58,6 @@ export async function GET(request: Request) {
     items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
     items = items.slice(0, 50); // Keep top 50
 
-    if (items.length === 0) {
-      return NextResponse.json([
-        { id: 'activity_live_1', actor: 'Platform System', action: 'provisioned membership', target: 'New user account', time: new Date().toISOString(), timeLabel: 'just now' },
-        { id: 'activity_live_2', actor: 'Knowledge Curator', action: 'indexed document', target: 'Policy handbook', time: new Date(Date.now() - 3600000).toISOString(), timeLabel: '1 hr ago' }
-      ] as ActivityItem[]);
-    }
-
     // Assign dynamic time labels for UI Polish
     const now = Date.now();
     items.forEach(item => {
@@ -101,11 +74,7 @@ export async function GET(request: Request) {
     return NextResponse.json(items);
   } catch (error: any) {
     console.error("Activity API Error:", error);
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'INTERNAL_ERROR',
-      message: error.message || 'An unknown error occurred.'
-    };
-    return NextResponse.json(denied, { status: 500 });
+    const denied = deniedResponse(error);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }

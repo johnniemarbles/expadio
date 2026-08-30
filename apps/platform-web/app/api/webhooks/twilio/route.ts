@@ -5,19 +5,11 @@ import { PostgresCommunicationDeliveryRepository } from '@expadio/postgres-runti
 import { dbPool } from '../../../../lib/iam-adapter';
 
 const deliveryRepository = new PostgresCommunicationDeliveryRepository(dbPool);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-const normalizer = new TwilioWebhookNormalizer({
-  adapterKey: 'twilio-sms-whatsapp-v1', // Can be either sms or voice depending on the routing.
-  resolveAuthToken: async (connectorKey: string) => {
-    return process.env.TWILIO_AUTH_TOKEN;
-  },
-  getWebhookUrl: (request) => {
-    // Determine the original URL for signature validation
-    return process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/twilio`
-      : 'https://example.com/api/webhooks/twilio'; 
-  },
-});
+function badRequest(error: string, reason: string) {
+  return NextResponse.json({ error, reason }, { status: 400 });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,8 +21,16 @@ export async function POST(req: NextRequest) {
     });
 
     const searchParams = req.nextUrl.searchParams;
-    const tenantId = searchParams.get('tenantId') || '00000000-0000-0000-0000-000000000001';
-    const connectorKey = searchParams.get('connectorKey') || 'default-twilio';
+    const tenantId = searchParams.get('tenantId')?.trim() ?? '';
+    const connectorKey = searchParams.get('connectorKey')?.trim() ?? '';
+
+    if (!uuidPattern.test(tenantId)) {
+      return badRequest('TENANT_ID_REQUIRED', 'Twilio provider webhooks must include a valid tenantId.');
+    }
+
+    if (connectorKey.length === 0) {
+      return badRequest('CONNECTOR_KEY_REQUIRED', 'Twilio provider webhooks must include connectorKey.');
+    }
 
     // We can inject the exact URL into the normalizer if we update the normalizer interface,
     // but the options.getWebhookUrl handles it based on request object (if we attach it).
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     const normalizerWithUrl = new TwilioWebhookNormalizer({
       adapterKey: 'twilio-sms-whatsapp-v1',
-      resolveAuthToken: async (key: string) => process.env.TWILIO_AUTH_TOKEN,
+      resolveAuthToken: async () => process.env.TWILIO_AUTH_TOKEN,
       getWebhookUrl: () => req.url,
     });
 

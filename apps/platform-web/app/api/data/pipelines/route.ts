@@ -1,21 +1,10 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import { dbPool } from '../../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
-  const resolve = () => authenticateAndResolveContext(
-    { identityVerifier, membershipRepository },
-    { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-  );
   try {
-    const effectiveContext = await resolve();
+    const effectiveContext = await resolveRequestContext(request);
     // Query latest AI job execution pipelines
     const result = await dbPool.query(
       `SELECT j.job_id, j.operation, j.purpose, j.created_at,
@@ -36,17 +25,9 @@ export async function GET(request: Request) {
       totalStages: 1
     }));
 
-    // Fallback if empty DB
-    if (pipelines.length === 0) {
-      return NextResponse.json([
-        { id: 'pipe-001', name: 'Customer Sentiment Analysis', status: 'RUNNING', currentStage: 'CLASSIFY', totalStages: 1 },
-        { id: 'pipe-002', name: 'Invoice Data Extraction', status: 'SUCCEEDED', currentStage: 'EXTRACT', totalStages: 1 }
-      ]);
-    }
-
     return NextResponse.json(pipelines);
   } catch (error: any) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: error.message || 'Unknown error' };
-    return NextResponse.json(denied, { status: 500 });
+    const denied = deniedResponse(error);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
