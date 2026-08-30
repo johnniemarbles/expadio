@@ -39,3 +39,14 @@ test("CRM client offers a Convert action wired to the convert endpoint", () => {
   assert.match(client, /\/convert\$\{queryString\}/);
   assert.match(client, /ConvertModal/);
 });
+
+
+test("converted cases use the governed Industry Pack schema and provenance", () => {
+  assert.match(convertRoute, /PostgresIndustryPackRuntimeResolver/);
+  assert.match(convertRoute, /validateCaseAttributes\(resolveCaseSchema\(runtimePack\.pack\)/);
+  assert.match(convertRoute, /caseAttributes/);
+  assert.match(convertRoute, /attributes_schema_version/);
+  assert.match(convertRoute, /industry_pack_vertical_key/);
+  assert.match(convertRoute, /industry_pack_runtime_source/);
+  assert.match(convertRoute, /invalidCaseAttributes/);
+});
