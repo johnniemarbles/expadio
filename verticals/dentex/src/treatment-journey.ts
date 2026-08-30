@@ -7,7 +7,7 @@ import {
   type CaseAttributeValidation,
   type CaseStageSemanticEvaluation,
   type CrmCaseStage,
-} from '@expadio/industry-packs';
+} from '../../../packages/industry-packs/src/index.ts';
 
 export interface DentexTreatmentFacts {
   readonly stage: CrmCaseStage;
