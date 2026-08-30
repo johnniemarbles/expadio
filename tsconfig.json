@@ -14,45 +14,124 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@expadio/iam": ["packages/iam/src/index.ts"],
-      "@expadio/tenancy": ["packages/tenancy/src/index.ts"],
-      "@expadio/tenancy-persistence": ["packages/tenancy-persistence/src/index.ts"],
-      "@expadio/authorization": ["packages/authorization/src/index.ts"],
-      "@expadio/authorization-persistence": ["packages/authorization-persistence/src/index.ts"],
-      "@expadio/capabilities": ["packages/capabilities/src/index.ts"],
-      "@expadio/capability-persistence": ["packages/capability-persistence/src/index.ts"],
-      "@expadio/provider-registry": ["packages/provider-registry/src/index.ts"],
-      "@expadio/provider-registry/repository": ["packages/provider-registry/src/repository.ts"],
-      "@expadio/postgres-runtime": ["packages/postgres-runtime/src/index.ts"],
-      "@expadio/postgres-runtime/provider-registry": ["packages/postgres-runtime/src/provider-registry.ts"],
-      "@expadio/postgres-runtime/authorization": ["packages/postgres-runtime/src/authorization.ts"],
-      "@expadio/postgres-runtime/access-runtime": ["packages/postgres-runtime/src/access-runtime.ts"],
-      "@expadio/postgres-runtime/conversation": ["packages/postgres-runtime/src/conversation.ts"],
-      "@expadio/postgres-runtime/workflow": ["packages/postgres-runtime/src/workflow.ts"],
-      "@expadio/postgres-runtime/workflow-instance": ["packages/postgres-runtime/src/workflow-instance.ts"],
-      "@expadio/postgres-runtime/workflow-decision": ["packages/postgres-runtime/src/workflow-decision.ts"],
-      "@expadio/access-control": ["packages/access-control/src/index.ts"],
-      "@expadio/access-runtime": ["packages/access-runtime/src/index.ts"],
-      "@expadio/communication": ["packages/communication/src/index.ts"],
-      "@expadio/ai-gateway": ["packages/ai-gateway/src/index.ts"],
-      "@expadio/voice-gateway": ["packages/voice-gateway/src/index.ts"],
-      "@expadio/data-orchestrator": ["packages/data-orchestrator/src/index.ts"],
-      "@expadio/context-engine": ["packages/context-engine/src/index.ts"],
-      "@expadio/agent-runtime": ["packages/agent-runtime/src/index.ts"],
-      "@expadio/usage-metering": ["packages/usage-metering/src/index.ts"],
-      "@expadio/knowledge": ["packages/knowledge/src/index.ts"],
-      "@expadio/storage": ["packages/storage/src/index.ts"],
-      "@expadio/party": ["packages/party/src/index.ts"],
-      "@expadio/lead": ["packages/lead/src/index.ts"],
-      "@expadio/case": ["packages/case/src/index.ts"],
-      "@expadio/agreement": ["packages/agreement/src/index.ts"],
-      "@expadio/business-config": ["packages/business-config/src/index.ts"],
-      "@expadio/industry-packs": ["packages/industry-packs/src/index.ts"],
-      "@expadio/workflow": ["packages/workflow/src/index.ts"],
-      "@expadio/ui": ["packages/ui/src/index.ts"],
-      "@expadio/ui/tokens": ["packages/ui/src/tokens/index.css"],
-      "@expadio/ui/contracts": ["packages/ui/src/contracts.ts"]
+      "@expadio/iam": [
+        "packages/iam/src/index.ts"
+      ],
+      "@expadio/tenancy": [
+        "packages/tenancy/src/index.ts"
+      ],
+      "@expadio/tenancy-persistence": [
+        "packages/tenancy-persistence/src/index.ts"
+      ],
+      "@expadio/authorization": [
+        "packages/authorization/src/index.ts"
+      ],
+      "@expadio/authorization-persistence": [
+        "packages/authorization-persistence/src/index.ts"
+      ],
+      "@expadio/capabilities": [
+        "packages/capabilities/src/index.ts"
+      ],
+      "@expadio/capability-persistence": [
+        "packages/capability-persistence/src/index.ts"
+      ],
+      "@expadio/provider-registry": [
+        "packages/provider-registry/src/index.ts"
+      ],
+      "@expadio/provider-registry/repository": [
+        "packages/provider-registry/src/repository.ts"
+      ],
+      "@expadio/postgres-runtime": [
+        "packages/postgres-runtime/src/index.ts"
+      ],
+      "@expadio/postgres-runtime/provider-registry": [
+        "packages/postgres-runtime/src/provider-registry.ts"
+      ],
+      "@expadio/postgres-runtime/authorization": [
+        "packages/postgres-runtime/src/authorization.ts"
+      ],
+      "@expadio/postgres-runtime/access-runtime": [
+        "packages/postgres-runtime/src/access-runtime.ts"
+      ],
+      "@expadio/postgres-runtime/conversation": [
+        "packages/postgres-runtime/src/conversation.ts"
+      ],
+      "@expadio/postgres-runtime/workflow": [
+        "packages/postgres-runtime/src/workflow.ts"
+      ],
+      "@expadio/postgres-runtime/workflow-instance": [
+        "packages/postgres-runtime/src/workflow-instance.ts"
+      ],
+      "@expadio/postgres-runtime/workflow-decision": [
+        "packages/postgres-runtime/src/workflow-decision.ts"
+      ],
+      "@expadio/access-control": [
+        "packages/access-control/src/index.ts"
+      ],
+      "@expadio/access-runtime": [
+        "packages/access-runtime/src/index.ts"
+      ],
+      "@expadio/communication": [
+        "packages/communication/src/index.ts"
+      ],
+      "@expadio/ai-gateway": [
+        "packages/ai-gateway/src/index.ts"
+      ],
+      "@expadio/voice-gateway": [
+        "packages/voice-gateway/src/index.ts"
+      ],
+      "@expadio/data-orchestrator": [
+        "packages/data-orchestrator/src/index.ts"
+      ],
+      "@expadio/context-engine": [
+        "packages/context-engine/src/index.ts"
+      ],
+      "@expadio/agent-runtime": [
+        "packages/agent-runtime/src/index.ts"
+      ],
+      "@expadio/usage-metering": [
+        "packages/usage-metering/src/index.ts"
+      ],
+      "@expadio/knowledge": [
+        "packages/knowledge/src/index.ts"
+      ],
+      "@expadio/storage": [
+        "packages/storage/src/index.ts"
+      ],
+      "@expadio/party": [
+        "packages/party/src/index.ts"
+      ],
+      "@expadio/lead": [
+        "packages/lead/src/index.ts"
+      ],
+      "@expadio/case": [
+        "packages/case/src/index.ts"
+      ],
+      "@expadio/agreement": [
+        "packages/agreement/src/index.ts"
+      ],
+      "@expadio/business-config": [
+        "packages/business-config/src/index.ts"
+      ],
+      "@expadio/industry-packs": [
+        "packages/industry-packs/src/index.ts"
+      ],
+      "@expadio/workflow": [
+        "packages/workflow/src/index.ts"
+      ],
+      "@expadio/ui": [
+        "packages/ui/src/index.ts"
+      ],
+      "@expadio/ui/tokens": [
+        "packages/ui/src/tokens/index.css"
+      ],
+      "@expadio/ui/contracts": [
+        "packages/ui/src/contracts.ts"
+      ]
     }
   },
-  "include": ["packages/*/src/**/*.ts"]
+  "include": [
+    "packages/*/src/**/*.ts",
+    "verticals/*/src/**/*.ts"
+  ]
 }
