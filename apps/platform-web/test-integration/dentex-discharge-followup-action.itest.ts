@@ -10,6 +10,10 @@ import {
 } from '../lib/crm-case-governed-actions';
 import { executeGovernedScheduleAction } from '../lib/governed-schedule-executor';
 import { runScheduledGovernedActionWorkerOnce } from '../lib/scheduled-governed-action-worker';
+import { runCommunicationDeliveryWorkerOnce } from '../lib/communication-delivery-worker';
+import { ingestVerifiedCommunicationProviderWebhook } from '../lib/communication-provider-webhook';
+import { listBusinessExecutionTrace } from '../lib/business-execution-trace';
+import { listCommunicationHealthSummary } from '../lib/communication-health-summary';
 
 const CAPABILITY_KEY = 'communication.email.send';
 
@@ -33,6 +37,10 @@ test('DENTEX discharge schedules a +7 day follow-up and queues it only when due'
     const workflowInstanceId = randomUUID();
     const actor = `${tenantId.slice(0, 8)}-reviewer`;
     const patientEmail = 'dentex.followup@example.test';
+    const connectorKey = `resend-${tenantId}`;
+    const serviceSubjectId = `dentex-communication-worker-${tenantId}`;
+    const providerMessageId = `resend-dentex-${randomUUID()}`;
+    const roleKey = `dentex-communication-worker-role-${randomUUID()}`;
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
@@ -93,13 +101,58 @@ test('DENTEX discharge schedules a +7 day follow-up and queues it only when due'
          'HEALTHY', 1, true, false
        )
        RETURNING connector_id`,
-      [`resend-${tenantId}`, tenantId],
+      [connectorKey, tenantId],
     )).rows[0].connector_id as string;
 
     await c.query(
       `INSERT INTO platform.connector_capabilities (connector_id, capability_id)
        VALUES ($1::uuid, $2::uuid)`,
       [connectorId, capabilityId],
+    );
+
+    await c.query(
+      `INSERT INTO platform.connector_credentials
+         (connector_id, credential_ref, key_version, custody_mode, state)
+       VALUES ($1::uuid, $2, 'v1', 'PLATFORM_MANAGED', 'ACTIVE')`,
+      [connectorId, `vault://tenant/${tenantId}/connector/${connectorKey}/v1`],
+    );
+
+    await c.query(
+      `INSERT INTO platform.communication_sender_identities (
+         scope, tenant_id, channel, address, display_name, purposes,
+         is_default, verification_status, status
+       ) VALUES (
+         'TENANT', $1::uuid, 'email', 'sender@example.test', 'DENTEX',
+         ARRAY['transactional']::text[], true, 'VERIFIED', 'ACTIVE'
+       )`,
+      [tenantId],
+    );
+
+    const roleId = (await c.query(
+      `INSERT INTO platform.authorization_roles
+         (role_key, display_name, ownership_scope, tenant_id, status)
+       VALUES ($1, 'DENTEX communication delivery worker', 'TENANT', $2::uuid, 'ACTIVE')
+       RETURNING role_id`,
+      [roleKey, tenantId],
+    )).rows[0].role_id as string;
+
+    await c.query(
+      `INSERT INTO platform.authorization_role_capabilities
+         (role_id, action, resource_type)
+       VALUES ($1::uuid, 'credential.lease', 'connector-credential')`,
+      [roleId],
+    );
+
+    await c.query(
+      `INSERT INTO platform.authorization_assignments (
+         tenant_id, subject_id, role_id, status,
+         clearances, sensitive_compartments
+       ) VALUES (
+         $1::uuid, $2, $3::uuid, 'ACTIVE',
+         ARRAY['sensitive']::text[],
+         ARRAY['provider-credentials']::text[]
+       )`,
+      [tenantId, serviceSubjectId, roleId],
     );
 
     await c.query(
@@ -277,6 +330,144 @@ test('DENTEX discharge schedules a +7 day follow-up and queues it only when due'
       delivery_state: 'PENDING',
       execution_status: 'QUEUED',
     });
+
+    let providerCallCount = 0;
+    const delivered = await runCommunicationDeliveryWorkerOnce(c, {
+      tenantId,
+      options: {
+        serviceSubjectId,
+        now: () => new Date('2026-09-06T13:00:01.000Z'),
+        secretResolver: {
+          async resolve() {
+            return { value: 're_dentex_vertical_proof_token', version: 'v1' };
+          },
+        },
+        fetchImpl: async (input, init) => {
+          providerCallCount += 1;
+          assert.equal(String(input), 'https://api.resend.com/emails');
+          const headers = new Headers(init?.headers);
+          assert.equal(
+            headers.get('Authorization'),
+            'Bearer re_dentex_vertical_proof_token',
+          );
+          assert.ok(headers.get('Idempotency-Key'));
+          const body = JSON.parse(String(init?.body)) as {
+            to?: readonly string[];
+            subject?: string;
+            text?: string;
+          };
+          assert.deepEqual(body.to, [patientEmail]);
+          assert.equal(body.subject, 'Your treatment follow-up');
+          assert.equal(
+            body.text,
+            'Hello Mira Patient, your follow-up for Root canal — UR6 is ready.',
+          );
+          return new Response(JSON.stringify({ id: providerMessageId }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        },
+      },
+    });
+
+    assert.equal(providerCallCount, 1);
+    assert.equal(delivered.status, 'ACCEPTED');
+    assert.equal(delivered.reasonCode, 'PROVIDER_ACCEPTED');
+
+    const acceptedDelivery = (await c.query(
+      `SELECT delivery_id, state, provider_message_id, last_reason_code
+         FROM platform.communication_deliveries
+        WHERE tenant_id = $1::uuid
+          AND idempotency_key = $2`,
+      [tenantId, due.communication.queue.delivery.idempotencyKey],
+    )).rows[0];
+
+    assert.equal(acceptedDelivery.state, 'ACCEPTED');
+    assert.equal(acceptedDelivery.provider_message_id, providerMessageId);
+    assert.equal(acceptedDelivery.last_reason_code, 'PROVIDER_ACCEPTED');
+
+    const webhook = await ingestVerifiedCommunicationProviderWebhook(c, {
+      tenantId,
+      providerKey: 'resend',
+      connectorKey,
+      providerEventId: `evt-dentex-${randomUUID()}`,
+      providerMessageId,
+      eventType: 'email.delivered',
+      payload: {
+        type: 'email.delivered',
+        data: { email_id: providerMessageId },
+      },
+      receivedAt: new Date('2026-09-06T13:00:02.000Z'),
+    });
+
+    assert.deepEqual(webhook, {
+      status: 'RECORDED',
+      normalizedOutcome: 'DELIVERED',
+      deliveryId: acceptedDelivery.delivery_id,
+      previousDeliveryState: 'ACCEPTED',
+      newDeliveryState: 'DELIVERED',
+      reasonCode: 'PROVIDER_WEBHOOK_DELIVERED',
+    });
+
+    const webhookEvidence = (await c.query(
+      `SELECT normalized_outcome, delivery_id, provider_message_id, reason_code
+         FROM platform.communication_provider_webhook_events
+        WHERE tenant_id = $1::uuid
+          AND delivery_id = $2::uuid
+        ORDER BY received_at DESC
+        LIMIT 1`,
+      [tenantId, acceptedDelivery.delivery_id],
+    )).rows[0];
+
+    assert.deepEqual(webhookEvidence, {
+      normalized_outcome: 'DELIVERED',
+      delivery_id: acceptedDelivery.delivery_id,
+      provider_message_id: providerMessageId,
+      reason_code: 'PROVIDER_WEBHOOK_DELIVERED',
+    });
+
+    const trace = await listBusinessExecutionTrace(c, {
+      tenantId,
+      rootEventId: eventId,
+    });
+    const traceKinds = new Set(trace.map((entry) => entry.traceKind));
+    assert.ok(traceKinds.has('DOMAIN_EVENT'));
+    assert.ok(traceKinds.has('DOMAIN_EVENT_OUTBOX'));
+    assert.ok(traceKinds.has('GOVERNED_ACTION'));
+    assert.ok(traceKinds.has('GOVERNED_ACTION_ATTEMPT'));
+    assert.ok(traceKinds.has('SCHEDULED_ACTION'));
+    assert.ok(traceKinds.has('COMMUNICATION_DELIVERY'));
+    assert.ok(traceKinds.has('COMMUNICATION_PROVIDER_ATTEMPT'));
+
+    const deliveryTrace = trace.find(
+      (entry) => entry.traceKind === 'COMMUNICATION_DELIVERY',
+    );
+    assert.equal(deliveryTrace?.state, 'DELIVERED');
+    assert.equal(deliveryTrace?.reasonCode, 'PROVIDER_WEBHOOK_DELIVERED');
+    assert.equal(deliveryTrace?.aggregateId, treatmentId);
+
+    const providerTrace = trace.find(
+      (entry) => entry.traceKind === 'COMMUNICATION_PROVIDER_ATTEMPT',
+    );
+    assert.equal(providerTrace?.state, 'ACCEPTED');
+    assert.equal(providerTrace?.reasonCode, 'PROVIDER_ACCEPTED');
+    assert.equal(providerTrace?.metadata.providerMessageId, providerMessageId);
+
+    const communicationHealth = await listCommunicationHealthSummary(c, {
+      tenantId,
+    });
+    assert.deepEqual(
+      communicationHealth.filter((entry) =>
+        entry.healthKey !== 'communication_deliveries_in_flight'
+      ),
+      [],
+    );
+    assert.equal(
+      communicationHealth.find(
+        (entry) => entry.healthKey === 'communication_deliveries_in_flight',
+      ),
+      undefined,
+    );
   } finally {
     c.release();
     await p.end();
