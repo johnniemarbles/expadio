@@ -3,6 +3,8 @@ import { resolveRequestContext, withTenantClient, deniedResponse } from '../../.
 import { hasCrmWriteRole } from '../../../../../../lib/crm-authz';
 import { toLead } from '../../route';
 import { toCase } from '../../../cases/route';
+import { resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 
 /**
  * Convert a won piece of business into a customer.
@@ -38,6 +40,9 @@ export async function POST(
     }
     const openCase = body?.openCase === true;
     const caseSubjectRaw = typeof body?.caseSubject === 'string' ? body.caseSubject.trim() : '';
+    const caseAttributes = body?.caseAttributes && typeof body.caseAttributes === 'object'
+      ? body.caseAttributes as Record<string, unknown>
+      : {};
 
     const result = await withTenantClient(context, async (client) => {
       if (!(await hasCrmWriteRole(client, context.subjectId))) {
@@ -103,14 +108,45 @@ export async function POST(
 
         let caseRow = null;
         if (openCase) {
+          const vertical = await client.query(
+            `SELECT vertical_key FROM platform.tenants WHERE tenant_id = $1::uuid`,
+            [context.tenantId],
+          );
+          const runtimePack = await new PostgresIndustryPackRuntimeResolver(client).resolve({
+            tenantId: context.tenantId,
+            verticalKey: vertical.rows[0]?.vertical_key ?? null,
+          });
+          const validated = validateCaseAttributes(resolveCaseSchema(runtimePack.pack), caseAttributes);
+          if (!validated.ok) {
+            await client.query('ROLLBACK');
+            return { invalidCaseAttributes: true, errors: validated.errors } as const;
+          }
+          const schemaVersion = validated.schemaVersion > 0 ? validated.schemaVersion : null;
           const subject = (caseSubjectRaw || `Onboarding — ${accountRow.name}`).slice(0, 200);
           const insertedCase = await client.query(
             `INSERT INTO platform.crm_cases
-               (tenant_id, account_id, contact_id, subject, priority, status, owner_subject_id)
-             VALUES ($1::uuid, $2::uuid, $3, $4, 'NORMAL', 'OPEN', $5)
+               (tenant_id, account_id, contact_id, subject, priority, status, owner_subject_id,
+                attributes, attributes_schema_version,
+                industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source)
+             VALUES ($1::uuid, $2::uuid, $3, $4, 'NORMAL', 'OPEN', $5,
+                     $6::jsonb, $7, $8, $9, $10)
              RETURNING case_id, tenant_id, account_id, contact_id, subject, description, priority, status,
-                       blueprint_key, workflow_instance_id, stage_key, owner_subject_id, created_at, updated_at`,
-            [context.tenantId, accountRow.account_id, leadRow.contact_id, subject, context.subjectId],
+                       blueprint_key, workflow_instance_id, stage_key, owner_subject_id,
+                       attributes, attributes_schema_version,
+                       industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source,
+                       created_at, updated_at`,
+            [
+              context.tenantId,
+              accountRow.account_id,
+              leadRow.contact_id,
+              subject,
+              context.subjectId,
+              JSON.stringify(validated.attributes),
+              schemaVersion,
+              runtimePack.provenance.verticalKey,
+              runtimePack.provenance.version,
+              runtimePack.provenance.source,
+            ],
           );
           caseRow = insertedCase.rows[0];
         }
@@ -149,6 +185,10 @@ export async function POST(
     }
     if ('lost' in result) {
       return NextResponse.json({ error: 'A lost lead cannot be converted. Reopen it first.' }, { status: 409 });
+    }
+    if ('invalidCaseAttributes' in result) {
+      const errors = result.errors ?? [];
+      return NextResponse.json({ error: errors.join(' '), fields: errors }, { status: 400 });
     }
     return NextResponse.json({ success: true, ...result }, { status: 201 });
   } catch (error) {
