@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, reverificationErrorResponse } from '@clerk/nextjs/server';
 import { headers } from 'next/headers';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
@@ -153,25 +153,49 @@ export async function withTenantTransaction<T>(
   }
 }
 
-/** §3.4 — step-up authentication for credential intake, rotation, revocation. */
-export async function requireStepUp(maxAgeSeconds = 300): Promise<void> {
-  const headerList = await headers();
-  const raw = headerList.get('x-expadio-reauth-at');
-  if (raw === null) {
+export type StepUpPreset = 'strict' | 'strict_mfa' | 'moderate' | 'lax';
+
+export class StepUpReverificationRequired extends Error {
+  readonly preset: StepUpPreset;
+
+  constructor(preset: StepUpPreset) {
+    super('STEP_UP_REVERIFICATION_REQUIRED');
+    this.name = 'StepUpReverificationRequired';
+    this.preset = preset;
+  }
+}
+
+/**
+ * Server-verified step-up for sensitive actions.
+ *
+ * Freshness/factor state comes from Clerk's signed session token through
+ * auth().has({ reverification }), never from a browser-supplied timestamp.
+ */
+export async function requireStepUp(
+  preset: StepUpPreset = 'strict',
+): Promise<void> {
+  const authState = await auth();
+  if (!authState.isAuthenticated) {
     throw new ContextDenied(
-      'STEP_UP_REQUIRED',
-      'Confirm your identity again to continue.',
+      'AUTHENTICATION_REQUIRED',
+      'Sign in to continue.',
       401,
     );
   }
-  const age = (Date.now() - Date.parse(raw)) / 1000;
-  if (!Number.isFinite(age) || age < 0 || age > maxAgeSeconds) {
-    throw new ContextDenied(
-      'STEP_UP_EXPIRED',
-      'Your confirmation has expired. Confirm your identity again to continue.',
-      401,
-    );
+
+  if (!authState.has({ reverification: preset })) {
+    throw new StepUpReverificationRequired(preset);
   }
+}
+
+/**
+ * Convert a failed server reverification check into Clerk's canonical response
+ * envelope. Clients wrapped with useReverification() recognize this 403,
+ * prompt for a fresh factor, then retry the original action.
+ */
+export function stepUpReverificationResponse(error: unknown): Response | null {
+  if (!(error instanceof StepUpReverificationRequired)) return null;
+  return reverificationErrorResponse(error.preset);
 }
 
 export function deniedResponse(error: unknown): { body: DeniedResult; status: number } {
