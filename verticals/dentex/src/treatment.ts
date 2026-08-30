@@ -116,3 +116,32 @@ export interface DentexTreatmentWorkspace {
     readonly runtimeSource: string;
   };
 }
+
+
+export interface DentexTreatmentRequirement {
+  readonly key: string;
+  readonly label: string;
+  readonly satisfied: boolean;
+  readonly kind: 'RELATIONSHIP' | 'ATTRIBUTE' | 'DECISION' | 'PARTICIPANT';
+  readonly actionHint: string | null;
+}
+
+export interface DentexTreatmentReadinessStage {
+  readonly stageKey: DentexTreatmentStage;
+  readonly label: string;
+  readonly sequence: number;
+}
+
+export interface DentexTreatmentReadiness {
+  readonly workflowStarted: boolean;
+  readonly state: string | null;
+  readonly currentStage: DentexTreatmentStage | null;
+  readonly currentStageLabel: string | null;
+  readonly nextStage: DentexTreatmentStage | null;
+  readonly nextStageLabel: string | null;
+  readonly revision: number | null;
+  readonly stages: readonly DentexTreatmentReadinessStage[];
+  readonly requirements: readonly DentexTreatmentRequirement[];
+  readonly canAdvance: boolean;
+  readonly currentDecision: { readonly outcome: string } | null;
+}
