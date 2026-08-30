@@ -221,6 +221,9 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
+      '@expadio/governed-actions':
+        specifier: workspace:*
+        version: link:../governed-actions
       '@expadio/relationship':
         specifier: workspace:*
         version: link:../relationship
