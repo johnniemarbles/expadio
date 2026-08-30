@@ -3,6 +3,7 @@ import { DeniedState, StatePill } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { fetchApi } from '../../../../../../../lib/live-adapter';
 import styles from '../../../page.module.css';
+import { DraftWorkflowEditor } from './DraftWorkflowEditor';
 
 interface DraftDefinition {
   readonly verticalKey: string;
@@ -94,6 +95,19 @@ export default async function IndustryPackDraftPage({
           Back to versions
         </Link>
       </section>
+
+      <DraftWorkflowEditor
+        initial={{
+          label: definition.label,
+          defaultLocale: definition.terminology.defaultLocale,
+          workType: definition.caseWorkflow?.workType ?? 'Case',
+          stages: workflowEntries.map(([key, label]) => ({
+            key,
+            label,
+            guidance: definition.caseWorkflow?.stageGuidance?.[key] ?? '',
+          })),
+        }}
+      />
 
       <section className={styles.summaryGrid} aria-label="Draft summary">
         <article className={styles.summaryCard}>
