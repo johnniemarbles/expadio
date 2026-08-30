@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import { dbPool } from '../../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED' }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
 
     const result = await dbPool.query(
       `SELECT blueprint_key, label as display_name, version, state as status, created_at
@@ -23,19 +16,14 @@ export async function GET(request: Request) {
     
     return NextResponse.json(result.rows);
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
     
     const { blueprint_key, label, version = 1, stages = [] } = await request.json();
     if (!blueprint_key || !label) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -49,19 +37,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, blueprint_key: result.rows[0].blueprint_key });
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
 
 export async function PUT(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
     
     const { blueprint_key, state } = await request.json();
     if (!blueprint_key || !state) return NextResponse.json({ error: 'Missing key or state' }, { status: 400 });
@@ -76,6 +59,7 @@ export async function PUT(request: Request) {
     if (result.rowCount === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ success: true, blueprint: result.rows[0] });
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
