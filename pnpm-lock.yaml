@@ -324,6 +324,12 @@ importers:
 
   packages/workflow: {}
 
+  verticals/dentex:
+    dependencies:
+      '@expadio/industry-packs':
+        specifier: workspace:*
+        version: link:../../packages/industry-packs
+
 packages:
 
   '@clerk/backend@3.16.12':
