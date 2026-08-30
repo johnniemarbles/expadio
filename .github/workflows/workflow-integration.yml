@@ -13,6 +13,7 @@ on:
     paths:
       - 'apps/platform-web/**'
       - 'packages/**'
+      - 'verticals/**'
       - 'infra/db/**'
       - '.github/workflows/workflow-integration.yml'
 
