@@ -7,24 +7,17 @@ import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
 /**
  * Design spec §0.2 G5 — un-scaffolding.
  *
- * Communications API routes used to hardcode
- *   tenantId: '00000000-0000-0000-0000-000000000001'
- *   organizationId: '00000000-0000-0000-0000-000000000002'
- *
- * That was scaffolding presenting as wiring. Tenant selection now arrives on
- * the `x-expadio-tenant-id` / `x-expadio-organization-id` request headers,
- * which `proxy.ts` injects from the shell's active workspace
+ * Communications API routes used to hardcode tenant and organization
+ * identifiers. That was scaffolding presenting as wiring. Tenant selection now
+ * arrives on the `x-expadio-tenant-id` / `x-expadio-organization-id` request
+ * headers, which `proxy.ts` injects from the shell's active workspace
  * (`?account=<tenantId>&org=<organizationId>`, with a cookie fallback).
  * Membership is verified below, so the header is a *request* for a tenant, not
  * proof of access.
  *
- * The demo UUID survives only as a bootstrap default: a cold request that
- * carries no selection at all (first load before the shell threads a
- * workspace) resolves to it. Any real selection overrides it, and any
- * selection the caller is not a member of is denied.
+ * Cold requests with no selected workspace now fail closed instead of silently
+ * resolving to a bootstrap/demo tenant.
  */
-
-const DEMO_TENANT = '00000000-0000-0000-0000-000000000001';
 
 export interface ResolvedRequestContext {
   readonly subjectId: string;
@@ -61,16 +54,24 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   }
 
   const headerList = await headers();
-  let requestedTenant = headerList.get('x-expadio-tenant-id');
-  let requestedOrganization = headerList.get('x-expadio-organization-id');
+  let requestedTenant = headerList.get('x-expadio-tenant-id')?.trim() || null;
+  let requestedOrganization = headerList.get('x-expadio-organization-id')?.trim() || null;
   if (request) {
     const url = new URL(request.url);
-    if (url.searchParams.has('account')) requestedTenant = url.searchParams.get('account');
-    if (url.searchParams.has('org')) requestedOrganization = url.searchParams.get('org');
+    if (url.searchParams.has('account')) requestedTenant = url.searchParams.get('account')?.trim() || null;
+    if (url.searchParams.has('org')) requestedOrganization = url.searchParams.get('org')?.trim() || null;
   }
-  requestedTenant = requestedTenant || DEMO_TENANT;
-  requestedOrganization = requestedOrganization || '00000000-0000-0000-0000-000000000002';
-  
+
+  if (requestedTenant === null) {
+    throw new ContextDenied(
+      'WORKSPACE_REQUIRED',
+      'Select a workspace to continue.',
+      400,
+    );
+  }
+
+  const tenantIdRequest = requestedTenant;
+  const organizationIdRequest = requestedOrganization ?? '';
 
   let effective;
   try {
@@ -78,8 +79,8 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
       { identityVerifier, membershipRepository },
       {
         credential: userId,
-        tenantId: requestedTenant,
-        organizationId: requestedOrganization,
+        tenantId: tenantIdRequest,
+        organizationId: organizationIdRequest,
       },
     );
   } catch {
@@ -98,7 +99,7 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   return {
     subjectId: userId,
     tenantId,
-    organizationId: organizationId ?? '',
+    organizationId,
     platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
     applyTo: async (client) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
@@ -152,4 +153,19 @@ export function deniedResponse(error: unknown): { body: DeniedResult; status: nu
     status: 500,
   };
 }
-export type RouteSearchParams = { [key: string]: string | string[] | undefined }; export function requestedOrganizationId(_request?: any) { return '00000000-0000-0000-0000-000000000002'; }
+
+export type RouteSearchParams = { [key: string]: string | string[] | undefined };
+
+type OrganizationSelectionSource = Request | RouteSearchParams | undefined;
+
+function firstRouteParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0]?.trim() ?? '';
+  return value?.trim() ?? '';
+}
+
+export function requestedOrganizationId(source?: OrganizationSelectionSource): string {
+  if (source instanceof Request) {
+    return new URL(source.url).searchParams.get('org')?.trim() ?? '';
+  }
+  return firstRouteParam(source?.org);
+}

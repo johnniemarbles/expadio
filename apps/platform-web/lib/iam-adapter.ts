@@ -7,7 +7,7 @@ export class ClerkIdentityVerifier implements IdentityVerifier {
   async verify(request: IdentityVerificationRequest): Promise<VerifiedIdentity> {
     const userId = request.credential; // In this setup, we pass userId directly
     const client = await clerkClient();
-    const user = await client.users.getUser(userId);
+    await client.users.getUser(userId);
     
     return {
       providerKey: userId,
@@ -39,41 +39,5 @@ if (process.env.NODE_ENV === 'development') {
   global._dbPool = dbPool;
 }
 
-import type { IdentityContext, MembershipContext } from '@expadio/tenancy';
-
-export interface MembershipRepository {
-  listActiveMemberships(identity: IdentityContext): Promise<readonly MembershipContext[]>;
-}
-
-export class AutoProvisioningMembershipRepository implements MembershipRepository {
-  constructor(private readonly inner: MembershipRepository, private readonly pool: pg.Pool) {}
-
-  async listActiveMemberships(identity: IdentityContext): Promise<readonly MembershipContext[]> {
-    let list = await this.inner.listActiveMemberships(identity);
-    if (list.length === 0 && identity.subjectId) {
-      try {
-        const client = await this.pool.connect();
-        try {
-          await client.query(
-            `INSERT INTO platform.memberships (tenant_id, organization_id, subject_id, actor_kind, status, issuer, workspace_scope_mode, operating_unit_scope_mode)
-             VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', $1, 'user', 'ACTIVE', 'https://clerk.expadio.com', 'ALL', 'ALL')
-             ON CONFLICT (tenant_id, subject_id) DO UPDATE SET status = 'ACTIVE', issuer = 'https://clerk.expadio.com'`,
-            [identity.subjectId]
-          );
-        } finally {
-          client.release();
-        }
-        list = await this.inner.listActiveMemberships(identity);
-      } catch (err) {
-        console.error('Error auto-provisioning membership:', err);
-      }
-    }
-    return list;
-  }
-}
-
-export const membershipRepository = new AutoProvisioningMembershipRepository(
-  new PostgresMembershipRepository(dbPool),
-  dbPool
-);
+export const membershipRepository = new PostgresMembershipRepository(dbPool);
 export const identityVerifier = new ClerkIdentityVerifier();

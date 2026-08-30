@@ -53,8 +53,6 @@ const knownCurrentBaselineDebt = [
   "apps/platform-web/app/api/workflows/blueprints/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/workflows/instances/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
   "apps/platform-web/app/api/workspaces/route.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/lib/iam-adapter.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
-  "apps/platform-web/lib/request-context.ts: contains forbidden production fallback 00000000-0000-0000-0000-000000000001",
 ].sort();
 
 const ignoredSegments = new Set([
