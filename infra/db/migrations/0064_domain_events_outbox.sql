@@ -8,7 +8,7 @@ BEGIN;
 
 CREATE TABLE platform.domain_events (
   event_id uuid PRIMARY KEY,
-  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE RESTRICT,
   aggregate_type text NOT NULL CHECK (btrim(aggregate_type) <> ''),
   aggregate_id text NOT NULL CHECK (btrim(aggregate_id) <> ''),
   event_type text NOT NULL CHECK (btrim(event_type) <> ''),
