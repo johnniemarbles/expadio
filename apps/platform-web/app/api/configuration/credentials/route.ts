@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../../lib/request-context';
 import crypto from 'node:crypto';
 
 export async function GET(request: Request) {
   try {
     const effectiveContext = await resolveRequestContext(request);
 
-    const result = await dbPool.query(
-      `SELECT event_id as rotation_id, connector_key as credential_name, event_type as status, occurred_at as rotated_at, request_id as correlation_id
-       FROM platform.credential_rotation_events
-       WHERE tenant_id = $1
-       ORDER BY occurred_at DESC LIMIT 50`,
-      [effectiveContext.tenantId]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `SELECT event_id as rotation_id, connector_key as credential_name, event_type as status, occurred_at as rotated_at, request_id as correlation_id
+         FROM platform.credential_rotation_events
+         WHERE tenant_id = $1
+         ORDER BY occurred_at DESC LIMIT 50`,
+        [effectiveContext.tenantId]
+      )
     );
     
     return NextResponse.json(result.rows);
@@ -48,26 +49,28 @@ export async function POST(request: Request) {
       replacementRef = `provider-secret://${connector_key}/${keyHash}`;
     }
 
-    const result = await dbPool.query(
-      `INSERT INTO platform.credential_rotation_events 
-       (event_id, rotation_reference, sequence, request_id, tenant_id, requested_by_subject_id, connector_key, 
-        current_credential_reference, replacement_credential_reference, event_type, 
-        authorization_decision_id, reason, occurred_at, correlation_id, evidence_refs)
-       VALUES ($1, $2, 1, $3, $4, $5, $6, 'provider-secret://current', $7, 'STAGED', $8, $9, NOW(), $10, $11)
-       RETURNING event_id`,
-      [
-        crypto.randomUUID(), 
-        crypto.randomUUID(), 
-        crypto.randomUUID(), 
-        effectiveContext.tenantId, 
-        effectiveContext.subjectId, 
-        connector_key,
-        replacementRef,
-        'decision-auth-' + crypto.randomUUID().slice(0, 8),
-        `Rotate provider keys for ${connector_key}`,
-        crypto.randomUUID(),
-        ['audit:credentials-rotation']
-      ]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `INSERT INTO platform.credential_rotation_events 
+         (event_id, rotation_reference, sequence, request_id, tenant_id, requested_by_subject_id, connector_key, 
+          current_credential_reference, replacement_credential_reference, event_type, 
+          authorization_decision_id, reason, occurred_at, correlation_id, evidence_refs)
+         VALUES ($1, $2, 1, $3, $4, $5, $6, 'provider-secret://current', $7, 'STAGED', $8, $9, NOW(), $10, $11)
+         RETURNING event_id`,
+        [
+          crypto.randomUUID(), 
+          crypto.randomUUID(), 
+          crypto.randomUUID(), 
+          effectiveContext.tenantId, 
+          effectiveContext.subjectId, 
+          connector_key,
+          replacementRef,
+          'decision-auth-' + crypto.randomUUID().slice(0, 8),
+          `Rotate provider keys for ${connector_key}`,
+          crypto.randomUUID(),
+          ['audit:credentials-rotation']
+        ]
+      )
     );
 
     return NextResponse.json({ success: true, rotation_id: result.rows[0].event_id });
