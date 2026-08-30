@@ -32,6 +32,39 @@ const row = {
   requested_at: '2026-08-25T05:00:00.000Z',
   accepted_at: null,
   updated_at: '2026-08-25T05:00:00.000Z',
+  dispatch_snapshot: {
+    dispatch: {
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      triggerKey: 'patient.follow_up',
+      purpose: 'transactional',
+      channel: 'email',
+      recipient: { email: 'patient@example.test' },
+      recipientKey: 'patient@example.test',
+      idempotencyKey: 'idem-1',
+      templateScope: 'PLATFORM',
+      rendered: {
+        templateId: 'template-1',
+        version: 1,
+        channel: 'email',
+        locale: 'en',
+        format: 'TEXT',
+        subject: 'Follow-up',
+        body: 'Hello',
+        variables: {},
+      },
+      compliance: {
+        preflight: { allowed: true, reasonCode: 'OK', reason: 'allowed' },
+        evaluatedAt: '2026-08-25T05:00:00.000Z',
+      },
+      routing: { capabilityKey: 'communication.email.send' },
+      requestedAt: '2026-08-25T05:00:00.000Z',
+    },
+    consentRequired: false,
+  },
+  next_attempt_at: '2026-08-25T05:00:00.000Z',
+  last_attempt_at: null,
+  claim_token: null,
+  claim_expires_at: null,
 };
 
 test('createOrGet uses tenant idempotency and maps the durable record', async () => {
@@ -44,10 +77,13 @@ test('createOrGet uses tenant idempotency and maps the durable record', async ()
     connectorKey: row.connector_key,
     adapterKey: row.adapter_key,
     requestedAt: row.requested_at,
+    dispatchSnapshot: row.dispatch_snapshot,
   });
   assert.equal(result.deliveryId, row.delivery_id);
   assert.equal(result.state, 'PENDING');
   assert.match(client.calls[0]?.text ?? '', /ON CONFLICT \(tenant_id, idempotency_key\)/);
+  assert.match(client.calls[0]?.text ?? '', /dispatch_snapshot/);
+  assert.equal(result.dispatchSnapshot?.dispatch.triggerKey, 'patient.follow_up');
 });
 
 test('applyTransition locks, updates, and appends an event', async () => {
