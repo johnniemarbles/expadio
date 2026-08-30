@@ -63,6 +63,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] `GET /api/outbox/health` implemented.
 - [x] Read-only `/platform-health` operator dashboard implemented.
 - [x] Explicit stuck communication delivery health buckets implemented.
+- [x] Due scheduled-action detection covered by scheduler health read model and source-contract guard.
 
 ### Foundation governance
 
@@ -93,7 +94,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Add outbox health API.
 - [x] Add platform health dashboard.
 - [x] Add stuck delivery detection.
-- [ ] Add due scheduled-action detection.
+- [x] Add due scheduled-action detection.
 - [ ] Add unmatched webhook detection.
 - [ ] Add stale provider-attempt reconciliation detection.
 
