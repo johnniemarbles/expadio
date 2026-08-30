@@ -114,7 +114,7 @@ async function recordCoordinatorResults(
 
     await client.query(
       `UPDATE platform.domain_event_scheduler_targets
-          SET next_scheduled_at = $2 + make_interval(secs => cadence_seconds),
+          SET next_scheduled_at = $2::timestamptz + make_interval(secs => cadence_seconds),
               last_selected_at = $2,
               last_invocation_id = $3::uuid,
               last_result = $4,
