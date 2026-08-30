@@ -66,6 +66,40 @@ function mapRow(row: OperationRow): DomainEventOperationItem {
   };
 }
 
+
+export async function loadDomainEventOperationById(
+  client: PoolClient,
+  input: {
+    readonly tenantId: string;
+    readonly outboxId: string;
+  },
+): Promise<DomainEventOperationItem | null> {
+  const result = await client.query<OperationRow>(
+    `SELECT outbox.outbox_id,
+            outbox.event_id,
+            event.event_type,
+            event.aggregate_type,
+            event.aggregate_id,
+            outbox.status,
+            outbox.attempts,
+            outbox.available_at,
+            outbox.claimed_at,
+            outbox.published_at,
+            outbox.last_error,
+            outbox.created_at
+       FROM platform.domain_event_outbox outbox
+       JOIN platform.domain_events event
+         ON event.tenant_id = outbox.tenant_id
+        AND event.event_id = outbox.event_id
+      WHERE outbox.tenant_id = $1::uuid
+        AND outbox.outbox_id = $2::uuid
+      LIMIT 1`,
+    [input.tenantId, input.outboxId],
+  );
+  const row = result.rows[0];
+  return row === undefined ? null : mapRow(row);
+}
+
 export async function loadDomainEventOperations(
   client: PoolClient,
   input: {
@@ -187,9 +221,11 @@ export async function requeueDeadDomainEvent(
     [input.tenantId, input.outboxId, now],
   );
 
-  const items = await loadDomainEventOperations(client, { limit: 200 });
-  const item = items.find((candidate) => candidate.outboxId === input.outboxId);
-  if (item === undefined) throw new Error('DOMAIN_EVENT_REQUEUE_READBACK_FAILED');
+  const item = await loadDomainEventOperationById(client, {
+    tenantId: input.tenantId,
+    outboxId: input.outboxId,
+  });
+  if (item === null) throw new Error('DOMAIN_EVENT_REQUEUE_READBACK_FAILED');
 
   return {
     item,
