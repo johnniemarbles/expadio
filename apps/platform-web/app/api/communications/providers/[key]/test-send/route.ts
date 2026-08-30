@@ -18,6 +18,7 @@ import {
 import {
   deniedResponse,
   requireStepUp,
+  stepUpReverificationResponse,
   resolveRequestContext,
   withTenantTransaction,
 } from '../../../../../../lib/request-context';
@@ -280,6 +281,8 @@ export async function POST(
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
+    const reverification = stepUpReverificationResponse(error);
+    if (reverification !== null) return reverification;
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
   }
