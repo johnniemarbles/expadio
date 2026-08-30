@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  credentialReference,
-  type ConnectorDefinition,
-} from '@expadio/provider-registry';
+import type { ConnectorDefinition } from '@expadio/provider-registry';
 import type {
   CommunicationConsentRepository,
   CommunicationSuppressionRepository,
@@ -59,7 +56,6 @@ function connector(): ConnectorDefinition {
     providerKey: 'resend',
     ownership: 'PLATFORM',
     capabilityKeys: ['communication.email.send'],
-    credentialRef: credentialReference('secret://resend-primary'),
     region: 'ca-central-1',
     residencyTags: ['CA'],
     complianceTags: ['SOC2'],
