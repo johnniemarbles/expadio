@@ -4,6 +4,7 @@ import {
   type GovernedActionExecutorClass,
   type PersistedGovernedActionExecutionAttempt,
 } from '@expadio/governed-actions';
+import { loadDomainEvent } from '@expadio/postgres-runtime/domain-events';
 import {
   findGovernedActionExecutionAttempt,
   persistGovernedActionExecutionAttempt,
@@ -122,7 +123,14 @@ export async function executeGovernedScheduleAction(
     return { replayed: false, attempt, scheduled: null };
   }
 
-  const dueAt = new Date(input.intent.requestedAt.getTime() + parsed.delaySeconds * 1000);
+  const sourceEvent = await loadDomainEvent(client, {
+    tenantId: input.intent.tenantId,
+    eventId: input.intent.sourceEventId,
+  });
+  if (sourceEvent === null) {
+    throw new Error('GOVERNED_SCHEDULE_SOURCE_EVENT_NOT_FOUND');
+  }
+  const dueAt = new Date(sourceEvent.occurredAt.getTime() + parsed.delaySeconds * 1000);
   const scheduled = await persistScheduledGovernedAction(client, {
     parentIntent: input.intent,
     dueAt,
