@@ -99,3 +99,32 @@ test('idempotency key is deterministic by event, rule, and executor', () => {
     }),
   );
 });
+
+
+test('an allowed decision cannot omit a policy required by the rule', () => {
+  const resolved = resolveGovernedAction(
+    event,
+    {
+      ruleKey: 'dentex.discharge.follow-up',
+      eventType: 'Treatment.Discharged',
+      executorClass: 'COMMUNICATE',
+      actionKey: 'patient.follow_up',
+      enabled: true,
+      policyKeys: ['patient-contactable', 'quiet-hours'],
+      configuration: {},
+    },
+    {
+      allowed: true,
+      policyKeys: ['patient-contactable'],
+      evidenceRefs: ['consent:active'],
+      reasonCode: 'ALLOWED',
+      evaluatedAt: new Date(),
+    },
+  );
+
+  assert.deepEqual(resolved, {
+    matched: true,
+    allowed: false,
+    reasonCode: 'POLICY_EVALUATION_INCOMPLETE',
+  });
+});
