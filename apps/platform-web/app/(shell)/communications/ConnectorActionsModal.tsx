@@ -77,6 +77,8 @@ export function ConnectorActionsModal({
   const [revoking, setRevoking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [testRecipient, setTestRecipient] = useState("");
+  const [testing, setTesting] = useState(false);
 
   const base = `/api/communications/providers/${encodeURIComponent(connectorKey)}`;
 
@@ -107,6 +109,8 @@ export function ConnectorActionsModal({
     setNotice(null);
     setNeedsApproval(false);
     setApprovalRef("");
+    setTestRecipient("");
+    setTesting(false);
     void load();
   }, [isOpen, load]);
 
@@ -146,6 +150,45 @@ export function ConnectorActionsModal({
       setError(cause instanceof Error ? cause.message : "Revocation failed.");
     } finally {
       setRevoking(false);
+    }
+  }
+
+  async function handleTestSend() {
+    const recipient = testRecipient.trim().toLowerCase();
+    if (recipient === "") {
+      setError("Enter a test recipient email.");
+      return;
+    }
+
+    setTesting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`${base}/test-send${queryString}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-expadio-reauth-at": new Date().toISOString(),
+        },
+        body: JSON.stringify({
+          recipient,
+          idempotencyKey: `test-${crypto.randomUUID()}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || data.reasonCode || "Test send failed.");
+      }
+      setNotice(
+        data.providerMessageId
+          ? `Test accepted by provider. Message id: ${data.providerMessageId}`
+          : `Test result: ${data.outcome ?? "accepted"}.`,
+      );
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Test send failed.");
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -217,6 +260,32 @@ export function ConnectorActionsModal({
           ) : (
             <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500, #64748b)" }}>No credential on record for this connector.</p>
           )}
+        </section>
+
+        {/* Governed test send */}
+        <section style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Test this connector</h3>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--ink-500, #64748b)", lineHeight: 1.5 }}>
+            Resend email only in this first golden-path slice. The API re-checks routing, sender verification and custody before calling the provider.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="email"
+              value={testRecipient}
+              onChange={(event) => setTestRecipient(event.target.value)}
+              placeholder="you@example.com"
+              aria-label="Test recipient email"
+              style={{ flex: 1, minWidth: 0, padding: "8px 10px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 12 }}
+            />
+            <button
+              type="button"
+              onClick={handleTestSend}
+              disabled={testing || testRecipient.trim() === ""}
+              style={{ padding: "8px 14px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: testing ? "not-allowed" : "pointer" }}
+            >
+              {testing ? "Sending…" : "Send test"}
+            </button>
+          </div>
         </section>
 
         {/* Attestation history */}
