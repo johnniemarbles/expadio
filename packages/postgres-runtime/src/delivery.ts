@@ -54,8 +54,8 @@ export class PostgresCommunicationDeliveryRepository
     const result = await this.#client.query<DeliveryRow>(
       `INSERT INTO platform.communication_deliveries (
          tenant_id, organization_id, idempotency_key, channel,
-         connector_key, adapter_key, requested_at
-       ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
+         connector_key, adapter_key, requested_at, dispatch_snapshot, next_attempt_at
+       ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8::jsonb, $7)
        ON CONFLICT (tenant_id, idempotency_key)
        DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
        RETURNING ${DELIVERY_COLUMNS}`,
@@ -130,7 +130,6 @@ export class PostgresCommunicationDeliveryRepository
         input.reasonCode,
         input.reason ?? null,
         input.occurredAt,
-        input.attemptToken ?? null,
       ],
     );
     const updated = mapRequired(updatedResult.rows[0]);
@@ -147,6 +146,7 @@ export class PostgresCommunicationDeliveryRepository
         input.reasonCode,
         input.reason ?? null,
         input.occurredAt,
+        input.attemptToken ?? null,
       ],
     );
 
@@ -207,7 +207,6 @@ export class PostgresCommunicationDeliveryRepository
         input.transition.reasonCode ?? null,
         input.transition.reason ?? null,
         input.transition.occurredAt,
-        input.attemptToken ?? null,
       ],
     );
     const updated = mapRequired(updatedResult.rows[0]);
@@ -226,6 +225,7 @@ export class PostgresCommunicationDeliveryRepository
         input.transition.reasonCode ?? null,
         input.transition.reason ?? null,
         input.transition.occurredAt,
+        input.attemptToken ?? null,
       ],
     );
 
