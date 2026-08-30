@@ -131,9 +131,10 @@ test('worker claims discharge event, schedules follow-up, creates review task, t
   try {
     const { tenantId, eventId } = await seedDentexFollowupCase(c);
 
+    const workerNow = new Date(Date.now() + 60_000);
     const result = await processOneDomainEventActionWorkItem(c, {
       tenantId,
-      now: () => new Date('2026-08-30T14:31:00.000Z'),
+      now: () => workerNow,
     });
 
     assert.equal(result.status, 'PUBLISHED');
@@ -283,9 +284,10 @@ test('worker retries materialization failures without creating an intent', async
     });
     assert.ok(appended);
 
+    const workerNow = new Date(Date.now() + 60_000);
     const result = await processOneDomainEventActionWorkItem(c, {
       tenantId,
-      now: () => new Date('2026-08-30T14:40:00.000Z'),
+      now: () => workerNow,
       maxAttempts: 2,
     });
     assert.equal(result.status, 'FAILED');
@@ -294,14 +296,14 @@ test('worker retries materialization failures without creating an intent', async
 
     const row = (await c.query(
       `SELECT status, attempts,
-              (available_at > timestamp '2026-08-30T14:40:00.000Z') AS retry_scheduled,
+              (available_at > $3::timestamptz) AS retry_scheduled,
               (SELECT count(*)::int FROM platform.governed_action_intents
                 WHERE tenant_id = $1::uuid AND source_event_id = $2::uuid) AS intents,
               (SELECT count(*)::int FROM platform.operational_tasks
                 WHERE tenant_id = $1::uuid AND source_event_id = $2::uuid) AS tasks
          FROM platform.domain_event_outbox
         WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
-      [tenantId, appended.event.eventId],
+      [tenantId, appended.event.eventId, workerNow],
     )).rows[0];
     assert.deepEqual(row, {
       status: 'FAILED',

@@ -51,9 +51,10 @@ test('DEAD Domain Event outbox can start a new audited retry cycle', async () =>
       },
     });
 
+    const firstAt = new Date(Date.now() + 60_000);
     const claim = await claimDomainEventOutbox(c, {
       tenantId,
-      now: new Date('2026-08-30T17:01:00.000Z'),
+      now: firstAt,
       maxAttempts: 1,
     });
     assert.ok(claim);
@@ -63,7 +64,7 @@ test('DEAD Domain Event outbox can start a new audited retry cycle', async () =>
       outboxId: claim.outboxId,
       claimedAt: claim.claimedAt,
       error: 'Permanent test failure',
-      failedAt: new Date('2026-08-30T17:01:01.000Z'),
+      failedAt: new Date(firstAt.getTime() + 1_000),
       maxAttempts: 1,
     }), 'DEAD');
 
@@ -85,7 +86,7 @@ test('DEAD Domain Event outbox can start a new audited retry cycle', async () =>
         actorRoleKey: 'TENANT_ADMIN',
         reason: 'Provider incident resolved; replay approved.',
         correlationId: randomUUID(),
-        now: new Date('2026-08-30T17:05:00.000Z'),
+        now: new Date(firstAt.getTime() + 240_000),
       });
       await c.query('COMMIT');
     } catch (error) {
