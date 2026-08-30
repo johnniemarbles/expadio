@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   hasDraftWorkflowEditorErrors,
   validateDraftWorkflowEditorState,
-} from '../app/(shell)/configuration/industry-packs/drafts/[verticalKey]/[version]/draft-editor-model';
+} from '../app/(shell)/configuration/industry-packs/drafts/[verticalKey]/[version]/draft-editor-model.ts';
 
 const valid = {
   label: 'DENTEX — Dental practice',
