@@ -6,13 +6,13 @@ import {
   publishDomainEventOutboxClaim,
 } from './domain-event-outbox.ts';
 
-export interface DomainEventOutboxHandlerContext {
+export interface DomainEventPublishContext {
   readonly item: ClaimedDomainEventOutboxItem;
   readonly renewLease: (leaseSeconds?: number) => Promise<void>;
 }
 
-export interface DomainEventOutboxBatchHandler {
-  handle(context: DomainEventOutboxHandlerContext): Promise<void>;
+export interface DomainEventPublisher {
+  publish(context: DomainEventPublishContext): Promise<void>;
 }
 
 export interface DomainEventOutboxBatchRunResult {
@@ -59,16 +59,20 @@ function isClaimLost(error: unknown): boolean {
 /**
  * Process one tenant-scoped outbox batch.
  *
- * Handler side effects must be idempotent because a process can crash after the
- * handler commits but before this runner marks the outbox row PUBLISHED.
- * Governed Action Intents and Communications delivery records already satisfy
- * that contract through their deterministic idempotency keys.
+ * Publisher side effects must be idempotent because a process can crash after
+ * the transport accepts an event but before this runner marks the outbox row
+ * PUBLISHED. A transport adapter should therefore publish with eventId as its
+ * deduplication/message identity whenever the transport supports it.
+ *
+ * PUBLISHED means transport publication succeeded. Business consumers (such as
+ * governed-action materialization) acknowledge their own downstream delivery
+ * independently; this runner does not conflate publication with consumption.
  */
 export async function runDomainEventOutboxBatch(
   client: DomainEventOutboxSqlClient,
   input: {
     readonly tenantId: string;
-    readonly handler: DomainEventOutboxBatchHandler;
+    readonly publisher: DomainEventPublisher;
     readonly batchSize?: number;
     readonly leaseSeconds?: number;
     readonly maxAttempts?: number;
@@ -96,7 +100,7 @@ export async function runDomainEventOutboxBatch(
 
   for (const item of claimed) {
     try {
-      await input.handler.handle({
+      await input.publisher.publish({
         item,
         renewLease: async (renewSeconds = leaseSeconds) => {
           await extendDomainEventOutboxClaim(client, {
