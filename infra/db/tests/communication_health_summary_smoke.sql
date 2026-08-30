@@ -49,12 +49,12 @@ INSERT INTO platform.communication_deliveries (
     'resend-health-a',
     'resend-email-v1',
     NULL,
-    'FAILED',
+    'DELIVERED',
     1,
     '2026-08-30T15:02:00Z',
-    NULL,
+    '2026-08-30T15:02:01Z',
     '2026-08-30T15:02:02Z',
-    'PROVIDER_ERROR'
+    'PROVIDER_ACCEPTED'
   );
 
 INSERT INTO platform.communication_provider_attempts (
