@@ -38,6 +38,7 @@ interface CrmCaseActionContextRow {
 }
 
 export interface CrmCaseActionAggregateContext {
+  readonly [key: string]: unknown;
   readonly caseId: string;
   readonly subject: string;
   readonly description: string | null;
