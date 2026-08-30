@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { dbPool } from '../../../lib/iam-adapter';
-import { deniedResponse, resolveRequestContext } from '../../../lib/request-context';
+import { deniedResponse, resolveRequestContext, withTenantClient } from '../../../lib/request-context';
 import type { PlatformOrganization } from '../../../lib/contracts';
 
 export async function GET(request: Request) {
@@ -18,11 +17,13 @@ export async function GET(request: Request) {
       return NextResponse.json(denied, { status: 400 });
     }
 
-    const result = await dbPool.query(
-      `SELECT organization_id, name, parent_organization_id, organization_kind, status 
-       FROM platform.organizations 
-       WHERE tenant_id = $1 AND organization_id = $2`,
-      [effectiveContext.tenantId, organizationId]
+    const result = await withTenantClient(effectiveContext, (client) =>
+      client.query(
+        `SELECT organization_id, name, parent_organization_id, organization_kind, status 
+         FROM platform.organizations 
+         WHERE tenant_id = $1 AND organization_id = $2`,
+        [effectiveContext.tenantId, organizationId]
+      )
     );
 
     if (result.rowCount === 0) {
