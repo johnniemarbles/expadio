@@ -5,6 +5,7 @@ import { PostgresCommunicationDeliveryRepository } from '@expadio/postgres-runti
 import { dbPool } from '../../../../lib/iam-adapter';
 
 const deliveryRepository = new PostgresCommunicationDeliveryRepository(dbPool);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const normalizer = new ResendWebhookNormalizer({
   resolveSecret: async (connectorKey: string) => {
@@ -24,10 +25,32 @@ export async function POST(req: NextRequest) {
       headers[key] = value;
     });
 
-    // In a multitenant setup, tenantId and connectorKey might be passed in query params or derived from the URL path.
+    // Webhook ingestion must be tenant-explicit. Production request paths must
+    // never silently fall back to demo tenants or default connectors.
     const searchParams = req.nextUrl.searchParams;
-    const tenantId = searchParams.get('tenantId') || '00000000-0000-0000-0000-000000000001';
-    const connectorKey = searchParams.get('connectorKey') || 'default-resend';
+    const tenantId = searchParams.get('tenantId')?.trim();
+    const connectorKey = searchParams.get('connectorKey')?.trim();
+
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'WEBHOOK_TENANT_REQUIRED', reason: 'tenantId query parameter is required' },
+        { status: 400 },
+      );
+    }
+
+    if (!UUID_PATTERN.test(tenantId)) {
+      return NextResponse.json(
+        { error: 'WEBHOOK_TENANT_INVALID', reason: 'tenantId must be a valid UUID' },
+        { status: 400 },
+      );
+    }
+
+    if (!connectorKey) {
+      return NextResponse.json(
+        { error: 'WEBHOOK_CONNECTOR_REQUIRED', reason: 'connectorKey query parameter is required' },
+        { status: 400 },
+      );
+    }
 
     const requestObj = {
       connectorKey,
