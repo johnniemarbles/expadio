@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../../lib/iam-adapter';
+import { dbPool } from '../../../../lib/iam-adapter';
+import { deniedResponse, resolveRequestContext } from '../../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED' }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
 
     const result = await dbPool.query(
       `SELECT o.organization_id, o.name, o.status, o.created_at, COUNT(m.membership_id)::int as members
@@ -25,19 +18,14 @@ export async function GET(request: Request) {
     
     return NextResponse.json(result.rows);
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
-  
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
+    const effectiveContext = await resolveRequestContext(request);
     
     const { name, kind = 'BUSINESS' } = await request.json();
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -51,6 +39,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, organization: result.rows[0] });
   } catch (err: any) {
-    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+    const denied = deniedResponse(err);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
