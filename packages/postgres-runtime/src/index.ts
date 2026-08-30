@@ -243,3 +243,6 @@ export * from './governed-action-execution.ts';
 export * from './domain-event-outbox.ts';
 
 export * from './domain-event-outbox-runner.ts';
+
+export * from './domain-event-inbox.ts';
+export * from './domain-event-inbox-runner.ts';
