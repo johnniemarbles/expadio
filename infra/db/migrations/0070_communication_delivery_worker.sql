@@ -14,6 +14,7 @@ UPDATE platform.communication_deliveries
  WHERE next_attempt_at IS NULL;
 
 ALTER TABLE platform.communication_deliveries
+  ALTER COLUMN next_attempt_at SET DEFAULT clock_timestamp(),
   ALTER COLUMN next_attempt_at SET NOT NULL;
 
 ALTER TABLE platform.communication_deliveries
