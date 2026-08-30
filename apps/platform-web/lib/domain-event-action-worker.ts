@@ -17,6 +17,10 @@ import {
   executeGovernedScheduleAction,
   type GovernedScheduleExecutionResult,
 } from './governed-schedule-executor';
+import {
+  executeGovernedCreateTaskAction,
+  type GovernedCreateTaskExecutionResult,
+} from './governed-create-task-executor';
 
 export type DomainEventActionWorkerResult =
   | { readonly status: 'IDLE' }
@@ -26,6 +30,7 @@ export type DomainEventActionWorkerResult =
       readonly actions: readonly CrmCaseGovernedActionResult[];
       readonly communications: readonly GovernedCommunicateExecutionResult[];
       readonly schedules: readonly GovernedScheduleExecutionResult[];
+      readonly tasks: readonly GovernedCreateTaskExecutionResult[];
     }
   | {
       readonly status: 'FAILED' | 'DEAD' | 'STALE_CLAIM';
@@ -92,7 +97,7 @@ export async function processOneDomainEventActionWorkItem(
         completedAt: now,
       });
       if (!completed) return { status: 'STALE_CLAIM', claim, reason: 'Claim was superseded before completion.' };
-      return { status: 'PUBLISHED', claim, actions: [], communications: [], schedules: [] };
+      return { status: 'PUBLISHED', claim, actions: [], communications: [], schedules: [], tasks: [] };
     }
 
     const actions = await materializeCrmCaseGovernedActionsForEvent(client, {
@@ -114,6 +119,7 @@ export async function processOneDomainEventActionWorkItem(
 
     const communications: GovernedCommunicateExecutionResult[] = [];
     const schedules: GovernedScheduleExecutionResult[] = [];
+    const tasks: GovernedCreateTaskExecutionResult[] = [];
     for (const action of actions) {
       if (action.status !== 'PERSISTED') continue;
       if (action.intent.executorClass === 'COMMUNICATE') {
@@ -123,6 +129,11 @@ export async function processOneDomainEventActionWorkItem(
         }));
       } else if (action.intent.executorClass === 'SCHEDULE') {
         schedules.push(await executeGovernedScheduleAction(client, {
+          intent: action.intent,
+          now: () => now,
+        }));
+      } else if (action.intent.executorClass === 'CREATE_TASK') {
+        tasks.push(await executeGovernedCreateTaskAction(client, {
           intent: action.intent,
           now: () => now,
         }));
@@ -151,6 +162,7 @@ export async function processOneDomainEventActionWorkItem(
       actions,
       communications,
       schedules,
+      tasks,
     };
   } catch (error) {
     return failClaim(

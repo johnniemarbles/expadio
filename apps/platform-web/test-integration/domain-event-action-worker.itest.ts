@@ -4,6 +4,8 @@ import test from 'node:test';
 import pg from 'pg';
 import { appendCrmCaseLifecycleEvent } from '../lib/crm-case-lifecycle-event';
 import { processOneDomainEventActionWorkItem } from '../lib/domain-event-action-worker';
+import { executeGovernedCreateTaskAction } from '../lib/governed-create-task-executor';
+import { findGovernedActionIntentById } from '@expadio/postgres-runtime/governed-action-intent';
 
 const CAPABILITY_KEY = 'communication.email.send';
 
@@ -122,7 +124,7 @@ async function seedDentexFollowupCase(c: pg.PoolClient) {
   return { tenantId, eventId: appended.event.eventId };
 }
 
-test('worker claims discharge event, schedules follow-up, then publishes outbox', async () => {
+test('worker claims discharge event, schedules follow-up, creates review task, then publishes outbox', async () => {
   const p = pool();
   const c = await p.connect();
   try {
@@ -135,10 +137,14 @@ test('worker claims discharge event, schedules follow-up, then publishes outbox'
 
     assert.equal(result.status, 'PUBLISHED');
     if (result.status !== 'PUBLISHED') throw new Error('expected worker publish');
-    assert.equal(result.actions.length, 1);
-    assert.equal(result.actions[0]?.status, 'PERSISTED');
+    assert.equal(result.actions.length, 2);
+    assert.equal(result.actions.every((action) => action.status === 'PERSISTED'), true);
     assert.equal(result.communications.length, 0);
     assert.equal(result.schedules.length, 1);
+    assert.equal(result.tasks.length, 1);
+    assert.equal(result.tasks[0]?.attempt.status, 'SUCCEEDED');
+    assert.equal(result.tasks[0]?.task?.title, 'Review discharged treatment follow-up');
+    assert.equal(result.tasks[0]?.task?.status, 'OPEN');
     assert.equal(result.schedules[0]?.attempt.status, 'QUEUED');
     assert.equal(result.schedules[0]?.scheduled?.dueAt.toISOString(), '2026-09-06T14:30:00.000Z');
 
@@ -160,7 +166,8 @@ test('worker claims discharge event, schedules follow-up, then publishes outbox'
          ON attempt.tenant_id = intent.tenant_id
         AND attempt.action_intent_id = intent.action_intent_id
       WHERE outbox.tenant_id = $1::uuid
-        AND outbox.event_id = $2::uuid`,
+        AND outbox.event_id = $2::uuid
+        AND intent.executor_class = 'SCHEDULE'`,
       [tenantId, eventId],
     )).rows[0];
 
@@ -171,6 +178,47 @@ test('worker claims discharge event, schedules follow-up, then publishes outbox'
       due_at: new Date('2026-09-06T14:30:00.000Z'),
       execution_status: 'QUEUED',
     });
+
+    const task = (await c.query(
+      `SELECT task.title, task.status, task.assignee_subject_id,
+              intent.action_intent_id, intent.executor_class,
+              attempt.status AS execution_status
+         FROM platform.operational_tasks task
+         JOIN platform.governed_action_intents intent
+           ON intent.tenant_id = task.tenant_id
+          AND intent.action_intent_id = task.source_action_intent_id
+         JOIN platform.governed_action_execution_attempts attempt
+           ON attempt.tenant_id = intent.tenant_id
+          AND attempt.action_intent_id = intent.action_intent_id
+        WHERE task.tenant_id = $1::uuid
+          AND task.source_event_id = $2::uuid`,
+      [tenantId, eventId],
+    )).rows[0];
+
+    assert.equal(task.title, 'Review discharged treatment follow-up');
+    assert.equal(task.status, 'OPEN');
+    assert.equal(task.assignee_subject_id, `${tenantId.slice(0, 8)}-reviewer`);
+    assert.equal(task.executor_class, 'CREATE_TASK');
+    assert.equal(task.execution_status, 'SUCCEEDED');
+
+    const taskIntent = await findGovernedActionIntentById(c, {
+      tenantId,
+      actionIntentId: task.action_intent_id as string,
+    });
+    assert.ok(taskIntent);
+    const replay = await executeGovernedCreateTaskAction(c, {
+      intent: taskIntent,
+      now: () => new Date('2026-08-30T14:32:00.000Z'),
+    });
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.task, null);
+    assert.equal((await c.query(
+      `SELECT count(*)::int AS count
+         FROM platform.operational_tasks
+        WHERE tenant_id = $1::uuid
+          AND source_event_id = $2::uuid`,
+      [tenantId, eventId],
+    )).rows[0].count, 1);
 
     assert.deepEqual(await processOneDomainEventActionWorkItem(c, { tenantId }), {
       status: 'IDLE',
@@ -235,7 +283,9 @@ test('worker retries materialization failures without creating an intent', async
       `SELECT status, attempts,
               (available_at > timestamp '2026-08-30T14:40:00.000Z') AS retry_scheduled,
               (SELECT count(*)::int FROM platform.governed_action_intents
-                WHERE tenant_id = $1::uuid AND source_event_id = $2::uuid) AS intents
+                WHERE tenant_id = $1::uuid AND source_event_id = $2::uuid) AS intents,
+              (SELECT count(*)::int FROM platform.operational_tasks
+                WHERE tenant_id = $1::uuid AND source_event_id = $2::uuid) AS tasks
          FROM platform.domain_event_outbox
         WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
       [tenantId, appended.event.eventId],
@@ -244,7 +294,8 @@ test('worker retries materialization failures without creating an intent', async
       status: 'FAILED',
       attempts: 1,
       retry_scheduled: true,
-      intents: 0,
+      intents: 1,
+      tasks: 0,
     });
   } finally {
     c.release();

@@ -366,6 +366,27 @@ const DENTEX_GOVERNED_ACTION_RULES: readonly GovernedActionRule[] = [
       },
     },
   },
+  {
+    ruleKey: 'dentex.treatment.discharge.follow-up-review-task',
+    eventType: 'Treatment.Discharged',
+    executorClass: 'CREATE_TASK',
+    actionKey: 'patient.follow_up.review_task',
+    enabled: true,
+    policyKeys: [],
+    configuration: {
+      title: { kind: 'LITERAL', value: 'Review discharged treatment follow-up' },
+      description: {
+        kind: 'LITERAL',
+        value: 'Confirm the patient follow-up is completed and record any required next step.',
+      },
+      assigneeSubjectId: {
+        kind: 'AGGREGATE_FIELD',
+        key: 'ownerSubjectId',
+        required: false,
+      },
+      priority: { kind: 'LITERAL', value: 'NORMAL' },
+    },
+  },
 ];
 
 const DENTEX_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [

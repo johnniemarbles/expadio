@@ -261,8 +261,11 @@ test('DENTEX lifecycle Domain Events are Pack semantics, not workflow hardcoding
 
 test('DENTEX discharge follow-up is a governed Pack rule with runtime bindings', () => {
   const rules = resolveGovernedActionRules(DENTEX_PACK, 'Treatment.Discharged');
-  assert.equal(rules.length, 1);
-  const rule = rules[0]!;
+  assert.equal(rules.length, 2);
+  const rule = rules.find((candidate) =>
+    candidate.ruleKey === 'dentex.treatment.discharge.patient-follow-up'
+  )!;
+  assert.ok(rule);
   assert.equal(rule.ruleKey, 'dentex.treatment.discharge.patient-follow-up');
   assert.equal(rule.executorClass, 'SCHEDULE');
   assert.equal(rule.actionKey, 'patient.follow_up.schedule');
@@ -283,6 +286,18 @@ test('DENTEX discharge follow-up is a governed Pack rule with runtime bindings',
     JSON.stringify(configuration).includes('patient@example'),
     false,
   );
+
+  const taskRule = rules.find((candidate) =>
+    candidate.ruleKey === 'dentex.treatment.discharge.follow-up-review-task'
+  )!;
+  assert.ok(taskRule);
+  assert.equal(taskRule.executorClass, 'CREATE_TASK');
+  assert.equal(taskRule.actionKey, 'patient.follow_up.review_task');
+  assert.deepEqual(taskRule.configuration.assigneeSubjectId, {
+    kind: 'AGGREGATE_FIELD',
+    key: 'ownerSubjectId',
+    required: false,
+  });
 
   assert.deepEqual(
     resolveGovernedActionRules(LEXFLOW_PACK, 'Treatment.Discharged'),

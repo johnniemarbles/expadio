@@ -13,6 +13,7 @@ export interface DomainEventActionRunnerItemSummary {
   readonly actionCount: number;
   readonly communicationCount: number;
   readonly scheduleCount: number;
+  readonly taskCount: number;
   readonly reason: string | null;
 }
 
@@ -50,6 +51,7 @@ function summarizeItem(
       actionCount: 0,
       communicationCount: 0,
       scheduleCount: 0,
+      taskCount: 0,
       reason: null,
     };
   }
@@ -63,6 +65,7 @@ function summarizeItem(
     actionCount: result.status === 'PUBLISHED' ? result.actions.length : 0,
     communicationCount: result.status === 'PUBLISHED' ? result.communications.length : 0,
     scheduleCount: result.status === 'PUBLISHED' ? result.schedules.length : 0,
+    taskCount: result.status === 'PUBLISHED' ? result.tasks.length : 0,
     reason: result.status === 'PUBLISHED' ? null : result.reason,
   };
 }
