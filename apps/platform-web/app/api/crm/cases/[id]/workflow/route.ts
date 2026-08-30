@@ -3,6 +3,7 @@ import { resolveRequestContext, withTenantClient, deniedResponse } from '../../.
 import { hasCrmWriteRole } from '../../../../../../lib/crm-authz';
 import { startWorkflow, transitionWorkflow, describeWorkflow } from '../../../../../../lib/workflow-runtime';
 import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
+import { appendCrmCaseLifecycleEvent } from '../../../../../../lib/crm-case-lifecycle-event';
 
 /**
  * Bind a CRM case to the Decision Fabric.
@@ -20,6 +21,18 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SUBJECT_TYPE = 'crm.case';
+
+function requestCorrelationId(request: Request): string {
+  const supplied = request.headers.get('x-correlation-id')?.trim() ?? '';
+  if (
+    supplied !== ''
+    && supplied.length <= 200
+    && !/[\r\n\t]/u.test(supplied)
+  ) {
+    return supplied;
+  }
+  return crypto.randomUUID();
+}
 
 function workflowPackProvenanceFromRow(row: any): WorkflowIndustryPackProvenance | undefined {
   const source = row.industry_pack_runtime_source as
@@ -191,6 +204,7 @@ export async function PATCH(
     const toStageKey = typeof body?.toStageKey === 'string' ? body.toStageKey.trim() : '';
     const expectedRevision = Number(body?.expectedRevision);
     const reason = typeof body?.reason === 'string' && body.reason.trim() !== '' ? body.reason.trim() : undefined;
+    const correlationId = requestCorrelationId(request);
     if (toStageKey === '') {
       return NextResponse.json({ error: 'A target stage is required.' }, { status: 400 });
     }
@@ -206,14 +220,20 @@ export async function PATCH(
       try {
         await context.applyTo(client);
         const row = await client.query(
-          `SELECT workflow_instance_id FROM platform.crm_cases WHERE case_id = $1::uuid FOR UPDATE`,
+          `SELECT workflow_instance_id, stage_key,
+                  industry_pack_vertical_key, industry_pack_version,
+                  industry_pack_runtime_source
+             FROM platform.crm_cases
+            WHERE case_id = $1::uuid
+            FOR UPDATE`,
           [caseId],
         );
         if (row.rows.length === 0) {
           await client.query('ROLLBACK');
           return { notFound: true } as const;
         }
-        const instanceId = row.rows[0].workflow_instance_id as string | null;
+        const caseRow = row.rows[0];
+        const instanceId = caseRow.workflow_instance_id as string | null;
         if (instanceId === null) {
           await client.query('ROLLBACK');
           return { noWorkflow: true } as const;
@@ -242,8 +262,29 @@ export async function PATCH(
           `UPDATE platform.crm_cases SET stage_key = $2, updated_at = now() WHERE case_id = $1::uuid`,
           [caseId, moved.instance.currentStageKey ?? null],
         );
+
+        const lifecycleEvent = await appendCrmCaseLifecycleEvent(client, {
+          tenantId: context.tenantId,
+          caseId,
+          workflowInstanceId: instanceId,
+          fromStageKey: caseRow.stage_key ?? null,
+          toStageKey: moved.instance.currentStageKey ?? toStageKey,
+          actorSubjectId: context.subjectId,
+          correlationId,
+          provenance: {
+            verticalKey: caseRow.industry_pack_vertical_key ?? null,
+            version: caseRow.industry_pack_version ?? null,
+            runtimeSource: caseRow.industry_pack_runtime_source ?? null,
+          },
+          ...(reason === undefined ? {} : { reason }),
+        });
+
         await client.query('COMMIT');
-        return { instance: moved.instance, stages: moved.stages } as const;
+        return {
+          instance: moved.instance,
+          stages: moved.stages,
+          domainEventId: lifecycleEvent?.event.eventId ?? null,
+        } as const;
       } catch (err) {
         await client.query('ROLLBACK');
         throw err;
@@ -287,7 +328,12 @@ export async function PATCH(
       }
       return NextResponse.json({ error: 'That workflow instance was not found.' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, instance: result.instance, stages: result.stages });
+    return NextResponse.json({
+      success: true,
+      instance: result.instance,
+      stages: result.stages,
+      domainEventId: result.domainEventId,
+    });
   } catch (error) {
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
