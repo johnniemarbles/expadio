@@ -101,6 +101,10 @@ export async function invokeGovernedVoiceIntelligence(
     client,
     input.options.artifactBlobSink,
   );
+  const inputResolver = governedArtifactVoiceInputResolver(
+    input.options.artifactSource,
+    input.options.now ?? (() => new Date()),
+  );
 
   const adapters = new Map<string, VoiceProviderAdapter>();
   for (const connector of connectors) {
