@@ -61,8 +61,15 @@ export function parseGovernedAiActionConfiguration(
   if (typeof inputReference !== "string" || inputReference.trim() === "") {
     throw new Error("AI_ACTION_INPUT_REFERENCE_REQUIRED");
   }
+  const contextReference = config.contextReference;
+  if (
+    contextReference !== undefined
+    && (typeof contextReference !== "string" || contextReference.trim() === "")
+  ) {
+    throw new Error("AI_ACTION_CONTEXT_REFERENCE_INVALID");
+  }
   const promptKey = typeof config.promptKey === "string" && config.promptKey.trim() !== ""
-    ? config.promptKey
+    ? config.promptKey.trim()
     : "prompt.default";
   const promptVersion = Number(config.promptVersion ?? 1);
   if (!Number.isInteger(promptVersion) || promptVersion <= 0) {
@@ -102,7 +109,7 @@ export function parseGovernedAiActionConfiguration(
     operation,
     purpose: purpose.trim(),
     inputReference: inputReference.trim(),
-    ...(config.contextReference ? { contextReference: String(config.contextReference) } : {}),
+    ...(contextReference === undefined ? {} : { contextReference: contextReference.trim() }),
     promptKey,
     promptVersion,
     requiredResidencyTags,
