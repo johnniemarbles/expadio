@@ -190,11 +190,12 @@ Binding keys:
 | Field | Value |
 |-------|--------|
 | CRM package | `@expadio/lead` |
-| CRM table | `platform.crm_leads` (`0045_crm_leads.sql`) |
+| CRM table | `platform.crm_leads` (`0045_crm_leads.sql` + `0087_lead_capture_convert_seam.sql`) |
 | accepted CRM sources today | `manual`, `web_form`, `outbound_gtm` |
-| extract convert mapper | `mapCaptureStageToCrm` / `@expadio/lead-crm.convertCaptureToCrm` |
+| extract convert mapper | `mapCaptureStageToCrm` / `buildCrmLeadFromCapture` |
+| platform writer | `POST /api/crm/leads/from-capture` |
 | tenancy | EXPADIO tenant → organization → workspace → operatingUnit; layer tree is not a second tenant axis |
-| PDP | extract `authorize()` deny-by-default; production principal from EXPADIO gateway |
+| PDP | extract `authorize()` deny-by-default; production principal from EXPADIO `resolveRequestContext` |
 
 ### Done off-platform (lab closed — leave the extract alone)
 
@@ -209,15 +210,25 @@ Binding keys:
 - [x] Lab API: `POST /v1/submissions`, lead read/stage, `POST /v1/leads/:id/convert`.
 - [x] Merge-readiness doc and extract issue #1 list the four gates below.
 
-### Merge gates — all required before any PR into `johnniemarbles/expadio`
+### Done on EXPADIO branch `feat/lead-capture-convert-seam` (not on main)
+
+- [x] `@expadio/lead.mapCaptureStageToCrm` + `buildCrmLeadFromCapture` (I8, source=`web_form`).
+- [x] Provenance columns `capture_lead_id` / `capture_layer_id` + unique `(tenant_id, capture_lead_id)` (`0087`).
+- [x] Real writer `POST /api/crm/leads/from-capture` upserts `platform.crm_leads` through the mapper. Does not use customer convert.
+- [x] Body `tenantId` / `brandId` / `layerId` rejected. Principal from `resolveRequestContext`.
+- [x] ADR-011 + soak catalogue `platform.lead_capture_soak_expectations()`.
+
+### Merge gates — all required before any extract PR into `johnniemarbles/expadio`
 
 - [ ] Live Postgres FORCE RLS soak of extract `0001`+`0002` against two tenants, sibling brands, and two countries (India vs US). Country grant must not read the sibling country. HQ grant reads descendants.
-- [ ] Convert path writes `platform.crm_leads` through `@expadio/lead` using `mapCaptureStageToCrm`. Capture lead / submissions / attribution / audit remain. Re-convert is idempotent.
-- [ ] EXPADIO gateway injects `x-expadio-principal`. Lab header trust off on platform. Body `tenantId` / `brandId` / `layerId` rejected (P16).
-- [ ] No BEMP `/brand/leads` routes, screens, or `lib/leads/service.ts` copied onto main.
+- [x] Convert path writes `platform.crm_leads` through `@expadio/lead` using `mapCaptureStageToCrm`. Capture lead / submissions / attribution / audit remain. Re-convert is idempotent. (code on branch; live soak still open)
+- [ ] EXPADIO gateway injects `x-expadio-principal`. Lab header trust off on platform. Body `tenantId` / `brandId` / `layerId` rejected (P16). Writer rejects body scope; header injection still open.
+- [x] No BEMP `/brand/leads` routes, screens, or `lib/leads/service.ts` copied onto this branch.
 
 ### Next on EXPADIO (after gates)
 
+- [ ] Run live FORCE RLS soak (`docs/leads/RLS-SOAK.md`) on a real cluster.
+- [ ] Inject `x-expadio-principal` from the platform gateway / `proxy.ts` after membership resolve. Keep `LAB_TRUSTED_HEADERS` off.
 - [ ] Port extract packages as `@expadio/lead-*` into the monorepo. Keep `@expadio/lead` as the CRM entity.
 - [ ] Add capture ingest source to `LEAD_INGEST_SOURCES` only if `web_form` is insufficient; do not invent a second lead table in `platform`.
 - [ ] Bind capture sources to existing tenancy (`operatingUnit` / workspace) rather than a parallel org tree.
@@ -416,3 +427,4 @@ Binding keys:
 - [ ] Audit production code for implicit demo tenant/default connector fallbacks.
 - [ ] Add source-contract guard against production demo fallbacks.
 - [ ] Reconcile migration 0085 collision before merging #489 and #481 (`0085_communication_social_channel.sql` vs `0085_audit_organization_provenance.sql`).
+- [x] Lead-capture convert seam uses `0087_lead_capture_convert_seam.sql` so it does not collide with social `0086`.

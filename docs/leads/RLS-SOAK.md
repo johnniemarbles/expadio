@@ -4,7 +4,7 @@ Gate 1 for merging `expadio-lead-management` into EXPADIO. Not a substitute for 
 
 ## Cluster
 
-Use the EXPADIO Postgres with FORCE RLS. Apply extract `0001_foundation.sql` + `0002_layers.sql` on a scratch schema or a dedicated lab database. Apply platform `0086_lead_capture_convert_seam.sql` on `platform.crm_leads`.
+Use the EXPADIO Postgres with FORCE RLS. Apply extract `0001_foundation.sql` + `0002_layers.sql` on a scratch schema or a dedicated lab database. Apply platform `0087_lead_capture_convert_seam.sql` on `platform.crm_leads`.
 
 Set session GUCs the same way production does:
 
@@ -13,6 +13,8 @@ SELECT set_config('app.tenant_id', '<tenant-a-uuid>', true);
 -- optional extract fence
 SELECT set_config('app.visible_layer_ids', 'hq,in,in-tn,in-tn-u1', true);
 ```
+
+Writer under test: `POST /api/crm/leads/from-capture` → `buildCrmLeadFromCapture` → upsert on `(tenant_id, capture_lead_id)`.
 
 ## Fixtures
 
