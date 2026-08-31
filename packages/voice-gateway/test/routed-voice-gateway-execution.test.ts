@@ -8,6 +8,17 @@ import {
   type VoiceIntelligenceIntent,
 } from "../src/index.ts";
 
+const inputResolver = {
+  resolveText: async (input: any) => ({
+    content: input.reference,
+    sourceReference: input.reference,
+  }),
+  resolveProviderFetchUrl: async (input: any) => ({
+    providerFetchUrl: input.reference,
+    sourceReference: input.reference,
+  }),
+};
+
 const artifactSink = {
   write: async (input: any) => ({
     contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
@@ -50,6 +61,7 @@ test("RoutedVoiceGateway routes TRANSCRIBE operation to DeepgramSttAdapter", asy
   const deepgramAdapter = new DeepgramSttAdapter({
     apiToken: async () => "deepgram-token",
     artifactSink,
+    inputResolver,
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
@@ -63,6 +75,7 @@ test("RoutedVoiceGateway routes TRANSCRIBE operation to DeepgramSttAdapter", asy
   const elevenLabsAdapter = new ElevenLabsTtsAdapter({
     apiToken: async () => "elevenlabs-token",
     artifactSink,
+    inputResolver,
     fetchImpl: async () => new Response(Buffer.from("AUDIO"), { status: 200 }),
   });
 
@@ -107,11 +120,13 @@ test("RoutedVoiceGateway routes SYNTHESIZE operation to ElevenLabsTtsAdapter", a
   const deepgramAdapter = new DeepgramSttAdapter({
     apiToken: async () => "deepgram-token",
     artifactSink,
+    inputResolver,
   });
 
   const elevenLabsAdapter = new ElevenLabsTtsAdapter({
     apiToken: async () => "elevenlabs-token",
     artifactSink,
+    inputResolver,
     fetchImpl: async () => new Response(Buffer.from("AUDIO"), { status: 200 }),
   });
 
