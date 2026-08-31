@@ -22,6 +22,7 @@ export interface GovernedArtifactStorageOptions {
   readonly tenantId: string;
   readonly organizationId: string;
   readonly serviceSubjectId: string;
+  readonly correlationId: string;
   readonly projectUrl: string;
   readonly bucket: string;
   readonly requiredResidencyTags: readonly string[];
@@ -79,6 +80,10 @@ export async function createGovernedSupabaseArtifactStore(
     options.serviceSubjectId,
     'GOVERNED_ARTIFACT_STORAGE_SUBJECT_INVALID',
   );
+  const correlationId = stable(
+    options.correlationId,
+    'GOVERNED_ARTIFACT_STORAGE_CORRELATION_INVALID',
+  );
 
   const registry = new PostgresProviderRegistryRepository(client);
   const [connectors, routingPolicy] = await Promise.all([
@@ -131,7 +136,7 @@ export async function createGovernedSupabaseArtifactStore(
     secretResolver: options.secretResolver ?? delegatedSecretResolver,
     requestedBySubjectId: serviceSubjectId,
     requestId: () => randomUUID(),
-    correlationId: () => randomUUID(),
+    correlationId: () => correlationId,
     now: nowIso,
   });
 
