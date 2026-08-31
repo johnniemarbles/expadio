@@ -36,7 +36,8 @@
     "@expadio/workflow": "workspace:*",
     "@expadio/ai-gateway": "workspace:*",
     "@expadio/provider-registry": "workspace:*",
-    "@expadio/storage": "workspace:*"
+    "@expadio/storage": "workspace:*",
+    "@expadio/voice-gateway": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
