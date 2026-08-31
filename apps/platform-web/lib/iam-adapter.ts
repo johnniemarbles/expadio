@@ -50,8 +50,6 @@ const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000002';
 
 export class AutoProvisioningMembershipRepository implements MembershipRepository {
-  // Subjects whose platform-admin grant has already been ensured this process
-  // lifetime, so the idempotent grant runs at most once per subject per pod.
   private readonly grantedSubjects = new Set<string>();
 
   constructor(private readonly inner: MembershipRepository, private readonly pool: pg.Pool) {}
@@ -77,14 +75,6 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
       }
     }
 
-    // Admin role grant, now gated rather than unconditional (was: every logged-in
-    // operator silently became PLATFORM_SUPER_ADMIN). Governance:
-    //   - PLATFORM_ADMIN_SUBJECTS: an explicit allowlist of subject ids that get
-    //     the platform-admin + tenant-owner grant. This is the production path.
-    //   - DEMO_OPEN_ADMIN (default "true"): when true, any provisioned operator
-    //     is granted, keeping the single-tenant demo console usable end to end.
-    //     Set DEMO_OPEN_ADMIN=false in production to require the allowlist.
-    // Idempotent and cached per process so the decision runs once per operator.
     if (identity.subjectId && list.length > 0 && !this.grantedSubjects.has(identity.subjectId)) {
       this.grantedSubjects.add(identity.subjectId);
       if (shouldGrantPlatformAdmin(identity.subjectId)) {
@@ -103,9 +93,6 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
     await ensureGlobalBootstrap(this.pool);
     const client = await this.pool.connect();
     try {
-      // Grant both the platform-admin role (platform-scoped governance: template
-      // authoring/publication) and the tenant-owner role (tenant-scoped actions
-      // such as cloning a platform template into a brand draft).
       await client.query(
         `INSERT INTO platform.authorization_assignments (tenant_id, organization_id, subject_id, role_id, status)
          SELECT $1::uuid, $2::uuid, $3, r.role_id, 'ACTIVE'
@@ -126,10 +113,6 @@ export class AutoProvisioningMembershipRepository implements MembershipRepositor
   }
 }
 
-// Canonical communication capabilities the provider-registration flow references.
-// The register step validates connector capability keys against this table, so
-// without these rows no communication connector can be created. Seeded here (and
-// in scripts/seed.cjs) so the live console works without a manual re-seed.
 export const COMMUNICATION_CAPABILITIES: readonly { key: string; name: string }[] = [
   { key: 'communication.email.send', name: 'Email — Send' },
   { key: 'communication.sms.send', name: 'SMS — Send' },
@@ -137,15 +120,11 @@ export const COMMUNICATION_CAPABILITIES: readonly { key: string; name: string }[
   { key: 'communication.voice.dial', name: 'Voice — Dial' },
   { key: 'communication.push.send', name: 'Push — Send' },
   { key: 'communication.rcs.send', name: 'RCS — Send' },
+  { key: 'communication.social.send', name: 'Social — Send' },
 ];
 
 let globalBootstrapPromise: Promise<void> | undefined;
 
-/**
- * One-time, idempotent process bootstrap of the platform-scoped rows the
- * console depends on: the PLATFORM_SUPER_ADMIN role and the communication
- * capability registry. Runs once per pod; safe to call concurrently.
- */
 function ensureGlobalBootstrap(pool: pg.Pool): Promise<void> {
   if (globalBootstrapPromise === undefined) {
     globalBootstrapPromise = (async () => {
@@ -174,7 +153,6 @@ function ensureGlobalBootstrap(pool: pg.Pool): Promise<void> {
         client.release();
       }
     })().catch((err) => {
-      // Reset so a transient failure can be retried on the next request.
       globalBootstrapPromise = undefined;
       throw err;
     });
