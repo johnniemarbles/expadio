@@ -1,4 +1,4 @@
-import { LearningAssessmentValidationError, LearningAssignmentValidationError, LearningCompetencyValidationError, LearningProgramValidationError, LearningValidationError } from '@expadio/learning';
+import { LearningAssessmentValidationError, LearningAssignmentValidationError, LearningAutomationValidationError, LearningCompetencyValidationError, LearningProgramValidationError, LearningValidationError } from '@expadio/learning';
 
 export interface LearningApiError {
   readonly status: number;
@@ -17,6 +17,7 @@ export function learningApiError(error: unknown): LearningApiError | null {
     || error instanceof LearningProgramValidationError
     || error instanceof LearningCompetencyValidationError
     || error instanceof LearningAssignmentValidationError
+    || error instanceof LearningAutomationValidationError
   ) {
     return {
       status: 400,
@@ -72,6 +73,7 @@ export function learningApiError(error: unknown): LearningApiError | null {
     'LEARNING_ASSIGNMENT_RULE_KEY_INVALID',
     'LEARNING_ASSIGNMENT_RULE_ID_INVALID',
     'LEARNING_TRIGGER_EVENT_ID_INVALID',
+    'LEARNING_AUTOMATION_RULE_REVISION_INVALID',
   ]);
   if (validationErrors.has(error.message)) {
     return {
@@ -174,6 +176,7 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSIGNMENT_RULE_VERSION_NOT_FOUND':
     case 'LEARNING_ASSIGNMENT_RULE_COURSE_NOT_FOUND':
     case 'LEARNING_ASSIGNMENT_RULE_PROGRAM_NOT_FOUND':
+    case 'LEARNING_AUTOMATION_RULE_NOT_FOUND':
       return {
         status: 404,
         body: {
@@ -227,6 +230,8 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSIGNMENT_RULE_KEY_EXISTS':
     case 'LEARNING_ASSIGNMENT_RULE_VERSION_NOT_PUBLISHABLE':
     case 'LEARNING_ASSIGNMENT_RULE_TARGET_NOT_PUBLISHED':
+    case 'LEARNING_AUTOMATION_RULE_KEY_EXISTS':
+    case 'LEARNING_AUTOMATION_RULE_REVISION_CONFLICT':
       return {
         status: 409,
         body: {
