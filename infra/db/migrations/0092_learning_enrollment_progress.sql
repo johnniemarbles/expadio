@@ -22,6 +22,7 @@ CREATE TABLE platform.learning_learners (
   learner_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
   subject_id text,
+  subject_issuer text,
   contact_id uuid,
   external_ref text,
   full_name text NOT NULL CHECK (char_length(btrim(full_name)) BETWEEN 1 AND 200),
@@ -37,12 +38,18 @@ CREATE TABLE platform.learning_learners (
   UNIQUE (learner_id, tenant_id),
   FOREIGN KEY (contact_id, tenant_id)
     REFERENCES platform.crm_contacts(contact_id, tenant_id)
-    ON DELETE SET NULL,
+    ON DELETE RESTRICT,
   CONSTRAINT learning_learner_identity_required CHECK (
     subject_id IS NOT NULL OR contact_id IS NOT NULL OR external_ref IS NOT NULL
   ),
   CONSTRAINT learning_learner_subject_nonblank CHECK (
     subject_id IS NULL OR btrim(subject_id) <> ''
+  ),
+  CONSTRAINT learning_learner_subject_issuer_consistency CHECK (
+    subject_id IS NOT NULL OR subject_issuer IS NULL
+  ),
+  CONSTRAINT learning_learner_subject_issuer_nonblank CHECK (
+    subject_issuer IS NULL OR btrim(subject_issuer) <> ''
   ),
   CONSTRAINT learning_learner_external_ref_nonblank CHECK (
     external_ref IS NULL OR btrim(external_ref) <> ''
@@ -50,7 +57,11 @@ CREATE TABLE platform.learning_learners (
 );
 
 CREATE UNIQUE INDEX learning_learners_subject_uq
-  ON platform.learning_learners (tenant_id, subject_id)
+  ON platform.learning_learners (
+    tenant_id,
+    subject_id,
+    COALESCE(subject_issuer, '')
+  )
   WHERE subject_id IS NOT NULL;
 
 CREATE UNIQUE INDEX learning_learners_contact_uq
