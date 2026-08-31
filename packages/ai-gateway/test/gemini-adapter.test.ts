@@ -147,7 +147,7 @@ test("GeminiAiAdapter handles EMBED operation with embedContent API", async () =
 
   assert.ok(requestedUrl.includes("gemini-2.0-flash:embedContent"));
   assert.equal(proposal.outputReference, `artifact://AI_EMBEDDING/${embedIntent.invocationId}`);
-  assert.equal(proposal.confidence, 1.0);
+  assert.equal(proposal.confidence, undefined);
 
   const validation = validateAiProposal(embedIntent, proposal);
   assert.equal(validation.valid, true);
