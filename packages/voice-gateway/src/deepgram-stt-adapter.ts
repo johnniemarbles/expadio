@@ -123,11 +123,6 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
     const durationMilliseconds = durationSeconds === undefined
       ? undefined
       : Math.round(durationSeconds * 1000);
-    // Cost is an estimate only when provider duration is available.
-    const costMinorUnits = durationSeconds === undefined
-      ? undefined
-      : Math.max(1, Math.ceil((durationSeconds / 60) * 0.5));
-
     const artifact = await this.#artifactSink.write({
       tenantId: intent.tenantId,
       artifactKind: "VOICE_TRANSCRIPT",
@@ -150,8 +145,9 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      ...(durationMilliseconds !== undefined ? { audioDurationMilliseconds: durationMilliseconds } : {}),
-      ...(costMinorUnits !== undefined ? { estimatedCostMinorUnits: costMinorUnits } : {}),
+      ...(durationMilliseconds !== undefined
+        ? { audioDurationMilliseconds: durationMilliseconds }
+        : {}),
     };
 
     return {
