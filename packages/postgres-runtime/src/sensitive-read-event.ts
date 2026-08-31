@@ -10,6 +10,7 @@ interface SensitiveReadRow {
   readonly event_id: string;
   readonly request_id: string;
   readonly tenant_id: string;
+  readonly organization_id: string;
   readonly requested_by_subject_id: string;
   readonly resource_type: string;
   readonly resource_id: string;
@@ -48,11 +49,11 @@ implements SensitiveReadAuditRepository {
          authorization_decision_id, authorization_reason_key, outcome,
          result_reference, classifications, source_references,
          failure_reason_key, requested_at, recorded_at,
-         correlation_id, evidence_refs
+         correlation_id, evidence_refs, organization_id
        ) VALUES (
          $1::uuid, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10,
          $11, $12, $13::text[], $14::text[], $15,
-         $16::timestamptz, $17::timestamptz, $18::uuid, $19::text[]
+         $16::timestamptz, $17::timestamptz, $18::uuid, $19::text[], $20::uuid
        ) ON CONFLICT DO NOTHING`,
       values(event),
     );
@@ -86,7 +87,7 @@ implements SensitiveReadAuditRepository {
 }
 
 const SENSITIVE_READ_SELECT =
-  `SELECT event_id, request_id, tenant_id, requested_by_subject_id,
+  `SELECT event_id, request_id, tenant_id, organization_id, requested_by_subject_id,
           resource_type, resource_id, purpose, legal_basis,
           authorization_decision_id, authorization_reason_key, outcome,
           result_reference, classifications, source_references,
@@ -105,6 +106,7 @@ function values(event: SensitiveReadAuditEvent): readonly unknown[] {
     [...event.sourceReferences], event.failureReasonKey,
     request.requestedAt, event.recordedAt, request.correlationId,
     [...request.evidenceRefs],
+    request.organizationId,
   ];
 }
 
@@ -114,6 +116,7 @@ function map(row: SensitiveReadRow): SensitiveReadAuditEvent {
     request: {
       requestId: row.request_id,
       tenantId: row.tenant_id,
+      organizationId: row.organization_id,
       requestedBySubjectId: row.requested_by_subject_id,
       resourceReference: {
         type: row.resource_type,

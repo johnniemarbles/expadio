@@ -4,15 +4,19 @@ INSERT INTO platform.tenants (tenant_id, name) VALUES
   ('9d6e3f40-a12b-4c53-d4e5-f60718293a4b', 'Agent Run Tenant A'),
   ('ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'Agent Run Tenant B');
 
+INSERT INTO platform.organizations (organization_id, tenant_id, name) VALUES
+  ('9d6e3f40-a12b-4c53-d4e5-f60718293a4b', '9d6e3f40-a12b-4c53-d4e5-f60718293a4b', 'Audit smoke scope'),
+  ('ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'Audit smoke scope');
+
 INSERT INTO platform.agent_runs (
-  run_id, tenant_id, agent_id, purpose,
+  run_id, tenant_id, organization_id, agent_id, purpose,
   context_bundle_reference, budget_policy_reference,
   idempotency_key, requested_by_subject_id,
   requested_at, created_at, reason, correlation_id, evidence_refs
 ) VALUES
   (
     'b0000000-0000-0000-0000-000000000001',
-    '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
+    '9d6e3f40-a12b-4c53-d4e5-f60718293a4b', '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
     'agent-a', 'Prepare an authorized account proposal.',
     'context://tenant-a/bundle-1', 'policy://agent-budget/v1',
     'agent-run:a:1', 'subject-a',
@@ -22,7 +26,7 @@ INSERT INTO platform.agent_runs (
   ),
   (
     'b0000000-0000-0000-0000-000000000002',
-    'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
+    'ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
     'agent-b', 'Prepare a tenant B proposal.',
     'context://tenant-b/bundle-1', 'policy://agent-budget/v1',
     'agent-run:b:1', 'subject-b',
@@ -32,13 +36,13 @@ INSERT INTO platform.agent_runs (
   );
 
 INSERT INTO platform.agent_run_events (
-  event_id, run_id, tenant_id, sequence, event_type,
+  event_id, run_id, tenant_id, organization_id, sequence, event_type,
   event_reference, occurred_at, actor_subject_id, reason,
   correlation_id, evidence_refs, cost_minor_units
 ) VALUES (
   'b0000000-0000-0000-0000-000000000011',
   'b0000000-0000-0000-0000-000000000002',
-  'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
+  'ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
   1, 'STARTED', 'event://agent-run/b/started',
   now(), 'subject-b', 'Agent run started.',
   'b0000000-0000-0000-0000-000000000112',
@@ -53,6 +57,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE
   TO expadio_agent_runs_test;
 
 SET ROLE expadio_agent_runs_test;
+SELECT set_config('app.organization_id', '9d6e3f40-a12b-4c53-d4e5-f60718293a4b', false);
 SELECT set_config(
   'app.tenant_id',
   '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
@@ -73,13 +78,13 @@ END;
 $$;
 
 INSERT INTO platform.agent_run_events (
-  event_id, run_id, tenant_id, sequence, event_type,
+  event_id, run_id, tenant_id, organization_id, sequence, event_type,
   event_reference, occurred_at, actor_subject_id, reason,
   correlation_id, evidence_refs, cost_minor_units
 ) VALUES (
   'b0000000-0000-0000-0000-000000000012',
   'b0000000-0000-0000-0000-000000000001',
-  '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
+  '9d6e3f40-a12b-4c53-d4e5-f60718293a4b', '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
   1, 'BUDGET_RESERVED', 'budget://reservation/a/1',
   now(), 'subject-a', 'Reserved governed tool budget.',
   'b0000000-0000-0000-0000-000000000113',
@@ -90,13 +95,13 @@ DO $$
 BEGIN
   BEGIN
     INSERT INTO platform.agent_run_events (
-      event_id, run_id, tenant_id, sequence, event_type,
+      event_id, run_id, tenant_id, organization_id, sequence, event_type,
       event_reference, occurred_at, actor_subject_id, reason,
       correlation_id, evidence_refs
     ) VALUES (
       'b0000000-0000-0000-0000-000000000013',
       'b0000000-0000-0000-0000-000000000001',
-      '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
+      '9d6e3f40-a12b-4c53-d4e5-f60718293a4b', '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
       3, 'SUCCEEDED', 'output://agent-run/a/1',
       now(), 'subject-a', 'Invalid sequence.',
       'b0000000-0000-0000-0000-000000000114',
@@ -118,13 +123,13 @@ DO $$
 BEGIN
   BEGIN
     INSERT INTO platform.agent_runs (
-      run_id, tenant_id, agent_id, purpose,
+      run_id, tenant_id, organization_id, agent_id, purpose,
       context_bundle_reference, budget_policy_reference,
       idempotency_key, requested_by_subject_id,
       requested_at, created_at, reason, correlation_id, evidence_refs
     ) VALUES (
       'b0000000-0000-0000-0000-000000000003',
-      'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
+      'ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
       'agent-cross', 'Cross tenant run.',
       'context://tenant-b/cross', 'policy://agent-budget/v1',
       'agent-run:cross:1', 'subject-a',

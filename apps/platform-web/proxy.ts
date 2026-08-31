@@ -11,10 +11,8 @@ const ORG_COOKIE = 'expadio-org'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function pickUuid(...candidates: (string | null | undefined)[]): string | null {
-  for (const value of candidates) {
-    if (typeof value === 'string' && UUID.test(value)) return value
-  }
-  return null
+  const value = candidates.find(candidate => candidate !== null && candidate !== undefined)
+  return typeof value === 'string' && UUID.test(value) ? value : null
 }
 
 export default clerkMiddleware(async (auth, req) => {
@@ -40,10 +38,12 @@ export default clerkMiddleware(async (auth, req) => {
   const accountParam = params.get('account')
   const orgParam = params.get('org')
 
-  const tenantId = pickUuid(accountParam, req.cookies.get(TENANT_COOKIE)?.value)
-  const organizationId = pickUuid(orgParam, req.cookies.get(ORG_COOKIE)?.value)
+  const tenantId = pickUuid(accountParam, req.headers.get('x-expadio-tenant-id'), req.cookies.get(TENANT_COOKIE)?.value)
+  const organizationId = pickUuid(orgParam, req.headers.get('x-expadio-organization-id'), req.cookies.get(ORG_COOKIE)?.value)
 
   const requestHeaders = new Headers(req.headers)
+  requestHeaders.delete('x-expadio-tenant-id')
+  requestHeaders.delete('x-expadio-organization-id')
   if (tenantId) requestHeaders.set('x-expadio-tenant-id', tenantId)
   if (organizationId) requestHeaders.set('x-expadio-organization-id', organizationId)
 

@@ -55,14 +55,18 @@ export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
     const url = `${baseUrl}${path}`;
     
     // Forward headers (specifically cookies) if running on the server
-    const fetchOptions: RequestInit = {};
+    const fetchOptions: RequestInit = { cache: 'no-store' };
     if (typeof window === 'undefined') {
       try {
         const headersList = await headers();
         const cookieHeader = headersList.get('cookie');
-        if (cookieHeader) {
-          fetchOptions.headers = { 'Cookie': cookieHeader };
+        const forwarded = new Headers();
+        if (cookieHeader) forwarded.set('Cookie', cookieHeader);
+        for (const key of ['x-expadio-tenant-id', 'x-expadio-organization-id']) {
+          const value = headersList.get(key);
+          if (value) forwarded.set(key, value);
         }
+        fetchOptions.headers = forwarded;
       } catch (e) {
         // Fallback
       }
@@ -119,7 +123,7 @@ export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
     return fetchApi<ReviewItem[]>(`/api/governance/reviews?organizationId=${orgId}`);
   },
   async loadActivity(orgId: string) {
-    return fetchApi<ActivityItem[]>(`/api/activity?organizationId=${orgId}`);
+    return fetchApi<ActivityItem[]>(`/api/activity?org=${encodeURIComponent(orgId)}`);
   },
   async loadOrganization(orgId: string) {
     return fetchApi<PlatformOrganization>(`/api/organizations?id=${orgId}`);

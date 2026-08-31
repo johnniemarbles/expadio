@@ -28,6 +28,7 @@ class Client implements PostgresClient {
 const run: AgentRunRecord = {
   runId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   tenantId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  organizationId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   agentId: 'agent-1',
   purpose: 'Prepare a proposal.',
   contextBundleReference: 'context://bundle/1',
@@ -45,6 +46,7 @@ const event: AgentRunEventRecord = {
   eventId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
   runId: run.runId,
   tenantId: run.tenantId,
+  organizationId: run.organizationId,
   sequence: 1,
   eventType: 'STARTED',
   eventReference: 'event://agent-run/1/started',
@@ -60,6 +62,7 @@ function runRow() {
   return {
     run_id: run.runId,
     tenant_id: run.tenantId,
+    organization_id: run.organizationId,
     agent_id: run.agentId,
     purpose: run.purpose,
     context_bundle_reference: run.contextBundleReference,
@@ -79,6 +82,7 @@ function eventRow() {
     event_id: event.eventId,
     run_id: event.runId,
     tenant_id: event.tenantId,
+    organization_id: event.organizationId,
     sequence: event.sequence,
     event_type: event.eventType,
     event_reference: event.eventReference,

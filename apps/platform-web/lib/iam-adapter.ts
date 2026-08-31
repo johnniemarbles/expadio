@@ -182,8 +182,6 @@ function ensureGlobalBootstrap(pool: pg.Pool): Promise<void> {
   return globalBootstrapPromise;
 }
 
-export const membershipRepository = new AutoProvisioningMembershipRepository(
-  new PostgresMembershipRepository(dbPool),
-  dbPool
-);
+// Live authentication only reads persisted memberships. Provisioning is a separate explicit operation.
+export const membershipRepository = new PostgresMembershipRepository(dbPool);
 export const identityVerifier = new ClerkIdentityVerifier();

@@ -9,6 +9,7 @@ import {
 const request = {
   requestId: 'read-1',
   tenantId: 'tenant-1',
+  organizationId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   requestedBySubjectId: 'subject-1',
   resourceReference: { type: 'regulated-record', id: 'record-1' },
   purpose: 'Provide authorized case review.',
@@ -20,6 +21,7 @@ const request = {
 const observation = {
   requestId: request.requestId,
   tenantId: request.tenantId,
+  organizationId: request.organizationId,
   resourceReference: request.resourceReference,
   resultReference: 'result://sensitive-read/1',
   classifications: ['RESTRICTED'],
