@@ -1,5 +1,6 @@
 import type { ConnectorDefinition } from "@expadio/provider-registry";
 import type {
+  AiGeneratedOutputStore,
   AiInvocationIntent,
   AiOperation,
   AiProposal,
@@ -24,6 +25,7 @@ export interface GeminiAiAdapterOptions {
   readonly endpointBaseUrl?: string;
   readonly fetchImpl?: typeof fetch;
   readonly now?: () => string;
+  readonly outputStore?: AiGeneratedOutputStore;
 }
 
 export class GeminiAiAdapter implements AiProviderAdapter {
@@ -33,6 +35,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
   readonly #endpointBaseUrl: string;
   readonly #fetch: typeof fetch;
   readonly #now: () => string;
+  readonly #outputStore?: AiGeneratedOutputStore;
 
   constructor(options: GeminiAiAdapterOptions) {
     this.#apiToken = options.apiToken;
@@ -40,6 +43,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://generativelanguage.googleapis.com").replace(/\/+$/u, "");
     this.#fetch = options.fetchImpl ?? fetch;
     this.#now = options.now ?? (() => new Date().toISOString());
+    this.#outputStore = options.outputStore;
   }
 
   async invoke(input: {
@@ -143,11 +147,24 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       costMinorUnits,
     };
 
+    const outputReference = this.#outputStore === undefined
+      ? `ref://ai-output/${intent.invocationId}#${encodeURIComponent(generatedText.slice(0, 120))}`
+      : (await this.#outputStore.store({
+          tenantId: intent.tenantId,
+          invocationId: intent.invocationId,
+          connectorKey: connector.connectorKey,
+          providerKey: connector.providerKey,
+          modelKey,
+          mediaType: "text/plain; charset=utf-8",
+          content: generatedText,
+          generatedAt: processedAt,
+        })).outputReference;
+
     return {
       invocationId: intent.invocationId,
       tenantId: intent.tenantId,
       status: intent.operation === "EXTRACT" || intent.operation === "CLASSIFY" ? "PROPOSAL" : "OBSERVATION",
-      outputReference: `ref://ai-output/${intent.invocationId}#${encodeURIComponent(generatedText.slice(0, 120))}`,
+      outputReference,
       confidence: 0.95,
       provenance,
     };
