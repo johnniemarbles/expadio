@@ -24,6 +24,7 @@ export interface VoiceIntelligenceIntent {
     readonly maximumCostMinorUnits?: number;
   };
   readonly idempotencyKey: string;
+  readonly correlationId: string;
   readonly requestedAt: string;
 }
 
@@ -70,6 +71,7 @@ export type VoiceContractValidationCode =
   | 'VOICE_POLICY_REFERENCE_INVALID'
   | 'VOICE_JURISDICTION_REQUIRED'
   | 'VOICE_IDEMPOTENCY_REQUIRED'
+  | 'VOICE_CORRELATION_ID_REQUIRED'
   | 'VOICE_REQUESTED_AT_INVALID'
   | 'VOICE_COST_LIMIT_INVALID'
   | 'VOICE_OBSERVATION_IDENTITY_MISMATCH'
@@ -150,6 +152,12 @@ export function validateVoiceIntelligenceIntent(
     intent.idempotencyKey,
     'VOICE_IDEMPOTENCY_REQUIRED',
     'idempotencyKey',
+    issues,
+  );
+  required(
+    intent.correlationId,
+    'VOICE_CORRELATION_ID_REQUIRED',
+    'correlationId',
     issues,
   );
   if (!validInstant(intent.requestedAt)) {
