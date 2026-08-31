@@ -51,6 +51,7 @@ separation, idempotency and policy. No commands are enabled in this correction.
 | Home / My work / Tenants / Capabilities / Sending health / Providers / Approvals / Safety / Audit | Home / My work / Customers / Communications / Growth / Knowledge / Settings |
 | Opaque operational identifiers and non-PII summaries | Scoped shared customer record |
 | No customer names, email, phone or customer drill-through | Separate server-authorized audience and payload contract |
+| Sending health may name a channel; it may not name a recipient | Communications observes CS-104 COMMUNICATE + DELIVERY only |
 | Break-glass is a governed request, not a PII view | Platform authority alone does not grant Brand access |
 
 These lists are exported as `SHELL_NAVIGATION`. Platform product workspaces now
@@ -75,8 +76,9 @@ proven. Platform `ShellFrame` must not link `/brand` or `/tenant`.
 3. Implement the verified product/storage mappings and server scope adapters in
    both apps. Role homes remain owner, manager, operator and approver. Restricted
    location/workspace access stays fail-closed until its ownership is verified.
-4. Platform product URLs/APIs/errors now use the PII contract. Runtime logs and
-   caches on a deployed preview are still unproven.
+4. Platform product URLs/APIs/errors now use the PII contract. Sending-health
+   product APIs use a channel-aware scanner. Runtime logs and caches on a
+   deployed preview are still unproven.
 5. Test scoped counts, view/action separation, expired/revoked access, mobile,
    keyboard and authenticated browser e2e. Unit selection tests and mounted-DOM
    checks do not satisfy these gates.

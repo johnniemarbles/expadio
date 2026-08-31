@@ -35,9 +35,10 @@ Status: table `0088_product_scope_bindings.sql` and lookup `0089_product_scope_l
 3. `createScopeDirectoryFromRows` feeds `authorizeBrandCustomerRequest`.
 4. Membership is loaded after the mapped tenant GUC is set.
 5. Canonical `readCustomers` runs on those keys. Same-origin route: `/brand/api/customers`.
+6. Same binding authorizes CS-104 observation on `/brand/api/journey`. Brand Communications shows COMMUNICATE + DELIVERY only.
 
 ## Still open
 
 - Separate Brand Next host on `app.expadio.com`.
-- Platform PII proof.
-- CS-104 journey on frozen executors.
+- Runtime Platform PII proof on a deployed preview.
+- A live CS-104 row with provider `DELIVERED`.
