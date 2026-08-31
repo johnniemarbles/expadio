@@ -3,14 +3,37 @@ import styles from '../page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
 import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
-import type { RouteSearchParams } from '../../../lib/request-context';
+import type { DeniedResult } from '@expadio/ui/contracts';
 import ProvisionScopeForm from './ProvisionScopeForm';
 
-export default async function OrganizationsPage({ searchParams }: { searchParams: RouteSearchParams }) {
-  void searchParams;
-  const orgs = await fetchApi<any[]>('/api/organizations/list');
+type OrgRow = {
+  organization_id: string;
+  name: string;
+  status: string;
+  members?: number;
+  created_at?: string;
+};
 
-  if (isDenied(orgs)) return <DeniedState result={orgs} />;
+async function loadOrganizations(): Promise<{ rows: OrgRow[]; denied?: DeniedResult }> {
+  try {
+    const result = await fetchApi<OrgRow[]>('/api/organizations/list');
+    if (isDenied(result)) return { rows: [], denied: result };
+    if (Array.isArray(result)) return { rows: result };
+    return { rows: [] };
+  } catch {
+    return {
+      rows: [],
+      denied: {
+        denied: true,
+        reasonKey: 'ORGANIZATION_LIST_UNAVAILABLE',
+        message: 'This information could not be loaded. Please try again.',
+      },
+    };
+  }
+}
+
+export default async function OrganizationsPage() {
+  const { rows, denied } = await loadOrganizations();
 
   return (
     <>
@@ -37,7 +60,7 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
             <h2 id="orgs-title">Organizations in this storage tenant</h2>
           </div>
         </div>
-
+        {denied ? <DeniedState result={denied} /> : null}
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -49,21 +72,21 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
               </tr>
             </thead>
             <tbody>
-              {orgs.map((org) => (
+              {rows.map((org) => (
                 <tr key={org.organization_id}>
                   <td><strong>{org.name}</strong><br /><span className={styles.code}>{org.organization_id}</span></td>
                   <td>
                     <StatePill state={org.status === 'ACTIVE' ? 'Published' : org.status === 'SUSPENDED' ? 'Review' : 'Draft'} />
                   </td>
                   <td>{org.members || 0}</td>
-                  <td className={styles.muted}>{new Date(org.created_at).toLocaleString()}</td>
+                  <td className={styles.muted}>{org.created_at ? new Date(org.created_at).toLocaleString() : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {orgs.length === 0 && (
+          {rows.length === 0 && !denied ? (
             <EmptyState title="No organizations" description="Provision a Brand scope to create the first organization." />
-          )}
+          ) : null}
         </div>
       </section>
     </>
