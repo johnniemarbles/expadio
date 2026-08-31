@@ -4,6 +4,7 @@ import {
   brandErrorResponse,
   membershipsFromRows,
   parseBrandProductScope,
+  platformJourneyCorrelationBody,
 } from '../lib/brand-host-runtime.ts';
 import { BrandHostError } from '@expadio/tenancy';
 
@@ -47,4 +48,16 @@ test('Brand errors do not leak internals', async () => {
   assert.equal(response.status, 500);
   assert.doesNotMatch(await response.text(), /password|schema/);
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
+});
+
+test('journey writes and email correlations are refused', async () => {
+  const write = brandErrorResponse(new Error('BRAND_JOURNEY_MUTATION_FORBIDDEN'));
+  assert.equal(write.status, 405);
+  assert.equal(write.headers.get('allow'), 'GET');
+  const invalid = brandErrorResponse(new Error('INVALID_JOURNEY_CORRELATION'));
+  assert.equal(invalid.status, 400);
+  assert.throws(() => platformJourneyCorrelationBody('ada@northstar.test'));
+  const body = platformJourneyCorrelationBody(null);
+  assert.equal(body.correlation, 'CS-104');
+  assert.equal(body.caseId, undefined);
 });
