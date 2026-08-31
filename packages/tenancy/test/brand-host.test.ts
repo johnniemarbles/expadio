@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  BRAND_FALLBACK_CUSTOMER_ROUTE,
   BRAND_HOST,
   BrandHostError,
   authorizeBrandCustomerRequest,
   createScopeDirectoryFromRows,
+  resolveBrandCustomerHttpTarget,
   serveBrandCustomerRead,
   unresolvedShellScope,
   type BrandIncomingRequest,
@@ -77,7 +79,21 @@ test('Brand host serves customers only after host, mapping and ALL membership', 
   assert.deepEqual(response.body, { items: [{ id: 'c-1' }], hasMore: false });
 });
 
-test('Platform host cannot serve Brand customers', () => {
+test('same-origin /brand fallback is accepted on the Platform host', async () => {
+  const directory = createScopeDirectoryFromRows([ALL_ROW]);
+  const target = resolveBrandCustomerHttpTarget('platform.expadio.com', BRAND_FALLBACK_CUSTOMER_ROUTE);
+  assert.equal(target.via, 'same-origin-fallback');
+  assert.equal(target.host, BRAND_HOST);
+  const response = await serveBrandCustomerRead(
+    request({ host: 'platform.expadio.com', path: BRAND_FALLBACK_CUSTOMER_ROUTE }),
+    directory,
+    async () => ({ items: [], hasMore: false }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.served, true);
+});
+
+test('Platform host cannot serve Brand customers on the product route', () => {
   const directory = createScopeDirectoryFromRows([ALL_ROW]);
   assert.throws(
     () => authorizeBrandCustomerRequest(request({ host: 'platform.expadio.com' }), directory),
