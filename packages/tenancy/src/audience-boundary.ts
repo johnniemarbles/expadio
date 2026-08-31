@@ -39,6 +39,7 @@ const PLATFORM_PRODUCT_PREFIXES = [
   '/api/capabilities',
   '/api/communications',
   '/api/governance',
+  '/api/journey-correlation',
   '/capabilities',
   '/communications',
   '/organizations',
