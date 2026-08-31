@@ -59,7 +59,10 @@ test('verticals and factory routes bind the four GTM work types', () => {
   assert.match(sequenceRoute, /INSERT INTO platform\.gtm_sequences/);
   assert.match(meetingRoute, /INSERT INTO platform\.gtm_meeting_requests/);
   assert.match(replyRoute, /OUTBOUND_GTM_LEAD_SOURCE/);
-  assert.match(communicate, /assertConnectorReady/);
+  assert.match(communicate, /persistGovernedActionIntent/);
+  assert.match(communicate, /toGovernedCommunicateIntent/);
+  assert.match(communicate, /dispatched: false/);
+  assert.doesNotMatch(communicate, /executeGovernedCommunicateAction/);
 });
 
 test('console, nav, lead source and review queue know AutoGTM', () => {

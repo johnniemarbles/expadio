@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
+import { persistGovernedActionIntent } from '@expadio/postgres-runtime/governed-action-intent';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../../lib/request-context';
 import { hasGovernanceWriteRole } from '../../../../../../lib/governance-authz';
 import {
   GTM_EMAIL_CONNECTOR_KEY,
   GtmSendGateError,
-  assertConnectorReady,
   buildGtmCommunicationIntent,
+  readGtmEmailConnector,
+  toGovernedCommunicateIntent,
 } from '../../../../../../lib/gtm-communication';
 
 /**
  * File a Communication intent for an approved sequence touch.
- * Does not send. gtm.email stays dark until a tenant enables BYOC.
+ * Persists a COMMUNICATE Action Intent. Does not dispatch. Does not send.
  */
 
 export const runtime = 'nodejs';
@@ -52,17 +54,17 @@ export async function POST(
       const connectorRow = connector.rows[0] as
         | { connector_key: string; enabled: boolean; provider_key: string }
         | undefined;
+      const connectorState = readGtmEmailConnector(
+        connectorRow
+          ? {
+              connectorKey: connectorRow.connector_key,
+              enabled: connectorRow.enabled,
+              providerKey: connectorRow.provider_key,
+            }
+          : null,
+      );
 
       try {
-        assertConnectorReady(
-          connectorRow
-            ? {
-                connectorKey: connectorRow.connector_key,
-                enabled: connectorRow.enabled,
-                providerKey: connectorRow.provider_key,
-              }
-            : null,
-        );
         const intent = buildGtmCommunicationIntent({
           touch: {
             sequenceId: row.sequence_id,
@@ -77,7 +79,20 @@ export async function POST(
           },
           actorSubjectId: context.subjectId,
         });
-        return { intent } as const;
+        const persisted = await persistGovernedActionIntent(
+          client,
+          toGovernedCommunicateIntent({
+            gtm: intent,
+            actorSubjectId: context.subjectId,
+            sequenceId: row.sequence_id,
+            stepKey,
+          }),
+        );
+        return {
+          intent,
+          actionIntentId: persisted.actionIntentId,
+          connectorState,
+        } as const;
       } catch (cause) {
         if (cause instanceof GtmSendGateError) {
           return { denied: true as const, code: cause.code, message: cause.message };
@@ -104,7 +119,12 @@ export async function POST(
     return NextResponse.json({
       success: true,
       sent: false,
-      reasonKey: 'INTENT_FILED_CONNECTOR_NOT_DISPATCHED',
+      dispatched: false,
+      persisted: true,
+      actionIntentId: result.actionIntentId,
+      reasonKey: result.connectorState.ready
+        ? 'INTENT_PERSISTED_NOT_DISPATCHED'
+        : result.connectorState.code,
       intent: result.intent,
     }, { status: 202 });
   } catch (error) {
