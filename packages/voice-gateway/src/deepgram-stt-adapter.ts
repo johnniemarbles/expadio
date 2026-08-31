@@ -1,4 +1,5 @@
 import type { ConnectorDefinition } from "@expadio/provider-registry";
+import type { DurableArtifactSink } from "@expadio/storage";
 import type {
   VoiceIntelligenceIntent,
   VoiceIntelligenceObservation,
@@ -20,6 +21,7 @@ export type VoiceApiTokenProvider = (request: VoiceCredentialRequest) => Promise
 
 export interface DeepgramSttAdapterOptions {
   readonly apiToken: VoiceApiTokenProvider;
+  readonly artifactSink: DurableArtifactSink;
   readonly endpointBaseUrl?: string;
   readonly modelKey?: string;
   readonly fetchImpl?: typeof fetch;
@@ -29,6 +31,7 @@ export interface DeepgramSttAdapterOptions {
 export class DeepgramSttAdapter implements VoiceProviderAdapter {
   readonly adapterKey = "deepgram-stt-v1";
   readonly #apiToken: VoiceApiTokenProvider;
+  readonly #artifactSink: DurableArtifactSink;
   readonly #endpointBaseUrl: string;
   readonly #modelKey: string;
   readonly #fetch: typeof fetch;
@@ -36,6 +39,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
 
   constructor(options: DeepgramSttAdapterOptions) {
     this.#apiToken = options.apiToken;
+    this.#artifactSink = options.artifactSink;
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://api.deepgram.com/v1/listen").replace(/\/+$/u, "");
     this.#modelKey = options.modelKey ?? "nova-2";
     this.#fetch = options.fetchImpl ?? fetch;
@@ -100,10 +104,25 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
     };
 
     const transcript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
-    const durationSeconds = data.metadata?.duration ?? 60;
-    const durationMilliseconds = Math.round(durationSeconds * 1000);
-    // Deepgram billing estimate: e.g. $0.0043/min ≈ 1 cent per 2 minutes
-    const costMinorUnits = Math.max(1, Math.ceil((durationSeconds / 60) * 0.5));
+    const durationSeconds = data.metadata?.duration;
+    const durationMilliseconds = durationSeconds === undefined
+      ? undefined
+      : Math.round(durationSeconds * 1000);
+    // Cost is an estimate only when provider duration is available.
+    const costMinorUnits = durationSeconds === undefined
+      ? undefined
+      : Math.max(1, Math.ceil((durationSeconds / 60) * 0.5));
+
+    const artifact = await this.#artifactSink.write({
+      tenantId: intent.tenantId,
+      artifactKind: "VOICE_TRANSCRIPT",
+      sourceKind: "VOICE_REQUEST",
+      sourceId: intent.requestId,
+      content: transcript,
+      contentType: "text/plain; charset=utf-8",
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
 
     const provenance: VoiceIntelligenceProvenance = {
       connectorKey: connector.connectorKey,
@@ -112,8 +131,8 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       sourceReferences: [intent.inputReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      audioDurationMilliseconds: durationMilliseconds,
-      costMinorUnits,
+      ...(durationMilliseconds !== undefined ? { audioDurationMilliseconds: durationMilliseconds } : {}),
+      ...(costMinorUnits !== undefined ? { costMinorUnits } : {}),
     };
 
     return {
@@ -121,7 +140,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       tenantId: intent.tenantId,
       callId: intent.callId,
       operation: "TRANSCRIBE",
-      outputReference: `ref://voice-transcript/${intent.requestId}#${encodeURIComponent(transcript.slice(0, 100))}`,
+      outputReference: artifact.contentReference,
       provenance,
     };
   }
