@@ -52,6 +52,7 @@ export type AiJobRegistrationErrorCode =
   | 'AI_JOB_CREATED_AT_INVALID'
   | 'AI_JOB_REASON_REQUIRED'
   | 'AI_JOB_CORRELATION_REQUIRED'
+  | 'AI_JOB_CORRELATION_MISMATCH'
   | 'AI_JOB_EVIDENCE_REQUIRED'
   | 'AI_JOB_INTENT_INVALID';
 
@@ -130,6 +131,12 @@ function validateRegistration(registration: AiJobRegistration): void {
     throw new AiJobRegistrationError(
       'AI_JOB_CORRELATION_REQUIRED',
       'correlationId is required.',
+    );
+  }
+  if (registration.intent.correlationId !== registration.correlationId) {
+    throw new AiJobRegistrationError(
+      'AI_JOB_CORRELATION_MISMATCH',
+      'registration and invocation correlationId must match.',
     );
   }
   if (registration.evidenceRefs.length === 0) {
