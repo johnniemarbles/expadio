@@ -13,34 +13,35 @@ Human was routing every Accept / Counter / Reject between agents in chat. That d
 
 Standing order (human 2026-08-31):
 
-1. **Grok** (or any Primary) audits and suggests in-repo.
-2. **Other reasoning agents** review: Accept / Counter / Reject on the Decision trail — autonomously when they see Open items.
-3. On **Counter**, Primary **Accepts or Rejects the counter** on the same trail (revise body if Accept).
-4. Peers may set suggestion **Status** to Accepted / Rejected when the trail supports it, without waiting for a human message each turn.
+1. **Grok** audits and suggests in-repo (default Primary).
+2. **ChatGPT** reviews: Accept / Counter / Reject on the Decision trail — autonomously when Open items appear.
+3. On **Counter**, Grok **Accepts or Rejects the counter** on the same trail (revise body if Accept).
+4. Either peer may set suggestion **Status** to Accepted / Rejected when the trail supports it, without waiting for a human message each turn.
 5. **Everything durable is in the repo**; agents must not rely on the human to “tell the other agent.”
-6. **Human-only:** freeze/checklist gate amendments, vertical unpause, waiving required CI, unauthorized production side effects. Human may override any decision.
+6. **Active roster: Grok + ChatGPT only.** Gemini, Claude, and **Hermes are paused** until the human re-enables them in `OPERATING-MODEL.md`.
+7. **Implementation** of Accepted packs: Grok and/or ChatGPT (not Hermes).
+8. **Human-only:** freeze/checklist gate amendments, vertical unpause, waiving required CI, unauthorized production side effects, changing the active agent roster.
 
-Canonical text lives in updated `OPERATING-MODEL.md` and `SYNC.md` (same PR as this suggestion).
+Canonical text lives in `OPERATING-MODEL.md` and `SYNC.md`.
 
 ## Expected benefits
 
-- Agents work across sessions without human as message bus.
+- Two-agent loop without human as message bus.
 - Full audit history of decisions.
-- Faster close of Open suggestions.
-- Clear safety exceptions still reserved for the human.
+- No dependency on Hermes for current execution.
 
 ## Risks / trade-offs
 
-- Two peers could disagree (Accept vs Reject); record both; human or a third peer breaks ties on the trail.
-- Autonomous Accept must not touch release gates — enforced by explicit human-only list in the operating model.
+- Only one reviewer (ChatGPT) — ties go to human.
+- No Hermes automation until re-enabled; pack execution is manual by Grok/ChatGPT sessions.
 
 ## Implementation notes
 
-- Docs-only PR: operating model + sync + this suggestion.
-- No application code.
-- Existing Accepted suggestions (audit honesty packs, governed loop strategy) remain as-is; this protocol governs future and open review cycles.
+- Docs-only; encoded in operating model + sync.
+- Re-enable Hermes/Gemini/Claude only via human-directed update to `OPERATING-MODEL.md`.
 
 ## Decision trail
 
 - **2026-08-31** — Proposed by Grok from human standing order: audit/suggest; peers review Accept/Counter/Reject; Primary resolves counters; all in-repo; autonomous so human need not relay.
 - **2026-08-31** — Accepted by human instruction in session (binding standing order). Encoded into OPERATING-MODEL.md and SYNC.md.
+- **2026-08-31** — Human narrowed active roster: **Grok + ChatGPT only; no Hermes for now.** Gemini and Claude also paused. OPERATING-MODEL and SYNC updated; implementation and review obligations apply only to Grok and ChatGPT.
