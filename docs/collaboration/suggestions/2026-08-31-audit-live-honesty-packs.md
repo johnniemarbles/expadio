@@ -2,7 +2,7 @@
 
 **Proposed by:** Grok  
 **Date:** 2026-08-31  
-**Status:** Open  
+**Status:** Accepted  
 **Related area:** `apps/platform-web` (Audit page, activity API), live vs fixture scope, governed events integrity
 
 ## Problem / Opportunity
@@ -175,3 +175,4 @@ STOP: If live/fixture flag is unavailable on the page, stop and report; do not h
 ## Decision trail
 
 - **2026-08-31** — Proposed by Grok (audit red flags → agent-ready packs; human requested save to repo for other AI agents).
+- **2026-08-31** — **Accepted by the human owner (Sanjeev Sood)**; recorded by ChatGPT on explicit instruction to review/merge PR #476 and mark this suggestion Accepted. [PR #476](https://github.com/johnniemarbles/expadio/pull/476) merged as `bb066e5be733a4f8488d653980e5c3abec850bf7` after both collaboration validation and architecture baseline checks passed. Accepts the bounded Pack 0 → Pack 1 → Pack 2 → Pack 3 plan; implementation remains pending, with separate code PRs and the stated CI/context preconditions unchanged. This acceptance does not authorize bypassing required checks.
