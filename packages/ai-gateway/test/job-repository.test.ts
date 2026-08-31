@@ -102,3 +102,16 @@ test('rejects invalid registration metadata before persistence', () => {
       && error.code === 'AI_JOB_MAXIMUM_ATTEMPTS_INVALID',
   );
 });
+
+
+test('rejects divergent registration and invocation correlation', () => {
+  assert.throws(
+    () => initialAiJobSnapshot({
+      ...registration,
+      correlationId: 'different-correlation',
+    }),
+    (error: unknown) =>
+      error instanceof AiJobRegistrationError
+      && error.code === 'AI_JOB_CORRELATION_MISMATCH',
+  );
+});
