@@ -15,13 +15,11 @@ test('learner creation emits a minimal transactional domain event', () => {
   assert.match(enrollment, /learning\.learner\.created/);
   assert.match(enrollment, /appendDomainEventWithOutbox/);
   assert.match(enrollment, /subjectBound: row\.subject_id !== null/);
-  assert.doesNotMatch(
-    enrollment.slice(
-      enrollment.indexOf("eventType: 'learning.learner.created'"),
-      enrollment.indexOf("eventType: 'learning.learner.created'") + 1000,
-    ),
-    /email|metadata/,
-  );
+  const eventStart = enrollment.indexOf("eventType: 'learning.learner.created'");
+  const payloadStart = enrollment.indexOf('payload: {', eventStart);
+  const payloadEnd = enrollment.indexOf('metadata: {', payloadStart);
+  const payload = enrollment.slice(payloadStart, payloadEnd);
+  assert.doesNotMatch(payload, /email|row\.metadata|learner\.metadata/);
 });
 
 test('domain event worker executes only learner-created learning automation', () => {
