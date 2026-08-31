@@ -7,10 +7,12 @@ import type {
 } from "./index.ts";
 import type { AiProviderAdapter } from "./routing.ts";
 import type { AiApiTokenProvider } from "./gemini-adapter.ts";
+import type { AiInputResolver } from "./input-resolution.ts";
 
 export interface OpenAiAiAdapterOptions {
   readonly apiToken: AiApiTokenProvider;
   readonly artifactSink: DurableArtifactSink;
+  readonly inputResolver: AiInputResolver;
   readonly modelKey?: string;
   readonly endpointBaseUrl?: string;
   readonly fetchImpl?: typeof fetch;
@@ -21,6 +23,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
   readonly adapterKey = "openai-v1";
   readonly #apiToken: AiApiTokenProvider;
   readonly #artifactSink: DurableArtifactSink;
+  readonly #inputResolver: AiInputResolver;
   readonly #defaultModelKey: string;
   readonly #endpointBaseUrl: string;
   readonly #fetch: typeof fetch;
@@ -29,6 +32,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
   constructor(options: OpenAiAiAdapterOptions) {
     this.#apiToken = options.apiToken;
     this.#artifactSink = options.artifactSink;
+    this.#inputResolver = options.inputResolver;
     this.#defaultModelKey = options.modelKey ?? "gpt-4o-mini";
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://api.openai.com/v1").replace(/\/+$/u, "");
     this.#fetch = options.fetchImpl ?? fetch;
@@ -73,16 +77,33 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
     const { intent, connector, modelKey, token, processedAt } = params;
     const url = `${this.#endpointBaseUrl}/chat/completions`;
 
+    const resolvedInput = await this.#inputResolver.resolveText({
+      tenantId: intent.tenantId,
+      reference: intent.inputReference,
+      purpose: intent.purpose,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+    const resolvedContext = intent.contextReference
+      ? await this.#inputResolver.resolveText({
+          tenantId: intent.tenantId,
+          reference: intent.contextReference,
+          purpose: intent.purpose,
+          requiredResidencyTags: intent.governance.requiredResidencyTags,
+          requiredComplianceTags: intent.governance.requiredComplianceTags,
+        })
+      : undefined;
+
     const messages: Array<{ role: "system" | "user"; content: string }> = [];
-    if (intent.contextReference) {
+    if (resolvedContext) {
       messages.push({
         role: "system",
-        content: `Context: ${intent.contextReference}`,
+        content: `Context: ${resolvedContext.content}`,
       });
     }
     messages.push({
       role: "user",
-      content: intent.inputReference,
+      content: resolvedInput.content,
     });
 
     const requestBody = {
@@ -129,7 +150,10 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       modelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
-      sourceReferences: [intent.inputReference, ...(intent.contextReference ? [intent.contextReference] : [])],
+      sourceReferences: [
+        resolvedInput.sourceReference,
+        ...(resolvedContext ? [resolvedContext.sourceReference] : []),
+      ],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
       costMinorUnits,
@@ -166,9 +190,17 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
     const { intent, connector, modelKey, token, processedAt } = params;
     const url = `${this.#endpointBaseUrl}/embeddings`;
 
+    const resolvedInput = await this.#inputResolver.resolveText({
+      tenantId: intent.tenantId,
+      reference: intent.inputReference,
+      purpose: intent.purpose,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+
     const requestBody = {
       model: modelKey === "gpt-4o-mini" ? "text-embedding-3-small" : modelKey,
-      input: intent.inputReference,
+      input: resolvedInput.content,
     };
 
     const response = await this.#fetch(url, {
@@ -203,7 +235,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       modelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
-      sourceReferences: [intent.inputReference],
+      sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
       costMinorUnits: 1,
