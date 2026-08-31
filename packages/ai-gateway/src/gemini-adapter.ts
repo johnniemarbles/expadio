@@ -184,7 +184,6 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       tenantId: intent.tenantId,
       status: intent.operation === "EXTRACT" || intent.operation === "CLASSIFY" ? "PROPOSAL" : "OBSERVATION",
       outputReference: artifact.contentReference,
-      confidence: 0.95,
       provenance,
     };
   }
@@ -259,7 +258,6 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       tenantId: intent.tenantId,
       status: "OBSERVATION",
       outputReference: artifact.contentReference,
-      confidence: 1.0,
       provenance,
     };
   }
