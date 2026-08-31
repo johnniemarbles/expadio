@@ -141,6 +141,7 @@ Binding keys:
 
 - [x] Dark Communication wiring merged via #491 (clean replay of dirty #489): channel union, capability seed, disabled `social.linkedin`, LinkedIn text adapter, Resend-shaped lease binding, CHECK widen, adapter-key map.
 - [x] Migration numbered `0086_communication_social_channel.sql` so draft #481 keeps `0085_audit_organization_provenance.sql` and #475 keeps 0083/0084.
+- [x] Communication seam: after DF APPROVE, reviewer files `COMMUNICATE` intent; author blocked (SoD); dark `CONNECTOR_DISABLED` while `social.linkedin` is off (ADR-011). Does not merge #482.
 
 ### Still HOLD
 
@@ -149,7 +150,7 @@ Binding keys:
 ### Next on EXPADIO
 
 - [ ] Seed-tenant proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send`.
-- [ ] File a Communication intent after DF APPROVE; author cannot file (SoD). Return dark / `CONNECTOR_DISABLED` while the connector is off.
+- [ ] HTTP communicate route after #482 subject table exists; persist via `persistGovernedActionIntent` without dispatch.
 - [ ] Do not add `social` to `CommunicationSenderChannel` / `isSenderChannel()`.
 - [ ] Do not wire the delivery worker to LinkedIn until COMMUNICATE → attempt → trace is proven on email.
 - [ ] Enable `social.linkedin` only after tenant BYOC + governed lease. ACCEPTED still requires provider message id (`x-restli-id`; synthetic ids fail closed).
