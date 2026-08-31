@@ -100,7 +100,15 @@ implements DurableArtifactSink, DurableArtifactSource {
       };
     }
 
-    if (response.status === 409 || response.status === 400) {
+    const uploadError = await response.text().catch(() => '');
+    const duplicate =
+      response.status === 409
+      || (
+        response.status === 400
+        && /already\s+exists|duplicate|resource\s+exists/iu.test(uploadError)
+      );
+
+    if (duplicate) {
       const existing = await this.#readBytes({
         tenantId: input.tenantId,
         reference: this.#reference(path),
