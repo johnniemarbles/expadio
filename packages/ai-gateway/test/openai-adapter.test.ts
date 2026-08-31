@@ -191,3 +191,20 @@ test("OpenAiAiAdapter resolves logical references before provider invocation", a
   assert.equal(requestBody.messages[0].content, "resolved clinical note");
   assert.deepEqual(proposal.provenance.sourceReferences, [logicalReference]);
 });
+
+test("OpenAiAiAdapter rejects unsupported modalities before credential acquisition", async () => {
+  const adapter = new OpenAiAiAdapter({
+    apiToken: async () => assert.fail("Unsupported operations must not acquire credentials"),
+    artifactSink,
+    inputResolver,
+    fetchImpl: async () => assert.fail("Unsupported operations must not call the provider"),
+  });
+
+  await assert.rejects(
+    adapter.invoke({
+      intent: { ...intent, operation: "VISION_ANALYZE" },
+      connector,
+    }),
+    /AI_OPERATION_UNSUPPORTED:VISION_ANALYZE/,
+  );
+});
