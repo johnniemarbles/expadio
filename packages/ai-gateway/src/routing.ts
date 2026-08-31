@@ -109,15 +109,17 @@ export class RoutedAiGateway implements AiGateway {
     }
 
     const maximumCost = intent.governance.maximumCostMinorUnits;
-    const actualCost = proposal.provenance.costMinorUnits;
+    const costForCeiling =
+      proposal.provenance.costMinorUnits
+      ?? proposal.provenance.estimatedCostMinorUnits;
     if (
       maximumCost !== undefined
-      && actualCost !== undefined
-      && actualCost > maximumCost
+      && costForCeiling !== undefined
+      && costForCeiling > maximumCost
     ) {
       throw new RoutedAiGatewayError(
         'AI_COST_LIMIT_EXCEEDED',
-        `AI cost ${actualCost} exceeds the invocation ceiling ${maximumCost}.`,
+        `AI reported/estimated cost ${costForCeiling} exceeds the invocation ceiling ${maximumCost}.`,
       );
     }
     return proposal;
