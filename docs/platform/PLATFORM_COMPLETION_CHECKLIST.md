@@ -171,7 +171,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 ### AI / Voice production hardening
 
 - [x] Make provider/model confidence advisory only; no confidence-only auto-approval.
-- [x] Validate governed AI operation, prompt version, cost ceiling, confidence threshold, and governance tags.
+- [x] Validate governed AI operation, pinned prompt identity/version, cost ceiling, context reference, and governance tags; reject confidence-driven auto-approval configuration.
 - [x] Resolve logical AI input/context references before provider invocation.
 - [x] Resolve Voice media/text references before provider invocation.
 - [x] Persist OpenAI/Gemini output through a required durable artifact sink before success.
@@ -180,11 +180,17 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Compose AI provider execution with the existing governed credential lease and secret-resolution path.
 - [x] Bind AI execution attempts to the persisted governed Action Intent UUID.
 - [x] Add a production AI execution composition root without activating an autonomous AI worker/route.
-- [ ] Implement the concrete governed blob/object sink behind the durable artifact port.
-- [ ] Implement production AI/Voice input resolvers over governed stored artifacts and short-lived provider-fetch URLs.
-- [ ] Separate estimated provider usage/cost from reconciled actual billing.
+- [x] Add a production Voice provider composition root without claiming telephony/agent orchestration.
+- [x] Require end-to-end correlation identity through AI/Voice intents, credential leases, and execution-artifact metadata.
+- [x] Verify durable artifact SHA-256 and byte length independently before trusting/indexing storage output.
+- [x] Seed horizontal AI, Voice, and Storage routing capabilities in the migration-backed capability catalog.
+- [x] Preserve complete connector capability sets during capability-filtered provider-registry discovery.
+- [x] Compose governed Supabase storage routing and credential leasing for the application runtime.
+- [x] Implement a concrete governed Supabase blob/object backend behind the durable artifact sink/source ports, with immutable replay checks and short-lived signed URLs.
+- [x] Implement production AI/Voice input resolvers over governed stored artifacts and short-lived HTTPS provider-fetch URLs.
+- [x] Separate provider usage / estimated cost from reconciled actual billing; remove fabricated provider pricing estimates.
 - [ ] Add autonomous AI Action Intent claim/retry worker only after artifact, review, and retry semantics are proven.
-- [ ] Add end-to-end AI execution integration test with database RLS, credential lease, artifact persistence, provider stub, and immutable execution trace.
+- [ ] Add end-to-end AI execution integration test with database RLS, Supabase/storage stub, credential lease, artifact persistence, provider stub, and immutable execution trace.
 - [ ] Add end-to-end Voice execution integration test with media resolution, STT/TTS artifact persistence, and execution trace.
 
 ## P2 — Agent Runtime foundation
