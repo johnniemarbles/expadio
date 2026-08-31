@@ -28,7 +28,7 @@ const DEMO_TENANT = '00000000-0000-0000-0000-000000000001';
 
 export interface ResolvedRequestContext {
   readonly subjectId: string;
-  readonly issuer: string | null;
+  readonly issuer?: string | null;
   readonly tenantId: string;
   readonly organizationId: string | null;
   readonly platformScope: boolean;
