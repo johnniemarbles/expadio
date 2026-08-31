@@ -96,7 +96,7 @@ INSERT INTO platform.learning_learners (
 INSERT INTO platform.learning_enrollments (
   tenant_id, learner_id, course_id, course_version_id, assignment_key,
   source_type, assigned_by_subject_id, status, started_at, completed_at,
-  progress_percent
+  completion_percent
 )
 SELECT learner.tenant_id, learner.learner_id, course.course_id,
        version.course_version_id,
