@@ -1,8 +1,10 @@
 import {
   PLATFORM_SAFE_ERROR_MESSAGE,
   SHELL_NAVIGATION,
+  assertPlatformPayloadHasNoCustomerPii,
   classifyRequestPath,
   platformSafeErrorBody,
+  platformSafeLogLine,
 } from '@expadio/tenancy';
 import type { WorkspaceSection } from './contracts';
 
@@ -34,6 +36,14 @@ export function assertPlatformSectionsMatchContract(): void {
 
 export function platformProductDenied(reasonKey = 'INTERNAL_ERROR') {
   return platformSafeErrorBody(reasonKey);
+}
+
+export function assertPlatformProductPayload(payload: unknown): void {
+  assertPlatformPayloadHasNoCustomerPii(payload);
+}
+
+export function writePlatformProductLog(write: (line: string) => void, line: string): void {
+  write(platformSafeLogLine(line));
 }
 
 export { PLATFORM_SAFE_ERROR_MESSAGE };

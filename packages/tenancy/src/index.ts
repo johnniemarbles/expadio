@@ -41,6 +41,7 @@ export {
   redactCustomerPii,
   assertPlatformPayloadHasNoCustomerPii,
   assertPlatformLogHasNoCustomerPii,
+  platformSafeLogLine,
   platformSafeErrorBody,
   assertBrandNavIsNotInsidePlatform,
 } from './audience-boundary.ts';
