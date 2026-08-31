@@ -9,6 +9,7 @@ import {
   assertJourneyIsObservationOnly,
   assertPlatformPayloadHasNoCustomerPii,
   emptyBrandJourneyObservation,
+  factsFromFrozenExecutorRows,
   observeBrandJourneyFromFacts,
   parseJourneyCorrelation,
   platformViewOfJourney,
@@ -78,4 +79,28 @@ test('COMMUNICATE delivered is the only path that marks delivery', () => {
   assert.equal(BRAND_JOURNEY_ROUTE, '/api/brand/journey');
   assert.equal(BRAND_FALLBACK_JOURNEY_ROUTE, '/brand/api/journey');
   assert.equal(PLATFORM_JOURNEY_CORRELATION_ROUTE, '/api/journey-correlation');
+});
+
+test('frozen rows map intent and attempt without claiming delivery', () => {
+  const facts = factsFromFrozenExecutorRows(CS104_CORRELATION, [
+    { correlation: CS104_CORRELATION, executor: 'SCHEDULE', attemptStatus: null },
+    { correlation: CS104_CORRELATION, executor: 'CREATE_TASK', attemptStatus: 'SUCCEEDED' },
+    { correlation: CS104_CORRELATION, executor: 'COMMUNICATE', attemptStatus: 'SUCCEEDED' },
+    { correlation: 'CS-999', executor: 'COMMUNICATE', attemptStatus: 'SUCCEEDED' },
+    { correlation: CS104_CORRELATION, executor: 'ASSIGN', attemptStatus: 'SUCCEEDED' },
+  ]);
+  assert.deepEqual(
+    facts.map((fact) => [fact.executor, fact.state]),
+    [
+      ['SCHEDULE', 'queued'],
+      ['CREATE_TASK', 'queued'],
+      ['COMMUNICATE', 'sent'],
+    ],
+  );
+  const observed = observeBrandJourneyFromFacts(CS104_CORRELATION, null, facts);
+  assert.equal(observed.steps.find((step) => step.step === 'SCHEDULE')?.state, 'queued');
+  assert.equal(observed.steps.find((step) => step.step === 'CREATE_TASK')?.state, 'queued');
+  assert.equal(observed.steps.find((step) => step.step === 'COMMUNICATE')?.state, 'sent');
+  assert.equal(observed.steps.find((step) => step.step === 'DELIVERY')?.state, 'sent');
+  assert.equal(observed.mutationsEnabled, false);
 });
