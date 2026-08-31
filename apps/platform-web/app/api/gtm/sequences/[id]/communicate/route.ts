@@ -79,7 +79,9 @@ export async function POST(
         });
         return { intent } as const;
       } catch (cause) {
-        if (cause instanceof GtmSendGateError) return { denied: cause } as const;
+        if (cause instanceof GtmSendGateError) {
+          return { denied: true as const, code: cause.code, message: cause.message };
+        }
         throw cause;
       }
     });
@@ -91,11 +93,11 @@ export async function POST(
       return NextResponse.json({ error: 'That sequence was not found in this workspace.' }, { status: 404 });
     }
     if ('denied' in result) {
-      const status = result.denied.code === 'SEPARATION_OF_DUTIES' ? 403 : 409;
+      const status = result.code === 'SEPARATION_OF_DUTIES' ? 403 : 409;
       return NextResponse.json({
         denied: true,
-        reasonKey: result.denied.code,
-        message: result.denied.message,
+        reasonKey: result.code,
+        message: result.message,
         sent: false,
       }, { status });
     }
