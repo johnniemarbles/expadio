@@ -141,64 +141,57 @@ export async function lookupScopeBinding(
   };
 }
 
-async function authorizeBrandFallback(
+async function bindBrandFallback(
   request: Request,
   subjectId: string | null,
   pool: { connect(): Promise<BrandSqlClient> },
-  serve: (incoming: BrandIncomingRequest, directory: ReturnType<typeof createScopeDirectoryFromRows>) => Promise<Response>,
-): Promise<Response> {
+): Promise<{
+  client: BrandSqlClient;
+  incoming: BrandIncomingRequest;
+  directory: ReturnType<typeof createScopeDirectoryFromRows>;
+}> {
   if (!subjectId) throw new BrandHostError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
   const url = new URL(request.url);
   const scope = parseBrandProductScope(url);
   const client = await pool.connect();
-  try {
-    await client.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
-    const binding = await lookupScopeBinding(client, scope);
-    const directory = createScopeDirectoryFromRows(binding ? [binding] : []);
-    if (binding) {
-      await client.query(
-        "SELECT set_config('app.tenant_id', $1, true), set_config('app.organization_id', $2, true), set_config('app.subject_id', $3, true)",
-        [binding.tenant_id, binding.organization_id, subjectId],
-      );
-    }
-    const memberships = binding
-      ? (
-          await client.query<{
-            tenant_id: string;
-            organization_id: string;
-            workspace_scope_mode: string;
-            operating_unit_scope_mode: string;
-          }>(
-            `SELECT tenant_id::text AS tenant_id, organization_id::text AS organization_id,
-                    workspace_scope_mode, operating_unit_scope_mode
-               FROM platform.memberships
-              WHERE subject_id = $1 AND actor_kind = 'user' AND issuer = 'https://clerk.expadio.com'
-                AND status = 'ACTIVE' AND valid_from <= CURRENT_TIMESTAMP
-                AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP)`,
-            [subjectId],
-          )
-        ).rows
-      : [];
-    const incoming: BrandIncomingRequest = {
+  await client.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  const binding = await lookupScopeBinding(client, scope);
+  const directory = createScopeDirectoryFromRows(binding ? [binding] : []);
+  if (binding) {
+    await client.query(
+      "SELECT set_config('app.tenant_id', $1, true), set_config('app.organization_id', $2, true), set_config('app.subject_id', $3, true)",
+      [binding.tenant_id, binding.organization_id, subjectId],
+    );
+  }
+  const memberships = binding
+    ? (
+        await client.query<{
+          tenant_id: string;
+          organization_id: string;
+          workspace_scope_mode: string;
+          operating_unit_scope_mode: string;
+        }>(
+          `SELECT tenant_id::text AS tenant_id, organization_id::text AS organization_id,
+                  workspace_scope_mode, operating_unit_scope_mode
+             FROM platform.memberships
+            WHERE subject_id = $1 AND actor_kind = 'user' AND issuer = 'https://clerk.expadio.com'
+              AND status = 'ACTIVE' AND valid_from <= CURRENT_TIMESTAMP
+              AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP)`,
+          [subjectId],
+        )
+      ).rows
+    : [];
+  return {
+    client,
+    directory,
+    incoming: {
       host: url.host,
       path: url.pathname,
       identity: { subjectId, actorKind: 'user', issuer: 'https://clerk.expadio.com' },
       scope,
       memberships: membershipsFromRows(memberships),
-    };
-    const response = await serve(incoming, directory);
-    await client.query('COMMIT');
-    return response;
-  } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      /* preserve original error */
-    }
-    throw error;
-  } finally {
-    client.release();
-  }
+    },
+  };
 }
 
 export async function serveBrandCustomerFallback(
@@ -208,17 +201,23 @@ export async function serveBrandCustomerFallback(
 ): Promise<Response> {
   const url = new URL(request.url);
   const pagination = parsePage(url);
-  return authorizeBrandFallback(request, subjectId, pool, async (incoming, directory) => {
-    const client = await pool.connect();
+  const bound = await bindBrandFallback(request, subjectId, pool);
+  try {
+    const response = await serveBrandCustomerRead(bound.incoming, bound.directory, (keys) =>
+      readCustomers(bound.client, { tenantId: keys.tenantId, organizationId: keys.organizationId }, pagination),
+    );
+    await bound.client.query('COMMIT');
+    return Response.json(response.body, { status: response.status, headers: response.headers });
+  } catch (error) {
     try {
-      const response = await serveBrandCustomerRead(incoming, directory, (keys) =>
-        readCustomers(client, { tenantId: keys.tenantId, organizationId: keys.organizationId }, pagination),
-      );
-      return Response.json(response.body, { status: response.status, headers: response.headers });
-    } finally {
-      client.release();
+      await bound.client.query('ROLLBACK');
+    } catch {
+      /* preserve original error */
     }
-  });
+    throw error;
+  } finally {
+    bound.client.release();
+  }
 }
 
 export async function serveBrandJourneyFallback(
@@ -229,11 +228,26 @@ export async function serveBrandJourneyFallback(
   refuseBrandJourneyWrite(request.method);
   const url = new URL(request.url);
   const correlation = parseJourneyCorrelation(url.searchParams.get('correlation') ?? CS104_CORRELATION);
-  return authorizeBrandFallback(request, subjectId, pool, async (incoming, directory) => {
-    await serveBrandCustomerRead(incoming, directory, async () => null);
+  const bound = await bindBrandFallback(request, subjectId, pool);
+  try {
+    const incoming: BrandIncomingRequest = {
+      ...bound.incoming,
+      path: '/brand/api/customers',
+    };
+    await serveBrandCustomerRead(incoming, bound.directory, async () => null);
     const observation = emptyBrandJourneyObservation(correlation, correlation);
+    await bound.client.query('COMMIT');
     return Response.json(observation, { status: 200, headers: { 'Cache-Control': 'private, no-store' } });
-  });
+  } catch (error) {
+    try {
+      await bound.client.query('ROLLBACK');
+    } catch {
+      /* preserve original error */
+    }
+    throw error;
+  } finally {
+    bound.client.release();
+  }
 }
 
 export function platformJourneyCorrelationBody(correlation: string | null) {
