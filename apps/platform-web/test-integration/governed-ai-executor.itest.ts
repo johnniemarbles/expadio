@@ -9,6 +9,7 @@ import {
   persistGovernedActionIntent,
 } from '@expadio/postgres-runtime/governed-action-intent';
 import type {
+  DurableArtifactProviderFetchResult,
   DurableArtifactReadContext,
   DurableArtifactSink,
   DurableArtifactSource,
@@ -65,7 +66,9 @@ implements DurableArtifactSink, DurableArtifactSource {
     };
   }
 
-  async issueProviderFetchUrl() {
+  async issueProviderFetchUrl(
+    _input: DurableArtifactReadContext,
+  ): Promise<DurableArtifactProviderFetchResult> {
     throw new Error('AI_E2E_PROVIDER_FETCH_URL_NOT_USED');
   }
 }
