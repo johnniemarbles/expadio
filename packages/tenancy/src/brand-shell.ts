@@ -65,7 +65,7 @@ export function brandWorkspace(
   const surfaces = Object.fromEntries(
     SHELL_NAVIGATION.brand.map((label) => {
       const key = SURFACE[label];
-      if (key === 'growth' || key === 'communications' || key === 'knowledge' || key === 'settings') {
+      if (key === 'growth' || key === 'knowledge' || key === 'settings') {
         return [key, { state: 'planned', reason: 'SURFACE_NOT_CONNECTED' } satisfies BrandSurfaceState];
       }
       return [key, status];

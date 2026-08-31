@@ -4,6 +4,9 @@ const CUSTOMER_PII_TOKEN =
   /\b(email|phone|mobile|whatsapp|full_name|first_name|last_name|patient_name|customer_name|crm_contacts)\b/i;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 const PHONE = /\+?\d[\d\s().-]{8,}\d/;
+const SENDING_HEALTH_FORBIDDEN_KEY =
+  /^(email|phone|mobile|full_name|first_name|last_name|patient_name|customer_name|recipient|to_address|from_address|crm_contacts)$/i;
+const CHANNEL_VALUE = /^(email|sms|whatsapp|voice|in_app|push|rcs|social)$/i;
 
 /** Placeholders must not contain customer-field tokens. `[redacted-email]` fails that test. */
 export const REDACTED_ADDR = '[redacted-addr]';
@@ -84,6 +87,37 @@ export function redactCustomerPii(value: string): string {
 export function assertPlatformPayloadHasNoCustomerPii(payload: unknown): void {
   if (customerPiiPresent(payload)) {
     throw new Error('PLATFORM_PII_BOUNDARY');
+  }
+}
+
+/**
+ * Sending health may name a channel `email` / `whatsapp`.
+ * It may not carry recipient fields or address values.
+ */
+export function assertPlatformSendingHealthPayload(payload: unknown): void {
+  visitSendingHealth(payload);
+}
+
+function visitSendingHealth(value: unknown, key?: string): void {
+  if (key !== undefined && SENDING_HEALTH_FORBIDDEN_KEY.test(key)) {
+    throw new Error('PLATFORM_PII_BOUNDARY');
+  }
+  if (typeof value === 'string') {
+    if (EMAIL.test(value) || PHONE.test(value)) {
+      throw new Error('PLATFORM_PII_BOUNDARY');
+    }
+    if (
+      key !== 'channel' &&
+      key !== 'providerType' &&
+      CUSTOMER_PII_TOKEN.test(value) &&
+      !CHANNEL_VALUE.test(value)
+    ) {
+      throw new Error('PLATFORM_PII_BOUNDARY');
+    }
+  } else if (Array.isArray(value)) {
+    for (const item of value) visitSendingHealth(item, key);
+  } else if (value && typeof value === 'object') {
+    for (const [nextKey, next] of Object.entries(value)) visitSendingHealth(next, nextKey);
   }
 }
 
