@@ -141,13 +141,12 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
 
     const choice = data.choices?.[0];
     const generatedText = choice?.message?.content ?? "";
-    const totalTokens = data.usage?.total_tokens ?? 0;
-    const costMinorUnits = Math.ceil((totalTokens / 1_000) * 1);
+    const totalTokens = data.usage?.total_tokens;
 
     const provenance: AiProvenance = {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
-      modelKey,
+      modelKey: embeddingModelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
       sourceReferences: [
@@ -156,12 +155,19 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       ],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      estimatedCostMinorUnits: costMinorUnits,
-      providerUsage: {
-        inputTokens: data.usage?.prompt_tokens ?? 0,
-        outputTokens: data.usage?.completion_tokens ?? 0,
-        totalTokens,
-      },
+      ...(data.usage === undefined
+        ? {}
+        : {
+            providerUsage: {
+              ...(data.usage.prompt_tokens === undefined
+                ? {}
+                : { inputTokens: data.usage.prompt_tokens }),
+              ...(data.usage.completion_tokens === undefined
+                ? {}
+                : { outputTokens: data.usage.completion_tokens }),
+              ...(totalTokens === undefined ? {} : { totalTokens }),
+            },
+          }),
     };
 
     const artifact = await this.#artifactSink.write({
@@ -205,8 +211,10 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
 
+    const embeddingModelKey =
+      modelKey === "gpt-4o-mini" ? "text-embedding-3-small" : modelKey;
     const requestBody = {
-      model: modelKey === "gpt-4o-mini" ? "text-embedding-3-small" : modelKey,
+      model: embeddingModelKey,
       input: resolvedInput.content,
     };
 
@@ -234,7 +242,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       contentType: "application/json",
       providerKey: connector.providerKey,
       connectorKey: connector.connectorKey,
-      modelKey,
+      modelKey: embeddingModelKey,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
@@ -248,7 +256,6 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      estimatedCostMinorUnits: 1,
     };
 
     return {
