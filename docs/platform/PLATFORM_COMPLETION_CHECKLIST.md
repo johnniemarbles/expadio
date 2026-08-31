@@ -52,6 +52,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Replayed provider webhook events with distinct provider event ids recorded without duplicate delivery lifecycle mutation.
 - [x] Social channel `social` + capability `communication.social.send` on main (#491).
 - [x] Disabled connector `social.linkedin` on main (#491, `0086_communication_social_channel.sql`).
+- [x] Seed-tenant catalog proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send` (`social_linkedin_connector_smoke.sql` + source-contract).
 - [ ] Delivery-worker social dispatch — forbidden until COMMUNICATE proof + explicit enable.
 
 ### Observability
@@ -141,6 +142,7 @@ Binding keys:
 
 - [x] Dark Communication wiring merged via #491 (clean replay of dirty #489): channel union, capability seed, disabled `social.linkedin`, LinkedIn text adapter, Resend-shaped lease binding, CHECK widen, adapter-key map.
 - [x] Migration numbered `0086_communication_social_channel.sql` so draft #481 keeps `0085_audit_organization_provenance.sql` and #475 keeps 0083/0084.
+- [x] Seed-tenant proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send` (`infra/db/tests/social_linkedin_connector_smoke.sql` + `apps/platform-web/test/social-linkedin-seed.test.ts`).
 
 ### Still HOLD
 
@@ -148,7 +150,6 @@ Binding keys:
 
 ### Next on EXPADIO
 
-- [ ] Seed-tenant proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send`.
 - [ ] File a Communication intent after DF APPROVE; author cannot file (SoD). Return dark / `CONNECTOR_DISABLED` while the connector is off.
 - [ ] Do not add `social` to `CommunicationSenderChannel` / `isSenderChannel()`.
 - [ ] Do not wire the delivery worker to LinkedIn until COMMUNICATE → attempt → trace is proven on email.
@@ -178,7 +179,7 @@ Freeze exception 2026-08-31. Multi-source demand-capture is a horizontal capabil
 EXPADIO already owns the CRM pipeline. Do not collapse these two catalogues:
 
 | Layer | Catalogue | Home |
-|-------|-----------|------|
+|-------|--------|
 | Capture journey | 19 stages (`NEW_ENQUIRY` … `NURTURE`) | extract `@expadio/lead-capture` / `@expadio/lead-pipeline` |
 | CRM entity | 5 stages (`NEW` / `QUALIFIED` / `PROPOSAL` / `WON` / `LOST`) | EXPADIO `@expadio/lead` + `platform.crm_leads` |
 
