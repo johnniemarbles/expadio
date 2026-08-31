@@ -148,3 +148,37 @@ test('registry-driven routing loads connectors and policy then applies pure rout
   assert.equal(result.connector?.connectorKey, 'platform-email');
   assert.deepEqual(new Set(calls), new Set(['connectors', 'policy']));
 });
+
+
+test('tenant registry lookup preserves all connector capabilities while filtering by one required capability', async () => {
+  const client = new ScriptedClient();
+  client.responses.push({
+    rowCount: 1,
+    rows: [{
+      connector_key: 'platform-storage',
+      provider_type: 'supabase-storage',
+      provider_key: 'supabase',
+      ownership_scope: 'PLATFORM',
+      tenant_id: null,
+      capability_keys: ['storage.read', 'storage.store'],
+      region: 'us-east',
+      residency_tags: ['US'],
+      compliance_tags: ['SOC2'],
+      health: 'HEALTHY',
+      priority: 1,
+      enabled: true,
+      fallback_enabled: false,
+    }],
+  });
+
+  const repository = new PostgresProviderRegistryRepository(client);
+  const connectors = await repository.listConnectors(
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'storage.store',
+  );
+
+  assert.deepEqual(connectors[0]?.capabilityKeys, ['storage.read', 'storage.store']);
+  assert.match(client.calls[0]?.text ?? '', /EXISTS\s*\(/);
+  assert.match(client.calls[0]?.text ?? '', /cc_all/);
+  assert.match(client.calls[0]?.text ?? '', /cap_required\.capability_key = \$2/);
+});
