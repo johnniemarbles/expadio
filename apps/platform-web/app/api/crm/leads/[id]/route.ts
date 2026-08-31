@@ -40,7 +40,7 @@ export async function PATCH(
             SET stage = $2, updated_at = now()
           WHERE lead_id = $1::uuid
           RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
-                    amount_minor_units, currency, source, owner_subject_id, created_at, updated_at`,
+                    amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at`,
         [leadId, stage],
       );
       if (updated.rows.length === 0) return { notFound: true } as const;

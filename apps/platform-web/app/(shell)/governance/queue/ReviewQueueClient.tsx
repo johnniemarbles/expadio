@@ -6,8 +6,8 @@ import styles from '../../workflows/page.module.css';
 
 /**
  * The reviewer's cross-vertical inbox — every open governed instance waiting on
- * the signed-in participant to act, across case, vendor, expense and access
- * request. Oldest-waiting first, and actionable in place: the governed action
+ * the signed-in participant to act, across case, vendor, expense, access request
+ * and AutoGTM. Oldest-waiting first, and actionable in place: the governed action
  * endpoint records a decision on any vertical without leaving the queue.
  */
 
@@ -38,6 +38,10 @@ const VERTICAL_HREF: Record<string, string> = {
   'vendor.onboarding': '/vendors',
   'expense.reimbursement': '/expenses',
   'access.request': '/access-requests',
+  'gtm.icp.publish': '/gtm',
+  'gtm.sequence.publish': '/gtm',
+  'gtm.campaign.launch': '/gtm',
+  'gtm.meeting_request': '/gtm',
 };
 
 const sinceLabel = (iso: string): string => {

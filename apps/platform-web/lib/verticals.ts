@@ -33,6 +33,42 @@ export const ACCESS_WORKFLOW: VerticalWorkflowConfig = {
   statusForStage: (stageKey) => (stageKey === 'GRANTED' ? 'GRANTED' : 'SUBMITTED'),
 };
 
+export const GTM_ICP_WORKFLOW: VerticalWorkflowConfig = {
+  table: 'platform.gtm_icps',
+  idColumn: 'icp_id',
+  subjectType: 'gtm.icp.publish',
+  subjectNoun: 'ICP',
+  blueprintLabel: 'gtm.icp.publish',
+  statusForStage: (stageKey) => (stageKey === 'PUBLISHED' ? 'published' : 'proposal'),
+};
+
+export const GTM_SEQUENCE_WORKFLOW: VerticalWorkflowConfig = {
+  table: 'platform.gtm_sequences',
+  idColumn: 'sequence_id',
+  subjectType: 'gtm.sequence.publish',
+  subjectNoun: 'sequence',
+  blueprintLabel: 'gtm.sequence.publish',
+  statusForStage: (stageKey) => (stageKey === 'APPROVED' ? 'approved' : 'draft'),
+};
+
+export const GTM_CAMPAIGN_WORKFLOW: VerticalWorkflowConfig = {
+  table: 'platform.gtm_campaigns',
+  idColumn: 'campaign_id',
+  subjectType: 'gtm.campaign.launch',
+  subjectNoun: 'campaign',
+  blueprintLabel: 'gtm.campaign.launch',
+  statusForStage: (stageKey) => (stageKey === 'RUNNING' ? 'running' : 'draft'),
+};
+
+export const GTM_MEETING_WORKFLOW: VerticalWorkflowConfig = {
+  table: 'platform.gtm_meeting_requests',
+  idColumn: 'meeting_request_id',
+  subjectType: 'gtm.meeting_request',
+  subjectNoun: 'meeting request',
+  blueprintLabel: 'gtm.meeting_request',
+  statusForStage: (stageKey) => (stageKey === 'ACCEPTED' ? 'accepted' : 'requested'),
+};
+
 /**
  * Every governed subject's table + id column, keyed by work type — the generic
  * subject→instance resolution the cross-vertical action endpoint needs. Includes
@@ -44,4 +80,8 @@ export const SUBJECT_TABLES: Record<string, { readonly table: string; readonly i
   'vendor.onboarding': { table: VENDOR_WORKFLOW.table, idColumn: VENDOR_WORKFLOW.idColumn },
   'expense.reimbursement': { table: EXPENSE_WORKFLOW.table, idColumn: EXPENSE_WORKFLOW.idColumn },
   'access.request': { table: ACCESS_WORKFLOW.table, idColumn: ACCESS_WORKFLOW.idColumn },
+  'gtm.icp.publish': { table: GTM_ICP_WORKFLOW.table, idColumn: GTM_ICP_WORKFLOW.idColumn },
+  'gtm.sequence.publish': { table: GTM_SEQUENCE_WORKFLOW.table, idColumn: GTM_SEQUENCE_WORKFLOW.idColumn },
+  'gtm.campaign.launch': { table: GTM_CAMPAIGN_WORKFLOW.table, idColumn: GTM_CAMPAIGN_WORKFLOW.idColumn },
+  'gtm.meeting_request': { table: GTM_MEETING_WORKFLOW.table, idColumn: GTM_MEETING_WORKFLOW.idColumn },
 };
