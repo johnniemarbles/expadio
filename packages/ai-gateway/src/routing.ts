@@ -134,5 +134,5 @@ export class RoutedAiGateway implements AiGateway {
 }
 
 export function aiCapabilityKey(operation: AiOperation): string {
-  return `ai.${operation.toLocaleLowerCase()}`;
+  return `ai.${operation.toLowerCase()}`;
 }
