@@ -268,3 +268,59 @@ test("executeGovernedAiAction uses one replay identity for configuration refusal
     }),
   );
 });
+
+
+test("executeGovernedAiAction requires an explicitly pinned prompt", async () => {
+  const invalidIntent: GovernedActionIntent = {
+    ...intent,
+    configuration: {
+      operation: "SUMMARIZE",
+      purpose: "Generate discharge clinical summary",
+      inputReference: "artifact://clinical/treatment-999",
+    },
+  };
+  const mockGateway: AiGateway = {
+    invoke: async () => assert.fail("Unpinned prompts must not invoke AI"),
+  };
+
+  const result = await executeGovernedAiAction({
+    intent: invalidIntent,
+    aiGateway: mockGateway,
+  });
+
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
+  assert.match(result.reason, /AI_ACTION_PROMPT_KEY_REQUIRED/);
+});
+
+test("executeGovernedAiAction rejects coerced string prompt versions and cost ceilings", async () => {
+  const mockGateway: AiGateway = {
+    invoke: async () => assert.fail("Invalid typed configuration must not invoke AI"),
+  };
+
+  const versionResult = await executeGovernedAiAction({
+    intent: {
+      ...intent,
+      configuration: {
+        ...intent.configuration,
+        promptVersion: "1",
+      },
+    },
+    aiGateway: mockGateway,
+  });
+  assert.equal(versionResult.status, "FAILED");
+  assert.match(versionResult.reason, /AI_ACTION_PROMPT_VERSION_INVALID/);
+
+  const costResult = await executeGovernedAiAction({
+    intent: {
+      ...intent,
+      configuration: {
+        ...intent.configuration,
+        maximumCostMinorUnits: "10",
+      },
+    },
+    aiGateway: mockGateway,
+  });
+  assert.equal(costResult.status, "FAILED");
+  assert.match(costResult.reason, /AI_ACTION_MAXIMUM_COST_INVALID/);
+});
