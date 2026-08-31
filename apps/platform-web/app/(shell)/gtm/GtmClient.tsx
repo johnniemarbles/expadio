@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * AutoGTM console — Demand Generation Control Plane surface.
- * Files ICP, sequence and campaign drafts. Publish/launch stay on Decision Fabric.
- * Send is Communication-owned; this page never calls a lab adapter.
+ * AutoGTM console on EXPADIO.
+ * File drafts, start DF review, assign reviewer, APPROVE, then persist a
+ * COMMUNICATE intent. This page never sends and never imports a lab adapter.
  */
 
 type IcpRow = {
@@ -14,7 +14,7 @@ type IcpRow = {
   status: string;
   review_status: string;
   stage_key: string | null;
-  created_at: string;
+  workflow_instance_id: string | null;
 };
 
 type SequenceRow = {
@@ -22,7 +22,7 @@ type SequenceRow = {
   name: string;
   status: string;
   stage_key: string | null;
-  created_at: string;
+  workflow_instance_id: string | null;
 };
 
 type CampaignRow = {
@@ -30,27 +30,64 @@ type CampaignRow = {
   name: string;
   status: string;
   stage_key: string | null;
+  workflow_instance_id: string | null;
+};
+
+type MeetingRow = {
+  meeting_request_id: string;
+  prospect_email: string;
+  summary: string;
+  status: string;
+  stage_key: string | null;
+  workflow_instance_id: string | null;
+};
+
+type ReplyRow = {
+  reply_id: string;
+  from_email: string;
+  proposed_class: string;
   created_at: string;
 };
+
+function apiError(data: unknown, fallback: string): string {
+  if (data && typeof data === 'object') {
+    const r = data as Record<string, unknown>;
+    if (typeof r.error === 'string') return r.error;
+    if (typeof r.message === 'string') return r.message;
+  }
+  return fallback;
+}
 
 export function GtmClient() {
   const [icps, setIcps] = useState<IcpRow[]>([]);
   const [sequences, setSequences] = useState<SequenceRow[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
+  const [meetings, setMeetings] = useState<MeetingRow[]>([]);
+  const [replies, setReplies] = useState<ReplyRow[]>([]);
   const [name, setName] = useState('');
   const [brandId, setBrandId] = useState('');
+  const [prospectEmail, setProspectEmail] = useState('');
+  const [meetingSummary, setMeetingSummary] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [touchSubject, setTouchSubject] = useState('Northwind — a sharper ops loop');
+  const [touchBody, setTouchBody] = useState('Hi Priya');
+  const [lastIntent, setLastIntent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function refresh() {
-    const [i, s, c] = await Promise.all([
+    const [i, s, c, m, r] = await Promise.all([
       fetch('/api/gtm/icps'),
       fetch('/api/gtm/sequences'),
       fetch('/api/gtm/campaigns'),
+      fetch('/api/gtm/meeting-requests'),
+      fetch('/api/gtm/replies'),
     ]);
     if (i.ok) setIcps(await i.json());
     if (s.ok) setSequences(await s.json());
     if (c.ok) setCampaigns(await c.json());
+    if (m.ok) setMeetings(await m.json());
+    if (r.ok) setReplies(await r.json());
   }
 
   useEffect(() => {
@@ -58,7 +95,7 @@ export function GtmClient() {
   }, []);
 
   async function file(kind: 'icp' | 'sequence' | 'campaign') {
-    setBusy(true);
+    setBusy(kind);
     setError(null);
     try {
       const path = kind === 'icp' ? '/api/gtm/icps' : kind === 'sequence' ? '/api/gtm/sequences' : '/api/gtm/campaigns';
@@ -68,47 +105,222 @@ export function GtmClient() {
         body: JSON.stringify({ name, brandId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? data?.message ?? 'Could not file.');
+      if (!res.ok) throw new Error(apiError(data, 'Could not file.'));
       setName('');
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not file.');
     } finally {
-      setBusy(false);
+      setBusy(null);
+    }
+  }
+
+  async function startReview(kind: 'icps' | 'sequences' | 'campaigns' | 'meeting-requests', id: string) {
+    setBusy(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/gtm/${kind}/${encodeURIComponent(id)}/workflow`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not start review.'));
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not start review.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function assignReviewer(
+    kind: 'icps' | 'sequences' | 'campaigns' | 'meeting-requests',
+    id: string,
+    stageKey: string,
+    participantKey: string,
+  ) {
+    setBusy(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/gtm/${kind}/${encodeURIComponent(id)}/workflow/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stageKey, participantKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not assign reviewer.'));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not assign reviewer.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function decide(
+    kind: 'icps' | 'sequences' | 'campaigns' | 'meeting-requests',
+    id: string,
+    outcome: 'APPROVE' | 'REJECT',
+  ) {
+    setBusy(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/gtm/${kind}/${encodeURIComponent(id)}/workflow/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not record the decision.'));
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not record the decision.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function fileIntent(sequenceId: string) {
+    setBusy(sequenceId);
+    setError(null);
+    setLastIntent(null);
+    try {
+      const res = await fetch(`/api/gtm/sequences/${encodeURIComponent(sequenceId)}/communicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stepKey: 'touch-1',
+          subject: touchSubject,
+          body: touchBody,
+          recipientEmail: prospectEmail || 'priya.shah@northwind-plants.example',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not file Communication intent.'));
+      setLastIntent(
+        `persisted=${String(data.persisted)} dispatched=${String(data.dispatched)} sent=${String(data.sent)} reason=${data.reasonKey ?? ''} id=${data.actionIntentId ?? ''}`,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not file Communication intent.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function fileMeeting() {
+    setBusy('meeting');
+    setError(null);
+    try {
+      const res = await fetch('/api/gtm/meeting-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, prospectEmail, summary: meetingSummary }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not file meeting request.'));
+      setMeetingSummary('');
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not file meeting request.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function ingestReply() {
+    setBusy('reply');
+    setError(null);
+    try {
+      const proposedClass = /meet|calendar|book/i.test(replyBody)
+        ? 'meeting_requested'
+        : /interest|tell me more|deck/i.test(replyBody)
+          ? 'interested'
+          : 'unknown';
+      const res = await fetch('/api/gtm/replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandId,
+          fromEmail: prospectEmail,
+          proposedClass,
+          rawPayload: { body: replyBody },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not ingest reply.'));
+      setReplyBody('');
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not ingest reply.');
+    } finally {
+      setBusy(null);
     }
   }
 
   return (
-    <section style={{ padding: 24, maxWidth: 960 }}>
+    <section style={{ padding: 24, maxWidth: 1100 }}>
       <p style={{ fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: '#64748b' }}>Demand Generation Control Plane</p>
       <h1>AutoGTM</h1>
-      <p style={{ color: '#475569', maxWidth: 640 }}>
-        Propose an ICP, sequence or campaign draft. Reviewers approve in the Decision Fabric queue.
-        After APPROVE, Communication intent files on <code>communication.email.send</code> via <code>gtm.email</code>
-        (disabled until BYOC is bound). Warm replies ingest as CRM leads with source <code>outbound_gtm</code>.
+      <p style={{ color: '#475569', maxWidth: 720 }}>
+        Propose an ICP, sequence or campaign. Start review, assign a second-subject reviewer, APPROVE.
+        After APPROVE, file a Communication intent on <code>communication.email.send</code> via <code>gtm.email</code>.
+        Send stays dark until BYOC. Warm replies ingest as CRM leads with source <code>outbound_gtm</code>.
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '16px 0' }}>
         <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <input placeholder="Brand UUID" value={brandId} onChange={(e) => setBrandId(e.target.value)} />
-        <button type="button" disabled={busy} onClick={() => file('icp')}>Propose ICP</button>
-        <button type="button" disabled={busy} onClick={() => file('sequence')}>File sequence draft</button>
-        <button type="button" disabled={busy} onClick={() => file('campaign')}>File campaign draft</button>
+        <button type="button" disabled={busy !== null} onClick={() => file('icp')}>Propose ICP</button>
+        <button type="button" disabled={busy !== null} onClick={() => file('sequence')}>File sequence draft</button>
+        <button type="button" disabled={busy !== null} onClick={() => file('campaign')}>File campaign draft</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <input placeholder="Prospect email" value={prospectEmail} onChange={(e) => setProspectEmail(e.target.value)} />
+        <input placeholder="Meeting summary" value={meetingSummary} onChange={(e) => setMeetingSummary(e.target.value)} />
+        <button type="button" disabled={busy !== null} onClick={() => void fileMeeting()}>File meeting request</button>
+        <input placeholder="Reply text" value={replyBody} onChange={(e) => setReplyBody(e.target.value)} />
+        <button type="button" disabled={busy !== null} onClick={() => void ingestReply()}>Ingest reply</button>
       </div>
       {error && <p role="alert" style={{ color: '#b91c1c' }}>{error}</p>}
+      {lastIntent && <p>Last intent: {lastIntent}</p>}
 
       <h2>ICP proposals</h2>
       <ul>
         {icps.map((row) => (
-          <li key={row.icp_id}>{row.name} · {row.status}/{row.review_status} · {row.stage_key ?? 'unbound'}</li>
+          <li key={row.icp_id}>
+            {row.name} · {row.status}/{row.review_status} · {row.stage_key ?? 'unbound'}
+            {' '}
+            {row.workflow_instance_id === null ? (
+              <button type="button" disabled={busy !== null} onClick={() => void startReview('icps', row.icp_id)}>Start review</button>
+            ) : (
+              <>
+                <button type="button" disabled={busy !== null} onClick={() => void assignReviewer('icps', row.icp_id, 'GOVERNANCE_REVIEW', 'gtm_reviewer')}>Assign reviewer</button>
+                <button type="button" disabled={busy !== null} onClick={() => void decide('icps', row.icp_id, 'APPROVE')}>APPROVE</button>
+                <button type="button" disabled={busy !== null} onClick={() => void decide('icps', row.icp_id, 'REJECT')}>REJECT</button>
+              </>
+            )}
+          </li>
         ))}
         {icps.length === 0 && <li>No ICP proposals yet.</li>}
       </ul>
 
       <h2>Sequence drafts</h2>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <input placeholder="Touch subject" value={touchSubject} onChange={(e) => setTouchSubject(e.target.value)} />
+        <input placeholder="Touch body" value={touchBody} onChange={(e) => setTouchBody(e.target.value)} />
+      </div>
       <ul>
         {sequences.map((row) => (
-          <li key={row.sequence_id}>{row.name} · {row.status} · {row.stage_key ?? 'unbound'}</li>
+          <li key={row.sequence_id}>
+            {row.name} · {row.status} · {row.stage_key ?? 'unbound'}
+            {' '}
+            {row.workflow_instance_id === null ? (
+              <button type="button" disabled={busy !== null} onClick={() => void startReview('sequences', row.sequence_id)}>Start review</button>
+            ) : (
+              <>
+                <button type="button" disabled={busy !== null} onClick={() => void assignReviewer('sequences', row.sequence_id, 'COPY_REVIEW', 'gtm_reviewer')}>Assign reviewer</button>
+                <button type="button" disabled={busy !== null} onClick={() => void decide('sequences', row.sequence_id, 'APPROVE')}>APPROVE</button>
+                <button type="button" disabled={busy !== null} onClick={() => void fileIntent(row.sequence_id)}>File Communication intent</button>
+              </>
+            )}
+          </li>
         ))}
         {sequences.length === 0 && <li>No sequences yet.</li>}
       </ul>
@@ -116,9 +328,47 @@ export function GtmClient() {
       <h2>Campaign drafts</h2>
       <ul>
         {campaigns.map((row) => (
-          <li key={row.campaign_id}>{row.name} · {row.status} · {row.stage_key ?? 'unbound'}</li>
+          <li key={row.campaign_id}>
+            {row.name} · {row.status} · {row.stage_key ?? 'unbound'}
+            {' '}
+            {row.workflow_instance_id === null ? (
+              <button type="button" disabled={busy !== null} onClick={() => void startReview('campaigns', row.campaign_id)}>Start review</button>
+            ) : (
+              <>
+                <button type="button" disabled={busy !== null} onClick={() => void assignReviewer('campaigns', row.campaign_id, 'LAUNCH_REVIEW', 'gtm_reviewer')}>Assign reviewer</button>
+                <button type="button" disabled={busy !== null} onClick={() => void decide('campaigns', row.campaign_id, 'APPROVE')}>APPROVE</button>
+              </>
+            )}
+          </li>
         ))}
         {campaigns.length === 0 && <li>No campaigns yet.</li>}
+      </ul>
+
+      <h2>Meeting requests</h2>
+      <ul>
+        {meetings.map((row) => (
+          <li key={row.meeting_request_id}>
+            {row.prospect_email} · {row.summary} · {row.status} · {row.stage_key ?? 'unbound'}
+            {' '}
+            {row.workflow_instance_id === null ? (
+              <button type="button" disabled={busy !== null} onClick={() => void startReview('meeting-requests', row.meeting_request_id)}>Start review</button>
+            ) : (
+              <>
+                <button type="button" disabled={busy !== null} onClick={() => void assignReviewer('meeting-requests', row.meeting_request_id, 'OWNER_REVIEW', 'gtm_owner')}>Assign owner</button>
+                <button type="button" disabled={busy !== null} onClick={() => void decide('meeting-requests', row.meeting_request_id, 'APPROVE')}>APPROVE</button>
+              </>
+            )}
+          </li>
+        ))}
+        {meetings.length === 0 && <li>No meeting requests yet.</li>}
+      </ul>
+
+      <h2>Reply observations</h2>
+      <ul>
+        {replies.map((row) => (
+          <li key={row.reply_id}>{row.from_email} · {row.proposed_class}</li>
+        ))}
+        {replies.length === 0 && <li>No replies ingested yet.</li>}
       </ul>
     </section>
   );
