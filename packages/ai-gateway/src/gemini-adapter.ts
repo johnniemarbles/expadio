@@ -1,4 +1,4 @@
-import type { ConnectorDefinition } from "@expadio/provider-registry";
+import type { ConnectorDefinition, GovernedApiCredentialRequest } from "@expadio/provider-registry";
 import type { DurableArtifactSink } from "@expadio/storage";
 import type {
   AiInvocationIntent,
@@ -9,14 +9,9 @@ import type {
 import type { AiProviderAdapter } from "./routing.ts";
 import type { AiInputResolver } from "./input-resolution.ts";
 
-export interface AiCredentialRequest {
-  readonly tenantId: string;
-  readonly connectorKey: string;
+export type AiCredentialRequest = GovernedApiCredentialRequest & {
   readonly operation: AiOperation;
-  readonly purpose: string;
-  readonly idempotencyKey: string;
-  readonly requestedAt: string;
-}
+};
 
 export type AiApiTokenProvider = (request: AiCredentialRequest) => Promise<string>;
 
