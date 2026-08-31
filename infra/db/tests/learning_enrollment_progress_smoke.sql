@@ -50,9 +50,9 @@ INSERT INTO platform.learning_course_versions (
   tenant_id, course_id, version, state, title, language, learning_objectives,
   created_by_subject_id, updated_by_subject_id, published_by_subject_id, published_at
 )
-SELECT tenant_id, course_id, 1, 'PUBLISHED', 'Enrollment Smoke v1', 'en',
+SELECT tenant_id, course_id, 1, 'DRAFT', 'Enrollment Smoke v1', 'en',
        '["Complete required learning"]'::jsonb,
-       'smoke-admin', 'smoke-admin', 'smoke-admin', now()
+       'smoke-admin', 'smoke-admin', NULL, NULL
   FROM platform.learning_courses
  WHERE tenant_id IN (
    '12121212-1212-4121-8121-121212121212'::uuid,
@@ -77,6 +77,26 @@ INSERT INTO platform.learning_lessons (
 SELECT tenant_id, course_version_id, course_module_id, 'lesson', 'Required lesson',
        'TEXT', 1, true, '{}'::jsonb
   FROM platform.learning_course_modules
+ WHERE tenant_id IN (
+   '12121212-1212-4121-8121-121212121212'::uuid,
+   '34343434-3434-4343-8343-343434343434'::uuid
+ );
+
+UPDATE platform.learning_course_versions
+   SET state = 'PUBLISHED',
+       published_by_subject_id = 'smoke-admin',
+       published_at = now(),
+       updated_by_subject_id = 'smoke-admin',
+       updated_at = now()
+ WHERE tenant_id IN (
+   '12121212-1212-4121-8121-121212121212'::uuid,
+   '34343434-3434-4343-8343-343434343434'::uuid
+ )
+   AND version = 1;
+
+UPDATE platform.learning_courses
+   SET current_published_version = 1,
+       updated_at = now()
  WHERE tenant_id IN (
    '12121212-1212-4121-8121-121212121212'::uuid,
    '34343434-3434-4343-8343-343434343434'::uuid
