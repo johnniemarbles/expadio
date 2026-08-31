@@ -7,6 +7,14 @@ import {
   type AiInvocationIntent,
 } from "../src/index.ts";
 
+const artifactSink = {
+  write: async (input: any) => ({
+    contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
+    sha256: "a".repeat(64),
+    byteLength: typeof input.content === "string" ? input.content.length : input.content.byteLength,
+  }),
+};
+
 const connector: ConnectorDefinition = {
   connectorKey: "connector.ai.openai.primary",
   providerType: "openai",
@@ -73,6 +81,7 @@ test("OpenAiAiAdapter invokes chat completions and returns validated proposal", 
 
   const adapter = new OpenAiAiAdapter({
     apiToken: async () => "mock-openai-key-abc",
+    artifactSink,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:02.000Z",
   });
@@ -108,6 +117,7 @@ test("OpenAiAiAdapter handles embeddings via /v1/embeddings", async () => {
 
   const adapter = new OpenAiAiAdapter({
     apiToken: async () => "mock-openai-key-abc",
+    artifactSink,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:02.000Z",
   });
@@ -122,7 +132,7 @@ test("OpenAiAiAdapter handles embeddings via /v1/embeddings", async () => {
   assert.equal(requestedUrl, "https://api.openai.com/v1/embeddings");
   assert.equal(requestBody.model, "text-embedding-3-small");
   assert.equal(proposal.status, "OBSERVATION");
-  assert.equal(proposal.outputReference, `ref://ai-embedding/${embedIntent.invocationId}`);
+  assert.equal(proposal.outputReference, `artifact://AI_EMBEDDING/${embedIntent.invocationId}`);
 
   const validation = validateAiProposal(embedIntent, proposal);
   assert.equal(validation.valid, true);
