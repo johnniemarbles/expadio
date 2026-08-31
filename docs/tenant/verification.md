@@ -1,25 +1,23 @@
 # Read-slice verification
 
-Local validation for this update:
+Wave 1 source contract on `feat/tenant-product-foundation` is closed against CI. Keep #499 draft.
 
-- 16 unit/contract tests in `test/tenant-read-model.test.ts`.
-- 12 isolated PostgreSQL-engine checks: actual membership, CRM, workflow-decision
-  and operational-task migrations; NOBYPASSRLS role; tenant and sibling-org
-  denial; restricted/expired membership; inconsistent child links; read-only
-  enforcement; pooled context cleanup. Dependency tables for events and action
-  intents are minimal test fixtures, not execution tests.
-- 10 mounted-DOM checks: explicit model, customer sections, empty live records,
-  denied/not-found states, query scope propagation and cancellation on navigation.
-- Targeted strict TypeScript checking of the tenant UI, read model, contracts,
-  model fixture, unit tests and compatibility with the pg Pool client interface.
+## Current head
 
-These are **not** a full monorepo build, browser/mobile accessibility review,
-authenticated deployment e2e, command idempotency/SoD verification or load test.
-The PR remains draft and no deployment or migration was run.
+CI green on this branch: `check`, `integration`, `postgres-contract`, `verify-architecture-baseline`.
+
+These are **not** a Railway preview, authenticated browser e2e, command idempotency/SoD verification or load test. No production migration was run. `/brand` is a same-origin fallback, not `app.expadio.com`.
 
 ## Reproduce
 
-With repository dependencies installed, from `apps/platform-web`:
+From the repository root:
+
+```sh
+node --experimental-strip-types --test packages/tenancy/test/*.test.ts
+node --experimental-strip-types --test apps/platform-web/test/tenant-audience-boundary.test.ts apps/platform-web/test/tenant-read-model.test.ts
+```
+
+From `apps/platform-web`:
 
 ```sh
 node --experimental-strip-types --test test/tenant-read-model.test.ts
@@ -39,34 +37,7 @@ installation. It does not inspect CSS layout, invoke Clerk or contact a real API
 The PostgreSQL harness creates a fresh in-memory engine, seeds test rows and
 closes it afterwards; it never connects to an external database.
 
-Before release run the normal monorepo checks and authenticated e2e on a deployed
-preview. Verify the database connection role cannot bypass RLS, inspect query
-plans for organization-scoped joins, test revoked sessions and memberships,
-keyboard focus, mobile tables/navigation and screen-reader announcements.
+## Next proof, not next source
 
-The superseded `artifacts/expadio-brand-dashboard.html` is removed from the draft
-tip and is recoverable from prior commits. No later Wave 1+2 fixture was supplied
-for this correction; no replacement was invented.
-
-## Dual-shell correction — verification pending at push
-
-Nine new scope-contract tests cover both audiences, explicit unresolved values,
-T/B/L selection, pack/residency independence, storage-ID rejection and navigation.
-Three source regression tests check removal of the Platform-to-lab link and old
-HTML and require explicit lab labeling.
-
-The local execution environment disconnected before these new tests or the 38
-read-slice regressions could run. Prior local green results above belong to
-`0c11284`, not to this correction. Check current-head CI before further work.
-
-Run from the repository root:
-
-```sh
-node --experimental-strip-types --test packages/tenancy/test/*.test.ts
-node --experimental-strip-types --test apps/platform-web/test/tenant-audience-boundary.test.ts apps/platform-web/test/tenant-read-model.test.ts
-```
-
-These checks do not prove Platform PII isolation, resolved T/B/L ownership,
-pack/residency-independent database counts, role homes, real location scope or
-authenticated browser e2e. See [remaining gates](shared-scope-contract.md).
-
+See [platform-pii-proof.md](platform-pii-proof.md) and [shared-scope-contract.md](shared-scope-contract.md).
+Runtime logs/caches require a Railway preview of platform-web. Do not invent a live `DELIVERED` row. Do not merge lab APIs into the product nav.

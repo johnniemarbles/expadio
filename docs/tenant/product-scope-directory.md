@@ -1,6 +1,6 @@
 # Product scope directory — migration review
 
-Status: table `0088_product_scope_bindings.sql` and lookup `0089_product_scope_lookup.sql` on draft #499. Not merged.
+Status: table `0088_product_scope_bindings.sql` and lookup `0089_product_scope_lookup.sql` on draft #499. Wave 1 source closed. Not merged.
 
 ## Why 0088 / 0089
 

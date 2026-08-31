@@ -1,7 +1,7 @@
 # Shared scope contract — Platform and Brand
 
-Status: definition implemented; dual-shell runtime integration not complete.
-Keep #499 draft. The source of truth is `ShellScope` in
+Status: Wave 1 source/CI closed on draft #499. Dual-shell runtime on Railway and Brand host on `app.expadio.com` are not closed.
+The source of truth is `ShellScope` in
 `packages/tenancy/src/shell-scope.ts`, exported by `@expadio/tenancy` for both
 audiences. Do not introduce a separate Brand scope or authorization engine.
 
@@ -65,24 +65,20 @@ membership resolution. These reads must not call Platform `/api/tenant`.
 `L-####` and SELECTED membership stay fail-closed until CRM unit ownership is
 proven. Platform `ShellFrame` must not link `/brand` or `/tenant`.
 
-## Integration gate — still open
+## Integration gates
 
-1. Preserve the canonical scoped reads and tests. Remove Platform's sidebar link
-   to /tenant and remove the superseded Northstar Dental HTML from the PR tip.
-2. Establish the separate Brand app/shell composition (target apps/brand-web),
-   importing this shared contract. The current /tenant in apps/platform-web is
-   only a draft read-model lab. `/brand` is a same-origin fallback, not the
-   completed Brand deploy.
-3. Implement the verified product/storage mappings and server scope adapters in
-   both apps. Role homes remain owner, manager, operator and approver. Restricted
-   location/workspace access stays fail-closed until its ownership is verified.
-4. Platform product URLs/APIs/errors now use the PII contract. Sending-health
-   product APIs use a channel-aware scanner. Runtime logs and caches on a
-   deployed preview are still unproven.
-5. Test scoped counts, view/action separation, expired/revoked access, mobile,
-   keyboard and authenticated browser e2e. Unit selection tests and mounted-DOM
-   checks do not satisfy these gates.
-6. Only then prove one Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE →
-   observed delivery on the same record using frozen executors. The observation
-   plan exists; no Brand mutation is enabled. No auto-send, second engine,
-   DENTEX expansion, Social or lead-inbox merge.
+Closed on this tip (source + CI only):
+
+1. Canonical scoped reads and tests preserved. Platform sidebar does not treat `/tenant` as product nav. Superseded Northstar Dental HTML is not on the product surface.
+2. Shared `ShellScope` + `SHELL_NAVIGATION` used by both audiences. `/brand` is mounted as same-origin fallback outside Platform chrome.
+3. Verified product/storage mapping table 0088 + lookup 0089. Empty table fail-closes. Role homes remain owner, manager, operator and approver.
+4. Platform product URLs/APIs/errors use the PII contract. Sending-health product APIs use a channel-aware scanner.
+5. Brand Communications observes CS-104 COMMUNICATE + DELIVERY. POST journey is 405. No auto-send.
+
+Still open (not source):
+
+1. Separate Brand Next host on `app.expadio.com`. `/brand` is not that deploy.
+2. Runtime logs and caches on a Railway preview of platform-web.
+3. Authenticated browser e2e, expired/revoked access, mobile and keyboard.
+4. A live CS-104 correlation that actually carries provider `DELIVERED`.
+5. No DENTEX expansion, Social, lead-inbox merge, or second engine.
