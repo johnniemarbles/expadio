@@ -77,15 +77,13 @@ test('Brand host serves customers only after host, mapping and ALL membership', 
   assert.deepEqual(response.body, { items: [{ id: 'c-1' }], hasMore: false });
 });
 
-test('Platform host cannot serve Brand customers',
-  () => {
-    const directory = createScopeDirectoryFromRows([ALL_ROW]);
-    assert.throws(
-      () => authorizeBrandCustomerRequest(request({ host: 'platform.expadio.com' }), directory),
-      (error: unknown) => error instanceof BrandHostError && error.code === 'BRAND_READS_NOT_PLATFORM_TENANT_API',
-    );
-  },
-);
+test('Platform host cannot serve Brand customers', () => {
+  const directory = createScopeDirectoryFromRows([ALL_ROW]);
+  assert.throws(
+    () => authorizeBrandCustomerRequest(request({ host: 'platform.expadio.com' }), directory),
+    (error: unknown) => error instanceof BrandHostError && error.code === 'BRAND_HOST_REQUIRED',
+  );
+});
 
 test('Platform tenant lab path is refused on the Brand host', () => {
   const directory = createScopeDirectoryFromRows([ALL_ROW]);
