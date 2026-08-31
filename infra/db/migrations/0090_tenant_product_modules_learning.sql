@@ -116,10 +116,13 @@ CREATE UNIQUE INDEX learning_academies_one_default_uq
 
 ALTER TABLE platform.tenant_module_entitlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.tenant_module_entitlements FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_module_entitlements_tenant_isolation
+-- Tenant runtime can inspect commercial entitlement state but cannot mint,
+-- extend, revoke, or otherwise mutate it. Commercial control-plane writes use
+-- a privileged database path outside the tenant runtime role.
+CREATE POLICY tenant_module_entitlements_tenant_select
   ON platform.tenant_module_entitlements
-  USING (tenant_id = platform.current_tenant_id())
-  WITH CHECK (tenant_id = platform.current_tenant_id());
+  FOR SELECT
+  USING (tenant_id = platform.current_tenant_id());
 
 ALTER TABLE platform.tenant_modules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.tenant_modules FORCE ROW LEVEL SECURITY;
