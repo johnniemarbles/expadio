@@ -340,4 +340,13 @@ $$;
 
 RESET ROLE;
 
+-- Keep SQL contract tests hermetic. Later Learning smoke files intentionally
+-- use broad fixture queries, so this test must not leave tenant-owned rows
+-- behind in the shared contract database.
+DELETE FROM platform.tenants
+ WHERE tenant_id IN (
+   '51515151-5151-4151-8151-515151515151'::uuid,
+   '62626262-6262-4262-8262-626262626262'::uuid
+ );
+
 SELECT 'learning assessment smoke: ok' AS result;
