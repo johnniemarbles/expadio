@@ -8,6 +8,14 @@ import {
   type AiInvocationIntent,
 } from "../src/index.ts";
 
+const artifactSink = {
+  write: async (input: any) => ({
+    contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
+    sha256: "c".repeat(64),
+    byteLength: typeof input.content === "string" ? input.content.length : input.content.byteLength,
+  }),
+};
+
 const geminiConnector: ConnectorDefinition = {
   connectorKey: "connector.ai.gemini.us",
   providerType: "gemini",
@@ -42,6 +50,7 @@ const openAiConnector: ConnectorDefinition = {
 test("RoutedAiGateway routes US HIPAA intent through GeminiAiAdapter", async () => {
   const geminiAdapter = new GeminiAiAdapter({
     apiToken: async (req) => `leased-token-for-${req.tenantId}`,
+    artifactSink,
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
@@ -54,6 +63,7 @@ test("RoutedAiGateway routes US HIPAA intent through GeminiAiAdapter", async () 
 
   const openAiAdapter = new OpenAiAiAdapter({
     apiToken: async () => "leased-openai-token",
+    artifactSink,
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
@@ -98,6 +108,7 @@ test("RoutedAiGateway routes US HIPAA intent through GeminiAiAdapter", async () 
 test("RoutedAiGateway routes EU GDPR intent to tenant-owned OpenAI adapter", async () => {
   const geminiAdapter = new GeminiAiAdapter({
     apiToken: async () => "gemini-key",
+    artifactSink,
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
@@ -109,6 +120,7 @@ test("RoutedAiGateway routes EU GDPR intent to tenant-owned OpenAI adapter", asy
 
   const openAiAdapter = new OpenAiAiAdapter({
     apiToken: async () => "openai-key",
+    artifactSink,
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
