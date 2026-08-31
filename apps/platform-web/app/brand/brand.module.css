@@ -1,0 +1,10 @@
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; background: #0f1419; color: #e8eef4; font-family: Inter, system-ui, sans-serif; }
+.sidebar { padding: 1.25rem 1rem; border-right: 1px solid #243040; }
+.mark { font-weight: 700; letter-spacing: 0.04em; margin: 0 0 1.5rem; }
+.mark small { display: block; font-weight: 500; color: #8aa0b5; letter-spacing: 0; }
+.sidebar nav { display: grid; gap: 0.35rem; }
+.sidebar a { color: #c5d2de; text-decoration: none; padding: 0.4rem 0.5rem; border-radius: 6px; }
+.sidebar a[aria-current='page'] { background: #1c2733; color: #fff; }
+.note, .fixture, .eyebrow { color: #8aa0b5; font-size: 0.8rem; }
+.main { padding: 1.5rem 2rem; }
+.main h1 { margin: 0.2rem 0 0.75rem; font-size: 1.6rem; }
