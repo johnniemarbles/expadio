@@ -7,6 +7,14 @@ import {
   type AiInvocationIntent,
 } from "../src/index.ts";
 
+const artifactSink = {
+  write: async (input: any) => ({
+    contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
+    sha256: "b".repeat(64),
+    byteLength: typeof input.content === "string" ? input.content.length : input.content.byteLength,
+  }),
+};
+
 const connector: ConnectorDefinition = {
   connectorKey: "connector.ai.gemini.primary",
   providerType: "gemini",
@@ -74,6 +82,7 @@ test("GeminiAiAdapter invokes generateContent, parses response and sets provenan
 
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "mock-gemini-key-123",
+    artifactSink,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:01.000Z",
   });
@@ -115,6 +124,7 @@ test("GeminiAiAdapter handles EMBED operation with embedContent API", async () =
 
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "mock-gemini-key-123",
+    artifactSink,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:01.000Z",
   });
@@ -127,7 +137,7 @@ test("GeminiAiAdapter handles EMBED operation with embedContent API", async () =
   const proposal = await adapter.invoke({ intent: embedIntent, connector });
 
   assert.ok(requestedUrl.includes("gemini-2.0-flash:embedContent"));
-  assert.equal(proposal.outputReference, `ref://ai-embedding/${embedIntent.invocationId}`);
+  assert.equal(proposal.outputReference, `artifact://AI_EMBEDDING/${embedIntent.invocationId}`);
   assert.equal(proposal.confidence, 1.0);
 
   const validation = validateAiProposal(embedIntent, proposal);
@@ -137,6 +147,7 @@ test("GeminiAiAdapter handles EMBED operation with embedContent API", async () =
 test("GeminiAiAdapter rejects empty leased token with clear error", async () => {
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "",
+    artifactSink,
   });
 
   await assert.rejects(
@@ -152,6 +163,7 @@ test("GeminiAiAdapter throws on provider error response", async () => {
 
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "mock-key",
+    artifactSink,
     fetchImpl: mockFetch,
   });
 
