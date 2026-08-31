@@ -138,3 +138,47 @@ test('rejects unknown runtime Voice operations', () => {
     true,
   );
 });
+
+test('fails closed on malformed nested Voice runtime JSON', () => {
+  const malformed = {
+    requestId: 'voice-malformed',
+    tenantId: 'tenant-1',
+    callId: 'call-1',
+    operation: 'TRANSCRIBE',
+    purpose: 'test',
+    inputReference: 'artifact://audio/1',
+    languageTag: 'en-US',
+    governance: undefined,
+    idempotencyKey: 'voice-idem-malformed',
+    correlationId: 'voice-corr-malformed',
+    requestedAt: '2026-08-31T03:00:00.000Z',
+  } as unknown as VoiceIntelligenceIntent;
+
+  const result = validateVoiceIntelligenceIntent(malformed);
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  const codes = new Set(result.issues.map((issue) => issue.code));
+  assert.equal(codes.has('VOICE_RECORDING_CONSENT_EVIDENCE_REQUIRED'), true);
+  assert.equal(codes.has('VOICE_POLICY_REFERENCE_INVALID'), true);
+  assert.equal(codes.has('VOICE_JURISDICTION_REQUIRED'), true);
+  assert.equal(codes.has('VOICE_GOVERNANCE_TAGS_INVALID'), true);
+});
+
+test('fails closed on missing Voice observation provenance', () => {
+  const malformed = {
+    requestId: intent.requestId,
+    tenantId: intent.tenantId,
+    callId: intent.callId,
+    operation: intent.operation,
+    outputReference: 'artifact://voice/output-1',
+    provenance: undefined,
+  } as unknown as VoiceIntelligenceObservation;
+
+  const result = validateVoiceIntelligenceObservation(intent, malformed);
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  const codes = new Set(result.issues.map((issue) => issue.code));
+  assert.equal(codes.has('VOICE_PROVENANCE_REQUIRED'), true);
+  assert.equal(codes.has('VOICE_PROVENANCE_SOURCE_REQUIRED'), true);
+  assert.equal(codes.has('VOICE_PROCESSED_AT_INVALID'), true);
+});
