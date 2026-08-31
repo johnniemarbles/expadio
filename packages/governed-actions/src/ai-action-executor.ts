@@ -125,10 +125,13 @@ export function parseGovernedAiActionConfiguration(
 
 export async function executeGovernedAiAction(input: {
   readonly intent: GovernedActionIntent;
+  /** Persisted Action Intent UUID when executing through the production runtime. */
+  readonly actionIntentId?: string;
   readonly aiGateway: AiGateway;
   readonly now?: () => Date;
 }): Promise<GovernedAiActionResult> {
   const { intent, aiGateway } = input;
+  const actionIntentId = input.actionIntentId ?? intent.idempotencyKey;
   const now = input.now ?? (() => new Date());
   const startedAt = now();
 
@@ -136,10 +139,10 @@ export async function executeGovernedAiAction(input: {
     const completedAt = now();
     const attempt: GovernedActionExecutionAttempt = {
       tenantId: intent.tenantId,
-      actionIntentId: intent.idempotencyKey,
+      actionIntentId,
       executorClass: intent.executorClass,
       attemptKey: governedActionExecutionAttemptKey({
-        actionIntentId: intent.idempotencyKey,
+        actionIntentId,
         phase: "INVOKE_AI",
       }),
       status: "REFUSED",
@@ -165,10 +168,10 @@ export async function executeGovernedAiAction(input: {
     const completedAt = now();
     const attempt: GovernedActionExecutionAttempt = {
       tenantId: intent.tenantId,
-      actionIntentId: intent.idempotencyKey,
+      actionIntentId,
       executorClass: "AI_ACTION",
       attemptKey: governedActionExecutionAttemptKey({
-        actionIntentId: intent.idempotencyKey,
+        actionIntentId,
         phase: "PARSE_CONFIG",
       }),
       status: "FAILED",
@@ -218,10 +221,10 @@ export async function executeGovernedAiAction(input: {
 
     const attempt: GovernedActionExecutionAttempt = {
       tenantId: intent.tenantId,
-      actionIntentId: intent.idempotencyKey,
+      actionIntentId,
       executorClass: "AI_ACTION",
       attemptKey: governedActionExecutionAttemptKey({
-        actionIntentId: intent.idempotencyKey,
+        actionIntentId,
         phase: "INVOKE_AI",
       }),
       status: "SUCCEEDED",
@@ -250,10 +253,10 @@ export async function executeGovernedAiAction(input: {
     const completedAt = now();
     const attempt: GovernedActionExecutionAttempt = {
       tenantId: intent.tenantId,
-      actionIntentId: intent.idempotencyKey,
+      actionIntentId,
       executorClass: "AI_ACTION",
       attemptKey: governedActionExecutionAttemptKey({
-        actionIntentId: intent.idempotencyKey,
+        actionIntentId,
         phase: "INVOKE_AI",
       }),
       status: "FAILED",
