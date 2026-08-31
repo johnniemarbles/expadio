@@ -141,7 +141,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
       ...(durationMilliseconds !== undefined ? { audioDurationMilliseconds: durationMilliseconds } : {}),
-      ...(costMinorUnits !== undefined ? { costMinorUnits } : {}),
+      ...(costMinorUnits !== undefined ? { estimatedCostMinorUnits: costMinorUnits } : {}),
     };
 
     return {
