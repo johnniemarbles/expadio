@@ -51,7 +51,7 @@ test('domain mapper and provenance columns stay on the 5-stage CRM', () => {
   assert.match(leadDomain, /DEMAND_CAPTURE_LEAD_SOURCE = 'web_form'/);
   assert.doesNotMatch(leadDomain, /NEW_ENQUIRY.*platform\.crm_leads/);
   assert.match(migration, /ADD COLUMN IF NOT EXISTS capture_lead_id uuid/);
-  assert.match(migration, /FORCE ROW LEVEL SECURITY/ === 'FORCE ROW LEVEL SECURITY' ? /crm_leads_tenant_capture_uidx/ : /crm_leads_tenant_capture_uidx/);
+  assert.match(migration, /crm_leads_tenant_capture_uidx/);
   assert.doesNotMatch(migration, /CREATE TABLE lead_mgmt/);
 });
 
