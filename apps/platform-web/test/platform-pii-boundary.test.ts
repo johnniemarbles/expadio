@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
+  PLATFORM_JOURNEY_CORRELATION_ROUTE,
   SHELL_NAVIGATION,
   classifyRequestPath,
 } from '@expadio/tenancy';
@@ -30,4 +31,9 @@ test('product API sources refuse lab dump and raw error leakage', () => {
   const context = readFileSync(new URL('../app/api/context/route.ts', import.meta.url), 'utf8');
   assert.match(context, /platformProductDenied|PLATFORM_SAFE_ERROR_MESSAGE/);
   assert.doesNotMatch(context, /message: error\.message/);
+  const journey = readFileSync(new URL('../app/api/journey-correlation/route.ts', import.meta.url), 'utf8');
+  assert.match(journey, /assertPlatformPayloadHasNoCustomerPii/);
+  assert.match(journey, /platformProductDenied/);
+  assert.doesNotMatch(journey, /export async function POST/);
+  assert.equal(classifyRequestPath(PLATFORM_JOURNEY_CORRELATION_ROUTE), 'platform-product');
 });
