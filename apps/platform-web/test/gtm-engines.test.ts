@@ -54,7 +54,9 @@ test('site extract and reply classification stay local', () => {
 });
 
 test('optimize proposals stay unreviewed suggestions', () => {
-  const pause = proposeOptimization({ sent: 40, replied: 1, meetings: 0, unsubscribed: 2 });
+  const pause = proposeOptimization({ sent: 40, replied: 1, meetings: 0, unsubscribed: 1 });
   assert.equal(pause?.action, 'pause_segment');
+  const retire = proposeOptimization({ sent: 40, replied: 1, meetings: 0, unsubscribed: 2 });
+  assert.equal(retire?.action, 'retire_sequence');
   assert.equal(proposeOptimization({ sent: 10, replied: 4, meetings: 2, unsubscribed: 0 }), null);
 });
