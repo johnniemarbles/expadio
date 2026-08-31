@@ -24,6 +24,7 @@ export function governedArtifactAiInputResolver(
 
 export function governedArtifactVoiceInputResolver(
   source: DurableArtifactSource,
+  now: () => Date = () => new Date(),
 ): VoiceInputResolver {
   return {
     async resolveText(input) {
@@ -49,7 +50,7 @@ export function governedArtifactVoiceInputResolver(
         requiredComplianceTags: input.requiredComplianceTags,
       });
       const expiresAt = Date.parse(resolved.expiresAt);
-      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      if (!Number.isFinite(expiresAt) || expiresAt <= now().getTime()) {
         throw new Error('VOICE_PROVIDER_FETCH_URL_EXPIRED');
       }
       return {
