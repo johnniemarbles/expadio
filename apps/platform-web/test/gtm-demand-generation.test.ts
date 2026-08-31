@@ -3,8 +3,14 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
+const withoutSqlComments = (sql: string) =>
+  sql
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('--'))
+    .join('\n');
 
 const migration = read('../../../infra/db/migrations/0082_gtm_demand_generation.sql');
+const migrationSql = withoutSqlComments(migration);
 const verticals = read('../lib/verticals.ts');
 const icpWorkflow = read('../app/api/gtm/icps/[id]/workflow/route.ts');
 const campaignDecision = read('../app/api/gtm/campaigns/[id]/workflow/decision/route.ts');
@@ -32,8 +38,8 @@ test('gtm tables, four blueprints, disabled connector, no lab adapter', () => {
   assert.match(migration, /false, false/);
   assert.match(migration, /outbound_gtm/);
   assert.match(migration, /raw_payload/);
-  assert.doesNotMatch(migration, /gtm-email-lab-v1/);
-  assert.doesNotMatch(migration, /SEND_OUTBOUND/);
+  assert.doesNotMatch(migrationSql, /gtm-email-lab-v1/);
+  assert.doesNotMatch(migrationSql, /SEND_OUTBOUND/);
 });
 
 test('verticals and factory routes bind the four GTM work types', () => {
