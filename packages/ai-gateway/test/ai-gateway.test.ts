@@ -20,6 +20,7 @@ const intent: AiInvocationIntent = {
     maximumCostMinorUnits: 20,
   },
   idempotencyKey: 'extract:document-1:v3',
+  correlationId: 'corr-ai-001',
   requestedAt: '2026-08-25T15:00:00.000Z',
 };
 
