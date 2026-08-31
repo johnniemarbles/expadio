@@ -25,6 +25,7 @@ export type RoutedAiGatewayErrorCode =
   | 'AI_CONNECTOR_UNAVAILABLE'
   | 'AI_ADAPTER_NOT_REGISTERED'
   | 'AI_PROPOSAL_INVALID'
+  | 'AI_COST_EVIDENCE_REQUIRED'
   | 'AI_COST_LIMIT_EXCEEDED';
 
 export class RoutedAiGatewayError extends Error {
@@ -112,6 +113,12 @@ export class RoutedAiGateway implements AiGateway {
     const costForCeiling =
       proposal.provenance.costMinorUnits
       ?? proposal.provenance.estimatedCostMinorUnits;
+    if (maximumCost !== undefined && costForCeiling === undefined) {
+      throw new RoutedAiGatewayError(
+        'AI_COST_EVIDENCE_REQUIRED',
+        'AI invocation declared a cost ceiling but the provider returned no authoritative or estimated cost evidence.',
+      );
+    }
     if (
       maximumCost !== undefined
       && costForCeiling !== undefined
