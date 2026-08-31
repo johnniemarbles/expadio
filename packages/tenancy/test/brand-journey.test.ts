@@ -104,3 +104,26 @@ test('frozen rows map intent and attempt without claiming delivery', () => {
   assert.equal(observed.steps.find((step) => step.step === 'DELIVERY')?.state, 'sent');
   assert.equal(observed.mutationsEnabled, false);
 });
+
+test('provider DELIVERED is the only frozen-row path to delivered', () => {
+  const sentOnly = factsFromFrozenExecutorRows(CS104_CORRELATION, [
+    {
+      correlation: CS104_CORRELATION,
+      executor: 'COMMUNICATE',
+      attemptStatus: 'SUCCEEDED',
+      providerDeliveryState: 'SENT',
+    },
+  ]);
+  assert.equal(sentOnly[0]?.state, 'sent');
+  const delivered = factsFromFrozenExecutorRows(CS104_CORRELATION, [
+    {
+      correlation: CS104_CORRELATION,
+      executor: 'COMMUNICATE',
+      attemptStatus: 'SUCCEEDED',
+      providerDeliveryState: 'DELIVERED',
+    },
+  ]);
+  assert.equal(delivered[0]?.state, 'delivered');
+  const observed = observeBrandJourneyFromFacts(CS104_CORRELATION, null, delivered);
+  assert.equal(observed.steps.find((step) => step.step === 'DELIVERY')?.state, 'delivered');
+});

@@ -3,7 +3,8 @@ import { factsFromFrozenExecutorRows, type FrozenExecutorRow } from '@expadio/te
 export const FROZEN_EXECUTOR_FACT_QUERY = `
 SELECT i.correlation_id AS correlation,
        i.executor_class AS executor,
-       a.status AS attempt_status
+       a.status AS attempt_status,
+       d.state AS provider_delivery_state
   FROM platform.governed_action_intents i
   LEFT JOIN LATERAL (
     SELECT e.status
@@ -13,6 +14,10 @@ SELECT i.correlation_id AS correlation,
      ORDER BY e.created_at DESC, e.execution_attempt_id DESC
      LIMIT 1
   ) a ON true
+  LEFT JOIN platform.communication_deliveries d
+    ON d.tenant_id = i.tenant_id
+   AND d.idempotency_key = i.idempotency_key
+   AND i.executor_class = 'COMMUNICATE'
  WHERE i.correlation_id = $1
    AND i.executor_class IN ('SCHEDULE', 'CREATE_TASK', 'COMMUNICATE')
  ORDER BY i.created_at ASC
@@ -25,7 +30,7 @@ export type JourneyFactSqlClient = {
   ): Promise<{ rows: T[] }>;
 };
 
-/** Read intent + latest attempt only. Never configuration, metadata, or recipients. */
+/** Read intent + latest attempt + delivery state only. Never snapshot or recipient. */
 export async function readFrozenExecutorRows(
   client: JourneyFactSqlClient,
   correlation: string,
@@ -34,11 +39,13 @@ export async function readFrozenExecutorRows(
     correlation: string;
     executor: string;
     attempt_status: string | null;
+    provider_delivery_state: string | null;
   }>(FROZEN_EXECUTOR_FACT_QUERY, [correlation]);
   return result.rows.map((row) => ({
     correlation: row.correlation,
     executor: row.executor,
     attemptStatus: row.attempt_status,
+    providerDeliveryState: row.provider_delivery_state,
   }));
 }
 
