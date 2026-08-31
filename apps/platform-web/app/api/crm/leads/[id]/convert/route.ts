@@ -87,7 +87,7 @@ export async function POST(
 
         const leadRes = await client.query(
           `SELECT lead_id, tenant_id, account_id, contact_id, title, stage,
-                  amount_minor_units, currency, source, owner_subject_id, created_at, updated_at
+                  amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at
              FROM platform.crm_leads
             WHERE lead_id = $1::uuid
             FOR UPDATE`,
@@ -139,7 +139,7 @@ export async function POST(
               SET stage = 'WON', account_id = $2::uuid, updated_at = now()
             WHERE lead_id = $1::uuid
             RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
-                      amount_minor_units, currency, source, owner_subject_id, created_at, updated_at`,
+                      amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at`,
           [leadId, accountRow.account_id],
         );
 

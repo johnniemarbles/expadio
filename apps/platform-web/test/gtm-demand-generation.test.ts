@@ -16,6 +16,10 @@ const icpWorkflow = read('../app/api/gtm/icps/[id]/workflow/route.ts');
 const campaignDecision = read('../app/api/gtm/campaigns/[id]/workflow/decision/route.ts');
 const campaignParticipants = read('../app/api/gtm/campaigns/[id]/workflow/participants/route.ts');
 const listRoute = read('../app/api/gtm/icps/route.ts');
+const sequenceRoute = read('../app/api/gtm/sequences/route.ts');
+const meetingRoute = read('../app/api/gtm/meeting-requests/route.ts');
+const replyRoute = read('../app/api/gtm/replies/route.ts');
+const communicate = read('../app/api/gtm/sequences/[id]/communicate/route.ts');
 const client = read('../app/(shell)/gtm/GtmClient.tsx');
 const nav = read('../app/api/workspaces/route.ts');
 const lead = read('../../../packages/lead/src/index.ts');
@@ -52,10 +56,15 @@ test('verticals and factory routes bind the four GTM work types', () => {
   assert.match(campaignParticipants, /createVerticalParticipantsRoute\(GTM_CAMPAIGN_WORKFLOW\)/);
   assert.match(listRoute, /INSERT INTO platform\.gtm_icps/);
   assert.match(listRoute, /hasGovernanceWriteRole/);
+  assert.match(sequenceRoute, /INSERT INTO platform\.gtm_sequences/);
+  assert.match(meetingRoute, /INSERT INTO platform\.gtm_meeting_requests/);
+  assert.match(replyRoute, /OUTBOUND_GTM_LEAD_SOURCE/);
+  assert.match(communicate, /assertConnectorReady/);
 });
 
 test('console, nav, lead source and review queue know AutoGTM', () => {
   assert.match(client, /Propose ICP/);
+  assert.match(client, /File sequence draft/);
   assert.match(client, /File campaign draft/);
   assert.match(client, /outbound_gtm/);
   assert.match(client, /gtm\.email/);
