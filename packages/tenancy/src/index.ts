@@ -57,6 +57,7 @@ export {
   refuseBrandJourneyWrite,
   parseJourneyCorrelation,
   observeBrandJourneyFromFacts,
+  factsFromFrozenExecutorRows,
   platformViewOfJourney,
 } from './brand-journey.ts';
 export type {
@@ -66,6 +67,7 @@ export type {
   BrandJourneyStepObservation,
   BrandJourneyObservation,
   JourneyExecutorFact,
+  FrozenExecutorRow,
 } from './brand-journey.ts';
 
 export interface IdentityContext {

@@ -41,6 +41,13 @@ export type JourneyExecutorFact = {
   readonly state: Exclude<JourneyObservationState, 'not-observed'>;
 };
 
+/** One intent plus latest attempt status. No configuration, no recipient. */
+export type FrozenExecutorRow = {
+  readonly correlation: string;
+  readonly executor: string;
+  readonly attemptStatus: string | null;
+};
+
 const STEP_EXECUTOR: Record<BrandJourneyStep, FrozenExecutorClass | null> = {
   CASE: null,
   SCHEDULE: 'SCHEDULE',
@@ -50,6 +57,7 @@ const STEP_EXECUTOR: Record<BrandJourneyStep, FrozenExecutorClass | null> = {
 };
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const FROZEN_EXECUTORS = new Set<string>(['SCHEDULE', 'CREATE_TASK', 'COMMUNICATE']);
 
 export function parseJourneyCorrelation(value: string | null | undefined): string {
   const raw = (value ?? CS104_CORRELATION).trim();
@@ -133,6 +141,42 @@ export function observeBrandJourneyFromFacts(
   };
   assertJourneyIsObservationOnly(observation);
   return observation;
+}
+
+function observationStateFromAttempt(
+  executor: FrozenExecutorClass,
+  attemptStatus: string | null,
+): Exclude<JourneyObservationState, 'not-observed'> {
+  if (attemptStatus === null || attemptStatus === 'QUEUED') return 'queued';
+  if (attemptStatus === 'FAILED' || attemptStatus === 'REFUSED') return 'failed';
+  if (attemptStatus === 'RETRYABLE') return 'uncertain';
+  if (attemptStatus === 'SUCCEEDED') {
+    return executor === 'COMMUNICATE' ? 'sent' : 'queued';
+  }
+  return 'uncertain';
+}
+
+/**
+ * Map persisted intent/attempt rows into observation facts.
+ * SUCCEEDED COMMUNICATE is sent, not delivered. Delivery needs a later provider proof.
+ */
+export function factsFromFrozenExecutorRows(
+  correlation: string,
+  rows: readonly FrozenExecutorRow[],
+): readonly JourneyExecutorFact[] {
+  const parsed = parseJourneyCorrelation(correlation);
+  const facts: JourneyExecutorFact[] = [];
+  for (const row of rows) {
+    if (row.correlation !== parsed) continue;
+    if (!FROZEN_EXECUTORS.has(row.executor)) continue;
+    const executor = row.executor as FrozenExecutorClass;
+    facts.push({
+      correlation: parsed,
+      executor,
+      state: observationStateFromAttempt(executor, row.attemptStatus),
+    });
+  }
+  return facts;
 }
 
 /** Platform may keep the correlation. It may not keep the customer record. */
