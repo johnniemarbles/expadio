@@ -342,7 +342,9 @@ function required(
   path: string,
   issues: VoiceContractValidationIssue[],
 ): void {
-  if (value.trim() === '') issues.push({ code, path });
+  if (typeof value !== 'string' || value.trim() === '') {
+    issues.push({ code, path });
+  }
 }
 
 function nonBlank(value: unknown): boolean {
