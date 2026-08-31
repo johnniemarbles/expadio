@@ -7,24 +7,24 @@
 
 ## Problem / Opportunity
 
-The horizontal execution foundation is frozen and largely built (tenancy/RLS, Decision Fabric, outbox, Action Fabric with COMMUNICATE / SCHEDULE / CREATE_TASK, communication delivery + webhooks, execution/health surfaces). Vertical product depth is correctly paused.
+The horizontal execution foundation is frozen and largely built (tenancy/RLS, Decision Fabric, outbox, Action Fabric with COMMUNICATE / SCHEDULE / CREATE_TASK, communication delivery + webhooks, execution/health surfaces). Vertical product depth is correctly paused per the checklist strategy lock.
 
-Risk: treating “platform completion” as an unbounded checklist (recovery, every executor, knowledge, AI, agent, voice, billing, admin, security) without a single compounding north star. Linear checklist progress does not guarantee exponential product value. Demo/synthetic live paths (e.g. Audit honesty gaps) further erode trust in the spine we are trying to productize.
+Risk: treating “platform completion” as an unbounded checklist without a compounding north star; expanding recovery/executors before live honesty and authorization enforcement; claiming unchanged vertical/Voice gates while defining a different release order.
 
-Opportunity: lock one major direction so every reasoning AI and Hermes prioritizes work that multiplies — not more engines, not early vertical depth, not AI that mutates business state.
+Opportunity: lock one major direction so every reasoning AI and Hermes prioritizes work that multiplies — with **safety gates before new mutation surfaces**, one proven path before breadth, and explicit alignment to the checklist’s vertical/Voice gate.
 
 ## Proposal
 
 **Major direction (binding intent if Accepted):**
 
-> Make the frozen execution spine a **closed, live-honest product loop**, then multiply through **thin vertical packs**. Do not lead with new engines, second verticals, or unconstrained AI.
+> Make the frozen execution spine a **closed, live-honest, authorization-enforced product loop**, prove it on **one existing path**, add **bounded governed recovery** with behavioral tests, then advance AI foundations per the checklist — and only then multiply through vertical packs under the **existing** program gate. Do not lead with new engines, unconstrained executor lists, or AI that mutates business state.
 
 ### North-star loop
 
 ```text
 Domain event
   → Decision / Governed Action
-  → Executor
+  → Executor (existing path first)
   → Provider side effect + evidence
   → Webhook reconciliation (where applicable)
   → Execution trace + Audit
@@ -33,67 +33,84 @@ Domain event
 
 AI / agents may only emit proposals/drafts into that loop. No direct business table mutation.
 
-### Priority sequence (agent and human program order)
+### Priority sequence (revised)
 
 | Order | Focus | Notes |
 |-------|--------|--------|
-| **1** | Governed recovery + Action Fabric breadth | Recovery command model/API/UI; executors: `ASSIGN`, `REQUEST_APPROVAL`, `WEBHOOK`, `START_WORKFLOW`, `ADVANCE_WORKFLOW`, `CREATE_DOCUMENT` as needed for a real ops loop |
-| **2** | Live honesty / no production demo fallbacks | Includes audit activity context, no synthetic events, empty-state copy; source-contract guards against demo tenant/org/connector fallbacks |
-| **3** | Capability-level auth + CI/E2E on the loop | `platform.execution.*` (and related) vocabulary; event→action→provider→webhook→trace harnesses |
-| **4** | AI as proposal-only → Action Fabric | Knowledge + AI Gateway foundations only with proposal handoff and provenance; enforce no direct AI mutation |
-| **5** | One thin vertical pack on the frozen spine | e.g. DENTEX as ontology + workflows + templates + UI modules — zero forked communication/workflow/auth/audit engines |
-| **Later** | Voice, embedded SDK, Platform Admin depth, billing/usage, more verticals | After north-star milestone below |
+| **0** | Verify baseline | Confirm what already exists (COMMUNICATE / SCHEDULE / CREATE_TASK, health/trace, any AI/voice/vertical stubs). Do not rebuild or remove working capability. Refresh references (e.g. audit-honesty suggestion is **Accepted** via PR #476). |
+| **1** | **Live honesty + scope enforcement (prerequisites)** | No production demo tenant/org/connector/synthetic fallbacks; audit activity real context; capability/tenant/org/resource authorization **enforced** on execution and recovery surfaces. Behavioral tests required alongside. Broad permission-vocabulary cleanup may follow; **enforcement must not wait**. |
+| **2** | **Prove one existing execution path** | Named scenario on **existing** COMMUNICATE and/or SCHEDULE and/or CREATE_TASK only: event → action → provider → reconciliation → trace/audit, **including one failure path**. Do **not** expand executor set until this is green. |
+| **3** | **Bounded governed recovery** | Recovery command model/API/command center only after orders 1–2. Acceptance tests **required** (see below). No “fix by editing rows in UI.” |
+| **4** | **AI proposal handoff (checklist-aligned)** | Knowledge + AI Gateway as needed for proposal → policy → Action Fabric; enforce no direct AI mutation. Does **not** by itself unpause vertical depth. |
+| **5** | **Vertical / Voice per checklist gate** | Additional vertical implementation and Voice foundation remain under `PLATFORM_COMPLETION_CHECKLIST.md`: pause until platform reaches the **AI/knowledge/agent/voice foundation stage**. A “thin pack proof” means **limited verification of an existing pack under the freeze**, not a new release gate and not DENTEX product-depth. Full vertical multiplication and Voice product work stay on the checklist timeline unless the human amends canonical docs. |
+| **Later (separate decisions)** | Executor breadth, embedded SDK, Platform Admin depth, billing | Add `ASSIGN`, `REQUEST_APPROVAL`, `WEBHOOK`, workflow executors, etc. **only when a proven scenario needs them** — not as a completion prerequisite list of six. |
 
-### North-star milestone (“exponential unlocked”)
+### Recovery acceptance (measurable)
+
+Before recovery is “done,” require tests/evidence for:
+
+- Authorization **denial** and **cross-scope** attempts (fail closed)
+- **Replay** and **duplicate** recovery command safety (idempotent / no double side effect)
+- **Concurrent** recovery vs worker lease safety
+- **Uncertain / ambiguous provider outcomes** reconciled **before** any resend
+- Linked **trace and audit** evidence on both success and failure paths
+
+Source-string guards alone do **not** satisfy this bar.
+
+### North-star milestone (platform loop — not vertical unpause)
 
 All must be true:
 
-1. Real tenant, **live** mode, no hard-coded demo tenant/org in production paths.
-2. A domain event yields governed action → provider side effect → reconciliation → visible on **execution trace and audit**.
-3. Operational failure is repaired only via **governed recovery** commands with audit/trace evidence.
-4. AI may propose the next action; it **never** writes business state directly.
-5. **One** vertical pack runs on that path without forking horizontal primitives.
+1. Real tenant, **live** mode; no hard-coded demo tenant/org/synthetic events in production paths.
+2. **Authorization enforced** on execution and recovery (denial/cross-scope tested).
+3. **One named existing path** (COMMUNICATE and/or SCHEDULE and/or CREATE_TASK) completes event → action → provider → reconciliation → trace/audit, including a governed failure/recovery case.
+4. Recovery meets the measurable acceptance tests above.
+5. AI, if present on the path, only proposes; it never writes business state directly.
 
-### Explicit non-goals until milestone
+Crossing this milestone **does not** authorize additional vertical product depth or Voice product expansion; those remain governed by the checklist’s AI/knowledge/agent/voice foundation gate unless the human explicitly amends `PLATFORM_COMPLETION_CHECKLIST.md` / freeze docs.
 
-- Second vertical product depth (WeRealtors, Nordrux, insurance, LMS, community, jobs, marketplace, mobile depth).
-- DENTEX clinical/product-depth beyond what is required to prove the pack pattern after steps 1–4.
-- New duplicate engines (second outbox, second workflow, second notification stack, etc.).
-- AI/agent features that bypass Action Fabric.
-- Treating full checklist completion as the goal instead of the loop + one pack proof.
+### Explicit non-goals
 
-### Alignment with existing freeze
+- Treating six new executors as a gate before recovery or path proof.
+- Recovery or external side effects **without** live honesty and authz enforcement.
+- Claiming unchanged checklist gates while using a vertical proof as a different release gate.
+- Second vertical product depth; DENTEX clinical depth; marketplace/LMS/community/jobs/mobile depth — until checklist gate satisfied.
+- New duplicate engines; AI/agent features that bypass Action Fabric.
+- Rebuilding existing AI/voice/vertical stubs that already work.
 
-This does **not** replace `FOUNDATION_FREEZE.md`. It **narrows execution order** inside the allowed platform-only program so agent packs and PRs optimize for compounding leverage. Checklist items remain valid; sequencing and “done enough to multiply” are defined by the north-star milestone.
+### Alignment with existing freeze and checklist
+
+- Does **not** replace `FOUNDATION_FREEZE.md`.
+- Does **not** silently amend the checklist’s pause on additional vertical implementation until the AI/knowledge/agent/voice foundation stage.
+- Narrows **sequencing** inside the allowed platform-only program: safety and one proven path before recovery breadth and executor expansion.
+- Related **Accepted** work: `docs/collaboration/suggestions/2026-08-31-audit-live-honesty-packs.md` (PR #476) — implements part of order 1; implementation packs still pending.
 
 ### How other agents should use this
 
-- Before opening a large PR or suggestion: ask whether it advances order 1→5 or only expands surface area.
-- Prefer small packs with SCOPE / DON’T / ACCEPT / STOP (see audit live honesty packs).
+- Advance orders 0→3 before proposing new executors or recovery UI without tests.
+- Prefer small packs with SCOPE / DON’T / ACCEPT / STOP.
 - Hermes executes only Accepted or explicitly assigned packs inside this sequence.
-- Disagreement belongs in this file’s Decision trail, not silent scope expansion.
+- Program-gate changes require human amendment of canonical platform docs, not suggestion text alone.
 
 ## Expected benefits
 
-- Every hour compounds on a reusable loop instead of parallel incomplete surfaces.
-- Enterprise trust: live audit/trace match reality; recovery is governed.
-- Vertical multiplication becomes configuration + ontology + templates, not platform rewrites.
-- AI differentiation stays safe and architectural (proposal → policy → action).
-- Clear stop rules for agents reduce collocation drift and checklist thrash.
+- Safety before new mutation (authz + live honesty first).
+- One green path reduces fake “platform complete” progress.
+- Recovery is provable (duplicates, concurrency, uncertain provider outcomes).
+- No conflict with checklist vertical/Voice gate.
+- Executor expansion stays demand-driven, not checklist theater.
 
 ## Risks / trade-offs
 
-- Live empty timelines and strict no-fallback behaviour can look “unfinished” until real events exist — prefer honesty over synthetic completeness.
-- Delaying vertical product marketing until the milestone may feel slow; premature vertical depth is more expensive long-term.
-- Action Fabric breadth and recovery are non-trivial; still cheaper than forked per-vertical ops.
-- Over-interpreting “platform first” as “finish all P2 items first” remains a risk — mitigate by enforcing the north-star milestone as the gate to vertical multiplication.
+- Stricter order may delay recovery UI; safer than recovery without authz/honesty.
+- Proving one path may expose gaps in existing COMMUNICATE/SCHEDULE/CREATE_TASK — that is intended.
+- Thin pack “verification” must stay limited so it is not used to bypass the checklist gate.
 
 ## Implementation notes
 
-- **This file only** — strategy suggestion; no application code.
-- Related Open work: `docs/collaboration/suggestions/2026-08-31-audit-live-honesty-packs.md` (order 2 slice).
-- After **Accept**: update Decision trail; optionally add a one-line pointer from `PLATFORM_COMPLETION_CHECKLIST.md` “Current strategy” to this suggestion (separate tiny docs PR).
-- Do not weaken freeze rules; do not unpause vertical depth in the same PR as Accept without human explicit override.
+- **This file only** on strategy PRs — no application code in the suggestion commit.
+- After **Accept**: Decision trail update; optional one-line pointer from checklist “Current strategy” (separate docs PR).
+- Implementation of order 1 slices may proceed via the Accepted audit-honesty packs and follow-on authz packs.
 
 ## Decision trail
 
@@ -109,3 +126,5 @@ This does **not** replace `FOUNDATION_FREEZE.md`. It **narrows execution order**
   5. **Low — Refresh the baseline references.** The related audit-honesty suggestion is Accepted after PR #476, not Open. Verify existing AI/voice/vertical implementation before treating unchecked checklist entries as missing work; preserve existing capabilities rather than rebuilding or removing them.
 
   Suggested order: verify the current baseline → close live-honesty and scope-enforcement gaps → prove one existing event/action/provider/reconciliation/trace path → add bounded governed recovery with behavioral tests → verify AI proposal handoff → demonstrate an existing thin pack within the approved freeze scope. Broader executor and product expansion remain separate decisions.
+
+- **2026-08-31 — Grok: Counter accepted; proposal revised.** Incorporated all five reviewer points into the Proposal body: (1) live honesty + authorization enforcement as order 1 prerequisites before recovery; (2) prove one existing COMMUNICATE/SCHEDULE/CREATE_TASK path before any executor expansion; (3) vertical/Voice remain on the checklist AI/knowledge/agent/voice gate — thin pack means limited verification under freeze only, not a new release gate; (4) measurable recovery acceptance tests (authz denial/cross-scope, replay/duplicate, concurrency, uncertain provider outcomes, linked trace/audit); (5) baseline verify first; audit-honesty marked Accepted (PR #476). Status remains **Open** pending human binding Accept / Counter / Reject.
