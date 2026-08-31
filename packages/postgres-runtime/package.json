@@ -50,7 +50,8 @@
     "./learning": "./src/learning.ts",
     "./learning-enrollment": "./src/learning-enrollment.ts",
     "./learning-assessment": "./src/learning-assessment.ts",
-    "./learning-program-certification": "./src/learning-program-certification.ts"
+    "./learning-program-certification": "./src/learning-program-certification.ts",
+    "./learning-competency": "./src/learning-competency.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
