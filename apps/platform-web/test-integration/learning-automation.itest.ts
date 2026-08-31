@@ -479,16 +479,8 @@ test('Learning event uses shared governed action worker and suspends side effect
     const finalTaskCount = await c.query<{ count: number }>(
       `SELECT count(*)::int AS count
          FROM platform.operational_tasks
-        WHERE tenant_id = $1::uuid
-          AND action_key IS NULL`,
+        WHERE tenant_id = $1::uuid`,
       [tenantId],
-    ).catch(async () =>
-      c.query<{ count: number }>(
-        `SELECT count(*)::int AS count
-           FROM platform.operational_tasks
-          WHERE tenant_id = $1::uuid`,
-        [tenantId],
-      ),
     );
     assert.equal(finalTaskCount.rows[0]?.count, 1);
   } finally {
