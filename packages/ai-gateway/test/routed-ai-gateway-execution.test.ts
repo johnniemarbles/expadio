@@ -101,7 +101,6 @@ test("RoutedAiGateway routes US HIPAA intent through GeminiAiAdapter", async () 
     governance: {
       requiredResidencyTags: ["US"],
       requiredComplianceTags: ["HIPAA"],
-      maximumCostMinorUnits: 10,
     },
     idempotencyKey: "idem_us_01",
     correlationId: "corr-us-01",
@@ -169,7 +168,6 @@ test("RoutedAiGateway routes EU GDPR intent to tenant-owned OpenAI adapter", asy
     governance: {
       requiredResidencyTags: ["EU"],
       requiredComplianceTags: ["GDPR"],
-      maximumCostMinorUnits: 20,
     },
     idempotencyKey: "idem_eu_01",
     correlationId: "corr-eu-01",
