@@ -167,7 +167,7 @@ export async function executeGovernedAiAction(input: {
       executorClass: "AI_ACTION",
       attemptKey: governedActionExecutionAttemptKey({
         actionIntentId,
-        phase: "PARSE_CONFIG",
+        phase: "INVOKE_AI",
       }),
       status: "FAILED",
       startedAt,
