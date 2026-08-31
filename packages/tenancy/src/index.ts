@@ -12,6 +12,10 @@ export {
   requireResolvedView,
   locationViewFromCode,
 } from './scope-adapter.ts';
+export { createScopeDirectory } from './scope-directory.ts';
+export type { ScopeDirectory, VerifiedScopeBinding } from './scope-directory.ts';
+export { BRAND_APP, brandWorkspace } from './brand-shell.ts';
+export type { BrandSurface, BrandSurfaceState } from './brand-shell.ts';
 export {
   platformSafeRef,
   assertPlatformPayloadHasNoCustomerPii,
@@ -38,7 +42,6 @@ export interface ResolveEffectiveContextInput {
   readonly organizationId: string;
   readonly workspaceId?: string;
   readonly operatingUnitId?: string;
-  readonly memberships: readonly MembershipContext[];
   readonly correlationId?: string;
 }
 

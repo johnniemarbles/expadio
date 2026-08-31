@@ -1,32 +1,21 @@
 # Dual-shell proposition — accepted shape
 
-Status: Brand shell package started on draft branch. Not deployed. Not merged as product.
-Source of truth for scope: `@expadio/tenancy` `ShellScope`.
+Status: Brand shell + verified in-memory T/B/L directory on the draft branch. Not deployed. Not merged.
 Hosts: `platform.expadio.com` (Platform), `app.expadio.com` (Brand).
-Repo folders `apps/platform-web` and `apps/brand-web` are not public paths.
-
-## Reuse from PR #499 (`5334de0`)
-
-- `ShellScope`, `SHELL_NAVIGATION`, `unresolvedShellScope`, `shellViewSelection`
-- Canonical org-scoped reads in `apps/platform-web/lib/tenant-read-model.ts` (lab only)
-- Fail-closed location until ownership is verified
-- Distinct communication states
-- Platform sidebar must not link `/tenant`
 
 ## This increment
 
-- `@expadio/brand-web` is a Brand-audience package. It imports the shared contract.
-- `mapShellScopeToStorageKeys()` refuses to invent UUIDs from T/B/L.
-- Platform payload helper rejects customer-name / email / phone shaped content.
-- Growth, Communications, Knowledge, Settings stay `SURFACE_NOT_CONNECTED`.
-- No Brand Next host, no Clerk session, no live CRM call, no mutation.
+- `createScopeDirectory(bindings)` is the shared adapter both shells call.
+- Bindings are explicit. A T-code never becomes a UUID by string transform.
+- Empty directory or missing row fails closed.
+- `all-permitted` does not satisfy a specific `L-####` view.
+- One T-code cannot map to two tenant ids in the same directory.
+- `apps/brand-web/package.json` was removed so CI frozen-lockfile stays valid. Brand runtime is `@expadio/tenancy` `brandWorkspace`.
 
 ## Still open
 
-1. Server-authorized Brand host and audience transition.
-2. Verified T→tenant_id, B→organization_id, L→operating_unit_id table used by both adapters.
-3. Move customer reads out of the Platform lab and behind Brand audience checks.
-4. Authenticated proof that Platform URLs/APIs/errors/logs/caches never contain customer PII.
+1. Persist the directory in a real mapping table after a non-colliding migration review.
+2. Server-authorized Brand host.
+3. Brand-audience customer reads (not `/api/tenant` on Platform).
+4. Platform PII proof on URLs/APIs/errors/logs/caches.
 5. One Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE → observed delivery.
-
-`/tenant` in `apps/platform-web` remains a labeled read-model lab.
