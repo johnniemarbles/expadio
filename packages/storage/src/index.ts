@@ -65,6 +65,35 @@ export interface DurableArtifactSink {
   write(input: DurableArtifactWriteInput): Promise<DurableArtifactWriteResult>;
 }
 
+export interface DurableArtifactReadContext {
+  readonly tenantId: string;
+  readonly reference: string;
+  readonly purpose: string;
+  readonly requiredResidencyTags: readonly string[];
+  readonly requiredComplianceTags: readonly string[];
+}
+
+export interface DurableArtifactTextReadResult {
+  readonly content: string;
+  readonly contentReference: string;
+}
+
+export interface DurableArtifactProviderFetchResult {
+  readonly providerFetchUrl: string;
+  readonly contentReference: string;
+  readonly expiresAt: string;
+}
+
+export interface DurableArtifactSource {
+  readText(
+    input: DurableArtifactReadContext,
+  ): Promise<DurableArtifactTextReadResult>;
+
+  issueProviderFetchUrl(
+    input: DurableArtifactReadContext,
+  ): Promise<DurableArtifactProviderFetchResult>;
+}
+
 export interface ObjectStorageGateway {
   execute(
     intent: ObjectStorageIntent,
