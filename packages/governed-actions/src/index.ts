@@ -187,6 +187,8 @@ export function resolveGovernedAction(
 
 export * from './execution.ts';
 
+export * from './ai-action-executor.ts';
+
 
 export type GovernedActionValueBinding =
   | { readonly kind: 'LITERAL'; readonly value: unknown }
