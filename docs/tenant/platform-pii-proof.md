@@ -2,6 +2,8 @@
 
 Keep #499 draft. This is a contract and source scan, not authenticated e2e.
 
+Deploy target: Railway is the initial hosting provider. Runtime log/cache proof is a Railway preview of `apps/platform-web`. Railway is not an architectural dependency and is not Brand on `app.expadio.com`.
+
 ## Landed on this tip
 
 - `classifyRequestPath` splits platform-product, brand, lab.
@@ -21,6 +23,6 @@ Keep #499 draft. This is a contract and source scan, not authenticated e2e.
 
 ## Still open
 
-- Runtime proof of logs and caches on a deployed preview.
+- Runtime proof of logs and caches on a Railway preview of platform-web.
 - Authenticated browser e2e and revoked-session checks.
 - A live CS-104 row that actually has provider `DELIVERED` in this tenant.

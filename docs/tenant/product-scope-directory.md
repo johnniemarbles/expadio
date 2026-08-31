@@ -40,5 +40,5 @@ Status: table `0088_product_scope_bindings.sql` and lookup `0089_product_scope_l
 ## Still open
 
 - Separate Brand Next host on `app.expadio.com`.
-- Runtime Platform PII proof on a deployed preview.
+- Runtime Platform PII proof on a Railway preview of platform-web.
 - A live CS-104 row with provider `DELIVERED`.
