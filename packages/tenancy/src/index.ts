@@ -48,8 +48,15 @@ export type { PlatformSafeRef, RequestSurface } from './audience-boundary.ts';
 export {
   BRAND_JOURNEY_STEPS,
   JOURNEY_OBSERVATION_STATES,
+  CS104_CORRELATION,
+  BRAND_JOURNEY_ROUTE,
+  BRAND_FALLBACK_JOURNEY_ROUTE,
+  PLATFORM_JOURNEY_CORRELATION_ROUTE,
   emptyBrandJourneyObservation,
   assertJourneyIsObservationOnly,
+  refuseBrandJourneyWrite,
+  parseJourneyCorrelation,
+  observeBrandJourneyFromFacts,
   platformViewOfJourney,
 } from './brand-journey.ts';
 export type {
@@ -58,6 +65,7 @@ export type {
   FrozenExecutorClass,
   BrandJourneyStepObservation,
   BrandJourneyObservation,
+  JourneyExecutorFact,
 } from './brand-journey.ts';
 
 export interface IdentityContext {
