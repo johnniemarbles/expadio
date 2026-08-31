@@ -1,6 +1,23 @@
 export type ActorKind = 'user' | 'party' | 'service' | 'agent';
 export { SHELL_NAVIGATION, shellViewSelection, unresolvedShellScope } from './shell-scope.ts';
 export type { ShellAudience, ShellScope, ShellScopeStorageKeys, ScopeValue, TenantCode, BrandCode, LocationCode, LocationView, RoleHome } from './shell-scope.ts';
+export { PLATFORM_HOST, BRAND_HOST, hostForAudience } from './hosts.ts';
+export {
+  ScopeMappingError,
+  assertProductCode,
+  parseTenantCode,
+  parseBrandCode,
+  parseLocationCode,
+  mapShellScopeToStorageKeys,
+  requireResolvedView,
+  locationViewFromCode,
+} from './scope-adapter.ts';
+export {
+  platformSafeRef,
+  assertPlatformPayloadHasNoCustomerPii,
+  assertBrandNavIsNotInsidePlatform,
+} from './audience-boundary.ts';
+export type { PlatformSafeRef } from './audience-boundary.ts';
 
 export interface IdentityContext {
   readonly subjectId: string;
