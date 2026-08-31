@@ -20,10 +20,6 @@ VALUES
   ('voice.stream_conversation', 'Voice Stream Conversation', ARRAY['A']::text[], true),
   ('storage.store', 'Object Storage Store', ARRAY['A']::text[], true),
   ('storage.read', 'Object Storage Read', ARRAY['A']::text[], true)
-ON CONFLICT (capability_key) DO UPDATE
-SET display_name = EXCLUDED.display_name,
-    permitted_modes = EXCLUDED.permitted_modes,
-    enabled = EXCLUDED.enabled,
-    updated_at = now();
+ON CONFLICT (capability_key) DO NOTHING;
 
 COMMIT;
