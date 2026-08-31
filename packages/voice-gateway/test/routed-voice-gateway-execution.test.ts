@@ -155,7 +155,6 @@ test("RoutedVoiceGateway routes SYNTHESIZE operation to ElevenLabsTtsAdapter", a
       jurisdictionTags: ["US"],
       requiredResidencyTags: ["US"],
       requiredComplianceTags: ["SOC2"],
-      maximumCostMinorUnits: 50,
     },
     idempotencyKey: "idem_tts_01",
     correlationId: "corr-tts-01",
