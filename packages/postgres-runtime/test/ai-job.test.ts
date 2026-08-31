@@ -37,6 +37,7 @@ const job: AiJobRegistration = {
       maximumCostMinorUnits: 20,
     },
     idempotencyKey: 'extract:1:v2',
+    correlationId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     requestedAt: '2026-08-25T15:00:00.000Z',
   },
   maximumAttempts: 2,
@@ -168,8 +169,8 @@ test('returns the expected sequence after a database sequence rejection', async 
 
 test('PostgresAiJobRepository restores persisted correlation into reconstructed AI intent', async () => {
   const correlationId = '33333333-3333-4333-8333-333333333333';
-  const client = new ScriptedClient();
-  client.responses.push({
+  const client = new Client();
+  client.steps.push({
     rowCount: 1,
     rows: [{
       job_id: '11111111-1111-4111-8111-111111111111',
