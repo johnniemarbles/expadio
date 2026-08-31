@@ -166,6 +166,9 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       sourceId: intent.invocationId,
       content: generatedText,
       contentType: "text/plain; charset=utf-8",
+      providerKey: connector.providerKey,
+      connectorKey: connector.connectorKey,
+      modelKey: modelKey,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
@@ -225,6 +228,9 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       sourceId: intent.invocationId,
       content: JSON.stringify(embeddingPayload),
       contentType: "application/json",
+      providerKey: connector.providerKey,
+      connectorKey: connector.connectorKey,
+      modelKey,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
