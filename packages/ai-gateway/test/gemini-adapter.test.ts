@@ -99,7 +99,11 @@ test("GeminiAiAdapter invokes generateContent, parses response and sets provenan
   const proposal = await adapter.invoke({ intent, connector });
 
   assert.ok(requestedUrl.includes("gemini-2.0-flash:generateContent"));
-  assert.ok(requestedUrl.includes("key=mock-gemini-key-123"));
+  assert.equal(requestedUrl.includes("mock-gemini-key-123"), false);
+  assert.equal(
+    new Headers(requestHeaders).get("x-goog-api-key"),
+    "mock-gemini-key-123",
+  );
   assert.equal(requestBody.contents[0].parts[0].text, intent.inputReference);
   assert.equal(requestBody.systemInstruction.parts[0].text, `Context: ${intent.contextReference}`);
 
@@ -123,9 +127,11 @@ test("GeminiAiAdapter invokes generateContent, parses response and sets provenan
 
 test("GeminiAiAdapter handles EMBED operation with embedContent API", async () => {
   let requestedUrl = "";
+  let requestedHeaders: HeadersInit = {};
 
-  const mockFetch: typeof fetch = async (input) => {
+  const mockFetch: typeof fetch = async (input, init) => {
     requestedUrl = String(input);
+    requestedHeaders = init?.headers ?? {};
     return new Response(
       JSON.stringify({
         embedding: {
@@ -152,6 +158,11 @@ test("GeminiAiAdapter handles EMBED operation with embedContent API", async () =
   const proposal = await adapter.invoke({ intent: embedIntent, connector });
 
   assert.ok(requestedUrl.includes("gemini-2.0-flash:embedContent"));
+  assert.equal(requestedUrl.includes("mock-gemini-key-123"), false);
+  assert.equal(
+    new Headers(requestedHeaders).get("x-goog-api-key"),
+    "mock-gemini-key-123",
+  );
   assert.equal(proposal.outputReference, `artifact://AI_EMBEDDING/${embedIntent.invocationId}`);
   assert.equal(proposal.confidence, undefined);
 
