@@ -175,6 +175,39 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
+  IF NEW.state = 'PUBLISHED' AND OLD.state <> 'PUBLISHED' THEN
+    IF jsonb_array_length(NEW.learning_objectives) = 0 THEN
+      RAISE EXCEPTION 'published learning course versions require learning objectives'
+        USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+        FROM platform.learning_course_modules m
+       WHERE m.course_version_id = NEW.course_version_id
+         AND m.tenant_id = NEW.tenant_id
+    ) THEN
+      RAISE EXCEPTION 'published learning course versions require at least one module'
+        USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+        FROM platform.learning_course_modules m
+       WHERE m.course_version_id = NEW.course_version_id
+         AND m.tenant_id = NEW.tenant_id
+         AND NOT EXISTS (
+           SELECT 1
+             FROM platform.learning_lessons l
+            WHERE l.course_module_id = m.course_module_id
+              AND l.tenant_id = NEW.tenant_id
+         )
+    ) THEN
+      RAISE EXCEPTION 'published learning course modules require at least one lesson'
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+
   RETURN NEW;
 END;
 $$;
