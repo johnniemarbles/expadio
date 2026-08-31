@@ -3,6 +3,7 @@ import test from "node:test";
 import type { AiGateway, AiProposal } from "@expadio/ai-gateway";
 import {
   executeGovernedAiAction,
+  governedActionExecutionAttemptKey,
   type GovernedActionIntent,
 } from "../src/index.ts";
 
