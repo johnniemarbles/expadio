@@ -163,10 +163,29 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [ ] Add AI job runtime model.
 - [ ] Add AI job messages/outputs model.
 - [ ] Add AI usage/cost audit.
-- [ ] Add provider adapter interface.
-- [ ] Add AI proposal model.
-- [ ] Add AI proposal to Governed Action handoff.
-- [ ] Enforce no direct AI business mutation.
+- [x] Add provider adapter interface.
+- [x] Add AI proposal model.
+- [x] Add AI proposal to Governed Action handoff.
+- [x] Enforce no direct AI business mutation.
+
+### AI / Voice production hardening
+
+- [x] Make provider/model confidence advisory only; no confidence-only auto-approval.
+- [x] Validate governed AI operation, prompt version, cost ceiling, confidence threshold, and governance tags.
+- [x] Resolve logical AI input/context references before provider invocation.
+- [x] Resolve Voice media/text references before provider invocation.
+- [x] Persist OpenAI/Gemini output through a required durable artifact sink before success.
+- [x] Persist Deepgram transcripts and ElevenLabs audio through the same durable artifact contract.
+- [x] Add append-only tenant-RLS execution artifact metadata with storage reference, SHA-256, provider/connector/model provenance, and replay identity.
+- [x] Compose AI provider execution with the existing governed credential lease and secret-resolution path.
+- [x] Bind AI execution attempts to the persisted governed Action Intent UUID.
+- [x] Add a production AI execution composition root without activating an autonomous AI worker/route.
+- [ ] Implement the concrete governed blob/object sink behind the durable artifact port.
+- [ ] Implement production AI/Voice input resolvers over governed stored artifacts and short-lived provider-fetch URLs.
+- [ ] Separate estimated provider usage/cost from reconciled actual billing.
+- [ ] Add autonomous AI Action Intent claim/retry worker only after artifact, review, and retry semantics are proven.
+- [ ] Add end-to-end AI execution integration test with database RLS, credential lease, artifact persistence, provider stub, and immutable execution trace.
+- [ ] Add end-to-end Voice execution integration test with media resolution, STT/TTS artifact persistence, and execution trace.
 
 ## P2 — Agent Runtime foundation
 
@@ -182,7 +201,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [ ] Add voice provider config model.
 - [ ] Add voice session model.
 - [ ] Add recording consent events.
-- [ ] Add STT/TTS provider abstraction.
+- [x] Add STT/TTS provider abstraction.
 - [ ] Add transcript retention controls.
 - [ ] Add redaction events.
 - [ ] Add voice escalation model.
