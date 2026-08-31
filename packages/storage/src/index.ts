@@ -40,6 +40,27 @@ export interface ObjectStorageObservation {
   readonly sourceReferences: readonly string[];
 }
 
+export interface DurableArtifactWriteInput {
+  readonly tenantId: string;
+  readonly artifactKind: 'AI_TEXT' | 'AI_EMBEDDING' | 'VOICE_TRANSCRIPT' | 'VOICE_AUDIO';
+  readonly sourceKind: 'AI_INVOCATION' | 'VOICE_REQUEST';
+  readonly sourceId: string;
+  readonly content: string | Uint8Array;
+  readonly contentType: string;
+  readonly requiredResidencyTags: readonly string[];
+  readonly requiredComplianceTags: readonly string[];
+}
+
+export interface DurableArtifactWriteResult {
+  readonly contentReference: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+}
+
+export interface DurableArtifactSink {
+  write(input: DurableArtifactWriteInput): Promise<DurableArtifactWriteResult>;
+}
+
 export interface ObjectStorageGateway {
   execute(
     intent: ObjectStorageIntent,
