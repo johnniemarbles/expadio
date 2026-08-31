@@ -40,7 +40,9 @@ test('Customers is Brand-only navigation', () => {
 test('request paths split product, brand and lab', () => {
   assert.equal(classifyRequestPath('/api/overview'), 'platform-product');
   assert.equal(classifyRequestPath('/api/workspaces'), 'platform-product');
+  assert.equal(classifyRequestPath('/api/journey-correlation'), 'platform-product');
   assert.equal(classifyRequestPath('/brand/api/customers'), 'brand');
+  assert.equal(classifyRequestPath('/brand/api/journey'), 'brand');
   assert.equal(classifyRequestPath('/api/crm/contacts'), 'lab');
   assert.equal(classifyRequestPath('/tenant'), 'lab');
 });
