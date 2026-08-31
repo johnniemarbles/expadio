@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 /**
  * AutoGTM console on EXPADIO.
  * File drafts, start DF review, assign reviewer, APPROVE, then persist a
- * COMMUNICATE intent. This page never sends and never imports a lab adapter.
+ * COMMUNICATE intent. Prospects are scored locally. Replies are classified
+ * on the server. This page never sends and never imports a lab adapter.
  */
 
 type IcpRow = {
@@ -49,6 +50,13 @@ type ReplyRow = {
   created_at: string;
 };
 
+type ProspectRow = {
+  observation_id: string;
+  fit_score: number;
+  status: string;
+  payload: { email?: string; title?: string; score?: { band?: string } };
+};
+
 function apiError(data: unknown, fallback: string): string {
   if (data && typeof data === 'object') {
     const r = data as Record<string, unknown>;
@@ -64,9 +72,11 @@ export function GtmClient() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [replies, setReplies] = useState<ReplyRow[]>([]);
+  const [prospects, setProspects] = useState<ProspectRow[]>([]);
   const [name, setName] = useState('');
   const [brandId, setBrandId] = useState('');
   const [prospectEmail, setProspectEmail] = useState('');
+  const [prospectTitle, setProspectTitle] = useState('Head of Operations');
   const [meetingSummary, setMeetingSummary] = useState('');
   const [replyBody, setReplyBody] = useState('');
   const [touchSubject, setTouchSubject] = useState('Northwind — a sharper ops loop');
@@ -76,18 +86,20 @@ export function GtmClient() {
   const [busy, setBusy] = useState<string | null>(null);
 
   async function refresh() {
-    const [i, s, c, m, r] = await Promise.all([
+    const [i, s, c, m, r, p] = await Promise.all([
       fetch('/api/gtm/icps'),
       fetch('/api/gtm/sequences'),
       fetch('/api/gtm/campaigns'),
       fetch('/api/gtm/meeting-requests'),
       fetch('/api/gtm/replies'),
+      fetch('/api/gtm/prospects'),
     ]);
     if (i.ok) setIcps(await i.json());
     if (s.ok) setSequences(await s.json());
     if (c.ok) setCampaigns(await c.json());
     if (m.ok) setMeetings(await m.json());
     if (r.ok) setReplies(await r.json());
+    if (p.ok) setProspects(await p.json());
   }
 
   useEffect(() => {
@@ -223,22 +235,41 @@ export function GtmClient() {
     }
   }
 
+  async function observeProspect() {
+    setBusy('prospect');
+    setError(null);
+    try {
+      const res = await fetch('/api/gtm/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandId,
+          email: prospectEmail,
+          title: prospectTitle,
+          industry: 'software',
+          icpId: icps[0]?.icp_id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(apiError(data, 'Could not observe prospect.'));
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not observe prospect.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function ingestReply() {
     setBusy('reply');
     setError(null);
     try {
-      const proposedClass = /meet|calendar|book/i.test(replyBody)
-        ? 'meeting_requested'
-        : /interest|tell me more|deck/i.test(replyBody)
-          ? 'interested'
-          : 'unknown';
       const res = await fetch('/api/gtm/replies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brandId,
           fromEmail: prospectEmail,
-          proposedClass,
           rawPayload: { body: replyBody },
         }),
       });
@@ -260,7 +291,7 @@ export function GtmClient() {
       <p style={{ color: '#475569', maxWidth: 720 }}>
         Propose an ICP, sequence or campaign. Start review, assign a second-subject reviewer, APPROVE.
         After APPROVE, file a Communication intent on <code>communication.email.send</code> via <code>gtm.email</code>.
-        Send stays dark until BYOC. Warm replies ingest as CRM leads with source <code>outbound_gtm</code>.
+        Send stays dark until BYOC. Prospects are scored with <code>gtm-fit-v1</code>. Warm replies ingest as CRM leads with source <code>outbound_gtm</code>.
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '16px 0' }}>
@@ -273,6 +304,8 @@ export function GtmClient() {
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <input placeholder="Prospect email" value={prospectEmail} onChange={(e) => setProspectEmail(e.target.value)} />
+        <input placeholder="Prospect title" value={prospectTitle} onChange={(e) => setProspectTitle(e.target.value)} />
+        <button type="button" disabled={busy !== null} onClick={() => void observeProspect()}>Observe prospect</button>
         <input placeholder="Meeting summary" value={meetingSummary} onChange={(e) => setMeetingSummary(e.target.value)} />
         <button type="button" disabled={busy !== null} onClick={() => void fileMeeting()}>File meeting request</button>
         <input placeholder="Reply text" value={replyBody} onChange={(e) => setReplyBody(e.target.value)} />
@@ -342,6 +375,16 @@ export function GtmClient() {
           </li>
         ))}
         {campaigns.length === 0 && <li>No campaigns yet.</li>}
+      </ul>
+
+      <h2>Prospect observations</h2>
+      <ul>
+        {prospects.map((row) => (
+          <li key={row.observation_id}>
+            {row.payload?.email ?? 'unknown'} · {row.payload?.title ?? ''} · score {row.fit_score} {row.payload?.score?.band ?? ''}
+          </li>
+        ))}
+        {prospects.length === 0 && <li>No prospects observed yet.</li>}
       </ul>
 
       <h2>Meeting requests</h2>

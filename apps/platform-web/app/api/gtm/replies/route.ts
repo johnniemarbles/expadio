@@ -3,14 +3,22 @@ import { OUTBOUND_GTM_LEAD_SOURCE } from '@expadio/lead';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
 import { hasGovernanceWriteRole } from '../../../../lib/governance-authz';
 import { isReplyClass, shouldConvertReplyToLead } from '../../../../lib/gtm-communication';
+import { classifyReplyBody } from '../../../../lib/gtm-engines';
 
 /**
  * Ingest a warm-reply observation. Capture classes also file a CRM lead with
  * source outbound_gtm and raw_payload first. Not a second CRM.
+ * Classification comes from @expadio/gtm, not the console regex.
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+function replyBodyText(rawPayload: Record<string, unknown>): string {
+  if (typeof rawPayload.body === 'string') return rawPayload.body;
+  if (typeof rawPayload.text === 'string') return rawPayload.text;
+  return '';
+}
 
 export async function GET(request: Request) {
   try {
@@ -37,20 +45,26 @@ export async function POST(request: Request) {
     const body = await request.json();
     const brandId = typeof body?.brandId === 'string' ? body.brandId : null;
     const fromEmail = typeof body?.fromEmail === 'string' ? body.fromEmail.trim() : '';
-    const proposedClass = typeof body?.proposedClass === 'string' ? body.proposedClass.trim() : '';
     if (!brandId) {
       return NextResponse.json({ error: 'brandId is required.' }, { status: 400 });
     }
     if (!fromEmail.includes('@')) {
       return NextResponse.json({ error: 'fromEmail is required.' }, { status: 400 });
     }
-    if (!isReplyClass(proposedClass)) {
-      return NextResponse.json({ error: 'proposedClass is not a known reply class.' }, { status: 400 });
-    }
-    const campaignId = typeof body?.campaignId === 'string' && body.campaignId.trim() !== '' ? body.campaignId : null;
-    const rawPayload = body?.rawPayload && typeof body.rawPayload === 'object' && !Array.isArray(body.rawPayload)
-      ? body.rawPayload as Record<string, unknown>
-      : {};
+    const campaignId =
+      typeof body?.campaignId === 'string' && body.campaignId.trim() !== '' ? body.campaignId : null;
+    const rawPayload =
+      body?.rawPayload && typeof body.rawPayload === 'object' && !Array.isArray(body.rawPayload)
+        ? (body.rawPayload as Record<string, unknown>)
+        : {};
+    const classified = classifyReplyBody(replyBodyText(rawPayload));
+    const clientClass = typeof body?.proposedClass === 'string' ? body.proposedClass.trim() : '';
+    const proposedClass =
+      classified.proposedClass !== 'unknown'
+        ? classified.proposedClass
+        : isReplyClass(clientClass)
+          ? clientClass
+          : 'unknown';
 
     const result = await withTenantClient(context, async (client) => {
       if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
@@ -61,6 +75,11 @@ export async function POST(request: Request) {
         source: OUTBOUND_GTM_LEAD_SOURCE,
         fromEmail,
         proposedClass,
+        classifier: {
+          version: 'gtm-reply-v1',
+          proposedClass: classified.proposedClass,
+          confidence: classified.confidence,
+        },
       };
       const inserted = await client.query(
         `INSERT INTO platform.gtm_reply_observations
@@ -88,18 +107,26 @@ export async function POST(request: Request) {
         );
         leadId = lead.rows[0].lead_id as string;
       }
-      return { replyId, leadId } as const;
+      return { replyId, leadId, proposedClass, confidence: classified.confidence } as const;
     });
 
     if ('forbidden' in result) {
-      return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'You need a governing role to ingest a reply.' }, { status: 403 });
+      return NextResponse.json(
+        { denied: true, reasonKey: 'FORBIDDEN', message: 'You need a governing role to ingest a reply.' },
+        { status: 403 },
+      );
     }
-    return NextResponse.json({
-      success: true,
-      replyId: result.replyId,
-      leadId: result.leadId,
-      captured: result.leadId !== null,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        replyId: result.replyId,
+        leadId: result.leadId,
+        captured: result.leadId !== null,
+        proposedClass: result.proposedClass,
+        confidence: result.confidence,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
