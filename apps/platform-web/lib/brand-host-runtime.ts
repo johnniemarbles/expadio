@@ -1,9 +1,14 @@
 import {
   BrandHostError,
+  CS104_CORRELATION,
   createScopeDirectoryFromRows,
+  emptyBrandJourneyObservation,
   parseBrandCode,
+  parseJourneyCorrelation,
   parseLocationCode,
   parseTenantCode,
+  platformViewOfJourney,
+  refuseBrandJourneyWrite,
   serveBrandCustomerRead,
   unresolvedShellScope,
   type BrandIncomingRequest,
@@ -33,6 +38,18 @@ export function brandErrorResponse(error: unknown): Response {
     return Response.json(
       { denied: true, reasonKey: error.code, message: error.message },
       { status: error.status, headers: { 'Cache-Control': 'private, no-store' } },
+    );
+  }
+  if (error instanceof Error && error.message === 'BRAND_JOURNEY_MUTATION_FORBIDDEN') {
+    return Response.json(
+      { denied: true, reasonKey: 'BRAND_JOURNEY_MUTATION_FORBIDDEN', message: 'Brand journey observation is read-only.' },
+      { status: 405, headers: { 'Cache-Control': 'private, no-store', Allow: 'GET' } },
+    );
+  }
+  if (error instanceof Error && error.message === 'INVALID_JOURNEY_CORRELATION') {
+    return Response.json(
+      { denied: true, reasonKey: 'INVALID_JOURNEY_CORRELATION', message: 'Use a CS-#### correlation.' },
+      { status: 400, headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
   return Response.json(
@@ -124,15 +141,15 @@ export async function lookupScopeBinding(
   };
 }
 
-export async function serveBrandCustomerFallback(
+async function authorizeBrandFallback(
   request: Request,
   subjectId: string | null,
   pool: { connect(): Promise<BrandSqlClient> },
+  serve: (incoming: BrandIncomingRequest, directory: ReturnType<typeof createScopeDirectoryFromRows>) => Promise<Response>,
 ): Promise<Response> {
   if (!subjectId) throw new BrandHostError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
   const url = new URL(request.url);
   const scope = parseBrandProductScope(url);
-  const pagination = parsePage(url);
   const client = await pool.connect();
   try {
     await client.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -169,11 +186,9 @@ export async function serveBrandCustomerFallback(
       scope,
       memberships: membershipsFromRows(memberships),
     };
-    const response = await serveBrandCustomerRead(incoming, directory, (keys) =>
-      readCustomers(client, { tenantId: keys.tenantId, organizationId: keys.organizationId }, pagination),
-    );
+    const response = await serve(incoming, directory);
     await client.query('COMMIT');
-    return Response.json(response.body, { status: response.status, headers: response.headers });
+    return response;
   } catch (error) {
     try {
       await client.query('ROLLBACK');
@@ -184,4 +199,44 @@ export async function serveBrandCustomerFallback(
   } finally {
     client.release();
   }
+}
+
+export async function serveBrandCustomerFallback(
+  request: Request,
+  subjectId: string | null,
+  pool: { connect(): Promise<BrandSqlClient> },
+): Promise<Response> {
+  const url = new URL(request.url);
+  const pagination = parsePage(url);
+  return authorizeBrandFallback(request, subjectId, pool, async (incoming, directory) => {
+    const client = await pool.connect();
+    try {
+      const response = await serveBrandCustomerRead(incoming, directory, (keys) =>
+        readCustomers(client, { tenantId: keys.tenantId, organizationId: keys.organizationId }, pagination),
+      );
+      return Response.json(response.body, { status: response.status, headers: response.headers });
+    } finally {
+      client.release();
+    }
+  });
+}
+
+export async function serveBrandJourneyFallback(
+  request: Request,
+  subjectId: string | null,
+  pool: { connect(): Promise<BrandSqlClient> },
+): Promise<Response> {
+  refuseBrandJourneyWrite(request.method);
+  const url = new URL(request.url);
+  const correlation = parseJourneyCorrelation(url.searchParams.get('correlation') ?? CS104_CORRELATION);
+  return authorizeBrandFallback(request, subjectId, pool, async (incoming, directory) => {
+    await serveBrandCustomerRead(incoming, directory, async () => null);
+    const observation = emptyBrandJourneyObservation(correlation, correlation);
+    return Response.json(observation, { status: 200, headers: { 'Cache-Control': 'private, no-store' } });
+  });
+}
+
+export function platformJourneyCorrelationBody(correlation: string | null) {
+  const observation = emptyBrandJourneyObservation(parseJourneyCorrelation(correlation), null);
+  return platformViewOfJourney(observation);
 }
