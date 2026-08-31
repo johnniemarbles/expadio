@@ -102,7 +102,11 @@ test("OpenAiAiAdapter invokes chat completions and returns validated proposal", 
   assert.equal(proposal.status, "PROPOSAL");
   assert.equal(proposal.provenance.modelKey, "gpt-4o-mini");
   assert.equal(proposal.provenance.costMinorUnits, undefined);
-  assert.equal(proposal.provenance.estimatedCostMinorUnits, 1);
+  assert.deepEqual(proposal.provenance.providerUsage, {
+    inputTokens: 15,
+    outputTokens: 10,
+    totalTokens: 25,
+  });
 
   const validation = validateAiProposal(intent, proposal);
   assert.equal(validation.valid, true);
@@ -142,6 +146,7 @@ test("OpenAiAiAdapter handles embeddings via /v1/embeddings", async () => {
   assert.equal(requestedUrl, "https://api.openai.com/v1/embeddings");
   assert.equal(requestBody.model, "text-embedding-3-small");
   assert.equal(proposal.status, "OBSERVATION");
+  assert.equal(proposal.provenance.modelKey, "text-embedding-3-small");
   assert.equal(proposal.outputReference, `artifact://AI_EMBEDDING/${embedIntent.invocationId}`);
 
   const validation = validateAiProposal(embedIntent, proposal);
