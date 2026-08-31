@@ -24,6 +24,7 @@ const client = read('../app/(shell)/gtm/GtmClient.tsx');
 const nav = read('../app/api/workspaces/route.ts');
 const lead = read('../../../packages/lead/src/index.ts');
 const queue = read('../app/(shell)/governance/queue/ReviewQueueClient.tsx');
+const engines = read('../../../packages/gtm/src/index.ts');
 
 test('gtm tables, four blueprints, disabled connector, no lab adapter', () => {
   assert.match(migration, /CREATE TABLE platform\.gtm_icps/);
@@ -69,10 +70,17 @@ test('console, nav, lead source and review queue know AutoGTM', () => {
   assert.match(client, /Propose ICP/);
   assert.match(client, /File sequence draft/);
   assert.match(client, /File campaign draft/);
+  assert.match(client, /Start review/);
+  assert.match(client, /File Communication intent/);
+  assert.match(client, /File meeting request/);
+  assert.match(client, /Ingest reply/);
   assert.match(client, /outbound_gtm/);
   assert.match(client, /gtm\.email/);
   assert.doesNotMatch(client, /gtm-email-lab-v1/);
+  assert.doesNotMatch(client, /executeGovernedCommunicateAction/);
   assert.match(nav, /href: '\/gtm'/);
   assert.match(lead, /OUTBOUND_GTM_LEAD_SOURCE = 'outbound_gtm'/);
   assert.match(queue, /'gtm\.campaign\.launch': '\/gtm'/);
+  assert.match(engines, /scoringMayAutoApprove/);
+  assert.doesNotMatch(engines, /gtm-email-lab-v1/);
 });
