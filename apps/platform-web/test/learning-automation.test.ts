@@ -38,6 +38,7 @@ test('automation rules are tenant isolated and revision guarded', () => {
     /ALTER TABLE platform\.learning_automation_rules FORCE ROW LEVEL SECURITY/,
   );
   assert.match(migration, /learning automation rule revision must increment exactly once/);
+  assert.match(migration, /learning_automation_enabled_policy_evaluator/);
   assert.match(migration, /learning automation rule identity and creation provenance are immutable/);
   assert.match(runtime, /LEARNING_AUTOMATION_RULE_REVISION_CONFLICT/);
 });
