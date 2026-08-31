@@ -111,11 +111,11 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
   }
 
   return <div className={styles.appShell}>
-    <aside ref={sidebarRef} className={[styles.sidebar, mobileOpen ? styles.sidebarOpen : ""].join(" ")} aria-label="Platform navigation">
+    <aside ref={sidebarRef} className={[styles.sidebar, mobileOpen ? styles.sidebarOpen : ""].join(" ")} aria-label="Tenant navigation">
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
-      <nav className={styles.primaryNav} aria-label="Platform sections"><p className={styles.navLabel}>Workspace</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>
+      <nav className={styles.primaryNav} aria-label="Tenant workspaces"><p className={styles.navLabel}>Workspaces</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>
       <div className={styles.sidebarFoot}>
-        <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--green)', boxShadow: '0 0 0 4px rgba(22,129,94,.12)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
+        <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--green)', boxShadow: '0 0 0 4px rgba(22,129,94,.12)' }}/><span><strong>Workspace connected</strong><small>Tenant activity status</small></span></div>
         <div ref={accountAreaRef} className={styles.accountArea} style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <UserButton appearance={{ elements: { userButtonAvatarBox: { width: 32, height: 32 } } }} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -131,15 +131,15 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
         <button type="button" ref={mobileMenuRef} className={styles.mobileMenu} onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-expanded={mobileOpen}><span aria-hidden="true">☰</span></button>
         
         {/* Audience Selector Pills */}
-        <div className={styles.audiencePills} role="tablist" aria-label="Audience Scope">
+        <div className={styles.audiencePills} role="tablist" aria-label="Workspace audience">
           <button type="button" className={styles.audiencePill}>
-            <span style={{ opacity: 0.7 }}>⊞</span> Brand
+            <span style={{ opacity: 0.7 }}>⊞</span> Home
           </button>
           <button type="button" className={[styles.audiencePill, styles.audiencePillActive].join(" ")}>
-            <span>🛡️</span> Platform
+            <span>✓</span> My work
           </button>
           <button type="button" className={styles.audiencePill}>
-            <span>🔗</span> Portal
+            <span>◉</span> Customers
           </button>
           <button type="button" className={styles.audiencePill}>
             Plan
@@ -152,7 +152,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
           <input
             type="text"
             className={styles.searchInput}
-            placeholder="Search fleet &amp; connectors..."
+            placeholder="Search customers, work and activity..."
             readOnly
           />
           <span className={styles.searchKbd}>⌘K</span>
