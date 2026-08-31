@@ -156,7 +156,12 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       ],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      costMinorUnits,
+      estimatedCostMinorUnits: costMinorUnits,
+      providerUsage: {
+        inputTokens: data.usage?.prompt_tokens ?? 0,
+        outputTokens: data.usage?.completion_tokens ?? 0,
+        totalTokens,
+      },
     };
 
     const artifact = await this.#artifactSink.write({
@@ -243,7 +248,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      costMinorUnits: 1,
+      estimatedCostMinorUnits: 1,
     };
 
     return {
