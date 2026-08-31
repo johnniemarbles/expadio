@@ -7,6 +7,7 @@ import {
   aiCapabilityKey,
   type AiGateway,
   type AiInputResolver,
+  type AiProviderAdapter,
 } from '@expadio/ai-gateway';
 import {
   executeGovernedAiAction,
@@ -161,7 +162,7 @@ export async function executePersistedGovernedAiAction(
       client,
       input.options.artifactBlobSink,
     );
-    const adapters = new Map();
+    const adapters = new Map<string, AiProviderAdapter>();
     for (const connector of connectors) {
       const token = governedApiTokenProvider({
         connector,
