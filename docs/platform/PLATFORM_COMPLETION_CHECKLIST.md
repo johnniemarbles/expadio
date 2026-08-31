@@ -13,6 +13,8 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Pause additional vertical implementation until platform completion program reaches the AI/knowledge/agent/voice foundation stage.
 - [x] Treat the horizontal execution foundation as frozen except for targeted hardening and capability completion.
 - [x] Use the repository, not chat memory, as the durable checklist of completed work.
+- [x] Freeze exception 2026-08-31: AutoGTM / Demand Generation Control Plane (#483) may proceed on Communication + Decision Fabric only.
+- [x] Freeze exception 2026-08-31: Social Content may proceed on Communication + Decision Fabric only. Lab `expadio-social-content` must be closed before EXPADIO send wiring. Owner: complete remaining lab scope first; no live social send until COMMUNICATE is proven.
 
 ## Completed foundation milestones
 
@@ -47,6 +49,9 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Provider webhook lifecycle transition matrix implemented.
 - [x] Out-of-order provider lifecycle events recorded without stale state regression.
 - [x] Replayed provider webhook events with distinct provider event ids recorded without duplicate delivery lifecycle mutation.
+- [ ] Social channel `social` + capability `communication.social.send` on main (wired on #489; not merged).
+- [ ] Disabled connector `social.linkedin` on main (wired on #489; not merged).
+- [ ] Delivery-worker social dispatch — forbidden until COMMUNICATE proof + explicit enable.
 
 ### Observability
 
@@ -106,6 +111,61 @@ Freeze exception 2026-08-31. Native Explee-like demand generation on EXPADIO. No
 - [ ] Lab adapter `gtm-email-lab-v1` on platform.
 - [ ] Second CRM.
 - [ ] Merge extract `apps/*` / lab UI onto main.
+
+## Social Content Control Plane (ADR-007)
+
+Freeze exception 2026-08-31. Social *send* is a BEMP Communication connector, not a new Action Fabric executor `PUBLISH_SOCIAL`. Decision Fabric `social.content_publish` only authorizes copy. Lab: `johnniemarbles/expadio-social-content` (catalog 0.6.1 + calendar 0.6.2 closed on lab main 2026-08-31).
+
+Binding keys:
+
+| Field | Value |
+|-------|--------|
+| channel | `social` (subjectId; not a sender-identity channel) |
+| capability | `communication.social.send` |
+| first connector | `social.linkedin` PLATFORM **enabled=false** |
+| provider / adapter | `linkedin` / `linkedin-social-text-v1` |
+| lease purpose | `communication.social.send:{purpose}` |
+| evidence | `PublishEvidence.externalPostId` → `communication_provider_attempts.provider_message_id` |
+
+### Done off-platform (lab closed)
+
+- [x] Lab Phases 0–3: connectors, AI content, research, calendar/forensics.
+- [x] Channel catalog 0.6.1: Threads / IG / TikTok PULL_FROM_URL + status poll / YouTube resumable+PUT / Bluesky / Pinterest / GBP.
+- [x] Calendar 0.6.2: ingest research → draft calendar → slot-to-intent (copy only; not a send path).
+- [x] ADR-007: Communication connector, not `PUBLISH_SOCIAL`.
+- [x] Lab registration contract: `docs/architecture/COMMUNICATION-ADAPTER-REGISTRATION.md` on the lab repo.
+
+### In flight on EXPADIO (not on main)
+
+- [x] Dark Communication wiring branch `feat/social-communication-wiring` (#489): channel union, capability seed, disabled `social.linkedin`, LinkedIn text adapter, Resend-shaped lease binding, CHECK widen, adapter-key map.
+- [ ] Merge #489 onto main after migration-number reconciliation (see hygiene).
+- [ ] Decision Fabric sketch `social.content_publish` (#482) — **HOLD**. Do not merge under freeze.
+
+### Next on EXPADIO
+
+- [ ] Reconcile migration number on #489 before merge. Draft #481 already uses `0085_audit_organization_provenance.sql`; #475 uses 0083/0084. Renumber social if those land first.
+- [ ] Seed-tenant proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send`.
+- [ ] File a Communication intent after DF APPROVE; author cannot file (SoD). Return dark / `CONNECTOR_DISABLED` while the connector is off.
+- [ ] Do not add `social` to `CommunicationSenderChannel` / `isSenderChannel()`.
+- [ ] Do not wire the delivery worker to LinkedIn until COMMUNICATE → attempt → trace is proven on email.
+- [ ] Enable `social.linkedin` only after tenant BYOC + governed lease. ACCEPTED still requires provider message id (`x-restli-id`; synthetic ids fail closed).
+- [ ] Then Meta Page text → X text → Threads → Instagram image → remaining catalog. Calendar expands to N intents, never a batch `send()`.
+- [ ] Merge #482 only after COMMUNICATE proof + explicit freeze/checklist release for this vertical.
+
+### Forbidden
+
+- [ ] New Action Fabric type `PUBLISH_SOCIAL`.
+- [ ] Nest `publish_jobs` as a production queue.
+- [ ] Enabling `social.linkedin` without tenant BYOC + lease.
+- [ ] Delivery-worker social dispatch while the connector is dark.
+- [ ] Adding `social` to sender-identity CHECKs or `isSenderChannel()`.
+- [ ] Silent / synthetic `external_post_id` mapped to ACCEPTED.
+- [ ] Treating TikTok `publish_id` as a public watch URL.
+- [ ] ACCEPTED on YouTube resumable init without a video id.
+- [ ] Review replies as Communication send.
+- [ ] Merging #482 under freeze.
+- [ ] Registering Meta/X/Threads/IG/TikTok/YouTube/Bluesky/Pinterest/GBP on main in this window.
+- [ ] Social in the Communications onboarding modal catalog.
 
 ## P0 — platform hardening and operations
 
@@ -283,3 +343,4 @@ Freeze exception 2026-08-31. Native Explee-like demand generation on EXPADIO. No
 - [ ] Remove obsolete Communications `route.ts.tmp` artifact if still present.
 - [ ] Audit production code for implicit demo tenant/default connector fallbacks.
 - [ ] Add source-contract guard against production demo fallbacks.
+- [ ] Reconcile migration 0085 collision before merging #489 and #481 (`0085_communication_social_channel.sql` vs `0085_audit_organization_provenance.sql`).
