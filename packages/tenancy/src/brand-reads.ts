@@ -3,8 +3,9 @@ import type { ShellScope, ShellScopeStorageKeys } from './shell-scope.ts';
 import { ScopeMappingError, mapShellScopeToStorageKeys } from './scope-adapter.ts';
 import type { ScopeDirectory } from './scope-directory.ts';
 
-export const BRAND_CUSTOMER_ROUTE = '/api/brand/customers';
-export const PLATFORM_TENANT_LAB_ROUTE = '/api/tenant';
+export const BRAND_CUSTOMER_ROUTE = '/api/brand/customers' as const;
+export const BRAND_FALLBACK_CUSTOMER_ROUTE = '/brand/api/customers' as const;
+export const PLATFORM_TENANT_LAB_ROUTE = '/api/tenant' as const;
 
 export type BrandCustomerReadPlan =
   | { readonly state: 'unresolved-scope'; readonly reason: 'PRODUCT_SCOPE_UNRESOLVED' }
@@ -52,13 +53,13 @@ export function planBrandCustomerRead(
   }
   try {
     const storageKeys = mapShellScopeToStorageKeys(scope, directory);
-    const plan = {
-      state: 'keys-resolved' as const,
+    const plan: BrandCustomerReadPlan = {
+      state: 'keys-resolved',
       host: BRAND_HOST,
       route: BRAND_CUSTOMER_ROUTE,
       storageKeys,
-      served: false as const,
-      source: 'brand-audience' as const,
+      served: false,
+      source: 'brand-audience',
     };
     assertNotPlatformTenantLab(plan.host + plan.route);
     return plan;

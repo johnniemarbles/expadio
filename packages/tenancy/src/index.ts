@@ -18,6 +18,7 @@ export { BRAND_APP, brandWorkspace } from './brand-shell.ts';
 export type { BrandSurface, BrandSurfaceState } from './brand-shell.ts';
 export {
   BRAND_CUSTOMER_ROUTE,
+  BRAND_FALLBACK_CUSTOMER_ROUTE,
   PLATFORM_TENANT_LAB_ROUTE,
   planBrandCustomerRead,
   assertNotPlatformTenantLab,
@@ -27,6 +28,9 @@ export {
   BrandHostError,
   authorizeBrandCustomerRequest,
   serveBrandCustomerRead,
+  resolveBrandCustomerHttpTarget,
+  requestHost,
+  requestPath,
 } from './brand-host.ts';
 export type { BrandIncomingRequest, BrandAuthorizedCustomerRead } from './brand-host.ts';
 export {

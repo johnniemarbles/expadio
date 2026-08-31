@@ -1,6 +1,11 @@
 import { BRAND_HOST } from './hosts.ts';
 import { ScopeMappingError } from './scope-adapter.ts';
-import { BRAND_CUSTOMER_ROUTE, assertNotPlatformTenantLab, planBrandCustomerRead } from './brand-reads.ts';
+import {
+  BRAND_CUSTOMER_ROUTE,
+  BRAND_FALLBACK_CUSTOMER_ROUTE,
+  assertNotPlatformTenantLab,
+  planBrandCustomerRead,
+} from './brand-reads.ts';
 import type { ShellScope, ShellScopeStorageKeys } from './shell-scope.ts';
 import type { ScopeDirectory } from './scope-directory.ts';
 
@@ -53,12 +58,17 @@ export type BrandAuthorizedCustomerRead = {
   readonly context: BoundContext;
 };
 
-function requestHost(host: string): string {
-  return host.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0].toLowerCase();
+export function requestHost(host: string): string {
+  const stripped = host.replace(/^https?:\/\//i, '');
+  const slash = stripped.indexOf('/');
+  const namePort = slash === -1 ? stripped : stripped.slice(0, slash);
+  const colon = namePort.indexOf(':');
+  return (colon === -1 ? namePort : namePort.slice(0, colon)).toLowerCase();
 }
 
-function requestPath(path: string): string {
-  const bare = path.split('?')[0];
+export function requestPath(path: string): string {
+  const query = path.indexOf('?');
+  const bare = query === -1 ? path : path.slice(0, query);
   return bare.startsWith('/') ? bare : `/${bare}`;
 }
 
@@ -73,6 +83,27 @@ function refusePlatformLab(target: string): void {
   }
 }
 
+/** Product host, or same-origin /brand/* fallback with Brand chrome. */
+export function resolveBrandCustomerHttpTarget(host: string, path: string): {
+  readonly host: typeof BRAND_HOST;
+  readonly path: typeof BRAND_CUSTOMER_ROUTE;
+  readonly via: 'brand-host' | 'same-origin-fallback';
+} {
+  const normalizedHost = requestHost(host);
+  const normalizedPath = requestPath(path);
+  refusePlatformLab(`${normalizedHost}${normalizedPath}`);
+  if (normalizedPath === BRAND_FALLBACK_CUSTOMER_ROUTE) {
+    return { host: BRAND_HOST, path: BRAND_CUSTOMER_ROUTE, via: 'same-origin-fallback' };
+  }
+  if (normalizedHost === BRAND_HOST && normalizedPath === BRAND_CUSTOMER_ROUTE) {
+    return { host: BRAND_HOST, path: BRAND_CUSTOMER_ROUTE, via: 'brand-host' };
+  }
+  if (normalizedHost !== BRAND_HOST) {
+    throw new BrandHostError(403, 'BRAND_HOST_REQUIRED', 'Brand reads are served on app.expadio.com.');
+  }
+  throw new BrandHostError(404, 'BRAND_ROUTE_NOT_FOUND', 'This Brand route is not connected.');
+}
+
 /**
  * Server-side Brand audience gate. Host + route + mapped keys + current membership.
  * CRM unit ownership is still unproven, so L-#### and SELECTED membership stay closed.
@@ -85,17 +116,7 @@ export function authorizeBrandCustomerRequest(
     throw new BrandHostError(403, 'WRONG_AUDIENCE', 'Brand reads require the Brand audience.');
   }
 
-  const host = requestHost(request.host);
-  const path = requestPath(request.path);
-  refusePlatformLab(`${host}${path}`);
-
-  if (host !== BRAND_HOST) {
-    throw new BrandHostError(403, 'BRAND_HOST_REQUIRED', 'Brand reads are served on app.expadio.com.');
-  }
-  if (path !== BRAND_CUSTOMER_ROUTE) {
-    throw new BrandHostError(404, 'BRAND_ROUTE_NOT_FOUND', 'This Brand route is not connected.');
-  }
-
+  const target = resolveBrandCustomerHttpTarget(request.host, request.path);
   const plan = planBrandCustomerRead(request.scope, directory);
   if (plan.state !== 'keys-resolved') {
     throw new BrandHostError(403, plan.reason, 'Verified T/B/L mapping is required before Brand customer reads.');
@@ -133,8 +154,8 @@ export function authorizeBrandCustomerRequest(
   };
 
   return {
-    host: BRAND_HOST,
-    route: BRAND_CUSTOMER_ROUTE,
+    host: target.host,
+    route: target.path,
     storageKeys: plan.storageKeys,
     context,
   };
@@ -142,7 +163,7 @@ export function authorizeBrandCustomerRequest(
 
 /**
  * Serves the reserved Brand customer route after authorization.
- * The reader is injected. This is not a Next host and not a mutation.
+ * The reader is injected. Mutations are not enabled.
  */
 export async function serveBrandCustomerRead<T>(
   request: BrandIncomingRequest,
