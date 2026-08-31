@@ -7,6 +7,14 @@ import {
   type VoiceIntelligenceIntent,
 } from "../src/index.ts";
 
+const artifactSink = {
+  write: async (input: any) => ({
+    contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
+    sha256: "e".repeat(64),
+    byteLength: typeof input.content === "string" ? input.content.length : input.content.byteLength,
+  }),
+};
+
 const connector: ConnectorDefinition = {
   connectorKey: "connector.voice.elevenlabs.primary",
   providerType: "elevenlabs",
@@ -44,7 +52,7 @@ const intent: VoiceIntelligenceIntent = {
   requestedAt: "2026-08-30T12:00:00.000Z",
 };
 
-test("ElevenLabsTtsAdapter synthesizes speech audio reference and calculates cost", async () => {
+test("ElevenLabsTtsAdapter persists synthesized audio before success", async () => {
   let requestedUrl = "";
   let requestHeaders: Record<string, string> = {};
   let requestBody: any = null;
@@ -63,6 +71,7 @@ test("ElevenLabsTtsAdapter synthesizes speech audio reference and calculates cos
 
   const adapter = new ElevenLabsTtsAdapter({
     apiToken: async () => "mock-elevenlabs-key-999",
+    artifactSink,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:06.000Z",
   });
@@ -77,9 +86,9 @@ test("ElevenLabsTtsAdapter synthesizes speech audio reference and calculates cos
   assert.equal(observation.requestId, intent.requestId);
   assert.equal(observation.tenantId, intent.tenantId);
   assert.equal(observation.operation, "SYNTHESIZE");
-  assert.equal(observation.outputReference, `ref://voice-audio/${intent.requestId}`);
-  assert.ok(observation.provenance.audioDurationMilliseconds! > 0);
-  assert.ok(observation.provenance.costMinorUnits! > 0);
+  assert.equal(observation.outputReference, `artifact://VOICE_AUDIO/${intent.requestId}`);
+  assert.equal(observation.provenance.audioDurationMilliseconds, undefined);
+  assert.equal(observation.provenance.costMinorUnits, undefined);
 
   const validation = validateVoiceIntelligenceObservation(intent, observation);
   assert.equal(validation.valid, true);
