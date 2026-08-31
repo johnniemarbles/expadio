@@ -202,6 +202,7 @@ export async function executeGovernedAiAction(input: {
       ...(aiConfig.maximumCostMinorUnits !== undefined ? { maximumCostMinorUnits: aiConfig.maximumCostMinorUnits } : {}),
     },
     idempotencyKey: intent.idempotencyKey,
+    correlationId: intent.correlationId,
     requestedAt: startedAt.toISOString(),
   };
 
