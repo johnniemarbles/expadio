@@ -134,6 +134,9 @@ importers:
       '@expadio/provider-registry':
         specifier: workspace:*
         version: link:../provider-registry
+      '@expadio/storage':
+        specifier: workspace:*
+        version: link:../storage
 
   packages/audit: {}
 
@@ -358,6 +361,9 @@ importers:
       '@expadio/provider-registry':
         specifier: workspace:*
         version: link:../provider-registry
+      '@expadio/storage':
+        specifier: workspace:*
+        version: link:../storage
 
   packages/workflow: {}
 
