@@ -54,6 +54,7 @@ const intent: AiInvocationIntent = {
     maximumCostMinorUnits: 50,
   },
   idempotencyKey: "idem_999",
+  correlationId: "corr-gemini-999",
   requestedAt: "2026-08-30T12:00:00.000Z",
 };
 
