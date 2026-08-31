@@ -17,6 +17,7 @@ export async function GET(request: Request) {
       listMyLearningEnrollments(client, {
         tenantId: context.tenantId,
         subjectId: context.subjectId,
+        subjectIssuer: context.issuer,
       }),
     );
     return NextResponse.json(learning, {
