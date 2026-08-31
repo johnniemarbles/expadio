@@ -142,3 +142,44 @@ test('rejects unknown runtime AI operations', () => {
     true,
   );
 });
+
+test('fails closed on malformed nested AI runtime JSON', () => {
+  const malformed = {
+    invocationId: 'inv-malformed',
+    tenantId: 'tenant-1',
+    operation: 'EXTRACT',
+    purpose: 'test',
+    inputReference: 'artifact://input/1',
+    promptConfiguration: undefined,
+    governance: undefined,
+    idempotencyKey: 'idem-malformed',
+    correlationId: 'corr-malformed',
+    requestedAt: '2026-08-31T03:00:00.000Z',
+  } as unknown as AiInvocationIntent;
+
+  const result = validateAiInvocationIntent(malformed);
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  const codes = new Set(result.issues.map((issue) => issue.code));
+  assert.equal(codes.has('AI_PROMPT_KEY_REQUIRED'), true);
+  assert.equal(codes.has('AI_PROMPT_VERSION_INVALID'), true);
+  assert.equal(codes.has('AI_GOVERNANCE_TAGS_INVALID'), true);
+});
+
+test('fails closed on missing AI proposal provenance', () => {
+  const malformed = {
+    invocationId: intent.invocationId,
+    tenantId: intent.tenantId,
+    status: 'PROPOSAL',
+    outputReference: 'artifact://output/1',
+    provenance: undefined,
+  } as unknown as AiProposal;
+
+  const result = validateAiProposal(intent, malformed);
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  const codes = new Set(result.issues.map((issue) => issue.code));
+  assert.equal(codes.has('AI_PROVENANCE_REQUIRED'), true);
+  assert.equal(codes.has('AI_PROVENANCE_SOURCE_REQUIRED'), true);
+  assert.equal(codes.has('AI_PROVENANCE_PROCESSED_AT_INVALID'), true);
+});
