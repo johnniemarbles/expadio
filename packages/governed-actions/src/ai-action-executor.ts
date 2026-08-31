@@ -68,20 +68,27 @@ export function parseGovernedAiActionConfiguration(
   ) {
     throw new Error("AI_ACTION_CONTEXT_REFERENCE_INVALID");
   }
-  const promptKey = typeof config.promptKey === "string" && config.promptKey.trim() !== ""
-    ? config.promptKey.trim()
-    : "prompt.default";
-  const promptVersion = Number(config.promptVersion ?? 1);
-  if (!Number.isInteger(promptVersion) || promptVersion <= 0) {
+  const promptKey = config.promptKey;
+  if (typeof promptKey !== "string" || promptKey.trim() === "") {
+    throw new Error("AI_ACTION_PROMPT_KEY_REQUIRED");
+  }
+  const promptVersion = config.promptVersion;
+  if (
+    typeof promptVersion !== "number"
+    || !Number.isInteger(promptVersion)
+    || promptVersion <= 0
+  ) {
     throw new Error("AI_ACTION_PROMPT_VERSION_INVALID");
   }
 
-  const maximumCostMinorUnits = config.maximumCostMinorUnits === undefined
-    ? undefined
-    : Number(config.maximumCostMinorUnits);
+  const maximumCostMinorUnits = config.maximumCostMinorUnits;
   if (
     maximumCostMinorUnits !== undefined
-    && (!Number.isInteger(maximumCostMinorUnits) || maximumCostMinorUnits < 0)
+    && (
+      typeof maximumCostMinorUnits !== "number"
+      || !Number.isInteger(maximumCostMinorUnits)
+      || maximumCostMinorUnits < 0
+    )
   ) {
     throw new Error("AI_ACTION_MAXIMUM_COST_INVALID");
   }
@@ -110,7 +117,7 @@ export function parseGovernedAiActionConfiguration(
     purpose: purpose.trim(),
     inputReference: inputReference.trim(),
     ...(contextReference === undefined ? {} : { contextReference: contextReference.trim() }),
-    promptKey,
+    promptKey: promptKey.trim(),
     promptVersion,
     requiredResidencyTags,
     requiredComplianceTags,
