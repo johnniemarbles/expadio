@@ -181,3 +181,37 @@ test("executeGovernedAiAction rejects invalid operations before provider invocat
   assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
   assert.match(result.reason, /OPERATION_INVALID/);
 });
+
+
+test("executeGovernedAiAction binds attempts to the persisted Action Intent ID", async () => {
+  const persistedActionIntentId = "11111111-1111-4111-8111-111111111111";
+  const mockGateway: AiGateway = {
+    invoke: async () => ({
+      invocationId: `inv_${intent.idempotencyKey}`,
+      tenantId: intent.tenantId,
+      status: "PROPOSAL",
+      outputReference: "artifact://AI_TEXT/inv-persisted",
+      confidence: 0.99,
+      provenance: {
+        connectorKey: "connector.ai.openai.us",
+        providerKey: "openai",
+        modelKey: "gpt-4o-mini",
+        promptConfigurationKey: "prompt.clinical.discharge",
+        promptConfigurationVersion: 1,
+        sourceReferences: ["ref://input/1"],
+        processedAt: "2026-08-31T02:00:00.000Z",
+        costMinorUnits: 1,
+      },
+    }),
+  };
+
+  const result = await executeGovernedAiAction({
+    intent,
+    actionIntentId: persistedActionIntentId,
+    aiGateway: mockGateway,
+  });
+
+  assert.equal(result.status, "SUCCEEDED");
+  assert.equal(result.attempt.actionIntentId, persistedActionIntentId);
+  assert.match(result.attempt.attemptKey, new RegExp(persistedActionIntentId));
+});
