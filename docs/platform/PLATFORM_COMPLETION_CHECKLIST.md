@@ -15,6 +15,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Use the repository, not chat memory, as the durable checklist of completed work.
 - [x] Freeze exception 2026-08-31: AutoGTM / Demand Generation Control Plane (#483) may proceed on Communication + Decision Fabric only.
 - [x] Freeze exception 2026-08-31: Social Content may proceed on Communication + Decision Fabric only. Lab `expadio-social-content` must be closed before EXPADIO send wiring. Owner: complete remaining lab scope first; no live social send until COMMUNICATE is proven.
+- [x] Freeze exception 2026-08-31: Lead Management / demand-capture may proceed as a lab extract only. Lab `expadio-lead-management` 0.3 engines are closed. Do not merge into EXPADIO until the four gates below are green. Owner: wire convert into `@expadio/lead` + live RLS soak; no second CRM.
 
 ## Completed foundation milestones
 
@@ -138,12 +139,13 @@ Binding keys:
 ### In flight on EXPADIO (not on main)
 
 - [x] Dark Communication wiring branch `feat/social-communication-wiring` (#489): channel union, capability seed, disabled `social.linkedin`, LinkedIn text adapter, Resend-shaped lease binding, CHECK widen, adapter-key map.
-- [ ] Merge #489 onto main after migration-number reconciliation (see hygiene).
+- [x] Migration number on #489 reconciled to `0086_communication_social_channel.sql` (#481 keeps `0085`; #475 keeps 0083/0084).
+- [ ] Merge #489 onto main.
 - [ ] Decision Fabric sketch `social.content_publish` (#482) — **HOLD**. Do not merge under freeze.
 
 ### Next on EXPADIO
 
-- [ ] Reconcile migration number on #489 before merge. Draft #481 already uses `0085_audit_organization_provenance.sql`; #475 uses 0083/0084. Renumber social if those land first.
+- [x] Reconcile migration number on #489 before merge. Social uses `0086_communication_social_channel.sql`. Draft #481 keeps `0085_audit_organization_provenance.sql`; #475 keeps 0083/0084.
 - [ ] Seed-tenant proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send`.
 - [ ] File a Communication intent after DF APPROVE; author cannot file (SoD). Return dark / `CONNECTOR_DISABLED` while the connector is off.
 - [ ] Do not add `social` to `CommunicationSenderChannel` / `isSenderChannel()`.
@@ -166,6 +168,77 @@ Binding keys:
 - [ ] Merging #482 under freeze.
 - [ ] Registering Meta/X/Threads/IG/TikTok/YouTube/Bluesky/Pinterest/GBP on main in this window.
 - [ ] Social in the Communications onboarding modal catalog.
+
+## Lead Management / demand-capture (lab closed, merge gated)
+
+Freeze exception 2026-08-31. Multi-source demand-capture is a horizontal capability, not a replacement for the thin CRM entity. Lab: `johnniemarbles/expadio-lead-management` (0.3 engines closed on lab main 2026-08-31).
+
+EXPADIO already owns the CRM pipeline. Do not collapse these two catalogues:
+
+| Layer | Catalogue | Home |
+|-------|-----------|------|
+| Capture journey | 19 stages (`NEW_ENQUIRY` … `NURTURE`) | extract `@expadio/lead-capture` / `@expadio/lead-pipeline` |
+| CRM entity | 5 stages (`NEW` / `QUALIFIED` / `PROPOSAL` / `WON` / `LOST`) | EXPADIO `@expadio/lead` + `platform.crm_leads` |
+
+Brand operating tree (same tenant/brand, downward visibility only):
+
+`BRAND_HQ → COUNTRY → REGION → STATE → MULTI_UNIT → UNIT`
+
+Each layer may own its own website / landing / social capture source. Layer is resolved from the source registry or a signed capture ticket — never from the JSON body.
+
+Binding keys:
+
+| Field | Value |
+|-------|--------|
+| CRM package | `@expadio/lead` |
+| CRM table | `platform.crm_leads` (`0045_crm_leads.sql`) |
+| accepted CRM sources today | `manual`, `web_form`, `outbound_gtm` |
+| extract convert mapper | `mapCaptureStageToCrm` / `@expadio/lead-crm.convertCaptureToCrm` |
+| tenancy | EXPADIO tenant → organization → workspace → operatingUnit; layer tree is not a second tenant axis |
+| PDP | extract `authorize()` deny-by-default; production principal from EXPADIO gateway |
+
+### Done off-platform (lab closed — leave the extract alone)
+
+- [x] Private extract repo `johnniemarbles/expadio-lead-management`.
+- [x] Phase 0 audit / dependency map / schema delta vs BEMP spec v2.0 (rebuild, do not copy `lib/leads/service.ts`).
+- [x] M1–M5 engines: identity, ingest (raw_payload first), routing DSL, scoring (no protected attributes), authorize PDP, hash-chained audit, 19-stage pipeline.
+- [x] Foundation SQL `lead_mgmt.*` with FORCE RLS + append-only triggers (`0001_foundation.sql`).
+- [x] Layer hierarchy + source registry + parent escalation (`@expadio/lead-hierarchy`, ADR-006, `0002_layers.sql`).
+- [x] Signed capture tickets, webhook HMAC, payload bounds, rate limit (`@expadio/lead-security`, ADR-007).
+- [x] Gateway principal adapter; lab headers only when `LAB_TRUSTED_HEADERS=1` (`@expadio/lead-gateway`).
+- [x] I8 CRM mapper writes a thin projection and does not delete capture history (`@expadio/lead-crm`, ADR-008).
+- [x] Lab API: `POST /v1/submissions`, lead read/stage, `POST /v1/leads/:id/convert`.
+- [x] Merge-readiness doc and extract issue #1 list the four gates below.
+
+### Merge gates — all required before any PR into `johnniemarbles/expadio`
+
+- [ ] Live Postgres FORCE RLS soak of extract `0001`+`0002` against two tenants, sibling brands, and two countries (India vs US). Country grant must not read the sibling country. HQ grant reads descendants.
+- [ ] Convert path writes `platform.crm_leads` through `@expadio/lead` using `mapCaptureStageToCrm`. Capture lead / submissions / attribution / audit remain. Re-convert is idempotent.
+- [ ] EXPADIO gateway injects `x-expadio-principal`. Lab header trust off on platform. Body `tenantId` / `brandId` / `layerId` rejected (P16).
+- [ ] No BEMP `/brand/leads` routes, screens, or `lib/leads/service.ts` copied onto main.
+
+### Next on EXPADIO (after gates)
+
+- [ ] Port extract packages as `@expadio/lead-*` into the monorepo. Keep `@expadio/lead` as the CRM entity.
+- [ ] Add capture ingest source to `LEAD_INGEST_SOURCES` only if `web_form` is insufficient; do not invent a second lead table in `platform`.
+- [ ] Bind capture sources to existing tenancy (`operatingUnit` / workspace) rather than a parallel org tree.
+- [ ] Seed-tenant proof: unit landing captures a lead; HQ subject sees it; sibling-unit subject gets 404.
+- [ ] Seed-tenant proof: convert creates one `platform.crm_leads` row; capture row still present with `crm_lead_id`.
+- [ ] Decision Fabric only if a capture-to-CRM convert or stage jump needs a second-subject APPROVE. Do not auto-approve on score (P10 / P18).
+- [ ] OTP provider and CSV import stay extract-side until the four gates are green.
+
+### Forbidden
+
+- [ ] Replacing `@expadio/lead` or `platform.crm_leads` with the 19-stage catalogue.
+- [ ] Second CRM or a second tenant tree.
+- [ ] Client-chosen tenant / brand / layer on the JSON body.
+- [ ] Silent drop of unmatched leads (must land in an explained unassigned queue).
+- [ ] Auto-merge below exact normalized email.
+- [ ] `if (user.role === 'admin')` in callers (single PDP only).
+- [ ] Copying BEMP `/brand/leads` or V1 `lib/leads/service.ts`.
+- [ ] Merging extract `apps/api` lab server onto main as the production gateway.
+- [ ] Merging this extract in the same PR as social-content or demand-generation.
+- [ ] Enabling live public ingest before gateway principal + RLS soak.
 
 ## P0 — platform hardening and operations
 
@@ -343,4 +416,4 @@ Binding keys:
 - [ ] Remove obsolete Communications `route.ts.tmp` artifact if still present.
 - [ ] Audit production code for implicit demo tenant/default connector fallbacks.
 - [ ] Add source-contract guard against production demo fallbacks.
-- [ ] Reconcile migration 0085 collision before merging #489 and #481 (`0085_communication_social_channel.sql` vs `0085_audit_organization_provenance.sql`).
+- [x] Reconcile migration 0085 collision before merging #489 and #481 (social now `0086_communication_social_channel.sql`; #481 keeps `0085_audit_organization_provenance.sql`).
