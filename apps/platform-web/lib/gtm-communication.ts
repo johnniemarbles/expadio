@@ -6,11 +6,16 @@
  * gtm.email. This module never sends. The lab adapter is forbidden here.
  */
 
+import type { GovernedActionIntent } from '@expadio/governed-actions';
+
 export const GTM_SEND_CAPABILITY_KEY = 'communication.email.send' as const;
 export const GTM_EMAIL_CONNECTOR_KEY = 'gtm.email' as const;
 export const GTM_EMAIL_PROVIDER_KEY = 'resend' as const;
 export const GTM_SEQUENCE_WORK_TYPE = 'gtm.sequence.publish' as const;
 export const GTM_SEQUENCE_APPROVED_STAGE = 'APPROVED' as const;
+export const GTM_COMMUNICATE_EVENT_TYPE = 'gtm.sequence.communicate' as const;
+export const GTM_COMMUNICATE_RULE_KEY = 'gtm.sequence.communicate' as const;
+export const GTM_COMMUNICATE_ACTION_KEY = 'gtm.email.send' as const;
 
 export type GtmSendDenial =
   | 'NOT_APPROVED'
@@ -86,11 +91,25 @@ export function assertApprovedForSend(params: {
   }
 }
 
-export function assertConnectorReady(connector: GtmEmailConnectorState | null): void {
+export function readGtmEmailConnector(connector: GtmEmailConnectorState | null): {
+  readonly ready: boolean;
+  readonly code: Extract<GtmSendDenial, 'CONNECTOR_MISSING' | 'CONNECTOR_DISABLED'> | 'OK';
+} {
   if (connector === null || connector.connectorKey !== GTM_EMAIL_CONNECTOR_KEY) {
-    throw new GtmSendGateError('CONNECTOR_MISSING', 'Connector gtm.email is not registered.');
+    return { ready: false, code: 'CONNECTOR_MISSING' };
   }
   if (!connector.enabled) {
+    return { ready: false, code: 'CONNECTOR_DISABLED' };
+  }
+  return { ready: true, code: 'OK' };
+}
+
+export function assertConnectorReady(connector: GtmEmailConnectorState | null): void {
+  const state = readGtmEmailConnector(connector);
+  if (state.code === 'CONNECTOR_MISSING') {
+    throw new GtmSendGateError('CONNECTOR_MISSING', 'Connector gtm.email is not registered.');
+  }
+  if (state.code === 'CONNECTOR_DISABLED') {
     throw new GtmSendGateError(
       'CONNECTOR_DISABLED',
       'Connector gtm.email is disabled until BYOC and sender identity are bound.',
@@ -133,6 +152,55 @@ export function buildGtmCommunicationIntent(params: {
       rendered: { format: 'TEXT', subject, body },
       idempotencyKey: `${GTM_SEQUENCE_WORK_TYPE}:${params.touch.sequenceId}:${params.touch.stepKey}:${email}`,
       requestedAt,
+    },
+  };
+}
+
+/** Map a filed GTM touch onto a COMMUNICATE Action Intent. Does not enqueue delivery. */
+export function toGovernedCommunicateIntent(params: {
+  readonly gtm: GtmCommunicationIntent;
+  readonly actorSubjectId: string;
+  readonly sequenceId: string;
+  readonly stepKey: string;
+}): GovernedActionIntent {
+  const requestedAt = new Date(params.gtm.sendRequest.requestedAt);
+  return {
+    tenantId: params.gtm.sendRequest.tenantId,
+    sourceEventId: params.sequenceId,
+    sourceEventType: GTM_COMMUNICATE_EVENT_TYPE,
+    aggregateType: 'gtm.sequence',
+    aggregateId: params.sequenceId,
+    ruleKey: `${GTM_COMMUNICATE_RULE_KEY}:${params.stepKey}`,
+    executorClass: 'COMMUNICATE',
+    actionKey: GTM_COMMUNICATE_ACTION_KEY,
+    idempotencyKey: params.gtm.sendRequest.idempotencyKey,
+    correlationId: params.gtm.sendRequest.idempotencyKey,
+    causationId: params.sequenceId,
+    requestedBySubjectId: params.actorSubjectId,
+    requestedAt,
+    configuration: {
+      triggerKey: params.gtm.triggerKey,
+      recipient: params.gtm.sendRequest.recipient,
+      variables: {
+        subject: params.gtm.sendRequest.rendered.subject,
+        body: params.gtm.sendRequest.rendered.body,
+      },
+      purpose: params.gtm.sendRequest.purpose,
+      consentRequired: true,
+      channel: params.gtm.sendRequest.channel,
+      capabilityKey: params.gtm.capabilityKey,
+      connectorKey: params.gtm.connectorKey,
+      providerKey: params.gtm.providerKey,
+    },
+    policyDecision: {
+      allowed: true,
+      policyKeys: ['gtm.sequence.publish.approved', 'gtm.separation_of_duties'],
+      evidenceRefs: [
+        `gtm://sequence/${params.sequenceId}`,
+        `gtm://step/${params.stepKey}`,
+      ],
+      reasonCode: 'GTM_SEQUENCE_APPROVED',
+      evaluatedAt: requestedAt,
     },
   };
 }

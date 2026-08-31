@@ -5,7 +5,9 @@ import {
   GtmSendGateError,
   assertConnectorReady,
   buildGtmCommunicationIntent,
+  readGtmEmailConnector,
   shouldConvertReplyToLead,
+  toGovernedCommunicateIntent,
   type GtmSequenceTouch,
 } from '../lib/gtm-communication.ts';
 
@@ -31,6 +33,20 @@ test('builds a Communication intent only after APPROVED and SoD', () => {
   assert.match(intent.sendRequest.idempotencyKey, /gtm\.sequence\.publish/);
 });
 
+test('maps the filed touch onto a COMMUNICATE Action Intent without dispatch', () => {
+  const gtm = buildGtmCommunicationIntent({ touch, actorSubjectId: 'reviewer-1' });
+  const action = toGovernedCommunicateIntent({
+    gtm,
+    actorSubjectId: 'reviewer-1',
+    sequenceId: touch.sequenceId,
+    stepKey: touch.stepKey,
+  });
+  assert.equal(action.executorClass, 'COMMUNICATE');
+  assert.equal(action.actionKey, 'gtm.email.send');
+  assert.equal(action.configuration.capabilityKey, 'communication.email.send');
+  assert.equal(action.idempotencyKey, gtm.sendRequest.idempotencyKey);
+});
+
 test('author cannot file the Communication intent', () => {
   assert.throws(
     () => buildGtmCommunicationIntent({ touch, actorSubjectId: 'author-1' }),
@@ -48,7 +64,11 @@ test('unapproved sequence cannot file the Communication intent', () => {
   );
 });
 
-test('disabled gtm.email stays dark', () => {
+test('disabled gtm.email stays dark and is readable without throwing on persist path', () => {
+  assert.deepEqual(
+    readGtmEmailConnector({ connectorKey: 'gtm.email', enabled: false, providerKey: 'resend' }),
+    { ready: false, code: 'CONNECTOR_DISABLED' },
+  );
   assert.throws(
     () => assertConnectorReady({ connectorKey: 'gtm.email', enabled: false, providerKey: 'resend' }),
     (err: unknown) => err instanceof GtmSendGateError && err.code === 'CONNECTOR_DISABLED',
@@ -61,11 +81,13 @@ test('warm interested and meeting replies convert to CRM leads', () => {
   assert.equal(shouldConvertReplyToLead('unsubscribe'), false);
 });
 
-test('platform communicate route never imports the lab adapter or SEND_OUTBOUND', () => {
+test('platform communicate route persists and never dispatches or uses the lab adapter', () => {
   const route = read('../app/api/gtm/sequences/[id]/communicate/route.ts');
   const lib = read('../lib/gtm-communication.ts');
-  assert.match(route, /buildGtmCommunicationIntent/);
-  assert.match(route, /assertConnectorReady/);
+  assert.match(route, /persistGovernedActionIntent/);
+  assert.match(route, /toGovernedCommunicateIntent/);
+  assert.match(route, /dispatched: false/);
+  assert.doesNotMatch(route, /executeGovernedCommunicateAction/);
   assert.doesNotMatch(route, /gtm-email-lab-v1/);
   assert.doesNotMatch(route, /SEND_OUTBOUND/);
   assert.doesNotMatch(lib, /gtm-email-lab-v1/);
