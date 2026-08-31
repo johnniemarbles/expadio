@@ -25,6 +25,7 @@ export interface AiInvocationIntent {
     readonly maximumCostMinorUnits?: number;
   };
   readonly idempotencyKey: string;
+  readonly correlationId: string;
   readonly requestedAt: string;
 }
 
@@ -73,6 +74,7 @@ export type AiContractValidationCode =
   | 'AI_PROMPT_KEY_REQUIRED'
   | 'AI_PROMPT_VERSION_INVALID'
   | 'AI_IDEMPOTENCY_KEY_REQUIRED'
+  | 'AI_CORRELATION_ID_REQUIRED'
   | 'AI_REQUESTED_AT_INVALID'
   | 'AI_COST_LIMIT_INVALID'
   | 'AI_PROPOSAL_INVOCATION_MISMATCH'
@@ -131,6 +133,12 @@ export function validateAiInvocationIntent(
     intent.idempotencyKey,
     'AI_IDEMPOTENCY_KEY_REQUIRED',
     'idempotencyKey',
+    issues,
+  );
+  required(
+    intent.correlationId,
+    'AI_CORRELATION_ID_REQUIRED',
+    'correlationId',
     issues,
   );
   if (!validInstant(intent.requestedAt)) {
