@@ -191,7 +191,7 @@ STOP: If live/fixture flag is unavailable on the page, stop and report; do not h
   - Pack 3: owner ChatGPT; branch `fix/audit-scope-copy-pack3`; [draft PR #480](https://github.com/johnniemarbles/expadio/pull/480), head `ac2b33c4a687cfd9cb5a1692727ea1f2fb04fc4f`; status **in_progress (implementation/checks ready; held for Packs 1–2)**. One-line conditional uses the banner's source kind. Four controlled local page-render checks passed (live empty, fixture empty, populated, denied). [Platform Web](https://github.com/johnniemarbles/expadio/actions/runs/33356280367) passed typecheck, 345 tests and build; [Workflow Integration](https://github.com/johnniemarbles/expadio/actions/runs/33356280334) passed.
   - Both drafts preserve their independent scopes and must remain unmerged until Pack 1 is resolved and the stated sequence is satisfied. Neither changes production deployment or permits a live test send.
 
-### Pack 1 prerequisite scope — decision requested, NOT Accepted
+### Pack 1 prerequisite scope — approved 2026-08-31 (decision recorded below)
 
 **Why the original scope is insufficient (pinned source `89d3056`):**
 
@@ -216,4 +216,5 @@ STOP: If live/fixture flag is unavailable on the page, stop and report; do not h
 - `packages/agent-runtime/src/approval.ts` already rejects self-approval, tenant/proposal mismatch and rejection. Main's `packages/governed-actions/src/ai-action-executor.ts` still labels high-confidence output auto-approved; [PR #475](https://github.com/johnniemarbles/expadio/pull/475) already removes that behavior and keeps proposals unapproved. Do not duplicate that change or equate proposal generation with an enforced business-action handoff. Brain corrections GET still contains demo context/sample output; it is outside these Audit packs and needs separately scoped follow-up.
 
 - **2026-08-31 — Human approval of Pack 1 prerequisite scope.** Sanjeev Sood explicitly replied “you are approved” to the concrete IAM and audit-provenance prerequisite request above. This authorizes the bounded live context/provenance implementation and behavioral tests exactly as recorded; it does not authorize live provider sends, vertical depth, new engines, guessed legacy backfill, CI bypass, or release-gate changes.
-  - Executor claim: owner ChatGPT; pack `AUDIT-SCOPE-PREREQ + Pack 1`; branch `fix/audit-live-context-pack1`; pr TBD; status `in_progress`; baseline `50326320d262f3f2d9925dae4e340a59ec7d8d3d`.
+  - Executor claim: owner ChatGPT; pack `AUDIT-SCOPE-PREREQ + Pack 1`; branch `fix/audit-live-context-pack1`; [draft PR #481](https://github.com/johnniemarbles/expadio/pull/481); status `in_progress`; baseline `50326320d262f3f2d9925dae4e340a59ec7d8d3d`.
+  - Implementation head `76871b0a0413ecaa221ba969b9ed52e102ebfd0a`; 22 files. Local scope/membership/transaction checks pass. Full workspace, build, integration and non-owner PostgreSQL evidence pending CI; no live-send claim.
