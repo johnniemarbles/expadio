@@ -110,7 +110,16 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
     };
 
     const transcript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+    if (transcript.trim() === "") {
+      throw new Error("VOICE_PROVIDER_OUTPUT_EMPTY: Deepgram returned no transcript");
+    }
     const durationSeconds = data.metadata?.duration;
+    if (
+      durationSeconds !== undefined
+      && (!Number.isFinite(durationSeconds) || durationSeconds < 0)
+    ) {
+      throw new Error("VOICE_PROVIDER_DURATION_INVALID: Deepgram returned invalid duration");
+    }
     const durationMilliseconds = durationSeconds === undefined
       ? undefined
       : Math.round(durationSeconds * 1000);
