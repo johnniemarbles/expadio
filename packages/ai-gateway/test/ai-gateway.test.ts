@@ -115,3 +115,17 @@ test('rejects cross-tenant or unprovenanced AI proposals', () => {
     ]),
   );
 });
+
+
+test('requires correlation identity for AI invocations', () => {
+  const result = validateAiInvocationIntent({
+    ...intent,
+    correlationId: '',
+  });
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  assert.equal(
+    result.issues.some((issue) => issue.code === 'AI_CORRELATION_ID_REQUIRED'),
+    true,
+  );
+});
