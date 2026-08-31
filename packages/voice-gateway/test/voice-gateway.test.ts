@@ -111,3 +111,17 @@ test('rejects cross-tenant observations and invalid usage metrics', () => {
     ]),
   );
 });
+
+
+test('requires correlation identity for Voice requests', () => {
+  const result = validateVoiceIntelligenceIntent({
+    ...intent,
+    correlationId: '',
+  });
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  assert.equal(
+    result.issues.some((issue) => issue.code === 'VOICE_CORRELATION_ID_REQUIRED'),
+    true,
+  );
+});
