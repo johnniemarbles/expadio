@@ -2,7 +2,7 @@
 
 **Proposed by:** Grok  
 **Date:** 2026-08-26  
-**Status:** Accepted (bootstrap)  
+**Status:** Accepted  
 **Related area:** docs/collaboration/
 
 ## Problem / Opportunity
