@@ -1,4 +1,5 @@
 import type { ConnectorDefinition } from "@expadio/provider-registry";
+import type { DurableArtifactSink } from "@expadio/storage";
 import type {
   VoiceIntelligenceIntent,
   VoiceIntelligenceObservation,
@@ -9,6 +10,7 @@ import type { VoiceApiTokenProvider } from "./deepgram-stt-adapter.ts";
 
 export interface ElevenLabsTtsAdapterOptions {
   readonly apiToken: VoiceApiTokenProvider;
+  readonly artifactSink: DurableArtifactSink;
   readonly endpointBaseUrl?: string;
   readonly defaultVoiceId?: string;
   readonly modelKey?: string;
@@ -19,6 +21,7 @@ export interface ElevenLabsTtsAdapterOptions {
 export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
   readonly adapterKey = "elevenlabs-tts-v1";
   readonly #apiToken: VoiceApiTokenProvider;
+  readonly #artifactSink: DurableArtifactSink;
   readonly #endpointBaseUrl: string;
   readonly #defaultVoiceId: string;
   readonly #modelKey: string;
@@ -27,6 +30,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
 
   constructor(options: ElevenLabsTtsAdapterOptions) {
     this.#apiToken = options.apiToken;
+    this.#artifactSink = options.artifactSink;
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://api.elevenlabs.io/v1/text-to-speech").replace(/\/+$/u, "");
     this.#defaultVoiceId = options.defaultVoiceId ?? "21m00Tcm4TlvDq8ikWAM";
     this.#modelKey = options.modelKey ?? "eleven_multilingual_v2";
@@ -84,11 +88,18 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
       throw new Error(`VOICE_PROVIDER_ERROR: ElevenLabs responded with status ${response.status}: ${errorText}`);
     }
 
-    // Estimate character-based cost: e.g. ~30c per 1000 characters
-    const charCount = textToSynthesize.length;
-    const costMinorUnits = Math.max(1, Math.ceil((charCount / 1000) * 30));
-    // Estimate ~150 words per min ≈ 750 chars per min
-    const estimatedDurationMs = Math.round((charCount / 12.5) * 1000);
+    const audioBytes = new Uint8Array(await response.arrayBuffer());
+    const contentType = response.headers.get("content-type") ?? "audio/mpeg";
+    const artifact = await this.#artifactSink.write({
+      tenantId: intent.tenantId,
+      artifactKind: "VOICE_AUDIO",
+      sourceKind: "VOICE_REQUEST",
+      sourceId: intent.requestId,
+      content: audioBytes,
+      contentType,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
 
     const provenance: VoiceIntelligenceProvenance = {
       connectorKey: connector.connectorKey,
@@ -97,8 +108,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
       sourceReferences: [intent.inputReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      audioDurationMilliseconds: estimatedDurationMs,
-      costMinorUnits,
+
     };
 
     return {
@@ -106,7 +116,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
       tenantId: intent.tenantId,
       callId: intent.callId,
       operation: "SYNTHESIZE",
-      outputReference: `ref://voice-audio/${intent.requestId}`,
+      outputReference: artifact.contentReference,
       provenance,
     };
   }
