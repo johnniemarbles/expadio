@@ -137,5 +137,5 @@ export class RoutedVoiceGateway implements VoiceGateway {
 export function voiceCapabilityKey(
   operation: VoiceIntelligenceOperation,
 ): string {
-  return `voice.${operation.toLocaleLowerCase()}`;
+  return `voice.${operation.toLowerCase()}`;
 }
