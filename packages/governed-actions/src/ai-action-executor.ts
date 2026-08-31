@@ -140,7 +140,7 @@ export async function executeGovernedAiAction(input: {
     const attempt: GovernedActionExecutionAttempt = {
       tenantId: intent.tenantId,
       actionIntentId,
-      executorClass: intent.executorClass,
+      executorClass: "AI_ACTION",
       attemptKey: governedActionExecutionAttemptKey({
         actionIntentId,
         phase: "INVOKE_AI",
