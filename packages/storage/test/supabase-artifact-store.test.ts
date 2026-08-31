@@ -25,6 +25,24 @@ const input: DurableArtifactWriteInput = {
   requiredComplianceTags: ['SOC2'],
 };
 
+function privateBucketResponse(publicBucket = false) {
+  return new Response(JSON.stringify({
+    id: 'execution-artifacts',
+    name: 'execution-artifacts',
+    public: publicBucket,
+    type: 'STANDARD',
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function isBucketRequest(resource: RequestInfo | URL): boolean {
+  return String(resource).includes(
+    '/storage/v1/bucket/execution-artifacts',
+  );
+}
+
 function store(fetchImpl: typeof fetch) {
   return new SupabaseDurableArtifactStore({
     projectUrl: 'https://project.supabase.co',
@@ -44,6 +62,7 @@ test('SupabaseDurableArtifactStore uploads a deterministic immutable tenant arti
   let headers: HeadersInit | undefined;
 
   const subject = store(async (resource, init) => {
+    if (isBucketRequest(resource)) return privateBucketResponse();
     requestedUrl = String(resource);
     method = init?.method ?? '';
     headers = init?.headers;
@@ -72,8 +91,9 @@ test('SupabaseDurableArtifactStore uploads a deterministic immutable tenant arti
 
 test('SupabaseDurableArtifactStore treats an identical existing object as an idempotent replay', async () => {
   let calls = 0;
-  const subject = store(async (_resource, init) => {
+  const subject = store(async (resource, init) => {
     calls += 1;
+    if (isBucketRequest(resource)) return privateBucketResponse();
     if (init?.method === 'POST') {
       return new Response('already exists', { status: 409 });
     }
@@ -82,7 +102,7 @@ test('SupabaseDurableArtifactStore treats an identical existing object as an ide
 
   const result = await subject.write(input);
 
-  assert.equal(calls, 2);
+  assert.equal(calls, 4);
   assert.equal(result.byteLength, 11);
   assert.equal(
     result.sha256,
@@ -91,7 +111,8 @@ test('SupabaseDurableArtifactStore treats an identical existing object as an ide
 });
 
 test('SupabaseDurableArtifactStore refuses an immutable replay with different bytes', async () => {
-  const subject = store(async (_resource, init) => {
+  const subject = store(async (resource, init) => {
+    if (isBucketRequest(resource)) return privateBucketResponse();
     if (init?.method === 'POST') {
       return new Response('already exists', { status: 409 });
     }
@@ -107,6 +128,7 @@ test('SupabaseDurableArtifactStore refuses an immutable replay with different by
 test('SupabaseDurableArtifactStore reads private text artifacts with tenant-scoped references', async () => {
   let requestedUrl = '';
   const subject = store(async (resource, init) => {
+    if (isBucketRequest(resource)) return privateBucketResponse();
     requestedUrl = String(resource);
     assert.equal(init?.method, 'GET');
     return new Response('clinical note', { status: 200 });
@@ -130,6 +152,7 @@ test('SupabaseDurableArtifactStore reads private text artifacts with tenant-scop
 
 test('SupabaseDurableArtifactStore creates short-lived HTTPS provider fetch URLs', async () => {
   const subject = store(async (resource, init) => {
+    if (isBucketRequest(resource)) return privateBucketResponse();
     assert.ok(String(resource).includes('/storage/v1/object/sign/execution-artifacts/'));
     assert.equal(init?.method, 'POST');
     assert.deepEqual(JSON.parse(String(init?.body)), { expiresIn: 300 });
@@ -191,8 +214,9 @@ test('SupabaseDurableArtifactStore rejects cross-tenant artifact references befo
 
 test('SupabaseDurableArtifactStore recognizes Supabase duplicate 400 responses without accepting generic bad requests', async () => {
   let duplicateCalls = 0;
-  const duplicateStore = store(async (_resource, init) => {
+  const duplicateStore = store(async (resource, init) => {
     duplicateCalls += 1;
+    if (isBucketRequest(resource)) return privateBucketResponse();
     if (init?.method === 'POST') {
       return new Response('The resource already exists', { status: 400 });
     }
@@ -200,12 +224,13 @@ test('SupabaseDurableArtifactStore recognizes Supabase duplicate 400 responses w
   });
 
   const replay = await duplicateStore.write(input);
-  assert.equal(duplicateCalls, 2);
+  assert.equal(duplicateCalls, 4);
   assert.equal(replay.byteLength, 11);
 
   let malformedCalls = 0;
-  const malformedStore = store(async () => {
+  const malformedStore = store(async (resource) => {
     malformedCalls += 1;
+    if (isBucketRequest(resource)) return privateBucketResponse();
     return new Response('invalid bucket request', { status: 400 });
   });
 
@@ -213,7 +238,7 @@ test('SupabaseDurableArtifactStore recognizes Supabase duplicate 400 responses w
     malformedStore.write(input),
     /SUPABASE_STORAGE_UPLOAD_FAILED:400/,
   );
-  assert.equal(malformedCalls, 1);
+  assert.equal(malformedCalls, 2);
 });
 
 
@@ -325,4 +350,20 @@ test('governedSupabaseStorageAccessTokenProvider refuses missing storage capabil
     }),
     /SUPABASE_STORAGE_CONNECTOR_CAPABILITY_UNAVAILABLE/,
   );
+});
+
+
+test('SupabaseDurableArtifactStore refuses public buckets before object access', async () => {
+  let calls = 0;
+  const subject = store(async (resource) => {
+    calls += 1;
+    if (isBucketRequest(resource)) return privateBucketResponse(true);
+    return assert.fail('artifact object request must not run for a public bucket');
+  });
+
+  await assert.rejects(
+    subject.write(input),
+    /SUPABASE_STORAGE_PRIVATE_BUCKET_REQUIRED/,
+  );
+  assert.equal(calls, 1);
 });
