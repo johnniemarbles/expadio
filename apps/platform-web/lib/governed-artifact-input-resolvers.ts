@@ -1,62 +1,22 @@
-import type { AiInputResolver } from '@expadio/ai-gateway';
-import type { VoiceInputResolver } from '@expadio/voice-gateway';
+import {
+  DurableArtifactAiInputResolver,
+  type AiInputResolver,
+} from '@expadio/ai-gateway';
+import {
+  DurableArtifactVoiceInputResolver,
+  type VoiceInputResolver,
+} from '@expadio/voice-gateway';
 import type { DurableArtifactSource } from '@expadio/storage';
 
 export function governedArtifactAiInputResolver(
   source: DurableArtifactSource,
 ): AiInputResolver {
-  return {
-    async resolveText(input) {
-      const resolved = await source.readText({
-        tenantId: input.tenantId,
-        reference: input.reference,
-        purpose: input.purpose,
-        requiredResidencyTags: input.requiredResidencyTags,
-        requiredComplianceTags: input.requiredComplianceTags,
-      });
-      return {
-        content: resolved.content,
-        sourceReference: resolved.contentReference,
-      };
-    },
-  };
+  return new DurableArtifactAiInputResolver(source);
 }
 
 export function governedArtifactVoiceInputResolver(
   source: DurableArtifactSource,
   now: () => Date = () => new Date(),
 ): VoiceInputResolver {
-  return {
-    async resolveText(input) {
-      const resolved = await source.readText({
-        tenantId: input.tenantId,
-        reference: input.reference,
-        purpose: input.purpose,
-        requiredResidencyTags: input.requiredResidencyTags,
-        requiredComplianceTags: input.requiredComplianceTags,
-      });
-      return {
-        content: resolved.content,
-        sourceReference: resolved.contentReference,
-      };
-    },
-
-    async resolveProviderFetchUrl(input) {
-      const resolved = await source.issueProviderFetchUrl({
-        tenantId: input.tenantId,
-        reference: input.reference,
-        purpose: input.purpose,
-        requiredResidencyTags: input.requiredResidencyTags,
-        requiredComplianceTags: input.requiredComplianceTags,
-      });
-      const expiresAt = Date.parse(resolved.expiresAt);
-      if (!Number.isFinite(expiresAt) || expiresAt <= now().getTime()) {
-        throw new Error('VOICE_PROVIDER_FETCH_URL_EXPIRED');
-      }
-      return {
-        providerFetchUrl: resolved.providerFetchUrl,
-        sourceReference: resolved.contentReference,
-      };
-    },
-  };
+  return new DurableArtifactVoiceInputResolver(source, now);
 }
