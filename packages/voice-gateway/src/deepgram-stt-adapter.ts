@@ -7,6 +7,7 @@ import type {
   VoiceIntelligenceProvenance,
 } from "./index.ts";
 import type { VoiceProviderAdapter } from "./routing.ts";
+import type { VoiceInputResolver } from "./input-resolution.ts";
 
 export interface VoiceCredentialRequest {
   readonly tenantId: string;
@@ -22,6 +23,7 @@ export type VoiceApiTokenProvider = (request: VoiceCredentialRequest) => Promise
 export interface DeepgramSttAdapterOptions {
   readonly apiToken: VoiceApiTokenProvider;
   readonly artifactSink: DurableArtifactSink;
+  readonly inputResolver: VoiceInputResolver;
   readonly endpointBaseUrl?: string;
   readonly modelKey?: string;
   readonly fetchImpl?: typeof fetch;
@@ -32,6 +34,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
   readonly adapterKey = "deepgram-stt-v1";
   readonly #apiToken: VoiceApiTokenProvider;
   readonly #artifactSink: DurableArtifactSink;
+  readonly #inputResolver: VoiceInputResolver;
   readonly #endpointBaseUrl: string;
   readonly #modelKey: string;
   readonly #fetch: typeof fetch;
@@ -40,6 +43,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
   constructor(options: DeepgramSttAdapterOptions) {
     this.#apiToken = options.apiToken;
     this.#artifactSink = options.artifactSink;
+    this.#inputResolver = options.inputResolver;
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://api.deepgram.com/v1/listen").replace(/\/+$/u, "");
     this.#modelKey = options.modelKey ?? "nova-2";
     this.#fetch = options.fetchImpl ?? fetch;
@@ -70,6 +74,13 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       throw new Error("VOICE_CREDENTIAL_UNAVAILABLE: Leased token is empty");
     }
 
+    const resolvedInput = await this.#inputResolver.resolveProviderFetchUrl({
+      tenantId: intent.tenantId,
+      reference: intent.inputReference,
+      purpose: intent.purpose,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
     const url = `${this.#endpointBaseUrl}?model=${encodeURIComponent(this.#modelKey)}&language=${encodeURIComponent(intent.languageTag)}&smart_format=true&punctuate=true`;
 
     const response = await this.#fetch(url, {
@@ -80,7 +91,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
         "User-Agent": "expadio-voice-gateway/1.0",
       },
       body: JSON.stringify({
-        url: intent.inputReference,
+        url: resolvedInput.providerFetchUrl,
       }),
     });
 
@@ -128,7 +139,7 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
       modelKey: this.#modelKey,
-      sourceReferences: [intent.inputReference],
+      sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
       ...(durationMilliseconds !== undefined ? { audioDurationMilliseconds: durationMilliseconds } : {}),
