@@ -5,6 +5,9 @@ import {
   type MembershipContext,
 } from '@expadio/tenancy';
 
+export { loadScopeDirectory } from './scope-directory-store.ts';
+export type { ProductScopeBindingRepository } from './scope-directory-store.ts';
+
 export interface MembershipRepository {
   listActiveMemberships(identity: IdentityContext): Promise<readonly MembershipContext[]>;
 }

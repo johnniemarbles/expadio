@@ -13,6 +13,16 @@ export type VerifiedScopeBinding = {
   readonly operatingUnitId: string | null;
 };
 
+/** Row shape of platform.product_scope_bindings. Codes stay codes; UUIDs stay UUIDs. */
+export type ScopeBindingRow = {
+  readonly tenant_code: string;
+  readonly brand_code: string;
+  readonly location_code: string;
+  readonly tenant_id: string;
+  readonly organization_id: string;
+  readonly operating_unit_id: string | null;
+};
+
 export type ScopeDirectory = {
   resolve(scope: ShellScope): ShellScopeStorageKeys;
 };
@@ -25,6 +35,17 @@ function assertUuid(label: string, value: string): void {
 
 function keyOf(tenant: TenantCode, brand: BrandCode, location: LocationCode | 'all-permitted'): string {
   return tenant + '\0' + brand + '\0' + location;
+}
+
+export function bindingsFromPersistedRows(rows: readonly ScopeBindingRow[]): VerifiedScopeBinding[] {
+  return rows.map((row) => ({
+    tenant: parseTenantCode(row.tenant_code),
+    brand: parseBrandCode(row.brand_code),
+    location: row.location_code === 'ALL' ? 'all-permitted' : parseLocationCode(row.location_code),
+    tenantId: row.tenant_id,
+    organizationId: row.organization_id,
+    operatingUnitId: row.operating_unit_id,
+  }));
 }
 
 /**
@@ -86,4 +107,8 @@ export function createScopeDirectory(bindings: readonly VerifiedScopeBinding[]):
       };
     },
   };
+}
+
+export function createScopeDirectoryFromRows(rows: readonly ScopeBindingRow[]): ScopeDirectory {
+  return createScopeDirectory(bindingsFromPersistedRows(rows));
 }

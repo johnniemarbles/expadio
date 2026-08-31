@@ -11,7 +11,7 @@ audiences. Do not introduce a separate Brand scope or authorization engine.
 and role. Each context field is explicitly resolved or unresolved.
 
 | Field | Meaning | Mapping / authority boundary |
-|---|---|---|
+|---|---|
 | audience | Platform or Brand | Server-authorized audience; not a permission supplied by the client |
 | tenant | T-#### | Verified mapping to tenant_id; never manufacture from a UUID |
 | brand | B-#### | Verify owning tenant and organization; organization is not automatically a brand |
@@ -21,9 +21,9 @@ and role. Each context field is explicitly resolved or unresolved.
 | role | Verified role key and home profile | Presentation only; not permission or an action grant |
 
 Codes use the namespace prefix followed by at least four decimal digits. This
-contract neither allocates codes nor adds mapping tables. No actual T/B/L
-mapping has been verified in this read slice: leave it unresolved rather than
-invent one. An unresolved pack must not silently become the neutral pack.
+contract does not allocate codes. Persistence lives in
+`platform.product_scope_bindings` (migration 0088). An empty table is still
+unresolved mapping. An unresolved pack must not silently become the neutral pack.
 
 `ShellScopeStorageKeys` describes tenantId, organizationId and operatingUnitId
 behind the adapter. Existing account/org parameters remain compatibility inputs
@@ -57,6 +57,9 @@ routes or claim the current Platform nav has already been migrated. A future
 audience switch must reauthorize and clear prior audience data. Frontend labels,
 a shared session, a scope query parameter or removal of a link do not establish
 a server boundary.
+
+Brand customer reads are planned at `app.expadio.com` `/api/brand/customers`.
+They are not served yet. They must not call Platform `/api/tenant`.
 
 ## Integration gate — still open
 

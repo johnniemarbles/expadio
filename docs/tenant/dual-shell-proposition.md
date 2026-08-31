@@ -1,21 +1,20 @@
 # Dual-shell proposition — accepted shape
 
-Status: Brand shell + verified in-memory T/B/L directory on the draft branch. Not deployed. Not merged.
+Status: Brand shell + verified T/B/L directory, now persisted as `platform.product_scope_bindings` (0088) on the draft branch. Not deployed. Not merged.
 Hosts: `platform.expadio.com` (Platform), `app.expadio.com` (Brand).
 
 ## This increment
 
-- `createScopeDirectory(bindings)` is the shared adapter both shells call.
-- Bindings are explicit. A T-code never becomes a UUID by string transform.
-- Empty directory or missing row fails closed.
-- `all-permitted` does not satisfy a specific `L-####` view.
-- One T-code cannot map to two tenant ids in the same directory.
-- `apps/brand-web/package.json` was removed so CI frozen-lockfile stays valid. Brand runtime is `@expadio/tenancy` `brandWorkspace`.
+- Restored `memberships` on `ResolveEffectiveContextInput` (CI typecheck).
+- `0088_product_scope_bindings.sql` is the mapping table. Codes are not allocated.
+- `loadScopeDirectory` in `@expadio/tenancy-persistence` feeds `createScopeDirectoryFromRows`.
+- `planBrandCustomerRead` binds Home/Customers to `app.expadio.com` `/api/brand/customers` with `served: false`.
+- Brand reads refuse Platform `/api/tenant`.
+- Empty directory still fails closed. `ALL` still does not satisfy `L-####`.
 
 ## Still open
 
-1. Persist the directory in a real mapping table after a non-colliding migration review.
-2. Server-authorized Brand host.
-3. Brand-audience customer reads (not `/api/tenant` on Platform).
-4. Platform PII proof on URLs/APIs/errors/logs/caches.
-5. One Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE → observed delivery.
+1. Server-authorized Brand host that serves the reserved Brand route.
+2. Membership-checked Brand CRM reads on the mapped keys.
+3. Platform PII proof on URLs/APIs/errors/logs/caches.
+4. One Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE → observed delivery.
