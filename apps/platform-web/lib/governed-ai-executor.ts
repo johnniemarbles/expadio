@@ -32,13 +32,17 @@ import {
   PostgresConnectorCredentialRepository,
   PostgresProviderRegistryRepository,
 } from '@expadio/postgres-runtime/provider-registry';
+import {
+  PostgresIndexedDurableArtifactSink,
+} from '@expadio/postgres-runtime/indexed-artifact-sink';
 import type { DurableArtifactSink } from '@expadio/storage';
 import { delegatedSecretResolver } from './vault-secret-resolver';
 
 export interface GovernedAiExecutionRuntimeOptions {
   readonly serviceSubjectId: string;
   readonly organizationId: string;
-  readonly artifactSink: DurableArtifactSink;
+  /** Concrete durable blob/object sink; PostgreSQL indexing is added here. */
+  readonly artifactBlobSink: DurableArtifactSink;
   readonly inputResolver: AiInputResolver;
   readonly secretResolver?: SecretResolver;
   readonly fetchImpl?: typeof fetch;
@@ -153,6 +157,10 @@ export async function executePersistedGovernedAiAction(
     const secretResolver =
       input.options.secretResolver ?? delegatedSecretResolver;
 
+    const artifactSink = new PostgresIndexedDurableArtifactSink(
+      client,
+      input.options.artifactBlobSink,
+    );
     const adapters = new Map();
     for (const connector of connectors) {
       const token = governedApiTokenProvider({
@@ -174,7 +182,7 @@ export async function executePersistedGovernedAiAction(
           connector.connectorKey,
           new OpenAiAiAdapter({
             apiToken: token,
-            artifactSink: input.options.artifactSink,
+            artifactSink,
             inputResolver: input.options.inputResolver,
             ...(input.options.fetchImpl === undefined
               ? {}
@@ -190,7 +198,7 @@ export async function executePersistedGovernedAiAction(
           connector.connectorKey,
           new GeminiAiAdapter({
             apiToken: token,
-            artifactSink: input.options.artifactSink,
+            artifactSink,
             inputResolver: input.options.inputResolver,
             ...(input.options.fetchImpl === undefined
               ? {}
