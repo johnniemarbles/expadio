@@ -1,4 +1,5 @@
 import type { ConnectorDefinition } from "@expadio/provider-registry";
+import type { DurableArtifactSink } from "@expadio/storage";
 import type {
   AiInvocationIntent,
   AiProposal,
@@ -9,6 +10,7 @@ import type { AiApiTokenProvider } from "./gemini-adapter.ts";
 
 export interface OpenAiAiAdapterOptions {
   readonly apiToken: AiApiTokenProvider;
+  readonly artifactSink: DurableArtifactSink;
   readonly modelKey?: string;
   readonly endpointBaseUrl?: string;
   readonly fetchImpl?: typeof fetch;
@@ -18,6 +20,7 @@ export interface OpenAiAiAdapterOptions {
 export class OpenAiAiAdapter implements AiProviderAdapter {
   readonly adapterKey = "openai-v1";
   readonly #apiToken: AiApiTokenProvider;
+  readonly #artifactSink: DurableArtifactSink;
   readonly #defaultModelKey: string;
   readonly #endpointBaseUrl: string;
   readonly #fetch: typeof fetch;
@@ -25,6 +28,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
 
   constructor(options: OpenAiAiAdapterOptions) {
     this.#apiToken = options.apiToken;
+    this.#artifactSink = options.artifactSink;
     this.#defaultModelKey = options.modelKey ?? "gpt-4o-mini";
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://api.openai.com/v1").replace(/\/+$/u, "");
     this.#fetch = options.fetchImpl ?? fetch;
@@ -131,11 +135,22 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       costMinorUnits,
     };
 
+    const artifact = await this.#artifactSink.write({
+      tenantId: intent.tenantId,
+      artifactKind: "AI_TEXT",
+      sourceKind: "AI_INVOCATION",
+      sourceId: intent.invocationId,
+      content: generatedText,
+      contentType: "text/plain; charset=utf-8",
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+
     return {
       invocationId: intent.invocationId,
       tenantId: intent.tenantId,
       status: intent.operation === "EXTRACT" || intent.operation === "CLASSIFY" ? "PROPOSAL" : "OBSERVATION",
-      outputReference: `ref://ai-output/${intent.invocationId}#${encodeURIComponent(generatedText.slice(0, 120))}`,
+      outputReference: artifact.contentReference,
       confidence: 0.95,
       provenance,
     };
@@ -170,6 +185,18 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       throw new Error(`AI_PROVIDER_ERROR: OpenAI responded with status ${response.status}: ${errorText}`);
     }
 
+    const embeddingPayload = await response.json() as unknown;
+    const artifact = await this.#artifactSink.write({
+      tenantId: intent.tenantId,
+      artifactKind: "AI_EMBEDDING",
+      sourceKind: "AI_INVOCATION",
+      sourceId: intent.invocationId,
+      content: JSON.stringify(embeddingPayload),
+      contentType: "application/json",
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+
     const provenance: AiProvenance = {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
@@ -186,7 +213,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       invocationId: intent.invocationId,
       tenantId: intent.tenantId,
       status: "OBSERVATION",
-      outputReference: `ref://ai-embedding/${intent.invocationId}`,
+      outputReference: artifact.contentReference,
       confidence: 1.0,
       provenance,
     };
