@@ -8,7 +8,8 @@
 --   * Communication owns send. Connector gtm.email is seeded DISABLED.
 --   * Do not register gtm-email-lab-v1. Do not add SEND_OUTBOUND.
 --   * No second CRM: warm replies ingest as crm_leads.source = outbound_gtm
---     with raw_payload first.
+--     with raw_payload first. Source vocabulary is enforced in @expadio/lead,
+--     not as a CHECK on existing rows.
 --   * Decision Fabric gates publish/launch/meeting. No auto-approve.
 
 -- ---------------------------------------------------------------------------
@@ -16,13 +17,6 @@
 -- ---------------------------------------------------------------------------
 ALTER TABLE platform.crm_leads
   ADD COLUMN IF NOT EXISTS raw_payload jsonb NOT NULL DEFAULT '{}'::jsonb;
-
-ALTER TABLE platform.crm_leads
-  DROP CONSTRAINT IF EXISTS crm_leads_source_accepted;
-
-ALTER TABLE platform.crm_leads
-  ADD CONSTRAINT crm_leads_source_accepted
-  CHECK (source IS NULL OR source IN ('manual', 'web_form', 'outbound_gtm'));
 
 -- ---------------------------------------------------------------------------
 -- Subject tables (lab gtm_* → platform.gtm_*)
