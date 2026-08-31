@@ -130,6 +130,7 @@ implements DurableArtifactSink, DurableArtifactSource {
       `artifact.write:${input.artifactKind}`,
       input.sourceId,
     );
+    await this.#assertPrivateBucket(token);
     const response = await this.#fetch(this.#objectUrl(path), {
       method: 'POST',
       headers: {
@@ -209,6 +210,7 @@ implements DurableArtifactSink, DurableArtifactSource {
       input.purpose,
       input.reference,
     );
+    await this.#assertPrivateBucket(token);
     const response = await this.#fetch(this.#signUrl(path), {
       method: 'POST',
       headers: {
@@ -275,6 +277,7 @@ implements DurableArtifactSink, DurableArtifactSource {
       input.purpose,
       input.reference,
     );
+    await this.#assertPrivateBucket(token);
     const response = await this.#fetch(this.#authenticatedObjectUrl(path), {
       method: 'GET',
       headers: {
@@ -293,6 +296,31 @@ implements DurableArtifactSink, DurableArtifactSource {
       bytes: new Uint8Array(await response.arrayBuffer()),
       contentReference: this.#reference(path),
     };
+  }
+
+  async #assertPrivateBucket(token: string): Promise<void> {
+    const response = await this.#fetch(this.#bucketUrl(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: token,
+        'Cache-Control': 'no-store',
+      },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      throw new Error(
+        `SUPABASE_STORAGE_BUCKET_VERIFICATION_FAILED:${response.status}`,
+      );
+    }
+
+    const bucket = await response.json() as {
+      readonly id?: unknown;
+      readonly public?: unknown;
+    };
+    if (bucket.id !== this.#bucket || bucket.public !== false) {
+      throw new Error('SUPABASE_STORAGE_PRIVATE_BUCKET_REQUIRED');
+    }
   }
 
   async #token(
@@ -364,6 +392,10 @@ implements DurableArtifactSink, DurableArtifactSource {
     if (!compliance.every((tag) => this.#complianceTags.includes(tag))) {
       throw new Error('SUPABASE_STORAGE_COMPLIANCE_REQUIREMENT_UNSATISFIED');
     }
+  }
+
+  #bucketUrl(): string {
+    return `${this.#projectUrl}/storage/v1/bucket/${encodeURIComponent(this.#bucket)}`;
   }
 
   #objectUrl(path: string): string {
