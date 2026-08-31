@@ -19,6 +19,15 @@ export interface OpenAiAiAdapterOptions {
   readonly now?: () => string;
 }
 
+const SUPPORTED_OPERATIONS = new Set([
+  "GENERATE",
+  "CLASSIFY",
+  "SUMMARIZE",
+  "EXTRACT",
+  "EMBED",
+  "TRANSLATE",
+] as const);
+
 export class OpenAiAiAdapter implements AiProviderAdapter {
   readonly adapterKey = "openai-v1";
   readonly #apiToken: AiApiTokenProvider;
@@ -46,6 +55,10 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
     const { intent, connector } = input;
     const modelKey = this.#defaultModelKey;
     const processedAt = this.#now();
+
+    if (!SUPPORTED_OPERATIONS.has(intent.operation as never)) {
+      throw new Error(`AI_OPERATION_UNSUPPORTED:${intent.operation}`);
+    }
 
     const token = await this.#apiToken({
       tenantId: intent.tenantId,
