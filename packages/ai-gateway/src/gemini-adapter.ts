@@ -95,7 +95,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
   }): Promise<AiProposal> {
     const { intent, connector, modelKey, token, processedAt } = params;
 
-    const url = `${this.#endpointBaseUrl}/v1beta/models/${encodeURIComponent(modelKey)}:generateContent?key=${encodeURIComponent(token)}`;
+    const url = `${this.#endpointBaseUrl}/v1beta/models/${encodeURIComponent(modelKey)}:generateContent`;
 
     const resolvedInput = await this.#inputResolver.resolveText({
       tenantId: intent.tenantId,
@@ -136,6 +136,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Goog-Api-Key": token,
         "X-Goog-Api-Client": "expadio-ai-gateway/1.0",
       },
       body: JSON.stringify(requestBody),
@@ -225,7 +226,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
   }): Promise<AiProposal> {
     const { intent, connector, modelKey, token, processedAt } = params;
 
-    const url = `${this.#endpointBaseUrl}/v1beta/models/${encodeURIComponent(modelKey)}:embedContent?key=${encodeURIComponent(token)}`;
+    const url = `${this.#endpointBaseUrl}/v1beta/models/${encodeURIComponent(modelKey)}:embedContent`;
 
     const resolvedInput = await this.#inputResolver.resolveText({
       tenantId: intent.tenantId,
@@ -245,6 +246,8 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Goog-Api-Key": token,
+        "X-Goog-Api-Client": "expadio-ai-gateway/1.0",
       },
       body: JSON.stringify(requestBody),
     });
