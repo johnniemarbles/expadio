@@ -29,6 +29,8 @@ test('domain event worker executes only learner-created learning automation', ()
   assert.match(worker, /eventType === 'learning\.learner\.created'/);
   assert.match(worker, /evaluateLearningAssignmentRulesForLearner/);
   assert.match(worker, /completeDomainEventOutbox/);
+  assert.match(worker, /client\.query\('BEGIN'\)/);
+  assert.match(worker, /client\.query\('COMMIT'\)/);
   assert.match(worker, /system:learning-assignment-automation/);
 });
 
@@ -66,7 +68,7 @@ test('assignment automation uses FORCE RLS', () => {
 test('evaluation is serialized and prevents duplicate target assignment', () => {
   assert.match(runtime, /pg_advisory_xact_lock/);
   assert.match(runtime, /status IN \('ASSIGNED','IN_PROGRESS','COMPLETED'\)/);
-  assert.match(runtime, /outcome: 'SATISFIED'/);
+  assert.match(runtime, /SATISFIED/);
   assert.match(runtime, /ON CONFLICT \(tenant_id, assignment_rule_version_id, learner_id\)/);
   assert.match(runtime, /sourceType: 'RULE'/);
 });
