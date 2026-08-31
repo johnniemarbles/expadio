@@ -53,14 +53,22 @@ INSERT INTO platform.learning_course_versions (
 SELECT tenant_id, course_id, 1, 'PUBLISHED', 'Enrollment Smoke v1', 'en',
        '["Complete required learning"]'::jsonb,
        'smoke-admin', 'smoke-admin', 'smoke-admin', now()
-  FROM platform.learning_courses;
+  FROM platform.learning_courses
+ WHERE tenant_id IN (
+   '12121212-1212-4121-8121-121212121212'::uuid,
+   '34343434-3434-4343-8343-343434343434'::uuid
+ );
 
 INSERT INTO platform.learning_course_modules (
   tenant_id, course_version_id, module_key, title, position
 )
 SELECT tenant_id, course_version_id, 'required', 'Required', 1
   FROM platform.learning_course_versions
- WHERE version = 1;
+ WHERE version = 1
+   AND tenant_id IN (
+     '12121212-1212-4121-8121-121212121212'::uuid,
+     '34343434-3434-4343-8343-343434343434'::uuid
+   );
 
 INSERT INTO platform.learning_lessons (
   tenant_id, course_version_id, course_module_id, lesson_key, title,
@@ -68,7 +76,11 @@ INSERT INTO platform.learning_lessons (
 )
 SELECT tenant_id, course_version_id, course_module_id, 'lesson', 'Required lesson',
        'TEXT', 1, true, '{}'::jsonb
-  FROM platform.learning_course_modules;
+  FROM platform.learning_course_modules
+ WHERE tenant_id IN (
+   '12121212-1212-4121-8121-121212121212'::uuid,
+   '34343434-3434-4343-8343-343434343434'::uuid
+ );
 
 INSERT INTO platform.learning_learners (
   tenant_id, external_ref, full_name, audience_type, created_by_subject_id
