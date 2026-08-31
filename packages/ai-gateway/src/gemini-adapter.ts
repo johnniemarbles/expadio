@@ -25,7 +25,7 @@ export interface GeminiAiAdapterOptions {
   readonly now?: () => string;
 }
 
-const SUPPORTED_OPERATIONS = new Set([
+const SUPPORTED_OPERATIONS: ReadonlySet<AiInvocationIntent["operation"]> = new Set([
   "GENERATE",
   "CLASSIFY",
   "SUMMARIZE",
@@ -62,7 +62,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
     const modelKey = this.#defaultModelKey;
     const processedAt = this.#now();
 
-    if (!SUPPORTED_OPERATIONS.has(intent.operation as never)) {
+    if (!SUPPORTED_OPERATIONS.has(intent.operation)) {
       throw new Error(`AI_OPERATION_UNSUPPORTED:${intent.operation}`);
     }
 
