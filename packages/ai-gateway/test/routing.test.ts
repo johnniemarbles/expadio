@@ -132,3 +132,31 @@ test('fails closed when the provider reports cost over the ceiling', async () =>
       && error.code === 'AI_COST_LIMIT_EXCEEDED',
   );
 });
+
+
+test('fails closed when a declared AI cost ceiling has no cost evidence', async () => {
+  const adapter: AiProviderAdapter = {
+    async invoke({ connector }) {
+      const withCost = proposal(connector);
+      return {
+        ...withCost,
+        provenance: {
+          ...withCost.provenance,
+          costMinorUnits: undefined,
+          estimatedCostMinorUnits: undefined,
+        },
+      };
+    },
+  };
+  const gateway = new RoutedAiGateway({
+    connectors: [platformConnector],
+    adapters: new Map([['platform-ai', adapter]]),
+  });
+
+  await assert.rejects(
+    () => gateway.invoke(intent),
+    (error: unknown) =>
+      error instanceof RoutedAiGatewayError
+      && error.code === 'AI_COST_EVIDENCE_REQUIRED',
+  );
+});
