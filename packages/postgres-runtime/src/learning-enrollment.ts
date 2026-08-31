@@ -261,13 +261,7 @@ export async function createLearningEnrollment(
 
   const existing = await loadEnrollmentByAssignmentKey(client, input.tenantId, value.assignmentKey);
   if (existing !== null) {
-    if (
-      existing.learnerId !== value.learnerId
-      || existing.courseId !== value.courseId
-      || existing.sourceType !== value.sourceType
-      || existing.sourceRef !== value.sourceRef
-      || existing.dueAt !== value.dueAt
-    ) {
+    if (!enrollmentRequestMatches(existing, value)) {
       throw new Error('LEARNING_ASSIGNMENT_KEY_CONFLICT');
     }
     return { enrollment: existing, idempotent: true };
@@ -328,7 +322,12 @@ export async function createLearningEnrollment(
   } catch (error: any) {
     if (error?.code === '23505') {
       const replay = await loadEnrollmentByAssignmentKey(client, input.tenantId, value.assignmentKey);
-      if (replay !== null) return { enrollment: replay, idempotent: true };
+      if (replay !== null) {
+        if (!enrollmentRequestMatches(replay, value)) {
+          throw new Error('LEARNING_ASSIGNMENT_KEY_CONFLICT');
+        }
+        return { enrollment: replay, idempotent: true };
+      }
     }
     throw error;
   }
@@ -763,6 +762,23 @@ export async function loadMyLearningTranscript(
     completedAt: iso(row.completed_at),
     assignedAt: iso(row.assigned_at),
   }));
+}
+
+function enrollmentRequestMatches(
+  existing: LearningEnrollmentSummary,
+  requested: {
+    readonly learnerId: string;
+    readonly courseId: string;
+    readonly sourceType: EnrollmentSource;
+    readonly sourceRef: string | null;
+    readonly dueAt: string | null;
+  },
+): boolean {
+  return existing.learnerId === requested.learnerId
+    && existing.courseId === requested.courseId
+    && existing.sourceType === requested.sourceType
+    && existing.sourceRef === requested.sourceRef
+    && existing.dueAt === requested.dueAt;
 }
 
 async function resolveLearnerSubjectIssuer(
