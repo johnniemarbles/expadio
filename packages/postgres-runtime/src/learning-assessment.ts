@@ -3,12 +3,10 @@ import {
   LearningAssessmentValidationError,
   assertAssessmentPublishable,
   gradeQuestion,
-  publicQuestion,
   scorePercent,
   validateAssessmentDraft,
   validateQuestionDraft,
   type LearningAssessmentType,
-  type LearningQuestionDraft,
   type LearningQuestionType,
 } from '@expadio/learning';
 import type { PostgresClient } from './index.ts';
@@ -848,34 +846,62 @@ export async function startMyAssessmentAttempt(
     ? null
     : new Date(startedAt.getTime() + assessment.time_limit_seconds * 1000);
 
-  const inserted = await client.query<AttemptRow>(
-    `INSERT INTO platform.learning_assessment_attempts (
-       tenant_id, assessment_id, assessment_version_id, learner_id,
-       enrollment_id, course_version_id, attempt_key, attempt_number,
-       started_at, deadline_at
-     ) VALUES (
-       $1::uuid, $2::uuid, $3::uuid, $4::uuid,
-       $5::uuid, $6::uuid, $7, $8, $9, $10
-     )
-     RETURNING attempt_id, assessment_id, assessment_version_id, learner_id,
-               enrollment_id, course_version_id, attempt_key, attempt_number, status,
-               started_at, deadline_at, submitted_at, graded_at, score_points,
-               max_points, score_percent, passed`,
-    [
-      input.tenantId,
-      input.assessmentId,
-      assessment.assessment_version_id,
-      learnerId,
-      input.enrollmentId,
-      assessment.course_version_id,
-      input.attemptKey,
-      attemptNumber,
-      startedAt,
-      deadlineAt,
-    ],
-  );
-  const attempt = inserted.rows[0];
-  if (attempt === undefined) throw new Error('LEARNING_ASSESSMENT_ATTEMPT_INSERT_FAILED');
+  let attempt: AttemptRow;
+  try {
+    const inserted = await client.query<AttemptRow>(
+      `INSERT INTO platform.learning_assessment_attempts (
+         tenant_id, assessment_id, assessment_version_id, learner_id,
+         enrollment_id, course_version_id, attempt_key, attempt_number,
+         started_at, deadline_at
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, $4::uuid,
+         $5::uuid, $6::uuid, $7, $8, $9, $10
+       )
+       RETURNING attempt_id, assessment_id, assessment_version_id, learner_id,
+                 enrollment_id, course_version_id, attempt_key, attempt_number, status,
+                 started_at, deadline_at, submitted_at, graded_at, score_points,
+                 max_points, score_percent, passed`,
+      [
+        input.tenantId,
+        input.assessmentId,
+        assessment.assessment_version_id,
+        learnerId,
+        input.enrollmentId,
+        assessment.course_version_id,
+        input.attemptKey,
+        attemptNumber,
+        startedAt,
+        deadlineAt,
+      ],
+    );
+    const insertedAttempt = inserted.rows[0];
+    if (insertedAttempt === undefined) throw new Error('LEARNING_ASSESSMENT_ATTEMPT_INSERT_FAILED');
+    attempt = insertedAttempt;
+  } catch (error: any) {
+    if (error?.code !== '23505') throw error;
+
+    const raced = await client.query<AttemptRow>(
+      `SELECT attempt_id, assessment_id, assessment_version_id, learner_id,
+              enrollment_id, course_version_id, attempt_key, attempt_number, status,
+              started_at, deadline_at, submitted_at, graded_at, score_points,
+              max_points, score_percent, passed
+         FROM platform.learning_assessment_attempts
+        WHERE tenant_id = $1::uuid
+          AND attempt_key = $2
+        LIMIT 1`,
+      [input.tenantId, input.attemptKey],
+    );
+    const racedAttempt = raced.rows[0];
+    if (racedAttempt === undefined) throw error;
+    if (
+      racedAttempt.learner_id !== learnerId
+      || racedAttempt.assessment_id !== input.assessmentId
+      || racedAttempt.enrollment_id !== input.enrollmentId
+    ) {
+      throw new Error('LEARNING_ASSESSMENT_ATTEMPT_KEY_CONFLICT');
+    }
+    return loadAttemptProjection(client, input.tenantId, racedAttempt, true);
+  }
 
   await appendDomainEventWithOutbox(client, {
     event: {
