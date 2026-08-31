@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Northstar Dental — EXPADIO Brand Command Center</title>
+  <style>
+    :root {
+      --ink: #0b1016;
+      --ink-2: #121923;
+      --ink-3: #182230;
+      --line: rgba(232, 236, 242, 0.08);
+      --line-strong: rgba(232, 236, 242, 0.14);
+      --text: #e8ecf2;
+      --muted: #93a0b3;
+      --faint: #6b7789;
+      --brand: #2dd4bf;
+      --brand-2: #14b8a6;
+      --brand-soft: rgba(45, 212, 191, 0.12);
+      --gold: #e8c36a;
+      --gold-soft: rgba(232, 195, 106, 0.12);
+      --warn: #f59e0b;
+      --danger: #f87171;
+      --ok: #34d399;
+      --info: #7dd3fc;
+      --violet: #a78bfa;
+      --radius: 14px;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      --font: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--ink); color: var(--text); font-family: var(--font); }
+    button, select { font-family: inherit; }
+    a { color: inherit; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 248px 1fr;
+      min-height: 100vh;
+    }
+
+    .rail {
+      background: #0d141c;
+      border-right: 1px solid var(--line);
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 10px;
+    }
+    .mark-logo {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(145deg, #2dd4bf, #0f766e);
+      display: grid; place-items: center;
+      font-weight: 800; color: #04201c; letter-spacing: -0.04em;
+    }
+    .mark h1 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
+    .mark p { margin: 2px 0 0; font-size: 11px; color: var(--faint); }
+
+    .nav-group { display: flex; flex-direction: column; gap: 4px; }
+    .nav-label {
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--faint); padding: 8px 10px 4px;
+    }
+    .nav-btn {
+      appearance: none; border: 0; background: transparent; color: var(--muted);
+      text-align: left; padding: 9px 10px; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: 13.5px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+    .nav-btn.active { background: var(--brand-soft); color: var(--brand); }
+    .badge {
+      min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px;
+      background: #1f2a38; color: var(--text); font-size: 10px; display: grid; place-items: center;
+    }
+    .nav-btn.active .badge { background: rgba(45,212,191,0.22); color: var(--brand); }
+
+    .rail-foot {
+      margin-top: auto; padding: 12px 10px; border-top: 1px solid var(--line);
+      font-size: 11px; color: var(--faint); line-height: 1.45;
+    }
+
+    .main { display: flex; flex-direction: column; min-width: 0; }
+    .top {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; border-bottom: 1px solid var(--line);
+      background: rgba(11,16,22,0.88); position: sticky; top: 0; z-index: 8;
+      backdrop-filter: blur(12px);
+    }
+    .scope {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .crumb { color: var(--faint); font-size: 12px; }
+    .select {
+      background: var(--ink-3); color: var(--text); border: 1px solid var(--line-strong);
+      border-radius: 9px; padding: 7px 10px; font-size: 12.5px;
+    }
+    .top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .chip {
+      font-size: 11px; border: 1px solid var(--line-strong); background: var(--ink-3);
+      border-radius: 999px; padding: 5px 9px; color: var(--muted);
+    }
+    .chip.live { color: var(--ok); border-color: rgba(52,211,153,0.3); }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(145deg, #e8c36a, #b45309);
+      display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #1c1306;
+    }
+
+    .sample-banner {
+      margin: 16px 20px 0;
+      border: 1px solid rgba(232,195,106,0.28);
+      background: var(--gold-soft);
+      color: #f3e3b4;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+    }
+
+    .page { padding: 16px 20px 28px; display: none; }
+    .page.active { display: block; }
+
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 6px 0 16px; }
+    .page-head h2 { margin: 0; font-size: 22px; letter-spacing: -0.03em; }
+    .page-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+    .btn {
+      border: 1px solid var(--line-strong); background: var(--ink-3); color: var(--text);
+      border-radius: 10px; padding: 8px 12px; cursor: pointer; font-size: 13px;
+    }
+    .btn.primary { background: var(--brand); border-color: transparent; color: #04201c; font-weight: 650; }
+    .btn.ghost { background: transparent; }
+    .btn:hover { filter: brightness(1.08); }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+    .card {
+      background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 14px;
+    }
+    .kpi-label { font-size: 11px; color: var(--faint); letter-spacing: 0.06em; text-transform: uppercase; }
+    .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.04em; margin: 6px 0 2px; }
+    .kpi-meta { font-size: 12px; color: var(--muted); }
+    .up { color: var(--ok); }
+    .down { color: var(--danger); }
+
+    .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-top: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr; gap: 12px; margin-top: 12px; }
+    .section-title { margin: 0 0 12px; font-size: 14px; }
+    .row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      padding: 10px 0; border-top: 1px solid var(--line);
+    }
+    .row:first-of-type { border-top: 0; padding-top: 0; }
+    .row h4 { margin: 0 0 3px; font-size: 13.5px; font-weight: 600; }
+    .row p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .pill {
+      font-size: 10.5px; border-radius: 999px; padding: 3px 8px; white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .pill.review { background: rgba(245,158,11,0.14); color: #fbbf24; }
+    .pill.ready { background: rgba(45,212,191,0.14); color: var(--brand); }
+    .pill.hold { background: rgba(167,139,250,0.16); color: var(--violet); }
+    .pill.risk { background: rgba(248,113,113,0.14); color: var(--danger); }
+    .pill.info { background: rgba(125,211,252,0.12); color: var(--info); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 11px; color: var(--faint); font-weight: 600; padding: 8px 8px 10px; border-bottom: 1px solid var(--line); }
+    td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    tr:hover td { background: rgba(255,255,255,0.015); }
+    .linkish { color: var(--brand); cursor: pointer; background: none; border: 0; padding: 0; font-size: inherit; }
+
+    .flow {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .step {
+      flex: 1; min-width: 92px; background: var(--ink-3); border: 1px solid var(--line);
+      border-radius: 10px; padding: 8px; text-align: center;
+    }
+    .step strong { display: block; font-size: 12px; }
+    .step span { font-size: 10.5px; color: var(--faint); }
+    .step.now { border-color: rgba(45,212,191,0.45); background: var(--brand-soft); }
+
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; z-index: 20;
+    }
+    .drawer-backdrop.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; right: 0; width: min(460px, 100%); height: 100%;
+      background: #101821; border-left: 1px solid var(--line-strong);
+      padding: 22px; overflow: auto; box-shadow: var(--shadow);
+    }
+    .drawer h3 { margin: 0 0 6px; font-size: 18px; }
+    .drawer .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .kv { display: grid; grid-template-columns: 120px 1fr; gap: 8px 10px; font-size: 13px; margin: 14px 0 18px; }
+    .kv span { color: var(--faint); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .bars { display: flex; align-items: flex-end; gap: 8px; height: 92px; margin-top: 10px; }
+    .bar { flex: 1; background: linear-gradient(180deg, #2dd4bf, #115e59); border-radius: 6px 6px 2px 2px; opacity: 0.85; }
+    .legend { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); margin-top: 6px; }
+
+    @media (max-width: 1100px) {
+      .kpis, .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+      .rail { display: none; }
+      .kpis, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <div class="mark">
+        <div class="mark-logo">N</div>
+        <div>
+          <h1>Northstar Dental</h1>
+          <p>Brand workspace · DENTEX pack</p>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Operate</div>
+        <button class="nav-btn active" data-page="overview">Overview</button>
+        <button class="nav-btn" data-page="work">Work queue <span class="badge">7</span></button>
+        <button class="nav-btn" data-page="demand">Demand</button>
+        <button class="nav-btn" data-page="crm">CRM</button>
+        <button class="nav-btn" data-page="cases">Cases</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Grow</div>
+        <button class="nav-btn" data-page="gtm">AutoGTM</button>
+        <button class="nav-btn" data-page="social">Social studio <span class="badge">2</span></button>
+        <button class="nav-btn" data-page="comms">Communications</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Govern</div>
+        <button class="nav-btn" data-page="brain">Company Brain <span class="badge">3</span></button>
+        <button class="nav-btn" data-page="governance">Governance</button>
+      </div>
+
+      <div class="rail-foot">
+        Audience: Brand · Channel: Web<br />
+        Isolation: tenant + brand + layer<br />
+        Mutations only via Decision Fabric
+      </div>
+    </aside>
+
+    <section class="main">
+      <header class="top">
+        <div class="scope">
+          <span class="crumb">Aether Health</span>
+          <select class="select" aria-label="Brand">
+            <option selected>Brand · Northstar Dental</option>
+            <option disabled>Brand · Lumen Oral (sibling · hidden)</option>
+          </select>
+          <select class="select" aria-label="Layer">
+            <option>Layer · Brand HQ</option>
+            <option selected>Layer · India</option>
+            <option>Layer · Chandigarh cluster</option>
+            <option>Layer · Sector 9 unit</option>
+          </select>
+        </div>
+        <div class="top-right">
+          <span class="chip live">● Sample fixture</span>
+          <span class="chip">Vertical: DENTEX</span>
+          <div class="avatar" title="Priya Mehta, Brand Admin">PM</div>
+        </div>
+      </header>
+
+      <div class="sample-banner">
+        Sample Brand tenant dashboard. Sibling brand Lumen Oral is isolated. Fixture data is labelled and is not production truth.
+        Vocabulary is DENTEX pack labels over canonical CRM objects.
+      </div>
+
+      <!-- OVERVIEW -->
+      <div class="page active" id="overview">
+        <div class="page-head">
+          <div>
+            <h2>Command center</h2>
+            <p>What needs a human now, then the loops that already ran under policy.</p>
+          </div>
+          <div>
+            <button class="btn" onclick="go('work')">Open work queue</button>
+            <button class="btn primary" onclick="openDrawer('seq-aligners')">Review next decision</button>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="card">
+            <div class="kpi-label">Inbox needing you</div>
+            <div class="kpi-value">7</div>
+            <div class="kpi-meta">3 publish · 2 GTM · 2 brain</div>
+          </div>
+          <div class="card">
+            <div class="kpi-label">Demand captured · 7d</div>
+            <div class="kpi-value">46</div>
+            <div class="kpi-meta"><span class="up">+18%</span> vs prior week · HQ sees India + units</div>
+          </div>
+          <div class="card">
+            <div class="kpi-label">Pipeline value</div>
+            <div class="kpi-value">₹18.4L</div>
+            <div class="kpi-meta">11 qualified · 6 proposal</div>
+          </div>
+          <div class="card">
+            <div class="kpi-label">Deliverability · 7d</div>
+            <div class="kpi-value">98.4%</div>
+            <div class="kpi-meta">Bounce 0.6% · complaint 0.04%</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="section-title">Seamless loop in flight</h3>
+            <div class="flow">
+              <div class="step"><strong>Capture</strong><span>Web + GBP</span></div>
+              <div class="step"><strong>Score</strong><span>Fit 0.82</span></div>
+              <div class="step now"><strong>Decide</strong><span>SoD review</span></div>
+              <div class="step"><strong>Communicate</strong><span>Intent only</span></div>
+              <div class="step"><strong>CRM</strong><span>Lead / case</span></div>
+            </div>
+            <div class="row" style="margin-top:14px">
+              <div>
+                <h4>Aligner consult sequence</h4>
+                <p>Work type <code>gtm.sequence.publish</code> · maker Priya · waiting second authority</p>
+              </div>
+              <span class="pill review">SoD gate</span>
+            </div>
+            <div class="row">
+              <div>
+                <h4>Festival implant carousel</h4>
+                <p>Work type <code>social.content_publish</code> · approved · Communication intent queued</p>
+              </div>
+              <span class="pill ready">Intent queued</span>
+            </div>
+            <div class="row">
+              <div>
+                <h4>ICP refresh · Chandigarh professionals</h4>
+                <p>Work type <code>gtm.icp.publish</code> · Company Brain evidence attached</p>
+              </div>
+              <span class="pill hold">Unreviewed</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Today’s next actions</h3>
+            <div class="row">
+              <div>
+                <h4>Assign Sector 9 overflow</h4>
+                <p>4 NEW referrals with no unit owner · escalate to cluster</p>
+              </div>
+              <button class="btn" onclick="go('demand')">Route</button>
+            </div>
+            <div class="row">
+              <div>
+                <h4>Approve brain correction</h4>
+                <p>“After-hours WhatsApp is not a clinical channel” · evidence digest ready</p>
+              </div>
+              <button class="btn" onclick="openDrawer('brain-wa')">Review</button>
+            </div>
+            <div class="row">
+              <div>
+                <h4>Convert won consult</h4>
+                <p>Karan Joshi · QUALIFIED → onboarding case if converted</p>
+              </div>
+              <button class="btn" onclick="openDrawer('lead-karan')">Open</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="section-title">Capture by layer</h3>
+            <div class="bars">
+              <div class="bar" style="height:42%"></div>
+              <div class="bar" style="height:78%"></div>
+              <div class="bar" style="height:64%"></div>
+              <div class="bar" style="height:90%"></div>
+              <div class="bar" style="height:36%"></div>
+              <div class="bar" style="height:54%"></div>
+              <div class="bar" style="height:70%"></div>
+            </div>
+            <div class="legend"><span>Mon</span><span>Sun</span></div>
+            <p style="margin:10px 0 0;font-size:12px;color:var(--muted)">Visibility is downward from India. Action scope stays on membership units.</p>
+          </div>
+          <div class="card">
+            <h3 class="section-title">CRM stages</h3>
+            <div class="row"><div><h4>NEW</h4><p>Website, GBP, social reply ingest</p></div><strong>18</strong></div>
+            <div class="row"><div><h4>QUALIFIED</h4><p>Fit explained · owner assigned</p></div><strong>11</strong></div>
+            <div class="row"><div><h4>PROPOSAL</h4><p>Treatment plan case bound</p></div><strong>6</strong></div>
+            <div class="row"><div><h4>WON / LOST</h4><p>Convert writes thin @expadio/lead</p></div><strong>4 / 3</strong></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Health</h3>
+            <div class="row"><div><h4>Connectors</h4><p>Email, SMS, LinkedIn, Meta Page</p></div><span class="pill ready">Bound</span></div>
+            <div class="row"><div><h4>WhatsApp clinical</h4><p>Entitlement off · policy veto</p></div><span class="pill risk">Blocked</span></div>
+            <div class="row"><div><h4>Agent runtime</h4><p>OBSERVE / PROPOSE only</p></div><span class="pill info">Governed</span></div>
+            <div class="row"><div><h4>Residency</h4><p>IN inherited to units</p></div><span class="pill ready">IN</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORK QUEUE -->
+      <div class="page" id="work">
+        <div class="page-head">
+          <div>
+            <h2>Work queue</h2>
+            <p>Decision Fabric items in this brand scope. Maker cannot approve their own work.</p>
+          </div>
+        </div>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Work type</th><th>Subject</th><th>Layer</th><th>Maker</th><th>State</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>gtm.sequence.publish</code></td>
+                <td>Aligner consult · 4-touch</td>
+                <td>India</td>
+                <td>Priya Mehta</td>
+                <td><span class="pill review">Awaiting authority</span></td>
+                <td><button class="linkish" onclick="openDrawer('seq-aligners')">Open</button></td>
+              </tr>
+              <tr>
+                <td><code>social.content_publish</code></td>
+                <td>Festival implant carousel</td>
+                <td>Brand HQ</td>
+                <td>Arun Shah</td>
+                <td><span class="pill ready">Approved → intent</span></td>
+                <td><button class="linkish" onclick="go('social')">Studio</button></td>
+              </tr>
+              <tr>
+                <td><code>gtm.icp.publish</code></td>
+                <td>Chandigarh professionals v3</td>
+                <td>Chandigarh</td>
+                <td>Agent · GTM</td>
+                <td><span class="pill hold">Proposal</span></td>
+                <td><button class="linkish" onclick="go('gtm')">Open</button></td>
+              </tr>
+              <tr>
+                <td><code>brain.correction.publish</code></td>
+                <td>After-hours channel policy</td>
+                <td>Brand HQ</td>
+                <td>Agent · Brain</td>
+                <td><span class="pill review">Human review</span></td>
+                <td><button class="linkish" onclick="openDrawer('brain-wa')">Open</button></td>
+              </tr>
+              <tr>
+                <td><code>crm.lead.convert</code></td>
+                <td>Karan Joshi · consult won</td>
+                <td>Sector 9</td>
+                <td>Neha Kapoor</td>
+                <td><span class="pill info">Ready</span></td>
+                <td><button class="linkish" onclick="openDrawer('lead-karan')">Open</button></td>
+              </tr>
+              <tr>
+                <td><code>case.stage.advance</code></td>
+                <td>Onboarding · Asha Reddy</td>
+                <td>Sector 9</td>
+                <td>Front desk</td>
+                <td><span class="pill review">Participant slot empty</span></td>
+                <td><button class="linkish" onclick="go('cases')">Assign</button></td>
+              </tr>
+              <tr>
+                <td><code>gtm.campaign.launch</code></td>
+                <td>Implant awareness · Sep</td>
+                <td>India</td>
+                <td>Priya Mehta</td>
+                <td><span class="pill hold">Quota check</span></td>
+                <td><button class="linkish" onclick="go('comms')">Caps</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DEMAND -->
+      <div class="page" id="demand">
+        <div class="page-head">
+          <div>
+            <h2>Demand capture</h2>
+            <p>Multi-source engine. Capture history is kept. Thin CRM lead is a projection, not a replacement.</p>
+          </div>
+          <button class="btn">New capture ticket</button>
+        </div>
+        <div class="kpis">
+          <div class="card"><div class="kpi-label">Unassigned</div><div class="kpi-value">4</div><div class="kpi-meta">Escalate to Chandigarh cluster</div></div>
+          <div class="card"><div class="kpi-label">Median time to owner</div><div class="kpi-value">11m</div><div class="kpi-meta">P8 parent fallback on</div></div>
+          <div class="card"><div class="kpi-label">Duplicate merges</div><div class="kpi-value">6</div><div class="kpi-meta">Identity graph · brand scoped</div></div>
+          <div class="card"><div class="kpi-label">Sources live</div><div class="kpi-value">5</div><div class="kpi-meta">Web, GBP, Meta, LI, walk-in</div></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <table>
+            <thead><tr><th>Person</th><th>Source / layer</th><th>Fit</th><th>Owner</th><th>Stage</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Karan Joshi</td><td>Website · Sector 9</td><td>0.91 aligners</td><td>Neha Kapoor</td>
+                <td><span class="pill ready">QUALIFIED</span></td>
+                <td><button class="linkish" onclick="openDrawer('lead-karan')">Convert</button></td>
+              </tr>
+              <tr>
+                <td>Simran Kaur</td><td>GBP · unassigned</td><td>0.74 implants</td><td>—</td>
+                <td><span class="pill review">NEW</span></td>
+                <td><button class="linkish">Assign cluster</button></td>
+              </tr>
+              <tr>
+                <td>Rahul Nair</td><td>Social reply ingest · India</td><td>0.66 whitening</td><td>Queue · India inbound</td>
+                <td><span class="pill info">NEW</span></td>
+                <td><button class="linkish">Score explain</button></td>
+              </tr>
+              <tr>
+                <td>Asha Reddy</td><td>Partner referral · Sector 9</td><td>0.88 ortho</td><td>Dr. Banerjee</td>
+                <td><span class="pill hold">PROPOSAL</span></td>
+                <td><button class="linkish" onclick="go('cases')">Case</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CRM -->
+      <div class="page" id="crm">
+        <div class="page-head">
+          <div>
+            <h2>CRM · DENTEX vocabulary</h2>
+            <p>Canonical objects stay accounts / contacts / leads / cases / agreements. Pack only relabels.</p>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="section-title">Practices (accounts)</h3>
+            <div class="row"><div><h4>Northstar Sector 9</h4><p>UNIT · 14 active patients this week</p></div><span class="pill ready">Open</span></div>
+            <div class="row"><div><h4>Northstar Sector 22</h4><p>UNIT · 2 unassigned referrals</p></div><span class="pill review">Watch</span></div>
+            <div class="row"><div><h4>Northstar India HQ</h4><p>COUNTRY · downward visibility</p></div><span class="pill info">HQ</span></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Patients (contacts)</h3>
+            <div class="row"><div><h4>Karan Joshi</h4><p>Mobile +91 · consent SMS yes</p></div></div>
+            <div class="row"><div><h4>Asha Reddy</h4><p>Care plan draft bound to case</p></div></div>
+            <div class="row"><div><h4>Simran Kaur</h4><p>Identity pending OTP</p></div></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Agreements</h3>
+            <div class="row"><div><h4>Aligner plan · Karan</h4><p>DRAFT · source_lead_id set</p></div><span class="pill hold">Draft</span></div>
+            <div class="row"><div><h4>Implant package · Asha</h4><p>ACTIVE · 11 months left</p></div><span class="pill ready">Active</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASES -->
+      <div class="page" id="cases">
+        <div class="page-head">
+          <div>
+            <h2>Cases + Decision Fabric</h2>
+            <p>A case carries blueprint_key, workflow_instance_id and stage_key. Advance is gated.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div>
+              <h4>Onboarding · Asha Reddy</h4>
+              <p>Blueprint <code>dentex.care_plan.onboard</code> · stage CONSULT_REVIEW · participant slot: treating dentist empty</p>
+              <div class="flow" style="margin-top:10px">
+                <div class="step"><strong>INTAKE</strong><span>done</span></div>
+                <div class="step now"><strong>CONSULT</strong><span>needs dentist</span></div>
+                <div class="step"><strong>PLAN</strong><span></span></div>
+                <div class="step"><strong>ACTIVE</strong><span></span></div>
+              </div>
+            </div>
+            <button class="btn primary">Assign dentist</button>
+          </div>
+          <div class="row">
+            <div>
+              <h4>Referral follow-up · Simran Kaur</h4>
+              <p>Cannot advance: no recorded stage decision · SoD would also block maker-as-approver</p>
+            </div>
+            <span class="pill review">Blocked</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GTM -->
+      <div class="page" id="gtm">
+        <div class="page-head">
+          <div>
+            <h2>AutoGTM</h2>
+            <p>website → dossier → ICP → prospects → fit → sequence → Decision Fabric → Communication intent → reply → lead</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="section-title">Brand dossier</h3>
+            <p style="margin:0 0 10px;color:var(--muted);font-size:13px">Northstar Dental · premium family + implant + aligner. Markets: Chandigarh, Mohali. Not a second CRM.</p>
+            <div class="row"><div><h4>ICP v3 proposal</h4><p>Working professionals 28–44 · implant intent language</p></div><span class="pill hold">gtm.icp.publish</span></div>
+            <div class="row"><div><h4>Observed prospects</h4><p>126 in India layer · 31 explainable fit ≥ 0.75</p></div></div>
+            <div class="row"><div><h4>Sequence draft</h4><p>Email + LinkedIn text · no auto-approve</p></div><button class="btn" onclick="openDrawer('seq-aligners')">Review</button></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Optimize proposals</h3>
+            <div class="row"><div><h4>Subject line B</h4><p>Reply observe +12% on consult CTA · still a proposal</p></div><span class="pill info">Observe</span></div>
+            <div class="row"><div><h4>Meeting request</h4><p>Work type <code>gtm.meeting_request</code> · 3 pending</p></div></div>
+            <p style="font-size:12px;color:var(--faint);margin:12px 0 0">Agent may propose. Publication is a configuration changeset after human approval.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOCIAL -->
+      <div class="page" id="social">
+        <div class="page-head">
+          <div>
+            <h2>Social studio</h2>
+            <p>Send is a Communication connector. Studio never publishes after APPROVED — it builds an intent.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="section-title">Calendar · this week</h3>
+            <div class="row"><div><h4>Tue · Festival implant carousel</h4><p>LinkedIn + Meta Page · APPROVED · intent queued</p></div><span class="pill ready">Queued</span></div>
+            <div class="row"><div><h4>Thu · Hygienist hiring clip</h4><p>Work type social.content_publish · draft</p></div><span class="pill review">Needs SoD</span></div>
+            <div class="row"><div><h4>Sat · GBP offer</h4><p>Blocked: offer copy not in approved Brain Map</p></div><span class="pill risk">Policy</span></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Channel bindings</h3>
+            <div class="row"><div><h4>LinkedIn Company</h4><p>Text adapter · brand credential lease</p></div><span class="pill ready">On</span></div>
+            <div class="row"><div><h4>Meta Page</h4><p>Text + image · India layer</p></div><span class="pill ready">On</span></div>
+            <div class="row"><div><h4>X / Instagram / YouTube</h4><p>Registered disabled until COMMUNICATE proven</p></div><span class="pill hold">Lab</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMMS -->
+      <div class="page" id="comms">
+        <div class="page-head">
+          <div>
+            <h2>Communications</h2>
+            <p>Unified control plane. No module owns its own transport, routing or delivery tracking.</p>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="card"><div class="kpi-label">Sent · 7d</div><div class="kpi-value">1,284</div><div class="kpi-meta">Email 71% · SMS 22% · social 7%</div></div>
+          <div class="card"><div class="kpi-label">Suppressed</div><div class="kpi-value">19</div><div class="kpi-meta">Consent pack · IN DPDP</div></div>
+          <div class="card"><div class="kpi-label">Spend cap used</div><div class="kpi-value">34%</div><div class="kpi-meta">India monthly SMS cap</div></div>
+          <div class="card"><div class="kpi-label">Failed intents</div><div class="kpi-value">2</div><div class="kpi-meta">Provider timeout · retried</div></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <h3 class="section-title">Inbox</h3>
+          <div class="row"><div><h4>Reply · Karan Joshi</h4><p>“Can I come Thursday 6pm?” · ingested to demand + conversation</p></div><button class="btn" onclick="openDrawer('lead-karan')">Attach lead</button></div>
+          <div class="row"><div><h4>Bounce · cluster campaign</h4><p>2 addresses · complaint rate still under pack bound</p></div><span class="pill info">Tracked</span></div>
+        </div>
+      </div>
+
+      <!-- BRAIN -->
+      <div class="page" id="brain">
+        <div class="page-head">
+          <div>
+            <h2>Company Brain</h2>
+            <p>Unreviewed proposals never enter an executable context bundle.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="section-title">Correction queue</h3>
+            <div class="row">
+              <div>
+                <h4>After-hours WhatsApp is not clinical</h4>
+                <p>Source digest · jurisdiction IN · routed to Decision Fabric</p>
+              </div>
+              <button class="btn primary" onclick="openDrawer('brain-wa')">Review</button>
+            </div>
+            <div class="row">
+              <div>
+                <h4>Aligner eligibility copy v2</h4>
+                <p>Conflicts with published care-plan policy</p>
+              </div>
+              <span class="pill risk">Conflict</span>
+            </div>
+            <div class="row">
+              <div>
+                <h4>Sector 22 parking note</h4>
+                <p>Operational fact · low classification</p>
+              </div>
+              <span class="pill info">Ready</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Precedence in force</h3>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.55">
+              1 Platform safety<br />
+              2 IN jurisdiction / DPDP<br />
+              3 Northstar tenant policy<br />
+              4 Approved ADRs and decisions<br />
+              5 Live operational state<br />
+              6 Verified facts<br />
+              7 Approved skills / workers<br />
+              8 Unreviewed proposals — review only
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOVERNANCE -->
+      <div class="page" id="governance">
+        <div class="page-head">
+          <div>
+            <h2>Governance</h2>
+            <p>UI explains denials. Server decides. Every sensitive action keeps a correlation id.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row"><div><h4>Denied · enable WhatsApp clinical</h4><p>stage ENTITLEMENT · reasonKey entitlement.missing · corr DF-18422</p></div><span class="pill risk">Denied</span></div>
+          <div class="row"><div><h4>Denied · approve own sequence</h4><p>stage SOD · reasonKey sod.maker_cannot_approve · corr DF-18401</p></div><span class="pill risk">Denied</span></div>
+          <div class="row"><div><h4>Allowed · view Sector 22 referrals</h4><p>visibilityScope includes unit · actionScope does not allow convert</p></div><span class="pill info">Read only</span></div>
+          <div class="row"><div><h4>Audit</h4><p>Last 24h · 128 governed actions · 6 denials · 3 publications</p></div><button class="btn">Export trail</button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer" onclick="if(event.target.id==='drawer') closeDrawer()">
+    <aside class="drawer" role="dialog" aria-modal="true">
+      <div id="drawer-body"></div>
+    </aside>
+  </div>
+
+  <script>
+    const pages = document.querySelectorAll('.page');
+    const navs = document.querySelectorAll('.nav-btn');
+    function go(id) {
+      pages.forEach(p => p.classList.toggle('active', p.id === id));
+      navs.forEach(n => n.classList.toggle('active', n.dataset.page === id));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    navs.forEach(n => n.addEventListener('click', () => go(n.dataset.page)));
+
+    const drawers = {
+      'seq-aligners': {
+        title: 'Aligner consult sequence',
+        meta: 'gtm.sequence.publish · India layer · Decision Fabric',
+        kv: [
+          ['Maker', 'Priya Mehta (cannot approve)'],
+          ['Authority needed', 'Brand Admin other than maker'],
+          ['Channels', 'Email + LinkedIn text'],
+          ['After APPROVED', 'Build Communication intent — no local sender'],
+          ['Evidence', 'ICP v3 digest · Brain Map slice gtm.outbound'],
+          ['Correlation', 'DF-18401']
+        ],
+        body: 'Four touches over nine days. Reply ingest writes demand-capture history, then projects a thin CRM lead if identity resolves.',
+        actions: true
+      },
+      'lead-karan': {
+        title: 'Karan Joshi',
+        meta: 'Demand capture + CRM projection · Sector 9',
+        kv: [
+          ['Capture sources', 'Website form + SMS reply'],
+          ['Fit', '0.91 · aligners · explainable features on file'],
+          ['CRM stage', 'QUALIFIED'],
+          ['Convert effect', 'WON + CUSTOMER account + optional onboarding case'],
+          ['History', 'Kept in lead-management · not deleted on convert'],
+          ['Correlation', 'LD-99211']
+        ],
+        body: 'Convert is a governed command. UI only requests it. Authorization + SoD + entitlement run on the server.',
+        actions: true
+      },
+      'brain-wa': {
+        title: 'After-hours channel policy',
+        meta: 'brain.correction.publish · unreviewed proposal',
+        kv: [
+          ['Claim', 'WhatsApp after 21:00 is not a clinical channel'],
+          ['Precedence', 'IN jurisdiction + tenant policy beat the draft skill'],
+          ['May enter context?', 'No — unreviewed'],
+          ['On accept', 'Business configuration changeset → re-index slices'],
+          ['Correlation', 'CB-44109']
+        ],
+        body: 'Accepting this will block Saturday GBP offer copy that implied clinical advice over WhatsApp.',
+        actions: true
+      }
+    };
+
+    function openDrawer(key) {
+      const d = drawers[key];
+      const kv = d.kv.map(([k,v]) => `<span>${k}</span><div>${v}</div>`).join('');
+      document.getElementById('drawer-body').innerHTML = `
+        <h3>${d.title}</h3>
+        <div class="meta">${d.meta}</div>
+        <p style="font-size:14px;line-height:1.5;color:var(--text)">${d.body}</p>
+        <div class="kv">${kv}</div>
+        <div class="actions">
+          <button class="btn primary" onclick="closeDrawer()">Approve as authority</button>
+          <button class="btn" onclick="closeDrawer()">Return with comment</button>
+          <button class="btn ghost" onclick="closeDrawer()">Close</button>
+        </div>
+        <p style="margin-top:16px;font-size:12px;color:var(--faint)">Sample only. Live Brand app would POST the Decision Fabric command and show the audit reference returned by the API.</p>
+      `;
+      document.getElementById('drawer').classList.add('open');
+    }
+    function closeDrawer() {
+      document.getElementById('drawer').classList.remove('open');
+    }
+  </script>
+</body>
+</html>
+

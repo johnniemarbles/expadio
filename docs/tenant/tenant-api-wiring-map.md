@@ -1,54 +1,36 @@
-# Tenant API Wiring Map
+# Tenant API wiring — implemented read slice
 
-Branch: feat/tenant-product-foundation
+All routes below require a Clerk session and exactly one UUID `account` (tenant)
+and `org` query parameter. Headers and last-used cookies are not authorization.
+All responses are `private, no-store`. The read transaction applies tenant, org
+and subject context before the exact active-membership check and business reads.
 
-## Existing read surfaces
-
-| Tenant need | Current route | Current limitation |
+| Route | Result | Existing persistence |
 |---|---|---|
-| Workspace context | GET /api/context | Platform organization model; tenant language still needed |
-| Overview | GET /api/overview?organizationId= | Composed platform overview; not yet tenant Home contract |
-| Customers / practices | GET /api/crm/accounts, GET /api/crm/contacts | DENTEX-oriented labels and no shared customer record |
-| Communications | GET /api/communications/overview, providers, templates, fleet, spend | Strong platform control-plane data; tenant-safe presentation must hide custody details |
-| Governance | GET /api/governance/reviews?organizationId= | Review data exists; action-specific tenant command contract required |
-| Brain / knowledge | GET /api/brain/* | Proposal/evidence surfaces exist; tenant navigation should use business language |
-| Scheduler health | GET /api/scheduler/health | Health evidence only; not a tenant follow-up schedule API |
+| `GET /api/tenant/context` | Verified brand/org names and `read-only` access | tenants, organizations, memberships |
+| `GET /api/tenant/customers?account=&org=&limit=&offset=` | `{items, hasMore}` | crm_contacts + crm_accounts |
+| `GET /api/tenant/customers/:id?account=&org=` | customer, cases, tasks, decisions, truncation flags | canonical CRM, operational_tasks, workflow_stage_decisions |
+| `GET /api/tenant/work?account=&org=&limit=&offset=` | `{items, hasMore}` of case-linked tasks | operational_tasks + verified case/customer/account joins |
 
-## Missing neutral tenant contract
+List limits default to 50, maximum 100; offset is 0–10000. Detail child sections
+are capped at 100 and report truncation. There is no claim of complete queue totals.
 
-GET /api/tenant/home?account=&org=&location=
+Read policy: active exact issuer-bound user membership, active tenant/org, valid
+membership window, ALL workspace and operating-unit scopes. Selected scopes are
+denied until CRM has verified finer-grained ownership. Unknown, unowned or
+archived customers are not disclosed. A missing/out-of-scope detail is 404.
 
-GET /api/tenant/work?account=&org=&location=&tab=
+The decision read also checks workflow subject type `crm.case` and exact case ID.
+The task read accepts only the proven `crm.case` aggregate contract. Raw provider
+payloads, actor identifiers, credentials, internal errors and audit correlation
+metadata are not returned by these reads.
 
-GET /api/tenant/customers?account=&org=&location=
+## Not implemented / no enabled controls
 
-GET /api/tenant/customers/:id
+Home aggregate counts; server-side work-tab filtering; approvals and exceptions;
+task assignment/completion; follow-up/review/schedule/send commands; customer
+communication and document reads; role homes; authorized brand/location selector.
+These are build work, not absent backend claims. Reuse canonical services when
+their complete tenant-safe journey has been verified.
 
-GET /api/tenant/customers/:id/activity
-
-GET /api/tenant/customers/:id/work
-
-GET /api/tenant/customers/:id/communications
-
-GET /api/tenant/customers/:id/documents
-
-GET /api/tenant/customers/:id/decisions
-
-## Missing command contract
-
-POST /api/tenant/work/:id/request-review
-POST /api/tenant/work/:id/approve
-POST /api/tenant/work/:id/request-changes
-POST /api/tenant/follow-ups
-POST /api/tenant/follow-ups/:id/schedule
-POST /api/tenant/communications/:id/reconcile
-
-Every command must re-check membership, visibility scope, action scope, entitlement, SoD and idempotency. Responses must return a persisted status and correlation/audit reference.
-
-## Build boundary
-
-The /tenant model workspace currently uses fixture data to validate UX. It must not be relabeled live until these tenant-safe APIs exist and the end-to-end neutral follow-up path proves:
-
-case event → follow-up → review → schedule → queue → provider outcome → customer activity.
-
-DENTEX can then consume the same contract with vertical-specific labels and workflow rules.
+See [the feature map](../tenant-feature-map.md) for evidence and remaining gates.

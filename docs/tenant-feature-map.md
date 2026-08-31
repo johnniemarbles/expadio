@@ -1,78 +1,89 @@
-# EXPADIO Tenant Feature Map
+# Tenant feature map — brand-neutral foundation
 
-Status: build-gate draft, grounded in the locked tenant product thesis and the available platform audit history. Repository/API verification is required before implementation because the current workspace contains only the directional HTML prototype.
+Verified against branch `feat/tenant-product-foundation`, starting at `8a8c262`.
+This supersedes the earlier prototype-only map. The first operating product is
+brand-neutral; Northstar Services is an explicitly read-only model, not a seeded
+production tenant. DENTEX is a later vertical extension of the same work system.
 
-## Product contract
+The brand runs its business through connected work. EXPADIO executes, governs,
+isolates and owns providers underneath. Home answers only: what needs me, what
+is happening, what the system already finished.
 
-The brand runs the business through connected work. EXPADIO executes, governs, isolates and owns providers underneath. Tenant UI must expose only verified capabilities, enforce view scope separately from action scope, and use business language by default.
+## Build gate
 
-## Surface map
+**Ready** means the bounded implementation below is covered by local checks,
+not deployed or fully authenticated-browser verified. **Partial** means part of
+the read path exists but the product journey remains incomplete. **Planned**
+means no tenant action is enabled. **Platform-only** must not enter tenant UI.
 
-| Tenant surface | Existing backend foundation | Tenant-safe API required | Primary permission/scope | UI journey | Status |
-|---|---|---|---|---|---|
-| Home | Health/read models, CRM, work/decision data, communication outcomes | `GET /tenant/home` composed read model | Tenant membership; visibility scope; role-shaped cards | Needs me → happening → completed → open work | Partial |
-| My work | Governed actions, tasks, approvals, recovery/health signals | Queue query + task/approval command endpoints | Assigned/team queue; maker/approver SoD | My tasks / approvals / team / overdue / exceptions | Partial |
-| Customers | Party, lead, case, agreement CRM objects | Unified customer list/detail/activity APIs | Brand + permitted locations; action scope per command | Customer → Overview / Activity / Tasks / Communications / Documents / Decisions | Partial |
-| Communications | Delivery, provider registry, credentials, webhooks, traces | Tenant delivery/read APIs; sender/template configuration APIs | Tenant entitlement; recipient/brand scope; platform-owned provider custody | Schedule → review → queued → sent → delivered/failed | Partial |
-| Growth | Capture websites/forms, campaigns, AutoGTM/social proposals | Verified capability-specific APIs only | Feature entitlement + scope + approval policy | Capture sources and approved growth workflows | Platform-only / planned |
-| Knowledge & AI | AI gateway, knowledge, agent runtime, trace/evidence surfaces | Tenant-safe evidence/proposal/review APIs | Read/write knowledge policy; proposals cannot execute | Evidence → proposal → review → approved context | Partial |
-| Business settings | Business config, roles, locations, workflows, sender/domain model | Tenant configuration APIs | Tenant admin; no provider credential ownership | Team, locations, capabilities, domains, senders, templates, workflows | Partial |
-| DENTEX care plans | DENTEX clinical model, extraction/care-plan work | Case/care-plan/discharge APIs | Clinical role + location + governed transitions | Care plan → discharge → scheduled follow-up → review task → communication outcome | Partial; first verified path |
+| Surface | Existing backend → tenant-safe API | Permission / scope | UI journey | Evidence / status |
+|---|---|---|---|---|
+| Tenant shell | Clerk identity + `memberships`, `tenants`, `organizations` → `GET /api/tenant/context` | Exact active issuer-bound membership; active brand/org; valid membership window; unrestricted workspace and location read scope | Separate `/tenant` shell → verified brand/org names; scope carried on every link/read | Partial: shell ready; authorized selector, setup and role homes planned |
+| Customers | `crm_contacts` joined to `crm_accounts.organization_id` → `GET /api/tenant/customers` | Tenant RLS + explicit organization join; exclude archived and unowned records | Paged list → one shared customer record | Ready, read-only; unit, database-engine and mounted-DOM checks |
+| Overview | Customer + `crm_cases` → `GET /api/tenant/customers/:id` | Same scope; reject inconsistent case/account relationships | Customer details → connected cases | Ready, read-only; missing/cross-scope record returns 404 |
+| Activity | Persisted customer, case, task and decision timestamps in customer detail | Same scoped children | Chronological record summary | Partial: explicitly not a full audit log |
+| Tasks | `operational_tasks` → verified `crm.case` aggregate → scoped case/contact/account → work/detail API | Active org membership for reads; `isMine` uses authenticated subject | Customer Tasks; My tasks / Team queue / Overdue tabs | Partial: read-only; approvals, exceptions, assignment and completion not connected |
+| Decisions | `workflow_stage_decisions` → `workflow_instances` → exact `crm.case` subject → scoped customer detail | Verify tenant, org, case relationship and workflow ownership | Recorded decisions alongside customer context | Ready, read-only; no approval command implied |
+| Home | Case-linked operational task read → `GET /api/tenant/work` | Same scoped query | Needs me / happening; system-finished section explicitly unavailable | Partial: paged task subset, no invented totals or provider outcomes |
+| Communications | Canonical delivery, governed action, schedule and provider execution infrastructure exists | Customer-safe associations, entitlement and action scope not yet verified here | Planned explanation only; customer tab states not connected | Partial backend / planned tenant journey |
+| Documents | Existing document capability must be mapped to customer ownership | Customer-level read/download/share permission not verified | Customer tab states not connected | Planned |
+| Growth | Existing growth-related infrastructure requires capability-specific verification | Tenant entitlement, approval and execution boundaries not mapped here | Planned explanation; no AutoGTM, social or inbound execution | Planned |
+| Knowledge & AI | Existing knowledge/AI infrastructure requires tenant-safe source and proposal mapping | Source visibility, permitted knowledge changes and action controls not mapped here | Planned explanation only | Planned |
+| Business settings | Existing membership/configuration infrastructure | Tenant admin command authorization separate from membership reads | Planned explanation of tenant-owned configuration | Planned |
+| Provider custody | Providers, credentials, transport, execution and global safety | Platform authority only | Absent from tenant shell | Platform-only |
+| DENTEX care/discharge | Industry packs and case lifecycle event mapping exist | Clinical role, real care objects, location and governed commands still require verification | Later extension after neutral path | Planned tenant journey; no renamed CRM substitution |
 
-## Explicitly hidden until proven ready
+## Verified implementation references
 
-- AutoGTM execution and publication
-- Social publishing
-- Inbound conversation workspace
-- Any provider credential or transport administration
+- `apps/platform-web/lib/tenant-read-model.ts`: validation, read-only transaction,
+  exact membership guard, tenant/org joins, canonical child reads, safe errors.
+- `apps/platform-web/lib/tenant-api.ts`: authenticated read composition. Does not
+  call the platform auto-provisioning membership resolver or trust scope headers.
+- `apps/platform-web/app/tenant/`: independent shell and customer workspace.
+- `apps/platform-web/lib/tenant-model-fixture.ts`: one internally consistent,
+  read-only customer/case/task example. Only explicit `?mode=model` uses it.
+- `apps/platform-web/test/tenant-read-model.test.ts`: 16 unit/contract tests.
+- `apps/platform-web/scripts/verify-tenant-read-model.mjs`: 12 isolated
+  PostgreSQL-engine checks using actual relevant migrations and a NOBYPASSRLS role.
+- `apps/platform-web/scripts/verify-tenant-workspace.mjs`: 10 mounted-DOM checks.
 
-These may appear as planned/setup states, never as enabled production controls, until the API, entitlement, authorization, execution and reconciliation path is verified.
+## Deliberate limits / release blockers
 
-## Permission model required in every surface
+- CRM contacts do not have a verified operating-unit/location owner. Selected
+  location/workspace memberships and explicit location/workspace filters receive
+  a denial, not organization-wide data. No display-name-to-location inference.
+- No brand enumeration is introduced. A verified workspace link supplies
+  `account` and `org`; the authorized selector and onboarding are still required.
+- Role-specific homes (owner, location manager, operator, approver) are not built.
+- No tenant mutation is enabled. Approval, request changes, assignment,
+  scheduling, retry and reconciliation need action-specific commands and tests.
+- Work tabs filter the current page of case-linked tasks, labeled as a subset.
+  Full queue counts, server-side tab filters and global overdue totals remain work.
+- Detail sections return at most 100 records with explicit truncation notices.
+- Activity is a persisted-timestamp summary, not complete audit provenance.
+- Mobile navigation uses visible scrollable links; tables scroll independently.
+  Customer detail uses a full page, not a drawer. Browser/mobile/screen-reader QA
+  has not run; mounted-DOM tests are not that release gate.
+- Full monorepo build, authenticated deployed e2e, performance plans and deployed
+  database-role verification remain required before production readiness.
 
-1. Resolve tenant, brand and location visibility from the authenticated membership.
-2. Resolve action permissions independently from visibility.
-3. Disable or omit unauthorized actions with a plain-language reason.
-4. Show the legal next step: request review, assign owner, escalate, or contact an administrator.
-5. Re-check authorization, entitlement, SoD, idempotency and scope on the server.
-6. Persist command result, correlation/audit reference and execution status.
+## Next executable journey
 
-## First implementation slice
+Neutral customer/case event → proposed follow-up and review task → authorized
+review → permitted schedule/send execution → observed communication outcome.
+Scheduling may persist before approval only if dispatch remains blocked by policy.
+Do not collapse approved, scheduled, queued, sent, delivered, failed or uncertain.
 
-### Shell, scope and setup
+Before enabling any command: verify membership, visibility, action scope,
+entitlement, maker/reviewer separation, idempotency, durable result and audit
+reference. Exercise duplicate submit, denied action, provider failure and uncertain
+outcome. Then extend this same path with real DENTEX care/discharge objects.
 
-- Tenant shell with responsive mobile navigation.
-- Explicit brand/location scope selector that changes every query and count.
-- Role-shaped Home and My work tabs.
-- Unauthorized brands absent from all selectors and navigation.
-- Focus-trapped, keyboard-accessible drawers and usable responsive tables.
-- Setup checklist for team, location, sender identity, domain and enabled capabilities.
+## Migration correction
 
-### Verified DENTEX path
-
-```text
-case/discharge
-  → scheduled follow-up
-  → review task / approval
-  → communication intent
-  → provider execution
-  → delivery/reconciliation outcome
-  → customer/case activity and audit
-```
-
-The UI must distinguish approved, scheduled, queued, sent, delivered and failed. Each transition needs validation, pending state, persisted result, retry/idempotency behavior and an audit reference.
-
-## Acceptance gates
-
-- Cross-tenant and cross-location read denial.
-- View scope cannot grant action scope.
-- Maker cannot approve own work; disabled control explains the reason and next step.
-- Duplicate submit/replay creates no duplicate task, schedule or delivery.
-- Provider failure and uncertain outcome are visible and recoverable.
-- Fixture data is internally consistent; no contradictory counts or statuses.
-- Mobile widths, keyboard navigation, focus return and screen-reader labels pass.
-- Every enabled button maps to a real API command or is removed/marked planned.
-
-## Build decision
-
-Do not begin with a visual rewrite. First verify each row against the repository and attach exact route, controller/service, permission, and test references. Then implement the shell and the DENTEX path only where the map reads **ready** or has an explicitly bounded implementation slice.
+The draft-only `0061_tenant_work_execution.sql` proposal is withdrawn: it
+duplicated both an existing migration number and canonical task/scheduling
+infrastructure. Reads use `0073_operational_tasks.sql`; future scheduling must
+reuse `0071_scheduled_governed_actions.sql`. No database tables were dropped or
+data deleted. If that draft migration was applied anywhere, investigate and plan
+a separate data-preserving migration before release.

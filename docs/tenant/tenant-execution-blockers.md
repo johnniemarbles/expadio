@@ -1,17 +1,23 @@
-# Tenant execution blockers found
+# Tenant execution release gates
 
-Audit of the branch's existing APIs found one important blocker before wiring live tenant actions:
+The tenant read slice is implemented; tenant actions are not. No model action
+mutates local state and claims persistence. No tenant UI calls simulated
+governance approval endpoints.
 
-- POST /api/governance/reviews currently inserts REVIEW_DECISION_SIMULATED and returns simulated: true.
-- The route resolves a hard-coded tenant and organization fallback instead of deriving the selected tenant scope from the request context.
-- Therefore the tenant UI must not call this endpoint as a real Approve/Request changes command.
+Before enabling a brand-neutral follow-up journey:
 
-Required correction before live tenant actions:
+1. Verify case/customer organization and location ownership in canonical records.
+2. Map the canonical review/decision command and entitlement, including separate
+   read and action authority; reject self-approval server-side.
+3. Use existing operational tasks and scheduled governed actions, not parallel
+   tenant task or schedule tables.
+4. Return durable command state, idempotency result and audit reference.
+5. Confirm scheduling does not imply approval and dispatch remains policy-gated.
+6. Surface execution observations distinctly: queued, sent, delivered, failed,
+   uncertain. Never infer delivery from a completed task or approved decision.
+7. Prove duplicates, deny paths, failure and reconciliation through authenticated
+   browser e2e and real deployment/database-role checks.
 
-1. Resolve authenticated tenant, brand and location context from membership and request scope.
-2. Use a persisted decision/approval command with authorization and maker/approver separation.
-3. Return the persisted state and correlation/audit reference.
-4. Make replay idempotent and expose uncertain outcomes.
-5. Add denial and cross-scope tests.
-
-The model tenant UI remains fixture-only until this boundary is corrected. This keeps the tenant experience honest and avoids presenting a simulated mutation as production execution.
+Read readiness and action readiness are separate. Existing governance routes
+that return simulated outcomes must not be reused as production commands without
+independent verification and replacement of their simulated write path.
