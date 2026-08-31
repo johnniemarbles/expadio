@@ -71,6 +71,9 @@ importers:
       '@expadio/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@expadio/voice-gateway':
+        specifier: workspace:*
+        version: link:../../packages/voice-gateway
       '@expadio/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow
