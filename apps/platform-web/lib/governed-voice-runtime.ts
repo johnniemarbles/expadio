@@ -22,8 +22,8 @@ import {
   PostgresProviderRegistryRepository,
 } from '@expadio/postgres-runtime/provider-registry';
 import type { DurableArtifactSink, DurableArtifactSource } from '@expadio/storage';
-import { delegatedSecretResolver } from './vault-secret-resolver';
-import { governedArtifactVoiceInputResolver } from './governed-artifact-input-resolvers';
+import { delegatedSecretResolver } from './vault-secret-resolver.ts';
+import { governedArtifactVoiceInputResolver } from './governed-artifact-input-resolvers.ts';
 
 export interface GovernedVoiceRuntimeOptions {
   readonly serviceSubjectId: string;
