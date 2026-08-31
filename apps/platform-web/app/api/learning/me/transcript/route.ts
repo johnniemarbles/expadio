@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       loadMyLearningTranscript(client, {
         tenantId: context.tenantId,
         subjectId: context.subjectId,
-        subjectIssuer: context.issuer,
+        subjectIssuer: context.issuer ?? null,
       }),
     );
     return NextResponse.json({ transcript }, {
