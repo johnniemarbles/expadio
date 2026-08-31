@@ -137,6 +137,7 @@ export const COMMUNICATION_CAPABILITIES: readonly { key: string; name: string }[
   { key: 'communication.voice.dial', name: 'Voice — Dial' },
   { key: 'communication.push.send', name: 'Push — Send' },
   { key: 'communication.rcs.send', name: 'RCS — Send' },
+  { key: 'communication.social.send', name: 'Social — Send' },
 ];
 
 let globalBootstrapPromise: Promise<void> | undefined;
