@@ -89,6 +89,13 @@ export function assertPlatformLogHasNoCustomerPii(line: string): void {
   }
 }
 
+/** Redact addresses, then refuse leftover customer-field tokens. */
+export function platformSafeLogLine(line: string): string {
+  const redacted = redactCustomerPii(line);
+  assertPlatformLogHasNoCustomerPii(redacted);
+  return redacted;
+}
+
 export function platformSafeErrorBody(reasonKey = 'INTERNAL_ERROR'): {
   readonly denied: true;
   readonly reasonKey: string;
