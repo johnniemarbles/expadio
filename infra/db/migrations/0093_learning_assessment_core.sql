@@ -266,6 +266,12 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
+  IF NEW.state = 'PUBLISHED'
+     AND (NEW.published_by_subject_id IS NULL OR NEW.published_at IS NULL) THEN
+    RAISE EXCEPTION 'published learning question versions require publication provenance'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
   IF OLD.state = 'DRAFT' AND NEW.state NOT IN ('DRAFT','PUBLISHED','ARCHIVED') THEN
     RAISE EXCEPTION 'invalid learning question version transition'
       USING ERRCODE = 'check_violation';
@@ -318,6 +324,12 @@ BEGIN
        OR OLD.course_version_id IS DISTINCT FROM NEW.course_version_id
      ) THEN
     RAISE EXCEPTION 'only draft learning assessment versions may edit content'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF NEW.state = 'PUBLISHED'
+     AND (NEW.published_by_subject_id IS NULL OR NEW.published_at IS NULL) THEN
+    RAISE EXCEPTION 'published learning assessment versions require publication provenance'
       USING ERRCODE = 'check_violation';
   END IF;
 
