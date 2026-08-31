@@ -1,9 +1,30 @@
 import { BRAND_HOST } from './hosts.ts';
-import type { EffectiveContext, IdentityContext, MembershipContext } from './index.ts';
-import { ContextResolutionError, resolveEffectiveContext } from './index.ts';
 import { BRAND_CUSTOMER_ROUTE, assertNotPlatformTenantLab, planBrandCustomerRead } from './brand-reads.ts';
 import type { ShellScope, ShellScopeStorageKeys } from './shell-scope.ts';
 import type { ScopeDirectory } from './scope-directory.ts';
+
+type ActorKind = 'user' | 'party' | 'service' | 'agent';
+
+type Identity = {
+  readonly subjectId: string;
+  readonly actorKind: ActorKind;
+  readonly issuer?: string;
+};
+
+type Membership = {
+  readonly tenantId: string;
+  readonly organizationId: string;
+  readonly workspaceIds?: readonly string[];
+  readonly operatingUnitIds?: readonly string[];
+};
+
+type BoundContext = {
+  readonly subjectId: string;
+  readonly actorKind: ActorKind;
+  readonly issuer?: string;
+  readonly tenantId: string;
+  readonly organizationId: string;
+};
 
 export class BrandHostError extends Error {
   readonly status: number;
@@ -19,16 +40,16 @@ export class BrandHostError extends Error {
 export type BrandIncomingRequest = {
   readonly host: string;
   readonly path: string;
-  readonly identity: IdentityContext;
+  readonly identity: Identity;
   readonly scope: ShellScope;
-  readonly memberships: readonly MembershipContext[];
+  readonly memberships: readonly Membership[];
 };
 
 export type BrandAuthorizedCustomerRead = {
   readonly host: typeof BRAND_HOST;
   readonly route: typeof BRAND_CUSTOMER_ROUTE;
   readonly storageKeys: ShellScopeStorageKeys;
-  readonly context: EffectiveContext;
+  readonly context: BoundContext;
 };
 
 function requestHost(host: string): string {
@@ -75,24 +96,10 @@ export function authorizeBrandCustomerRequest(
     );
   }
 
-  let context: EffectiveContext;
-  try {
-    context = resolveEffectiveContext({
-      identity: request.identity,
-      tenantId: plan.storageKeys.tenantId,
-      organizationId: plan.storageKeys.organizationId,
-      memberships: request.memberships,
-    });
-  } catch (error) {
-    if (error instanceof ContextResolutionError) {
-      throw new BrandHostError(403, error.reason, 'You do not have access to this workspace.');
-    }
-    throw error;
-  }
-
   const membership = request.memberships.find(
     (candidate) =>
-      candidate.tenantId === context.tenantId && candidate.organizationId === context.organizationId,
+      candidate.tenantId === plan.storageKeys.tenantId &&
+      candidate.organizationId === plan.storageKeys.organizationId,
   );
   if (!membership) {
     throw new BrandHostError(403, 'NO_MEMBERSHIP', 'You do not have access to this workspace.');
@@ -104,6 +111,14 @@ export function authorizeBrandCustomerRequest(
       'Customer records are not yet available for location-restricted or workspace-restricted access.',
     );
   }
+
+  const context: BoundContext = {
+    subjectId: request.identity.subjectId,
+    actorKind: request.identity.actorKind,
+    tenantId: plan.storageKeys.tenantId,
+    organizationId: plan.storageKeys.organizationId,
+    ...(request.identity.issuer !== undefined ? { issuer: request.identity.issuer } : {}),
+  };
 
   return {
     host: BRAND_HOST,
@@ -120,7 +135,7 @@ export function authorizeBrandCustomerRequest(
 export async function serveBrandCustomerRead<T>(
   request: BrandIncomingRequest,
   directory: ScopeDirectory,
-  read: (keys: ShellScopeStorageKeys, context: EffectiveContext) => Promise<T>,
+  read: (keys: ShellScopeStorageKeys, context: BoundContext) => Promise<T>,
 ): Promise<{
   readonly status: 200;
   readonly headers: { readonly 'Cache-Control': 'private, no-store' };
