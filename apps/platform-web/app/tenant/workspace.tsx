@@ -66,6 +66,7 @@ export default function TenantWorkspace({ query }: { query: string }) {
       <p className={styles.sidebarNote}>Your business, connected.<br />Execution and provider operations stay with EXPADIO.</p>
     </aside>
     <main id="tenant-main" className={styles.main}>
+      <p className={styles.fixture}>Draft read-model lab · Not the Brand product or a deployed dual-shell boundary. No business actions are enabled.</p>
       {model ? <div className={styles.fixture}>Model tenant · Northstar Services · Read-only fixture, not live business data. No actions are saved or sent. <a href="/tenant">Exit model</a></div> : null}
       {!model && !hasScope ? <section className={styles.panel}><p className={styles.eyebrow}>Get started</p><h1>Open your brand workspace</h1><p>Use a workspace link containing your brand and organization. Access is verified before any business information is shown.</p><p>The authorized brand selector and setup journey are still being connected.</p><a className={styles.button} href="/tenant?mode=model">Explore the read-only model tenant</a></section> : <Connected key={query} model={model} scope={scope.toString()} view={view} params={params} link={link} />}
     </main>

@@ -1,9 +1,15 @@
-# Tenant feature map — brand-neutral foundation
+# Tenant feature map — scoped read-model draft
 
-Verified against branch `feat/tenant-product-foundation`, starting at `8a8c262`.
+Read slice verified at `0c11284`; dual-shell correction follows on `feat/tenant-product-foundation`.
 This supersedes the earlier prototype-only map. The first operating product is
 brand-neutral; Northstar Services is an explicitly read-only model, not a seeded
 production tenant. DENTEX is a later vertical extension of the same work system.
+
+**Not the tenant product. Keep PR #499 draft.** `/tenant` remains a read-model
+lab in `apps/platform-web`, not a separate Brand app or a proven audience/PII
+boundary. The Platform sidebar no longer links to it. The superseded Northstar
+Dental HTML is removed from the PR tip; it is not navigation or product evidence.
+See [the shared scope and dual-shell contract](tenant/shared-scope-contract.md).
 
 The brand runs its business through connected work. EXPADIO executes, governs,
 isolates and owns providers underneath. Home answers only: what needs me, what
@@ -18,7 +24,7 @@ means no tenant action is enabled. **Platform-only** must not enter tenant UI.
 
 | Surface | Existing backend → tenant-safe API | Permission / scope | UI journey | Evidence / status |
 |---|---|---|---|---|
-| Tenant shell | Clerk identity + `memberships`, `tenants`, `organizations` → `GET /api/tenant/context` | Exact active issuer-bound membership; active brand/org; valid membership window; unrestricted workspace and location read scope | Separate `/tenant` shell → verified brand/org names; scope carried on every link/read | Partial: shell ready; authorized selector, setup and role homes planned |
+| Tenant shell | Clerk identity + `memberships`, `tenants`, `organizations` → `GET /api/tenant/context` | Exact active issuer-bound membership; active brand/org; valid membership window; unrestricted workspace and location read scope | `/tenant` read-model lab in platform-web; compatibility UUID scope on links/reads | Partial: scoped reads only; separate Brand app, audience boundary, mapped product scope, selector, setup and role homes not implemented |
 | Customers | `crm_contacts` joined to `crm_accounts.organization_id` → `GET /api/tenant/customers` | Tenant RLS + explicit organization join; exclude archived and unowned records | Paged list → one shared customer record | Ready, read-only; unit, database-engine and mounted-DOM checks |
 | Overview | Customer + `crm_cases` → `GET /api/tenant/customers/:id` | Same scope; reject inconsistent case/account relationships | Customer details → connected cases | Ready, read-only; missing/cross-scope record returns 404 |
 | Activity | Persisted customer, case, task and decision timestamps in customer detail | Same scoped children | Chronological record summary | Partial: explicitly not a full audit log |
@@ -39,7 +45,9 @@ means no tenant action is enabled. **Platform-only** must not enter tenant UI.
   exact membership guard, tenant/org joins, canonical child reads, safe errors.
 - `apps/platform-web/lib/tenant-api.ts`: authenticated read composition. Does not
   call the platform auto-provisioning membership resolver or trust scope headers.
-- `apps/platform-web/app/tenant/`: independent shell and customer workspace.
+- `apps/platform-web/app/tenant/`: draft read-model lab, not `apps/brand-web`.
+- `packages/tenancy/src/shell-scope.ts`: shared scope definition for both
+  audiences; runtime mapping and shell integration are not complete.
 - `apps/platform-web/lib/tenant-model-fixture.ts`: one internally consistent,
   read-only customer/case/task example. Only explicit `?mode=model` uses it.
 - `apps/platform-web/test/tenant-read-model.test.ts`: 16 unit/contract tests.
@@ -48,6 +56,13 @@ means no tenant action is enabled. **Platform-only** must not enter tenant UI.
 - `apps/platform-web/scripts/verify-tenant-workspace.mjs`: 10 mounted-DOM checks.
 
 ## Deliberate limits / release blockers
+
+- Platform must not receive customer names/email/phone. Removing a sidebar link
+  fixes navigation only; direct-route/API and server audience isolation remain
+  unverified. Break-glass remains a request, not a PII drill-through.
+- T/B/L identifiers, pack/residency and verified role homes form the product
+  scope. Legacy UUIDs do not implement it. Defining the shared contract does not
+  resolve mappings or add a new authorization model.
 
 - CRM contacts do not have a verified operating-unit/location owner. Selected
   location/workspace memberships and explicit location/workspace filters receive
@@ -67,10 +82,11 @@ means no tenant action is enabled. **Platform-only** must not enter tenant UI.
 - Full monorepo build, authenticated deployed e2e, performance plans and deployed
   database-role verification remain required before production readiness.
 
-## Next executable journey
+## Next executable journey — after dual-shell and scope gates
 
-Neutral customer/case event → proposed follow-up and review task → authorized
-review → permitted schedule/send execution → observed communication outcome.
+Brand case → `SCHEDULE` → `CREATE_TASK` → `COMMUNICATE` → observed delivery on
+the same record, using frozen canonical executors. No mutations or auto-send
+are enabled by this correction.
 Scheduling may persist before approval only if dispatch remains blocked by policy.
 Do not collapse approved, scheduled, queued, sent, delivered, failed or uncertain.
 

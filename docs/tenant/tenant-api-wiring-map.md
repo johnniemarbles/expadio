@@ -1,5 +1,11 @@
 # Tenant API wiring — implemented read slice
 
+This is read-model lab wiring, not a dual-shell product. Legacy `account`/`org`
+are storage compatibility inputs. The shared product scope definition lives in
+`@expadio/tenancy`; T/B/L mappings and integration into separate Platform/Brand
+server boundaries remain required. Sidebar removal does not establish PII
+isolation. See [the scope contract](shared-scope-contract.md).
+
 All routes below require a Clerk session and exactly one UUID `account` (tenant)
 and `org` query parameter. Headers and last-used cookies are not authorization.
 All responses are `private, no-store`. The read transaction applies tenant, org

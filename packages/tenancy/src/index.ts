@@ -1,4 +1,6 @@
 export type ActorKind = 'user' | 'party' | 'service' | 'agent';
+export { SHELL_NAVIGATION, shellViewSelection, unresolvedShellScope } from './shell-scope.ts';
+export type { ShellAudience, ShellScope, ShellScopeStorageKeys, ScopeValue, TenantCode, BrandCode, LocationCode, LocationView, RoleHome } from './shell-scope.ts';
 
 export interface IdentityContext {
   readonly subjectId: string;

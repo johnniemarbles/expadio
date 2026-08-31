@@ -44,6 +44,29 @@ preview. Verify the database connection role cannot bypass RLS, inspect query
 plans for organization-scoped joins, test revoked sessions and memberships,
 keyboard focus, mobile tables/navigation and screen-reader announcements.
 
-The supplied HTML is preserved at `artifacts/expadio-brand-dashboard.html` as a
-directional prototype only. Its contradictory fixture states/counts are not used
-by the implementation.
+The superseded `artifacts/expadio-brand-dashboard.html` is removed from the draft
+tip and is recoverable from prior commits. No later Wave 1+2 fixture was supplied
+for this correction; no replacement was invented.
+
+## Dual-shell correction — verification pending at push
+
+Nine new scope-contract tests cover both audiences, explicit unresolved values,
+T/B/L selection, pack/residency independence, storage-ID rejection and navigation.
+Three source regression tests check removal of the Platform-to-lab link and old
+HTML and require explicit lab labeling.
+
+The local execution environment disconnected before these new tests or the 38
+read-slice regressions could run. Prior local green results above belong to
+`0c11284`, not to this correction. Check current-head CI before further work.
+
+Run from the repository root:
+
+```sh
+node --experimental-strip-types --test packages/tenancy/test/*.test.ts
+node --experimental-strip-types --test apps/platform-web/test/tenant-audience-boundary.test.ts apps/platform-web/test/tenant-read-model.test.ts
+```
+
+These checks do not prove Platform PII isolation, resolved T/B/L ownership,
+pack/residency-independent database counts, role homes, real location scope or
+authenticated browser e2e. See [remaining gates](shared-scope-contract.md).
+

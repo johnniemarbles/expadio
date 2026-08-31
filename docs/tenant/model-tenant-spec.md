@@ -5,6 +5,10 @@ extension. `/tenant?mode=model` is an explicit read-only fixture, uses no tenant
 API, sends nothing, and persists no business changes. It is not a complete or
 production-seeded tenant.
 
+It remains inside `apps/platform-web` as a draft read-model lab, not the completed
+dual-shell Brand app. The superseded Northstar Dental HTML is removed from the
+PR tip and is not product evidence. See [shared scope contract](shared-scope-contract.md).
+
 ## Implemented model
 
 - One customer: Jordan Lee, with a deliberately non-deliverable example address.
