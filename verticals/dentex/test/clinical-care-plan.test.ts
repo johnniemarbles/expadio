@@ -92,6 +92,7 @@ test("extractDentexClinicalConsultation never invents clinical facts when identi
     patientId: "pat_002",
     practiceId: "prac_001",
     consultationNotes: "Patient reports severe pain and may need a root canal. Tooth and diagnosis not yet confirmed.",
+    consultationNotesReference: "artifact://clinical-note/pat_002/consult_02",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_02",
   });
@@ -127,6 +128,7 @@ test("extractDentexClinicalConsultation ignores unsupported or implicit procedur
     patientId: "pat_003",
     practiceId: "prac_001",
     consultationNotes: "Discussed possible crown on tooth #12; no procedure code selected. Reference D9999 is not in the governed registry.",
+    consultationNotesReference: "artifact://clinical-note/pat_003/consult_03",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_03",
   });
@@ -135,4 +137,24 @@ test("extractDentexClinicalConsultation ignores unsupported or implicit procedur
   assert.equal(result.proposedTreatmentAttributes.procedureCode, undefined);
   assert.equal(result.recommendedUrgency, null);
   assert.deepEqual(result.extractedFindings, []);
+});
+
+
+test("extractDentexClinicalConsultation requires a governed consultation-note reference before AI invocation", async () => {
+  const mockAiGateway: AiGateway = {
+    invoke: async () => assert.fail("AI gateway must not be invoked without a governed reference"),
+  };
+
+  await assert.rejects(
+    extractDentexClinicalConsultation({
+      tenantId: "tenant_dentex_01",
+      patientId: "pat_004",
+      practiceId: "prac_001",
+      consultationNotes: "Tooth #8 reviewed.",
+      consultationNotesReference: "   ",
+      aiGateway: mockAiGateway,
+      idempotencyKey: "idem_consult_04",
+    }),
+    /DENTEX_CONSULTATION_NOTES_REFERENCE_REQUIRED/,
+  );
 });
