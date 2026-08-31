@@ -79,6 +79,7 @@ export type VoiceContractValidationCode =
   | 'VOICE_CORRELATION_ID_REQUIRED'
   | 'VOICE_REQUESTED_AT_INVALID'
   | 'VOICE_COST_LIMIT_INVALID'
+  | 'VOICE_GOVERNANCE_TAGS_INVALID'
   | 'VOICE_OBSERVATION_IDENTITY_MISMATCH'
   | 'VOICE_OUTPUT_REFERENCE_REQUIRED'
   | 'VOICE_PROVENANCE_REQUIRED'
@@ -104,25 +105,36 @@ export function validateVoiceIntelligenceIntent(
   intent: VoiceIntelligenceIntent,
 ): VoiceContractValidationResult {
   const issues: VoiceContractValidationIssue[] = [];
-  required(intent.requestId, 'VOICE_REQUEST_ID_REQUIRED', 'requestId', issues);
-  if (!VOICE_INTELLIGENCE_OPERATIONS.includes(intent.operation)) {
+  const runtime = intent as unknown as Record<string, unknown>;
+
+  required(runtime.requestId, 'VOICE_REQUEST_ID_REQUIRED', 'requestId', issues);
+  if (
+    typeof runtime.operation !== 'string'
+    || !VOICE_INTELLIGENCE_OPERATIONS.includes(
+      runtime.operation as VoiceIntelligenceOperation,
+    )
+  ) {
     issues.push({ code: 'VOICE_OPERATION_INVALID', path: 'operation' });
   }
-  required(intent.tenantId, 'VOICE_TENANT_REQUIRED', 'tenantId', issues);
-  required(intent.callId, 'VOICE_CALL_ID_REQUIRED', 'callId', issues);
-  required(intent.purpose, 'VOICE_PURPOSE_REQUIRED', 'purpose', issues);
+  required(runtime.tenantId, 'VOICE_TENANT_REQUIRED', 'tenantId', issues);
+  required(runtime.callId, 'VOICE_CALL_ID_REQUIRED', 'callId', issues);
+  required(runtime.purpose, 'VOICE_PURPOSE_REQUIRED', 'purpose', issues);
   required(
-    intent.inputReference,
+    runtime.inputReference,
     'VOICE_INPUT_REFERENCE_REQUIRED',
     'inputReference',
     issues,
   );
-  required(intent.languageTag, 'VOICE_LANGUAGE_REQUIRED', 'languageTag', issues);
+  required(runtime.languageTag, 'VOICE_LANGUAGE_REQUIRED', 'languageTag', issues);
+
+  const governance = isRecord(runtime.governance)
+    ? runtime.governance
+    : undefined;
+  const operation = runtime.operation;
 
   if (
-    (intent.operation === 'TRANSCRIBE'
-      || intent.operation === 'STREAM_CONVERSATION')
-    && !nonBlank(intent.governance.recordingConsentEvidenceReference)
+    (operation === 'TRANSCRIBE' || operation === 'STREAM_CONVERSATION')
+    && !nonBlank(governance?.recordingConsentEvidenceReference)
   ) {
     issues.push({
       code: 'VOICE_RECORDING_CONSENT_EVIDENCE_REQUIRED',
@@ -133,49 +145,60 @@ export function validateVoiceIntelligenceIntent(
   for (const [path, policy] of [
     [
       'governance.recordingRetentionPolicy',
-      intent.governance.recordingRetentionPolicy,
+      governance?.recordingRetentionPolicy,
     ],
     [
       'governance.transcriptRetentionPolicy',
-      intent.governance.transcriptRetentionPolicy,
+      governance?.transcriptRetentionPolicy,
     ],
-    ['governance.redactionPolicy', intent.governance.redactionPolicy],
+    ['governance.redactionPolicy', governance?.redactionPolicy],
   ] as const) {
-    if (
-      policy.key.trim() === ''
-      || !Number.isInteger(policy.version)
-      || policy.version <= 0
-    ) {
+    if (!validPolicyReference(policy)) {
       issues.push({ code: 'VOICE_POLICY_REFERENCE_INVALID', path });
     }
   }
 
-  if (intent.governance.jurisdictionTags.length === 0) {
+  if (!validNonBlankStringArray(governance?.jurisdictionTags)) {
     issues.push({
       code: 'VOICE_JURISDICTION_REQUIRED',
       path: 'governance.jurisdictionTags',
     });
   }
+
+  if (
+    governance === undefined
+    || !validStringArray(governance.requiredResidencyTags)
+    || !validStringArray(governance.requiredComplianceTags)
+  ) {
+    issues.push({
+      code: 'VOICE_GOVERNANCE_TAGS_INVALID',
+      path: 'governance',
+    });
+  }
+
   required(
-    intent.idempotencyKey,
+    runtime.idempotencyKey,
     'VOICE_IDEMPOTENCY_REQUIRED',
     'idempotencyKey',
     issues,
   );
   required(
-    intent.correlationId,
+    runtime.correlationId,
     'VOICE_CORRELATION_ID_REQUIRED',
     'correlationId',
     issues,
   );
-  if (!validInstant(intent.requestedAt)) {
+  if (!validInstant(runtime.requestedAt)) {
     issues.push({ code: 'VOICE_REQUESTED_AT_INVALID', path: 'requestedAt' });
   }
+
+  const maximumCost = governance?.maximumCostMinorUnits;
   if (
-    intent.governance.maximumCostMinorUnits !== undefined
+    maximumCost !== undefined
     && (
-      !Number.isInteger(intent.governance.maximumCostMinorUnits)
-      || intent.governance.maximumCostMinorUnits < 0
+      typeof maximumCost !== 'number'
+      || !Number.isInteger(maximumCost)
+      || maximumCost < 0
     )
   ) {
     issues.push({
@@ -183,6 +206,7 @@ export function validateVoiceIntelligenceIntent(
       path: 'governance.maximumCostMinorUnits',
     });
   }
+
   return result(issues);
 }
 
@@ -191,71 +215,129 @@ export function validateVoiceIntelligenceObservation(
   observation: VoiceIntelligenceObservation,
 ): VoiceContractValidationResult {
   const issues: VoiceContractValidationIssue[] = [];
+  const runtime = observation as unknown as Record<string, unknown>;
+  const provenance = isRecord(runtime.provenance)
+    ? runtime.provenance
+    : undefined;
+
   if (
-    observation.requestId !== intent.requestId
-    || observation.tenantId !== intent.tenantId
-    || observation.callId !== intent.callId
-    || observation.operation !== intent.operation
+    runtime.requestId !== intent.requestId
+    || runtime.tenantId !== intent.tenantId
+    || runtime.callId !== intent.callId
+    || runtime.operation !== intent.operation
   ) {
     issues.push({
       code: 'VOICE_OBSERVATION_IDENTITY_MISMATCH',
       path: 'observation',
     });
   }
+
   required(
-    observation.outputReference,
+    runtime.outputReference,
     'VOICE_OUTPUT_REFERENCE_REQUIRED',
     'outputReference',
     issues,
   );
+
   for (const [path, value] of [
-    ['provenance.connectorKey', observation.provenance.connectorKey],
-    ['provenance.providerKey', observation.provenance.providerKey],
-    ['provenance.modelKey', observation.provenance.modelKey],
+    ['provenance.connectorKey', provenance?.connectorKey],
+    ['provenance.providerKey', provenance?.providerKey],
+    ['provenance.modelKey', provenance?.modelKey],
   ] as const) {
     required(value, 'VOICE_PROVENANCE_REQUIRED', path, issues);
   }
-  if (observation.provenance.sourceReferences.length === 0) {
+
+  if (
+    provenance === undefined
+    || !validNonBlankStringArray(provenance.sourceReferences)
+  ) {
     issues.push({
       code: 'VOICE_PROVENANCE_SOURCE_REQUIRED',
       path: 'provenance.sourceReferences',
     });
   }
-  if (!validInstant(observation.provenance.processedAt)) {
+
+  if (!validInstant(provenance?.processedAt)) {
     issues.push({
       code: 'VOICE_PROCESSED_AT_INVALID',
       path: 'provenance.processedAt',
     });
   }
-  const duration = observation.provenance.audioDurationMilliseconds;
+
+  const duration = provenance?.audioDurationMilliseconds;
   if (
     duration !== undefined
-    && (!Number.isInteger(duration) || duration < 0)
+    && (
+      typeof duration !== 'number'
+      || !Number.isInteger(duration)
+      || duration < 0
+    )
   ) {
     issues.push({
       code: 'VOICE_AUDIO_DURATION_INVALID',
       path: 'provenance.audioDurationMilliseconds',
     });
   }
-  const cost = observation.provenance.costMinorUnits;
-  if (cost !== undefined && (!Number.isInteger(cost) || cost < 0)) {
-    issues.push({ code: 'VOICE_COST_INVALID', path: 'provenance.costMinorUnits' });
+
+  const cost = provenance?.costMinorUnits;
+  if (
+    cost !== undefined
+    && (
+      typeof cost !== 'number'
+      || !Number.isInteger(cost)
+      || cost < 0
+    )
+  ) {
+    issues.push({
+      code: 'VOICE_COST_INVALID',
+      path: 'provenance.costMinorUnits',
+    });
   }
-  const estimatedCost = observation.provenance.estimatedCostMinorUnits;
+
+  const estimatedCost = provenance?.estimatedCostMinorUnits;
   if (
     estimatedCost !== undefined
-    && (!Number.isInteger(estimatedCost) || estimatedCost < 0)
+    && (
+      typeof estimatedCost !== 'number'
+      || !Number.isInteger(estimatedCost)
+      || estimatedCost < 0
+    )
   ) {
     issues.push({
       code: 'VOICE_ESTIMATED_COST_INVALID',
       path: 'provenance.estimatedCostMinorUnits',
     });
   }
+
   return result(issues);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validStringArray(value: unknown): boolean {
+  return Array.isArray(value)
+    && value.every(
+      (entry) => typeof entry === 'string' && entry.trim() !== '',
+    );
+}
+
+function validNonBlankStringArray(value: unknown): boolean {
+  return validStringArray(value) && (value as readonly unknown[]).length > 0;
+}
+
+function validPolicyReference(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return typeof value.key === 'string'
+    && value.key.trim() !== ''
+    && typeof value.version === 'number'
+    && Number.isInteger(value.version)
+    && value.version > 0;
+}
+
 function required(
-  value: string,
+  value: unknown,
   code: VoiceContractValidationCode,
   path: string,
   issues: VoiceContractValidationIssue[],
@@ -263,12 +345,14 @@ function required(
   if (value.trim() === '') issues.push({ code, path });
 }
 
-function nonBlank(value: string | undefined): boolean {
-  return value !== undefined && value.trim() !== '';
+function nonBlank(value: unknown): boolean {
+  return typeof value === 'string' && value.trim() !== '';
 }
 
-function validInstant(value: string): boolean {
-  return value.trim() !== '' && Number.isFinite(Date.parse(value));
+function validInstant(value: unknown): boolean {
+  return typeof value === 'string'
+    && value.trim() !== ''
+    && Number.isFinite(Date.parse(value));
 }
 
 function result(
