@@ -27,6 +27,7 @@ const intent: VoiceIntelligenceIntent = {
     maximumCostMinorUnits: 20,
   },
   idempotencyKey: 'transcribe:call-1:v3',
+  correlationId: 'corr-voice-001',
   requestedAt: '2026-08-25T15:00:00.000Z',
 };
 
