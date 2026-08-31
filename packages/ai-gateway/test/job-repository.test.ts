@@ -23,6 +23,7 @@ const registration: AiJobRegistration = {
       maximumCostMinorUnits: 20,
     },
     idempotencyKey: 'extract:document-1:v1',
+    correlationId: 'correlation-1',
     requestedAt: '2026-08-25T15:00:00.000Z',
   },
   maximumAttempts: 2,
