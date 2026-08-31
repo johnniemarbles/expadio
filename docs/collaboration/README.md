@@ -2,35 +2,39 @@
 
 **Purpose:** Enable robust multi-AI collaboration on the EXPADIO / BEMP platform.
 
-This folder is the shared workspace. **GitHub is the only shared memory** — see `SYNC.md`.
+This folder is the shared workspace. **GitHub is the only shared memory** — see `SYNC.md` and `OPERATING-MODEL.md`.
 
-## Participants
+## Participants (current roster)
 
 | Participant | Role | Prompt file |
 |-------------|------|-------------|
-| Grok | Reasoning peer (Primary / Reviewer) | `GROK_COLLABORATION_PROMPT.md` |
-| ChatGPT | Reasoning peer (Primary / Reviewer) | `CHATGPT_COLLABORATION_PROMPT.md` |
-| Gemini | Reasoning peer (Primary / Reviewer) | `GEMINI_COLLABORATION_PROMPT.md` |
-| Claude | Reasoning peer (Primary / Reviewer) | `CLAUDE_COLLABORATION_PROMPT.md` |
-| Hermes Agent | Executor / Persistent Memory / Automation | `HERMES_COLLABORATION_PROMPT.md` |
-| Human Owner | Final decision maker | — |
+| Grok | Suggest / audit (Primary) | `GROK_COLLABORATION_PROMPT.md` |
+| Claude | Suggest / audit (Primary) | `CLAUDE_COLLABORATION_PROMPT.md` |
+| ChatGPT | Execute + independent review | `CHATGPT_COLLABORATION_PROMPT.md` |
+| Gemini | Execute + independent review | `GEMINI_COLLABORATION_PROMPT.md` |
+| Hermes Agent | **Paused** — do not assign | `HERMES_COLLABORATION_PROMPT.md` |
+| Human Owner | Override + freeze/checklist gates | — |
 
 ## Key docs
 
 | Doc | Purpose |
 |-----|---------|
-| `OPERATING-MODEL.md` | Primary / Reviewer / Hermes / Human roles |
-| `SYNC.md` | How work stays in sync; session start rules |
-| `CONNECTING-AGENTS.md` | How each agent gets GitHub access |
+| `OPERATING-MODEL.md` | Roster, Decision trail protocol, executor claims, human-only gates |
+| `SYNC.md` | Session start; anti-patterns |
+| `CONNECTING-AGENTS.md` | GitHub access |
 | `suggestions/` | Proposals + Accept / Counter / Reject trail |
 
 ## Operating Model (short)
 
-- Any of the four reasoning AIs can be the **Primary Worker** on a task.
-- The other three can **evaluate, raise red flags, applaud, or suggest** at any time.
-- **Hermes** executes scoped tasks, maintains artefacts, runs sync reports. Not a fifth peer reviewer.
-- The **human** is the sole final decision maker.
-- Durable decisions live in suggestion Decision trails and PRs — not only in chat.
+- **Grok / Claude** propose and audit.
+- **Independent** peers review (Accept / Counter / Reject). Reviewer must not author the substantive revision they Accept.
+- **Blocking Counters** must be resolved or adjudicated before Status Accepted.
+- **Gemini / ChatGPT** execute Accepted packs after recording an **executor claim** (one owner per pack).
+- **Hermes is paused.**
+- **Accepted** authorizes scoped implementation PRs only — **not** automatic merge, deployment, or CI bypass. Repository protections and required checks still apply.
+- **Human** overrides and alone may change freeze/checklist gates, unpause verticals, waive CI, or re-enable Hermes.
+
+Durable decisions live in suggestion Decision trails and PRs — not only in chat.
 
 ## Goals
 
@@ -53,13 +57,13 @@ This folder is the shared workspace. **GitHub is the only shared memory** — se
 ```markdown
 ### Evaluation: [short title]
 
-**Context:** [what was reviewed]
+**Context:** [what was reviewed; revision SHA or trail entry]
 
 **Strengths / Applause:**
 - ...
 
 **Red Flags / Concerns:**
-- [Severity: Critical / High / Medium / Low] ...
+- [Severity: Critical / High / Medium / Low] [blocking / non-blocking] ...
 
 **Suggestions / Ideas:**
 - ...
@@ -67,7 +71,7 @@ This folder is the shared workspace. **GitHub is the only shared memory** — se
 **Alignment with Architecture:**
 - ...
 
-**Recommendation:** [Approve / Request changes / Block / Discuss]
+**Recommendation:** [Accept / Counter / Reject] for revision <ref>
 ```
 
 ## Ground Rules
@@ -76,8 +80,9 @@ This folder is the shared workspace. **GitHub is the only shared memory** — se
 - Prefer architecture documents over personal preference.
 - Never suggest violating non-negotiable engineering rules.
 - Decision trail in-repo > chat-only replies.
-- Only the human issues binding decisions.
+- Independent Accept only; no self-Accept of your own substantive text.
+- Human issues gate-level and override decisions; peers close ordinary suggestions under `OPERATING-MODEL.md`.
 
 ---
 
-*Last updated: sync + agent GitHub connection guide*
+*Last updated: autonomous peer protocol + roster (Grok/Claude suggest; Gemini/ChatGPT execute; Hermes paused)*

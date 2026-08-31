@@ -1,94 +1,150 @@
 # EXPADIO Continuous Multi-AI Operating Model
 
 **Status:** Active  
-**Participants:** Grok · ChatGPT · Gemini · Claude · Hermes Agent · Human Owner  
-**Authority:** The human owner is the sole final decision maker.
+**Suggest / audit (Primary):** Grok · Claude  
+**Execute:** Gemini · ChatGPT  
+**Review:** Any active peer who did **not** author the substantive revision under review  
+**Paused:** Hermes Agent  
+**Authority:** Human owner retains override and sole authority to amend freeze/checklist/release gates. Day-to-day suggestion Accept / Counter / Reject closes among active peers **in the repo** under the rules below.
 
 ---
 
 ## Core Model
 
 ```text
-Any of the four reasoning AIs can be the Primary Worker on a task
+Primary (Grok or Claude) proposes → suggestion file + PR as needed
         │
         ▼
-The other reasoning AIs act as Reviewers / Suggestors
-(in parallel or after the primary produces something)
+Independent reviewer (did not author substantive changes) →
+  Accept | Counter (blocking or non-blocking) | Reject
         │
         ▼
-Hermes Agent acts as Executor / Persistent Memory / Automation
-(runs scoped tasks, maintains artefacts, accumulates project knowledge)
+All blocking Counters resolved (Primary accept+revise, or explicit adjudication)
         │
         ▼
-Human Owner remains the final decision maker
-Accept / Counter / Reject / Request changes
+Independent Accept of the *current* revision → Status: Accepted
+        │
+        ▼
+One executor claims the pack (name, branch, PR, handoff) → implements
+        │
+        ▼
+Merge/deploy only via normal repo protections + required CI — never implied by Accepted alone
 ```
 
-This is a **peer-review + rotating-primary + dedicated executor** model. No AI is permanently in charge of judgment. Hermes provides continuity and execution muscle. Authority stays with the human.
+**Accepted authorizes scoped implementation work only.** It does **not** mean automatic merge, deployment, or CI bypass.
 
 ---
 
 ## Roles
 
-| Role | Who | Responsibility |
-|------|-----|----------------|
-| **Primary Worker** | Any one of Grok / ChatGPT / Gemini / Claude (per task) | Produces the main reasoning output: evaluation, design, implementation plan, suggestion, etc. |
-| **Reviewer / Suggestor** | The other three reasoning AIs | Evaluate using the Shared Evaluation Template, raise red flags, applaud good work, or open/update suggestion files |
-| **Executor / Memory / Automation** | Hermes Agent | Executes well-scoped operational tasks, maintains collaboration files, persists project knowledge, runs checks/tests when asked. Does **not** act as a fifth equal peer reviewer. |
-| **Final Decision Maker** | Human Owner only | Accepts, Counters, Rejects, or requests changes. Binding authority. |
+| Lane | Who | Rules |
+|------|-----|--------|
+| **Suggest / audit** | Grok · Claude | Open suggestions; revise on accepted counters; may draft packs |
+| **Review** | ChatGPT · Gemini · the other Primary | Must be **independent**: reviewer must not be the author of the substantive changes being accepted. Co-authors do not Accept their own revision. |
+| **Execute** | Gemini · ChatGPT | After Accepted + **executor claim** recorded; one owner per pack |
+| **Paused** | Hermes | No assignments |
+| **Override / gates** | Human | Freeze, checklist gates, vertical unpause, waive required CI, production side effects, roster/Hermes, break ties on unresolved blocking counters |
 
-Any reasoning AI may also proactively open a suggestion even when not Primary. Hermes may surface observations found during execution but does not hold architectural authority.
+---
+
+## Autonomous Decision trail protocol
+
+### 1. Propose
+
+- Primary writes `docs/collaboration/suggestions/YYYY-MM-DD-title.md`.
+- Status: **Open**. Decision trail: “Proposed by …”.
+
+### 2. Independent review
+
+- Reviewer must **not** have authored the substantive proposal text (or the latest substantive revision) they are Accepting.
+- Append **Accept** | **Counter** | **Reject** with evidence.
+- Mark each Counter as **blocking** or **non-blocking**.
+- **Accept is always tied to a specific revision** (commit SHA or “body as of DATE/trail entry”). Accept of an old revision does not close a newer revision.
+
+### 3. Blocking counters cannot be bypassed
+
+- Status must **not** move to Accepted while any **blocking** Counter remains without:
+  - Primary **Accept counter** + revised body + new independent Accept of that revision, or
+  - Primary **Reject counter** with rationale **and** human or a second independent peer **explicit adjudication** on the trail, or
+  - Human override on the trail.
+- A single peer Accept does **not** close the item if another peer’s blocking Counter is still open.
+
+### 4. Primary response to Counter
+
+- **Accept counter** → revise body; trail “Counter accepted; proposal revised @ <ref>.”
+- **Reject counter** → trail rationale; leave Status Open until adjudication.
+- Do not leave blocking Counters unanswered across sessions.
+
+### 5. Close
+
+- **Accepted** only when: independent Accept of **current** revision + no unresolved blocking Counters.
+- **Rejected** on freeze/architecture violation per independent review (or human).
+- **Implemented** when merged work is linked (PR number).
+
+### 6. Executor ownership (before implementation starts)
+
+On the suggestion Decision trail (or pack section), record **before** coding:
+
+```text
+Executor claim:
+  owner: Gemini | ChatGPT
+  pack: <name or number>
+  branch: <branch>
+  pr: <url or TBD>
+  status: claimed | in_progress | handoff | done | abandoned
+```
+
+- Only **one** active owner per pack. Second executor must not start the same pack without trail **handoff** (previous owner → abandoned or handoff + new claim).
+- Claim does not bypass review rules or repo protections.
+
+### 7. Accepted ≠ merge/deploy
+
+- Accepted → permission to open implementation PRs within SCOPE.
+- Merge requires normal branch protection, reviews if configured, and **required CI green**.
+- Agents must not waive required checks. Human-only to waive.
+
+### 8. Human-only
+
+Freeze/checklist gate edits, vertical unpause, CI waiver, unauthorized production side effects, re-enable Hermes, roster change, final adjudication of stuck blocking counters when peers disagree.
 
 ---
 
 ## Operating Rhythm
 
-1. **Task is defined** (by human or proposed by a reasoning AI).
-2. **Primary is named** among the four reasoning AIs (explicitly by the human, or volunteered and confirmed).
-3. **Primary produces work** and, where useful, records it (evaluation or suggestion file).
-4. **Other reasoning AIs respond** using the Shared Evaluation Template or suggestion Decision trail.
-5. **Hermes may be assigned** concrete follow-up execution (update files, run tests, summarise open suggestions, etc.) and reports results with evidence.
-6. **Human closes the loop** — Accept, Counter, Reject, or request another round.
-7. Process repeats.
+1. Pull `main` / load prompt / read this file + `SYNC.md`.
+2. Scan Open suggestions, blocking Counters, Accepted items without executor claim, claimed packs in progress.
+3. Propose / independent review / resolve counters / claim / execute.
+4. All durable state on the Decision trail and PRs.
 
 ---
 
 ## Rules of Engagement
 
-- **Name a Primary** (from the four reasoning AIs) for any non-trivial piece of work.
-- **Reviewers act freely** — they do not need permission to evaluate or open a suggestion.
-- **Hermes stays in the Executor/Memory lane** — scoped execution, artefact maintenance, persistent knowledge. Escalate judgment questions.
-- **Disagreement among reasoning AIs is expected and useful.** Record it in the Decision trail.
-- **Architecture documents remain the source of truth.**
-- **No AI has authority over another.** Only the human issues binding decisions.
-- **Keep hand-offs structured.** Prefer the evaluation template and suggestion files.
-- **Celebrate good work.** Explicit applause reinforces strong patterns.
-
----
-
-## When no Primary is named
-
-Any reasoning AI may still raise a red flag, open a suggestion, or perform an evaluation. Hermes may still maintain artefacts or run previously approved automations. For implementation or multi-step judgment work, a Primary among the four reasoning AIs should be named.
+- Repo is the bus.
+- Independent review only for Accept.
+- Blocking Counters block Accepted.
+- One executor claim per pack.
+- Accepted ≠ auto-merge or CI bypass.
+- Hermes paused.
+- Architecture and freeze docs are source of truth.
 
 ---
 
 ## Artefacts
 
-| Artefact | Location | Purpose |
-|----------|----------|---------|
-| Shared Evaluation Template | `docs/collaboration/README.md` | Standard format for reviews |
-| Suggestions + Decision trail | `docs/collaboration/suggestions/` | Durable proposals and Accept/Counter/Reject history |
-| This operating model | `docs/collaboration/OPERATING-MODEL.md` | The rules of continuous collaboration |
-| Reasoning AI prompts | `GROK_`, `CHATGPT_`, `GEMINI_`, `CLAUDE_COLLABORATION_PROMPT.md` | Standing orders for peer reviewers |
-| Hermes prompt | `HERMES_COLLABORATION_PROMPT.md` | Standing orders for Executor/Memory role |
+| Artefact | Location |
+|----------|----------|
+| This model | `OPERATING-MODEL.md` |
+| Sync | `SYNC.md` |
+| Framework index | `README.md` |
+| Suggestions | `suggestions/` |
+| Prompts | `GROK_`, `CLAUDE_`, `CHATGPT_`, `GEMINI_COLLABORATION_PROMPT.md` |
+| Paused | `HERMES_COLLABORATION_PROMPT.md` |
 
 ---
 
 ## Summary
 
-- Four reasoning AIs collaborate as peers (Primary + Reviewers).
-- Hermes provides execution, memory, and automation continuity.
-- The human remains the final decision maker.
-- Everything important is written down in the collaboration folder.
+Grok/Claude suggest · independent peers review · blocking counters resolved · Gemini/ChatGPT claim and execute · Hermes paused · human gates and override · Accepted authorizes scoped PRs only, not merge/deploy/CI bypass.
 
 This model is now active.
