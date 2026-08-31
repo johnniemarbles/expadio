@@ -6,6 +6,12 @@ import styles from './brand.module.css';
 type Customer = { id: string; name: string; status: string; accountName: string };
 type PageResult = { items: Customer[]; hasMore: boolean };
 type Load = { state: 'loading' } | { state: 'empty-scope' } | { state: 'error'; message: string } | { state: 'ready'; data: PageResult };
+type JourneyStep = { step: string; state: string; executor: string | null };
+type JourneyLoad =
+  | { state: 'loading' }
+  | { state: 'empty-scope' }
+  | { state: 'error'; message: string }
+  | { state: 'ready'; correlation: string; steps: JourneyStep[]; mutationsEnabled: boolean; autoSend: boolean };
 
 const SURFACES = [
   ['home', 'Home'],
@@ -47,8 +53,10 @@ export default function BrandWorkspace({ query, nav }: { query: string; nav: rea
         <p className={styles.note}>Same-origin Brand chrome. Not the Platform sidebar.</p>
       </aside>
       <main className={styles.main}>
-        <p className={styles.fixture}>Brand fallback on /brand · Reads go through /brand/api/customers · No mutations</p>
-        {view === 'customers' ? <Customers scoped={scoped} query={query} /> : <Planned view={view} />}
+        <p className={styles.fixture}>Brand fallback on /brand · Reads go through /brand/api/* · No mutations</p>
+        {view === 'customers' ? <Customers scoped={scoped} query={query} /> : null}
+        {view === 'home' || view === 'work' ? <Journey scoped={scoped} query={query} view={view} /> : null}
+        {view !== 'customers' && view !== 'home' && view !== 'work' ? <Planned view={view} /> : null}
       </main>
     </div>
   );
@@ -99,8 +107,70 @@ function Customers({ scoped, query }: { scoped: boolean; query: string }) {
       ) : null}
       <p className={styles.note}>
         CS-104 journey stays observation-only: case → SCHEDULE → CREATE_TASK → COMMUNICATE → delivery.
-        No step is observed yet. A finished task is not a send.
+        A finished task is not a send.
       </p>
+    </section>
+  );
+}
+
+function Journey({ scoped, query, view }: { scoped: boolean; query: string; view: string }) {
+  const [result, setResult] = useState<JourneyLoad>(scoped ? { state: 'loading' } : { state: 'empty-scope' });
+  useEffect(() => {
+    if (!scoped) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams(query);
+    const url = `/brand/api/journey?tenant=${encodeURIComponent(params.get('tenant') ?? '')}&brand=${encodeURIComponent(params.get('brand') ?? '')}&location=${encodeURIComponent(params.get('location') ?? '')}&correlation=CS-104`;
+    void fetch(url, { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          message?: string;
+          correlation?: string;
+          steps?: JourneyStep[];
+          mutationsEnabled?: boolean;
+          autoSend?: boolean;
+        };
+        if (!response.ok) throw new Error(body.message ?? 'Unable to load journey observation.');
+        setResult({
+          state: 'ready',
+          correlation: body.correlation ?? 'CS-104',
+          steps: body.steps ?? [],
+          mutationsEnabled: Boolean(body.mutationsEnabled),
+          autoSend: Boolean(body.autoSend),
+        });
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setResult({ state: 'error', message: error instanceof Error ? error.message : 'Unable to load journey observation.' });
+        }
+      });
+    return () => controller.abort();
+  }, [scoped, query]);
+  return (
+    <section>
+      <p className={styles.eyebrow}>Observation only · frozen executors</p>
+      <h1>{view === 'home' ? 'Home' : 'My work'}</h1>
+      {result.state === 'empty-scope' ? (
+        <p>Open this workspace with tenant, brand and location to observe CS-104.</p>
+      ) : null}
+      {result.state === 'loading' ? <p role="status">Loading CS-104 observation…</p> : null}
+      {result.state === 'error' ? <p role="alert">{result.message}</p> : null}
+      {result.state === 'ready' ? (
+        <>
+          <p className={styles.note}>
+            {result.correlation} · mutations {result.mutationsEnabled ? 'on' : 'off'} · auto-send {result.autoSend ? 'on' : 'off'}
+          </p>
+          <ol className={styles.journey}>
+            {result.steps.map((step) => (
+              <li key={step.step}>
+                <strong>{step.step}</strong>
+                <span>{step.state}</span>
+                <small>{step.executor ?? 'no executor'}</small>
+              </li>
+            ))}
+          </ol>
+          <p className={styles.note}>No step is observed until a frozen executor reports it. Schedule and task completion are not delivery.</p>
+        </>
+      ) : null}
     </section>
   );
 }
