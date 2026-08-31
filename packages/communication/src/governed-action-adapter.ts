@@ -26,6 +26,17 @@ import {
 import type { CommunicationTemplateRepository } from './template.ts';
 import { resolveAndRenderCommunicationTemplate } from './template-resolve-render.ts';
 
+const COMMUNICATION_CHANNELS: readonly CommunicationChannel[] = [
+  'email',
+  'sms',
+  'whatsapp',
+  'voice',
+  'in_app',
+  'push',
+  'rcs',
+  'social',
+];
+
 export interface GovernedCommunicateConfiguration {
   readonly triggerKey: string;
   readonly recipient: CommunicationRecipient;
@@ -134,18 +145,10 @@ function parsePurpose(value: unknown): CommunicationPurpose {
 function parseChannel(value: unknown): CommunicationChannel | undefined {
   const channel = optionalText(value);
   if (channel === undefined) return undefined;
-  if (
-    channel !== 'email'
-    && channel !== 'sms'
-    && channel !== 'whatsapp'
-    && channel !== 'voice'
-    && channel !== 'in_app'
-    && channel !== 'push'
-    && channel !== 'rcs'
-  ) {
+  if (!(COMMUNICATION_CHANNELS as readonly string[]).includes(channel)) {
     throw new Error('GOVERNED_COMMUNICATE_CHANNEL_INVALID');
   }
-  return channel;
+  return channel as CommunicationChannel;
 }
 
 export function parseGovernedCommunicateConfiguration(
@@ -205,6 +208,9 @@ export function defaultCommunicationAdapterKey(input: {
   }
   if (providerKey === 'twilio' && input.channel === 'voice') {
     return 'twilio-voice-v1';
+  }
+  if (providerKey === 'linkedin' && input.channel === 'social') {
+    return 'linkedin-social-text-v1';
   }
   return null;
 }
