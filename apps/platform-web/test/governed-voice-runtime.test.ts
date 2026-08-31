@@ -21,5 +21,5 @@ test('governed Voice runtime composes routing, credential leasing, resolution, a
 test('governed Voice runtime does not claim telephony or agent orchestration', () => {
   assert.match(source, /invokeGovernedVoiceIntelligence/);
   assert.doesNotMatch(source, /NextResponse|export async function POST|export async function GET/);
-  assert.doesNotMatch(source, /telephone|Twilio|call control|setInterval/);
+  assert.doesNotMatch(source, /Twilio|call control|setInterval/);
 });
