@@ -139,6 +139,8 @@ export function learningApiError(error: unknown): LearningApiError | null {
         },
       };
     case 'LEARNING_LEARNER_IDENTITY_EXISTS':
+    case 'LEARNING_SUBJECT_MEMBERSHIP_NOT_FOUND':
+    case 'LEARNING_SUBJECT_ISSUER_AMBIGUOUS':
     case 'LEARNING_LEARNER_NOT_ACTIVE':
     case 'LEARNING_ASSIGNMENT_KEY_CONFLICT':
     case 'LEARNING_COURSE_NOT_PUBLISHED':
