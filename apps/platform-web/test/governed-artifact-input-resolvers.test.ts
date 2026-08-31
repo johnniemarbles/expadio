@@ -104,6 +104,41 @@ test('governedArtifactVoiceInputResolver rejects expired provider URLs', async (
       requiredResidencyTags: ['US'],
       requiredComplianceTags: ['HIPAA'],
     }),
-    /VOICE_PROVIDER_FETCH_URL_EXPIRED/,
+    /VOICE_INPUT_PROVIDER_URL_EXPIRED/,
+  );
+});
+
+
+test('governedArtifactVoiceInputResolver rejects non-HTTPS provider URLs', async () => {
+  const source: DurableArtifactSource = {
+    async readText() {
+      return {
+        content: 'hello',
+        contentReference: 'artifact://voice-text/1',
+      };
+    },
+    async issueProviderFetchUrl(input) {
+      return {
+        providerFetchUrl: 'http://internal.example.test/audio.wav',
+        contentReference: input.reference,
+        expiresAt: '2026-08-31T03:05:00.000Z',
+      };
+    },
+  };
+
+  const resolver = governedArtifactVoiceInputResolver(
+    source,
+    () => new Date('2026-08-31T03:00:00.000Z'),
+  );
+
+  await assert.rejects(
+    resolver.resolveProviderFetchUrl({
+      tenantId: 'tenant-1',
+      reference: 'artifact://voice-audio/1',
+      purpose: 'transcription',
+      requiredResidencyTags: ['US'],
+      requiredComplianceTags: ['HIPAA'],
+    }),
+    /VOICE_INPUT_PROVIDER_URL_INVALID/,
   );
 });
