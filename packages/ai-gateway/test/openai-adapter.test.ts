@@ -101,7 +101,8 @@ test("OpenAiAiAdapter invokes chat completions and returns validated proposal", 
   assert.equal(requestBody.model, "gpt-4o-mini");
   assert.equal(proposal.status, "PROPOSAL");
   assert.equal(proposal.provenance.modelKey, "gpt-4o-mini");
-  assert.equal(proposal.provenance.costMinorUnits, 1);
+  assert.equal(proposal.provenance.costMinorUnits, undefined);
+  assert.equal(proposal.provenance.estimatedCostMinorUnits, 1);
 
   const validation = validateAiProposal(intent, proposal);
   assert.equal(validation.valid, true);
