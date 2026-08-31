@@ -109,7 +109,11 @@ test("GeminiAiAdapter invokes generateContent, parses response and sets provenan
   assert.equal(proposal.provenance.providerKey, connector.providerKey);
   assert.equal(proposal.provenance.modelKey, "gemini-2.0-flash");
   assert.equal(proposal.provenance.costMinorUnits, undefined);
-  assert.equal(proposal.provenance.estimatedCostMinorUnits, 1);
+  assert.deepEqual(proposal.provenance.providerUsage, {
+    inputTokens: 20,
+    outputTokens: 15,
+    totalTokens: 35,
+  });
   assert.deepEqual(proposal.provenance.sourceReferences, [intent.inputReference, intent.contextReference]);
 
   const validation = validateAiProposal(intent, proposal);
