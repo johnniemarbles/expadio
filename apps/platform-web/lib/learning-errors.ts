@@ -97,3 +97,22 @@ export function learningApiError(error: unknown): LearningApiError | null {
       return null;
   }
 }
+
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function requireLearningUuid(value: string, field: string): string {
+  const normalized = value.trim();
+  if (!UUID.test(normalized)) {
+    throw new LearningValidationError(field, 'INVALID_IDENTIFIER', `${field} must be a valid identifier.`);
+  }
+  return normalized;
+}
+
+export function requireLearningVersion(value: string): number {
+  const version = Number(value);
+  if (!Number.isInteger(version) || version <= 0) {
+    throw new LearningValidationError('version', 'INVALID_VERSION', 'version must be a positive integer.');
+  }
+  return version;
+}
