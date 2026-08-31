@@ -189,3 +189,20 @@ test("GeminiAiAdapter throws on provider error response", async () => {
     /AI_PROVIDER_ERROR: Gemini responded with status 429/
   );
 });
+
+test("GeminiAiAdapter rejects unsupported modalities before credential acquisition", async () => {
+  const adapter = new GeminiAiAdapter({
+    apiToken: async () => assert.fail("Unsupported operations must not acquire credentials"),
+    artifactSink,
+    inputResolver,
+    fetchImpl: async () => assert.fail("Unsupported operations must not call the provider"),
+  });
+
+  await assert.rejects(
+    adapter.invoke({
+      intent: { ...intent, operation: "RERANK" },
+      connector,
+    }),
+    /AI_OPERATION_UNSUPPORTED:RERANK/,
+  );
+});
