@@ -10,6 +10,11 @@ type Result = {
   correlation?: string;
   communicate?: string;
   delivery?: string;
+  deliveryClaimed?: boolean;
+  payloadScan?: string;
+  sourceLogScan?: string;
+  runtimeLogFile?: string;
+  cache?: string;
 };
 
 export default function ProvisionScopeForm() {
@@ -22,17 +27,12 @@ export default function ProvisionScopeForm() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
 
-  async function post(path: string, body: Record<string, unknown>) {
+  async function call(path: string, init?: RequestInit) {
     setBusy(true);
     setError(null);
     setResult(null);
     try {
-      const response = await fetch(path, {
-        method: 'POST',
-        cache: 'no-store',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(path, { cache: 'no-store', ...init });
       const payload = (await response.json()) as Result & { message?: string; denied?: boolean };
       if (!response.ok || payload.denied) {
         throw new Error(payload.message ?? 'Unable to complete this Platform action.');
@@ -71,12 +71,10 @@ export default function ProvisionScopeForm() {
         type="button"
         disabled={busy}
         onClick={() =>
-          void post('/api/tenants/provision', {
-            tenantCode,
-            brandCode,
-            locationCode,
-            organizationLabel,
-            createTenant,
+          void call('/api/tenants/provision', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ tenantCode, brandCode, locationCode, organizationLabel, createTenant }),
           })
         }
       >
@@ -85,16 +83,35 @@ export default function ProvisionScopeForm() {
       <button
         type="button"
         disabled={busy}
-        onClick={() => void post('/api/tenants/cs104-observe', { tenantCode, brandCode })}
+        onClick={() =>
+          void call('/api/tenants/cs104-observe', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ tenantCode, brandCode }),
+          })
+        }
       >
         {busy ? 'Working…' : 'Seed CS-104 observation'}
       </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          void call(`/api/journey-correlation?tenant=${encodeURIComponent(tenantCode)}&brand=${encodeURIComponent(brandCode)}&correlation=CS-104`)
+        }
+      >
+        {busy ? 'Working…' : 'Read CS-104 on Platform'}
+      </button>
+      <button type="button" disabled={busy} onClick={() => void call('/api/tenants/pii-proof')}>
+        {busy ? 'Working…' : 'Run source PII proof'}
+      </button>
       {error ? <p role="alert">{error}</p> : null}
-      {result?.brandHref ? (
+      {result ? (
         <p>
+          {result.payloadScan ? `PII proof ${result.payloadScan}. Logs ${result.runtimeLogFile ?? ''}. ` : null}
           {result.correlation ? `CS-104 communicate ${result.communicate ?? ''} · delivery ${result.delivery ?? ''}. ` : null}
-          Bound {result.tenant ?? tenantCode} / {result.brand ?? brandCode} / {result.location ?? locationCode}.{' '}
-          <a href={result.brandHref}>Open Brand</a>
+          {result.tenant || result.brandHref ? `Bound ${result.tenant ?? tenantCode} / ${result.brand ?? brandCode}. ` : null}
+          {result.brandHref ? <a href={result.brandHref}>Open Brand</a> : null}
         </p>
       ) : null}
     </form>
