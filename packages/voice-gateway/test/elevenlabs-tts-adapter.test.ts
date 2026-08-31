@@ -60,6 +60,7 @@ const intent: VoiceIntelligenceIntent = {
     requiredComplianceTags: ["SOC2"],
   },
   idempotencyKey: "idem_tts_222",
+  correlationId: "corr-tts-222",
   requestedAt: "2026-08-30T12:00:00.000Z",
 };
 
