@@ -1,20 +1,17 @@
 # Dual-shell proposition — accepted shape
 
-Status: Brand host kernel plus same-origin `/brand` fallback. Next Brand app is not a separate deploy. Not merged.
+Status: Brand host kernel plus same-origin `/brand` fallback. Platform product APIs locked to shared nav. Next Brand app is not a separate deploy. Not merged.
 Hosts: `platform.expadio.com` (Platform), `app.expadio.com` (Brand). Fallback: `/brand/*` with Brand chrome.
 
 ## This increment
 
-- `authorizeBrandCustomerRequest` + `serveBrandCustomerRead` remain the kernel.
-- Product route: `app.expadio.com` `/api/brand/customers`.
-- Same-origin fallback: any host + `/brand/api/customers` (mounted in platform-web, outside Platform `ShellFrame`).
-- `0089` `lookup_product_scope_binding` resolves one ACTIVE T/B/L row without a prior tenant GUC.
-- Injected reader is canonical `readCustomers` on membership-checked mapped keys.
-- Lab `account`/`org` query params are refused on the Brand path.
-- `L-####` and SELECTED membership stay fail-closed. No mutation, no auto-send, no lockfile change.
+- Platform product nav = `SHELL_NAVIGATION.platform` via `SHELL_PLATFORM_SECTIONS`.
+- Overview / context / workspaces use generic errors and `private, no-store`.
+- PII contract: no customer email/phone/full_name on Platform product payloads or logs.
+- CS-104 journey contract exists as observation-only. No executor call from Brand.
 
 ## Still open
 
 1. Separate Brand Next deploy on `app.expadio.com` (fallback is not that host).
-2. Platform PII proof on URLs/APIs/errors/logs/caches.
-3. One Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE → observed delivery.
+2. Runtime PII proof on deployed logs/caches and authenticated e2e.
+3. Observed Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE → delivery.

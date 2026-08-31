@@ -53,11 +53,9 @@ separation, idempotency and policy. No commands are enabled in this correction.
 | No customer names, email, phone or customer drill-through | Separate server-authorized audience and payload contract |
 | Break-glass is a governed request, not a PII view | Platform authority alone does not grant Brand access |
 
-These lists are exported as `SHELL_NAVIGATION`; they do not invent working
-routes or claim the current Platform nav has already been migrated. A future
-audience switch must reauthorize and clear prior audience data. Frontend labels,
-a shared session, a scope query parameter or removal of a link do not establish
-a server boundary.
+These lists are exported as `SHELL_NAVIGATION`. Platform product workspaces now
+serve that list. Lab routes remain in the tree and stay classified as lab.
+A future audience switch must reauthorize and clear prior audience data.
 
 Brand customer reads are authorized by `authorizeBrandCustomerRequest` on
 `app.expadio.com` `/api/brand/customers`, or the same-origin fallback
@@ -77,17 +75,12 @@ proven. Platform `ShellFrame` must not link `/brand` or `/tenant`.
 3. Implement the verified product/storage mappings and server scope adapters in
    both apps. Role homes remain owner, manager, operator and approver. Restricted
    location/workspace access stays fail-closed until its ownership is verified.
-4. Prove Platform responses never contain customer PII through direct URLs,
-   APIs, errors, logs or caches. Platform-to-Brand transitions require separate
-   verified Brand authority. Sidebar removal is not proof of this isolation.
+4. Platform product URLs/APIs/errors now use the PII contract. Runtime logs and
+   caches on a deployed preview are still unproven.
 5. Test scoped counts, view/action separation, expired/revoked access, mobile,
    keyboard and authenticated browser e2e. Unit selection tests and mounted-DOM
    checks do not satisfy these gates.
 6. Only then prove one Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE →
-   observed delivery on the same record using frozen executors. No auto-send,
-   second engine, mutations now, DENTEX expansion, Social or lead-inbox merge.
-
-The later Wave 1+2 directional fixture is not available in this correction's
-supplied files; no replacement is fabricated. The written freeze and dual-shell
-contract govern the draft. The tip and verified evidence, not intermediate
-commit messages, describe the current implementation.
+   observed delivery on the same record using frozen executors. The observation
+   plan exists; no Brand mutation is enabled. No auto-send, second engine,
+   DENTEX expansion, Social or lead-inbox merge.

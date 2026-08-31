@@ -97,6 +97,10 @@ function Customers({ scoped, query }: { scoped: boolean; query: string }) {
           ))}
         </ul>
       ) : null}
+      <p className={styles.note}>
+        CS-104 journey stays observation-only: case → SCHEDULE → CREATE_TASK → COMMUNICATE → delivery.
+        No step is observed yet. A finished task is not a send.
+      </p>
     </section>
   );
 }

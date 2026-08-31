@@ -27,6 +27,7 @@ test('same-origin Brand fallback is mounted outside Platform chrome', () => {
   assert.equal(existsSync(new URL('../app/brand/page.tsx', import.meta.url)), true);
   const page = readFileSync(new URL('../app/brand/BrandWorkspace.tsx', import.meta.url), 'utf8');
   assert.match(page, /\/brand\/api\/customers/);
+  assert.match(page, /observation-only/);
   assert.doesNotMatch(page, /\/api\/tenant|DENTEX|AutoGTM|expenses|vendors/);
   const shell = readFileSync(new URL('../components/ShellFrame/ShellFrame.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(shell, /\/brand/);
