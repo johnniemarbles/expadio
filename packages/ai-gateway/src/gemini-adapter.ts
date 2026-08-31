@@ -162,7 +162,12 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       ],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      costMinorUnits,
+      estimatedCostMinorUnits: costMinorUnits,
+      providerUsage: {
+        inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
+        outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+        totalTokens,
+      },
     };
 
     const artifact = await this.#artifactSink.write({
@@ -250,7 +255,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      costMinorUnits: 1,
+      estimatedCostMinorUnits: 1,
     };
 
     return {
