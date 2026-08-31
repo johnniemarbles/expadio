@@ -93,6 +93,8 @@ CREATE TABLE platform.learning_assignment_rule_executions (
   assignment_rule_version_id uuid NOT NULL,
   learner_id uuid NOT NULL,
   trigger_event_id uuid,
+  evaluated_by_subject_id text NOT NULL CHECK (btrim(evaluated_by_subject_id) <> ''),
+  correlation_id text NOT NULL CHECK (btrim(correlation_id) <> ''),
   outcome text NOT NULL CHECK (
     outcome IN ('NOT_MATCHED','ASSIGNED','SATISFIED')
   ),
