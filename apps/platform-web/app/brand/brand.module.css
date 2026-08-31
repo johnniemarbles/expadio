@@ -8,3 +8,6 @@
 .note, .fixture, .eyebrow { color: #8aa0b5; font-size: 0.8rem; }
 .main { padding: 1.5rem 2rem; }
 .main h1 { margin: 0.2rem 0 0.75rem; font-size: 1.6rem; }
+.journey { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.5rem; }
+.journey li { display: grid; grid-template-columns: 10rem 8rem 1fr; gap: 0.75rem; padding: 0.55rem 0.7rem; background: #1c2733; border-radius: 8px; }
+.journey small { color: #8aa0b5; }
