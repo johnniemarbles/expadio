@@ -65,4 +65,7 @@ test('commercial suspension consumes old events without executing Learning rules
   assert.match(runtime, /loadTenantProductModule/);
   assert.match(runtime, /module\.availability !== 'ACTIVE'/);
   assert.match(runtime, /return \[\]/);
+  assert.match(worker, /loadTenantProductModule/);
+  assert.match(worker, /aggregateType === 'learning\.learner'/);
+  assert.match(worker, /eventType === 'learning\.learner\.created'/);
 });
