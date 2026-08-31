@@ -3,6 +3,7 @@ import {
   CS104_CORRELATION,
   createScopeDirectoryFromRows,
   emptyBrandJourneyObservation,
+  factsFromFrozenExecutorRows,
   observeBrandJourneyFromFacts,
   parseBrandCode,
   parseJourneyCorrelation,
@@ -247,13 +248,7 @@ export async function serveBrandJourneyFallback(
     const observation =
       rows.length === 0
         ? emptyBrandJourneyObservation(correlation, null)
-        : observeBrandJourneyFromFacts(
-            correlation,
-            null,
-            rows.map((row) => ({ correlation: row.correlation, executor: row.executor as 'SCHEDULE' | 'CREATE_TASK' | 'COMMUNICATE', state: 'queued' })).length >= 0
-              ? (await import('@expadio/tenancy')).factsFromFrozenExecutorRows(correlation, rows)
-              : [],
-          );
+        : observeBrandJourneyFromFacts(correlation, null, factsFromFrozenExecutorRows(correlation, rows));
     await bound.client.query('COMMIT');
     return Response.json(observation, { status: 200, headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
