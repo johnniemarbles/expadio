@@ -260,7 +260,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER learning_course_modules_draft_only
 BEFORE INSERT OR UPDATE OR DELETE ON platform.learning_course_modules
