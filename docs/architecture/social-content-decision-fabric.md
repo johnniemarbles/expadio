@@ -1,34 +1,35 @@
 # Social Content as Decision Fabric vertical
 
-**Work type:** `social.content_publish`  
-**Migration:** `infra/db/migrations/0057_social_content_publish.sql`  
-**Module origin:** https://github.com/johnniemarbles/expadio-social-content
+**Status: DESIGN SPIKE — DO NOT MERGE UNDER FOUNDATION FREEZE**
 
-## Stages
+**Work type:** `social.content_publish`  
+**Migration sketch:** `infra/db/migrations/0057_social_content_publish.sql`  
+**Module:** https://github.com/johnniemarbles/expadio-social-content (ADR-006)
+
+## Program note (2026-08-31)
+
+`FOUNDATION_FREEZE.md` pauses additional vertical implementation until the governed side-effect loop is proven and a human release decision is made. This branch keeps a correct **pattern copy** of `access.request` so Social Content can land without redesign later. It is **not** authorization to ship a fifth production vertical now.
+
+Production publish must use Governed Action + credential custody + provider evidence + execution trace — not a parallel Nest runtime from the standalone module.
+
+## Stages (sketch)
 
 | Stage | Gates |
 |-------|--------|
-| `DRAFT` | Author edits content |
-| `BRAND_REVIEW` | Required participant `brand_approver` + decision APPROVE/REJECT |
-| `APPROVED` | Publish allowed (connectors run outside this migration) |
+| `DRAFT` | Author edits |
+| `BRAND_REVIEW` | `brand_approver` + APPROVE/REJECT |
+| `APPROVED` | Eligible for governed publish action |
 
-Authority: **role + separation of duties only** (no `registerAuthorityDeriver`). Approver must not be the content author.
+Authority: role + SoD only.
 
-## Routes
+## Routes (sketch)
 
-- `GET/POST /api/social-content`
-- `GET/POST/PATCH /api/social-content/[id]/workflow`
-- `POST .../workflow/decision`
-- `POST .../workflow/participants`
-- `GET .../workflow/history`
+Factory routes under `/api/social-content/...` — same as other verticals.
 
-## Publish gate (module responsibility)
+## Follow-ups (after freeze allows)
 
-Live social publish must require `stage_key = 'APPROVED'` (or status mirrored from `statusForStage`). Standalone `expadio-social-content` status machine is a dev shim only.
-
-## Follow-ups
-
-- [ ] Shell UI tab + WorkflowTraceModal
-- [ ] Integration itest (SoD self-approval denied)
-- [ ] Wire social-content packages (connectors, AI) as governed side-effect after APPROVED
-- [ ] Feature-flag in Industry Packs
+- [ ] Explicit release decision
+- [ ] Shell UI + WorkflowTraceModal
+- [ ] SoD integration itest
+- [ ] Governed publish executor + evidence
+- [ ] Industry Pack feature flag
