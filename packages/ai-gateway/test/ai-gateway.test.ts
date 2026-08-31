@@ -129,3 +129,16 @@ test('requires correlation identity for AI invocations', () => {
     true,
   );
 });
+
+test('rejects unknown runtime AI operations', () => {
+  const result = validateAiInvocationIntent({
+    ...intent,
+    operation: 'UNKNOWN' as AiInvocationIntent['operation'],
+  });
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  assert.equal(
+    result.issues.some((issue) => issue.code === 'AI_OPERATION_INVALID'),
+    true,
+  );
+});
