@@ -27,7 +27,6 @@ const intent: GovernedActionIntent = {
     contextReference: "Patient allergic to penicillin.",
     promptKey: "prompt.clinical.discharge",
     promptVersion: 1,
-    autoApproveConfidenceThreshold: 0.9,
   },
   policyDecision: {
     allowed: true,
@@ -80,7 +79,7 @@ test("executeGovernedAiAction never auto-approves from provider confidence alone
   }
 });
 
-test("executeGovernedAiAction requires review when confidence is below threshold", async () => {
+test("executeGovernedAiAction requires independent review regardless of confidence", async () => {
   const lowConfidenceProposal: AiProposal = {
     invocationId: `inv_${intent.idempotencyKey}`,
     tenantId: intent.tenantId,
@@ -136,7 +135,7 @@ test("executeGovernedAiAction refuses intent with executorClass mismatch", async
 });
 
 
-test("executeGovernedAiAction rejects invalid confidence thresholds before provider invocation", async () => {
+test("executeGovernedAiAction rejects confidence-only auto-approval configuration", async () => {
   const invalidIntent: GovernedActionIntent = {
     ...intent,
     configuration: {
@@ -156,7 +155,7 @@ test("executeGovernedAiAction rejects invalid confidence thresholds before provi
 
   assert.equal(result.status, "FAILED");
   assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
-  assert.match(result.reason, /CONFIDENCE_THRESHOLD_INVALID/);
+  assert.match(result.reason, /AUTO_APPROVAL_UNSUPPORTED/);
 });
 
 test("executeGovernedAiAction rejects invalid operations before provider invocation", async () => {
