@@ -238,3 +238,33 @@ test("executeGovernedAiAction rejects malformed context references before provid
   assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
   assert.match(result.reason, /AI_ACTION_CONTEXT_REFERENCE_INVALID/);
 });
+
+
+test("executeGovernedAiAction uses one replay identity for configuration refusal and invocation", async () => {
+  const invalidIntent: GovernedActionIntent = {
+    ...intent,
+    configuration: {
+      ...intent.configuration,
+      operation: "INVALID",
+    },
+  };
+  const persistedActionIntentId = "22222222-2222-4222-8222-222222222222";
+  const mockGateway: AiGateway = {
+    invoke: async () => assert.fail("Invalid configuration must not invoke AI"),
+  };
+
+  const result = await executeGovernedAiAction({
+    intent: invalidIntent,
+    actionIntentId: persistedActionIntentId,
+    aiGateway: mockGateway,
+  });
+
+  assert.equal(result.status, "FAILED");
+  assert.equal(
+    result.attempt.attemptKey,
+    governedActionExecutionAttemptKey({
+      actionIntentId: persistedActionIntentId,
+      phase: "INVOKE_AI",
+    }),
+  );
+});
