@@ -6,6 +6,7 @@ export const COMMUNICATION_CHANNELS = [
   "in_app",
   "push",
   "rcs",
+  "social",
 ] as const;
 
 export type CommunicationChannel = (typeof COMMUNICATION_CHANNELS)[number];
