@@ -90,6 +90,32 @@ BEGIN
 END;
 $$;
 
+DO $
+BEGIN
+  BEGIN
+    INSERT INTO platform.learning_automation_rules (
+      tenant_id, rule_key, event_type, executor_class, action_key,
+      enabled, policy_keys, configuration, created_by_subject_id,
+      updated_by_subject_id
+    ) VALUES (
+      'a1a1a1a1-a1a1-41a1-81a1-a1a1a1a1a1a1',
+      'learning.policy.unavailable',
+      'learning.course.completed',
+      'CREATE_TASK',
+      'learning.policy.unavailable',
+      true,
+      '["manager-approval"]'::jsonb,
+      '{"title":"Must not enable"}'::jsonb,
+      'admin-a',
+      'admin-a'
+    );
+    RAISE EXCEPTION 'enabled policy-bearing automation rule unexpectedly succeeded';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+END;
+$;
+
 DROP ROLE IF EXISTS expadio_learning_automation_smoke;
 CREATE ROLE expadio_learning_automation_smoke NOLOGIN;
 GRANT USAGE ON SCHEMA platform TO expadio_learning_automation_smoke;
