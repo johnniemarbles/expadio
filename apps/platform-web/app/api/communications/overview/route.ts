@@ -1,5 +1,4 @@
 import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../lib/request-context";
-import type { DeniedResult } from "@expadio/ui/contracts";
 import { NextResponse } from "next/server";
 import {
   COMMUNICATION_CHANNELS,
@@ -7,8 +6,12 @@ import {
   type CommunicationDeliveryState,
   type CommunicationOverview,
 } from "../../../../lib/communication-contracts";
-
-
+import {
+  PLATFORM_PRODUCT_CACHE,
+  assertPlatformProductSendingHealth,
+  platformProductDenied,
+  writePlatformProductLog,
+} from "../../../../lib/platform-product-surface";
 
 interface ChannelRow {
   channel: CommunicationChannel;
@@ -135,18 +138,21 @@ export async function GET(request: Request) {
       })),
     };
 
-      return NextResponse.json(overview);
+      assertPlatformProductSendingHealth(overview);
+      return NextResponse.json(overview, { headers: PLATFORM_PRODUCT_CACHE });
     });
-  } catch (error: any) {
-    if (error.denied) {
-      const { body, status } = deniedResponse(error);
-      return NextResponse.json(body, { status });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'PLATFORM_PII_BOUNDARY') {
+      return NextResponse.json(platformProductDenied('PLATFORM_PII_BOUNDARY'), {
+        status: 500,
+        headers: PLATFORM_PRODUCT_CACHE,
+      });
     }
-    console.error("Communications overview API error:", error);
-    return NextResponse.json({
-      denied: true,
-      reasonKey: "INTERNAL_ERROR",
-      message: "Communications data could not be loaded.",
-    }, { status: 500 });
+    if (error && typeof error === 'object' && 'denied' in error) {
+      const { body, status } = deniedResponse(error as { denied: true });
+      return NextResponse.json(body, { status, headers: PLATFORM_PRODUCT_CACHE });
+    }
+    writePlatformProductLog((line) => console.error(line), 'Communications overview INTERNAL_ERROR');
+    return NextResponse.json(platformProductDenied(), { status: 500, headers: PLATFORM_PRODUCT_CACHE });
   }
 }

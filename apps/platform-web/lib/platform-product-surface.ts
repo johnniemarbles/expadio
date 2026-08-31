@@ -2,6 +2,7 @@ import {
   PLATFORM_SAFE_ERROR_MESSAGE,
   SHELL_NAVIGATION,
   assertPlatformPayloadHasNoCustomerPii,
+  assertPlatformSendingHealthPayload,
   classifyRequestPath,
   platformSafeErrorBody,
   platformSafeLogLine,
@@ -40,6 +41,10 @@ export function platformProductDenied(reasonKey = 'INTERNAL_ERROR') {
 
 export function assertPlatformProductPayload(payload: unknown): void {
   assertPlatformPayloadHasNoCustomerPii(payload);
+}
+
+export function assertPlatformProductSendingHealth(payload: unknown): void {
+  assertPlatformSendingHealthPayload(payload);
 }
 
 export function writePlatformProductLog(write: (line: string) => void, line: string): void {
