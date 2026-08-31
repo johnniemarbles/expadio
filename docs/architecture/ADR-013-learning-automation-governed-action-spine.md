@@ -73,6 +73,30 @@ Initial executor classes are intentionally limited to:
 Adding a new Learning executor class is prohibited unless that executor first
 exists as a horizontal EXPADIO executor.
 
+## Coexistence with assignment automation
+
+LMS-06 assignment automation and LMS-07 governed side effects are separate
+concerns over the same horizontal Domain Event worker.
+
+For `learning.learner.created` the worker composes them in this order:
+
+1. if Learning is operational, evaluate published assignment rules under the
+   existing tenant+learner transaction-scoped advisory lock;
+2. commit replay-safe assignment outcomes;
+3. materialize any tenant governed-action rules for the same Learning event;
+4. run the existing horizontal executors;
+5. complete the shared Domain Event outbox claim only after governed side
+   effects succeed.
+
+This ordering avoids nesting the COMMUNICATE executor's transaction inside the
+assignment transaction. If a later governed side effect fails, the outbox may
+retry safely because assignment executions are unique per
+learner/rule-version and exact target enrollments are duplicate-protected.
+
+If Learning has become suspended before a learner-created event is processed,
+both assignment evaluation and governed-action rule lookup return no work and
+the shared outbox item is consumed without side effects.
+
 ## PII boundary
 
 Rule configuration stores bindings, not learner data.
