@@ -25,6 +25,9 @@ CREATE TABLE platform.learning_automation_rules (
   policy_keys jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (
     jsonb_typeof(policy_keys) = 'array'
   ),
+  CONSTRAINT learning_automation_enabled_policy_evaluator CHECK (
+    enabled = false OR jsonb_array_length(policy_keys) = 0
+  ),
   configuration jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (
     jsonb_typeof(configuration) = 'object'
   ),
