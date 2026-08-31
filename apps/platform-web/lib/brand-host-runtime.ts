@@ -3,6 +3,7 @@ import {
   CS104_CORRELATION,
   createScopeDirectoryFromRows,
   emptyBrandJourneyObservation,
+  observeBrandJourneyFromFacts,
   parseBrandCode,
   parseJourneyCorrelation,
   parseLocationCode,
@@ -16,6 +17,7 @@ import {
   type ShellScope,
 } from '@expadio/tenancy';
 import { parsePage, readCustomers, TenantReadError, type SqlClient } from './tenant-read-model.ts';
+import { readFrozenExecutorRows } from './brand-journey-facts.ts';
 
 const PRODUCT_QUERY = ['tenant', 'brand', 'location'] as const;
 const LAB_QUERY = ['account', 'org', 'locationId', 'workspace', 'workspaceId'] as const;
@@ -50,6 +52,12 @@ export function brandErrorResponse(error: unknown): Response {
     return Response.json(
       { denied: true, reasonKey: 'INVALID_JOURNEY_CORRELATION', message: 'Use a CS-#### correlation.' },
       { status: 400, headers: { 'Cache-Control': 'private, no-store' } },
+    );
+  }
+  if (error instanceof Error && error.message === 'JOURNEY_DELIVERY_NOT_INFERRED') {
+    return Response.json(
+      { denied: true, reasonKey: 'JOURNEY_DELIVERY_NOT_INFERRED', message: 'Scheduling or a task is not delivery.' },
+      { status: 409, headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
   return Response.json(
@@ -235,7 +243,17 @@ export async function serveBrandJourneyFallback(
       path: '/brand/api/customers',
     };
     await serveBrandCustomerRead(incoming, bound.directory, async () => null);
-    const observation = emptyBrandJourneyObservation(correlation, correlation);
+    const rows = await readFrozenExecutorRows(bound.client, correlation);
+    const observation =
+      rows.length === 0
+        ? emptyBrandJourneyObservation(correlation, null)
+        : observeBrandJourneyFromFacts(
+            correlation,
+            null,
+            rows.map((row) => ({ correlation: row.correlation, executor: row.executor as 'SCHEDULE' | 'CREATE_TASK' | 'COMMUNICATE', state: 'queued' })).length >= 0
+              ? (await import('@expadio/tenancy')).factsFromFrozenExecutorRows(correlation, rows)
+              : [],
+          );
     await bound.client.query('COMMIT');
     return Response.json(observation, { status: 200, headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
