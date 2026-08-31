@@ -93,6 +93,24 @@ $$;
 DO $
 BEGIN
   BEGIN
+    DELETE FROM platform.learning_automation_rules
+     WHERE tenant_id = 'a1a1a1a1-a1a1-41a1-81a1-a1a1a1a1a1a1'::uuid
+       AND rule_key = 'learning.course.review';
+    RAISE EXCEPTION 'automation rule delete unexpectedly succeeded';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'automation rule delete unexpectedly succeeded' THEN
+      RAISE;
+    END IF;
+    IF POSITION('disable instead of deleting' IN SQLERRM) = 0 THEN
+      RAISE;
+    END IF;
+  END;
+END;
+$;
+
+DO $
+BEGIN
+  BEGIN
     INSERT INTO platform.learning_automation_rules (
       tenant_id, rule_key, event_type, executor_class, action_key,
       enabled, policy_keys, configuration, created_by_subject_id,
