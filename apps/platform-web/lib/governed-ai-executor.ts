@@ -174,7 +174,7 @@ export async function executePersistedGovernedAiAction(
         secretResolver,
         requestedBySubjectId: serviceSubjectId,
         requestId: () => randomUUID(),
-        correlationId: () => input.intent.correlationId || randomUUID(),
+        correlationId: () => input.intent.correlationId,
         now: credentialNow,
       });
 
