@@ -21,6 +21,10 @@ import {
   executeGovernedCreateTaskAction,
   type GovernedCreateTaskExecutionResult,
 } from './governed-create-task-executor';
+import {
+  evaluateLearningAssignmentRulesForLearner,
+  type LearningAssignmentExecutionResult,
+} from '@expadio/postgres-runtime/learning-assignment-automation';
 
 export type DomainEventActionWorkerResult =
   | { readonly status: 'IDLE' }
@@ -31,6 +35,7 @@ export type DomainEventActionWorkerResult =
       readonly communications: readonly GovernedCommunicateExecutionResult[];
       readonly schedules: readonly GovernedScheduleExecutionResult[];
       readonly tasks: readonly GovernedCreateTaskExecutionResult[];
+      readonly learningAssignments?: readonly LearningAssignmentExecutionResult[];
     }
   | {
       readonly status: 'FAILED' | 'DEAD' | 'STALE_CLAIM';
@@ -89,6 +94,46 @@ export async function processOneDomainEventActionWorkItem(
   if (claim === null) return { status: 'IDLE' };
 
   try {
+    if (
+      claim.event.aggregateType === 'learning.learner'
+      && claim.event.eventType === 'learning.learner.created'
+    ) {
+      const learningAssignments = await evaluateLearningAssignmentRulesForLearner(
+        client,
+        {
+          tenantId: claim.tenantId,
+          learnerId: claim.event.aggregateId,
+          actorSubjectId: 'system:learning-assignment-automation',
+          correlationId: claim.event.correlationId,
+          triggerEventId: claim.eventId,
+          evaluatedAt: now,
+        },
+      );
+
+      const completed = await completeDomainEventOutbox(client, {
+        tenantId: claim.tenantId,
+        outboxId: claim.outboxId,
+        claimedAt: claim.claimedAt,
+        completedAt: now,
+      });
+      if (!completed) {
+        return {
+          status: 'STALE_CLAIM',
+          claim,
+          reason: 'Claim was superseded before completion.',
+        };
+      }
+      return {
+        status: 'PUBLISHED',
+        claim,
+        actions: [],
+        communications: [],
+        schedules: [],
+        tasks: [],
+        learningAssignments,
+      };
+    }
+
     if (claim.event.aggregateType !== 'crm.case') {
       const completed = await completeDomainEventOutbox(client, {
         tenantId: claim.tenantId,
