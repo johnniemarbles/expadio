@@ -34,11 +34,31 @@ export {
 } from './brand-host.ts';
 export type { BrandIncomingRequest, BrandAuthorizedCustomerRead } from './brand-host.ts';
 export {
+  PLATFORM_SAFE_ERROR_MESSAGE,
   platformSafeRef,
+  classifyRequestPath,
+  customerPiiPresent,
+  redactCustomerPii,
   assertPlatformPayloadHasNoCustomerPii,
+  assertPlatformLogHasNoCustomerPii,
+  platformSafeErrorBody,
   assertBrandNavIsNotInsidePlatform,
 } from './audience-boundary.ts';
-export type { PlatformSafeRef } from './audience-boundary.ts';
+export type { PlatformSafeRef, RequestSurface } from './audience-boundary.ts';
+export {
+  BRAND_JOURNEY_STEPS,
+  JOURNEY_OBSERVATION_STATES,
+  emptyBrandJourneyObservation,
+  assertJourneyIsObservationOnly,
+  platformViewOfJourney,
+} from './brand-journey.ts';
+export type {
+  BrandJourneyStep,
+  JourneyObservationState,
+  FrozenExecutorClass,
+  BrandJourneyStepObservation,
+  BrandJourneyObservation,
+} from './brand-journey.ts';
 
 export interface IdentityContext {
   readonly subjectId: string;
