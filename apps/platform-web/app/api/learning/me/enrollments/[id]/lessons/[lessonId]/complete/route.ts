@@ -28,6 +28,7 @@ export async function POST(
       completeMyLearningLesson(client, {
         tenantId: context.tenantId,
         subjectId: context.subjectId,
+        subjectIssuer: context.issuer,
         enrollmentId,
         lessonId,
         correlationId: request.headers.get('x-correlation-id')?.trim() || randomUUID(),
