@@ -139,9 +139,13 @@ DECLARE
   state_count integer;
   event_count integer;
 BEGIN
-  SELECT count(*) INTO connector_count FROM platform.connectors;
+  -- Count only this test's fixtures. Catalog PLATFORM connectors (e.g. disabled
+  -- gtm.email from 0082) are also tenant-visible and must not fail isolation.
+  SELECT count(*) INTO connector_count
+    FROM platform.connectors
+   WHERE connector_key IN ('platform-email', 'tenant-a-email', 'tenant-b-email');
   IF connector_count <> 2 THEN
-    RAISE EXCEPTION 'tenant A expected 2 visible connectors (platform + own), got %', connector_count;
+    RAISE EXCEPTION 'tenant A expected 2 visible fixtures (platform-email + tenant-a-email), got %', connector_count;
   END IF;
 
   SELECT count(*) INTO policy_count FROM platform.connector_routing_policies;
