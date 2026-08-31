@@ -7,10 +7,12 @@ import type {
 } from "./index.ts";
 import type { VoiceProviderAdapter } from "./routing.ts";
 import type { VoiceApiTokenProvider } from "./deepgram-stt-adapter.ts";
+import type { VoiceInputResolver } from "./input-resolution.ts";
 
 export interface ElevenLabsTtsAdapterOptions {
   readonly apiToken: VoiceApiTokenProvider;
   readonly artifactSink: DurableArtifactSink;
+  readonly inputResolver: VoiceInputResolver;
   readonly endpointBaseUrl?: string;
   readonly defaultVoiceId?: string;
   readonly modelKey?: string;
@@ -22,6 +24,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
   readonly adapterKey = "elevenlabs-tts-v1";
   readonly #apiToken: VoiceApiTokenProvider;
   readonly #artifactSink: DurableArtifactSink;
+  readonly #inputResolver: VoiceInputResolver;
   readonly #endpointBaseUrl: string;
   readonly #defaultVoiceId: string;
   readonly #modelKey: string;
@@ -31,6 +34,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
   constructor(options: ElevenLabsTtsAdapterOptions) {
     this.#apiToken = options.apiToken;
     this.#artifactSink = options.artifactSink;
+    this.#inputResolver = options.inputResolver;
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://api.elevenlabs.io/v1/text-to-speech").replace(/\/+$/u, "");
     this.#defaultVoiceId = options.defaultVoiceId ?? "21m00Tcm4TlvDq8ikWAM";
     this.#modelKey = options.modelKey ?? "eleven_multilingual_v2";
@@ -65,7 +69,14 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
     const voiceId = this.#defaultVoiceId;
     const url = `${this.#endpointBaseUrl}/${encodeURIComponent(voiceId)}`;
 
-    const textToSynthesize = intent.inputReference;
+    const resolvedInput = await this.#inputResolver.resolveText({
+      tenantId: intent.tenantId,
+      reference: intent.inputReference,
+      purpose: intent.purpose,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+    const textToSynthesize = resolvedInput.content;
     const response = await this.#fetch(url, {
       method: "POST",
       headers: {
@@ -105,7 +116,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
       modelKey: this.#modelKey,
-      sourceReferences: [intent.inputReference],
+      sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
 
