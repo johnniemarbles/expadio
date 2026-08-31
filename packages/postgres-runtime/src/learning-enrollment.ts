@@ -16,6 +16,7 @@ import { requireTenantModuleOperational } from './product-module.ts';
 interface LearnerRow {
   readonly learner_id: string;
   readonly subject_id: string | null;
+  readonly subject_issuer: string | null;
   readonly contact_id: string | null;
   readonly external_ref: string | null;
   readonly full_name: string;
@@ -69,6 +70,7 @@ interface SelfLessonRow {
 export interface LearningLearner {
   readonly learnerId: string;
   readonly subjectId: string | null;
+  readonly subjectIssuer: string | null;
   readonly contactId: string | null;
   readonly externalRef: string | null;
   readonly fullName: string;
@@ -146,6 +148,7 @@ function learner(row: LearnerRow): LearningLearner {
   return {
     learnerId: row.learner_id,
     subjectId: row.subject_id,
+    subjectIssuer: row.subject_issuer,
     contactId: row.contact_id,
     externalRef: row.external_ref,
     fullName: row.full_name,
@@ -193,17 +196,22 @@ export async function createLearningLearner(
   await requireLearning(client, input.tenantId);
   const value = validateLearningLearnerInput(input.learner);
 
+  const subjectIssuer = value.subjectId === null
+    ? null
+    : await resolveLearnerSubjectIssuer(client, input.tenantId, value.subjectId);
+
   try {
     const result = await client.query<LearnerRow>(
       `INSERT INTO platform.learning_learners (
-         tenant_id, subject_id, contact_id, external_ref, full_name, email,
+         tenant_id, subject_id, subject_issuer, contact_id, external_ref, full_name, email,
          audience_type, metadata, created_by_subject_id
-       ) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6, $7, $8::jsonb, $9)
-       RETURNING learner_id, subject_id, contact_id, external_ref, full_name,
+       ) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, $8, $9::jsonb, $10)
+       RETURNING learner_id, subject_id, subject_issuer, contact_id, external_ref, full_name,
                  email, audience_type, status, metadata, created_at, updated_at`,
       [
         input.tenantId,
         value.subjectId,
+        subjectIssuer,
         value.contactId,
         value.externalRef,
         value.fullName,
@@ -229,7 +237,7 @@ export async function listLearningLearners(
 ): Promise<readonly LearningLearner[]> {
   await requireLearning(client, tenantId);
   const result = await client.query<LearnerRow>(
-    `SELECT learner_id, subject_id, contact_id, external_ref, full_name, email,
+    `SELECT learner_id, subject_id, subject_issuer, contact_id, external_ref, full_name, email,
             audience_type, status, metadata, created_at, updated_at
        FROM platform.learning_learners
       WHERE tenant_id = $1::uuid
@@ -379,21 +387,22 @@ export async function listLearningEnrollments(
 
 export async function listMyLearningEnrollments(
   client: PostgresClient,
-  input: { readonly tenantId: string; readonly subjectId: string },
+  input: { readonly tenantId: string; readonly subjectId: string; readonly subjectIssuer: string | null },
 ): Promise<{
   readonly learner: LearningLearner | null;
   readonly enrollments: readonly SelfLearningEnrollment[];
 }> {
   await requireLearning(client, input.tenantId);
   const learnerResult = await client.query<LearnerRow>(
-    `SELECT learner_id, subject_id, contact_id, external_ref, full_name, email,
+    `SELECT learner_id, subject_id, subject_issuer, contact_id, external_ref, full_name, email,
             audience_type, status, metadata, created_at, updated_at
        FROM platform.learning_learners
       WHERE tenant_id = $1::uuid
         AND subject_id = $2
+        AND subject_issuer IS NOT DISTINCT FROM $3
         AND status = 'ACTIVE'
       LIMIT 1`,
-    [input.tenantId, input.subjectId],
+    [input.tenantId, input.subjectId, input.subjectIssuer],
   );
   const learnerRow = learnerResult.rows[0];
   if (learnerRow === undefined) return { learner: null, enrollments: [] };
@@ -463,6 +472,7 @@ export async function completeMyLearningLesson(
   input: {
     readonly tenantId: string;
     readonly subjectId: string;
+    readonly subjectIssuer: string | null;
     readonly enrollmentId: string;
     readonly lessonId: string;
     readonly correlationId: string;
@@ -487,6 +497,7 @@ export async function completeMyLearningLesson(
          ON l.learner_id = e.learner_id
         AND l.tenant_id = e.tenant_id
         AND l.subject_id = $3
+        AND l.subject_issuer IS NOT DISTINCT FROM $4
         AND l.status = 'ACTIVE'
        JOIN platform.learning_courses c
          ON c.course_id = e.course_id AND c.tenant_id = e.tenant_id
@@ -495,7 +506,7 @@ export async function completeMyLearningLesson(
       WHERE e.tenant_id = $1::uuid
         AND e.enrollment_id = $2::uuid
       FOR UPDATE OF e`,
-    [input.tenantId, input.enrollmentId, input.subjectId],
+    [input.tenantId, input.enrollmentId, input.subjectId, input.subjectIssuer],
   );
   const enrollmentRow = locked.rows[0];
   if (enrollmentRow === undefined) throw new Error('LEARNING_ENROLLMENT_NOT_FOUND');
@@ -712,7 +723,7 @@ export async function completeMyLearningLesson(
 
 export async function loadMyLearningTranscript(
   client: PostgresClient,
-  input: { readonly tenantId: string; readonly subjectId: string },
+  input: { readonly tenantId: string; readonly subjectId: string; readonly subjectIssuer: string | null },
 ): Promise<readonly LearningTranscriptEntry[]> {
   await requireLearning(client, input.tenantId);
   const result = await client.query<{
@@ -731,6 +742,7 @@ export async function loadMyLearningTranscript(
          ON l.learner_id = e.learner_id
         AND l.tenant_id = e.tenant_id
         AND l.subject_id = $2
+        AND l.subject_issuer IS NOT DISTINCT FROM $3
        JOIN platform.learning_courses c
          ON c.course_id = e.course_id AND c.tenant_id = e.tenant_id
        JOIN platform.learning_course_versions v
@@ -739,7 +751,7 @@ export async function loadMyLearningTranscript(
         AND e.status = 'COMPLETED'
         AND e.completed_at IS NOT NULL
       ORDER BY e.completed_at DESC, e.enrollment_id`,
-    [input.tenantId, input.subjectId],
+    [input.tenantId, input.subjectId, input.subjectIssuer],
   );
 
   return result.rows.map((row) => ({
@@ -751,6 +763,26 @@ export async function loadMyLearningTranscript(
     completedAt: iso(row.completed_at),
     assignedAt: iso(row.assigned_at),
   }));
+}
+
+async function resolveLearnerSubjectIssuer(
+  client: PostgresClient,
+  tenantId: string,
+  subjectId: string,
+): Promise<string | null> {
+  const result = await client.query<{ readonly issuer: string | null }>(
+    `SELECT DISTINCT issuer
+       FROM platform.memberships
+      WHERE tenant_id = $1::uuid
+        AND subject_id = $2
+        AND status = 'ACTIVE'
+        AND valid_from <= now()
+        AND (valid_until IS NULL OR valid_until > now())`,
+    [tenantId, subjectId],
+  );
+  if (result.rows.length === 0) throw new Error('LEARNING_SUBJECT_MEMBERSHIP_NOT_FOUND');
+  if (result.rows.length > 1) throw new Error('LEARNING_SUBJECT_ISSUER_AMBIGUOUS');
+  return result.rows[0]?.issuer ?? null;
 }
 
 async function loadEnrollmentByAssignmentKey(
