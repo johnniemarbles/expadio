@@ -33,15 +33,32 @@ export const ACCESS_WORKFLOW: VerticalWorkflowConfig = {
   statusForStage: (stageKey) => (stageKey === 'GRANTED' ? 'GRANTED' : 'SUBMITTED'),
 };
 
+/** Fifth vertical: social content publish — role + SoD only (no monetary deriver). */
+export const SOCIAL_CONTENT_WORKFLOW: VerticalWorkflowConfig = {
+  table: 'platform.social_content_items',
+  idColumn: 'content_item_id',
+  subjectType: 'social.content_publish',
+  subjectNoun: 'social content',
+  blueprintLabel: 'social.content_publish',
+  statusForStage: (stageKey) => {
+    if (stageKey === 'APPROVED') return 'APPROVED';
+    if (stageKey === 'BRAND_REVIEW') return 'IN_REVIEW';
+    if (stageKey === 'DRAFT') return 'DRAFT';
+    return 'DRAFT';
+  },
+};
+
 /**
  * Every governed subject's table + id column, keyed by work type — the generic
- * subject→instance resolution the cross-vertical action endpoint needs. Includes
- * crm.case (whose routes predate the factory) so every review-queue item, of any
- * vertical, is resolvable to its workflow instance.
+ * subject→instance resolution the cross-vertical action endpoint needs.
  */
 export const SUBJECT_TABLES: Record<string, { readonly table: string; readonly idColumn: string }> = {
   'crm.case': { table: 'platform.crm_cases', idColumn: 'case_id' },
   'vendor.onboarding': { table: VENDOR_WORKFLOW.table, idColumn: VENDOR_WORKFLOW.idColumn },
   'expense.reimbursement': { table: EXPENSE_WORKFLOW.table, idColumn: EXPENSE_WORKFLOW.idColumn },
   'access.request': { table: ACCESS_WORKFLOW.table, idColumn: ACCESS_WORKFLOW.idColumn },
+  'social.content_publish': {
+    table: SOCIAL_CONTENT_WORKFLOW.table,
+    idColumn: SOCIAL_CONTENT_WORKFLOW.idColumn,
+  },
 };
