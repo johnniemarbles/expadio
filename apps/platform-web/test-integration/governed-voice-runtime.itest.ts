@@ -348,7 +348,7 @@ test('governed Voice STT/TTS persist lease and artifact evidence without autonom
         },
         idempotencyKey: `voice:tts:${callId}`,
         correlationId: ttsCorrelationId,
-        requestedAt: '2026-08-31T03:30:01.000Z',
+        requestedAt: '2026-08-31T03:30:00.000Z',
       },
       options: {
         serviceSubjectId,
