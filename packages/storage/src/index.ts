@@ -47,6 +47,10 @@ export interface DurableArtifactWriteInput {
   readonly sourceId: string;
   readonly content: string | Uint8Array;
   readonly contentType: string;
+  readonly providerKey: string;
+  readonly connectorKey: string;
+  readonly modelKey?: string;
+  readonly correlationId?: string;
   readonly requiredResidencyTags: readonly string[];
   readonly requiredComplianceTags: readonly string[];
 }
