@@ -106,3 +106,27 @@ test("ElevenLabsTtsAdapter persists synthesized audio before success", async () 
   const validation = validateVoiceIntelligenceObservation(intent, observation);
   assert.equal(validation.valid, true);
 });
+
+test("ElevenLabsTtsAdapter rejects empty audio before artifact persistence", async () => {
+  let artifactWrites = 0;
+  const adapter = new ElevenLabsTtsAdapter({
+    apiToken: async () => "mock-elevenlabs-key",
+    artifactSink: {
+      write: async () => {
+        artifactWrites += 1;
+        return assert.fail("Empty audio must not be persisted");
+      },
+    },
+    inputResolver,
+    fetchImpl: async () => new Response(new Uint8Array(), {
+      status: 200,
+      headers: { "Content-Type": "audio/mpeg" },
+    }),
+  });
+
+  await assert.rejects(
+    adapter.invoke({ intent, connector }),
+    /VOICE_PROVIDER_OUTPUT_EMPTY: ElevenLabs returned no audio/,
+  );
+  assert.equal(artifactWrites, 0);
+});
