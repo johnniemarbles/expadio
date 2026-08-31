@@ -1,0 +1,51 @@
+import { NextResponse } from 'next/server';
+import { createLearningQuestion } from '@expadio/postgres-runtime/learning-assessment';
+import {
+  deniedResponse,
+  resolveRequestContext,
+  withTenantTransaction,
+} from '@/lib/request-context';
+import { hasLearningAuthoringRole } from '@/lib/learning-authz';
+import { learningApiError, requireLearningUuid } from '@/lib/learning-errors';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const context = await resolveRequestContext(request);
+    const questionBankId = requireLearningUuid(decodeURIComponent((await params).id), 'questionBankId');
+    const raw = await request.json().catch(() => ({}));
+    const body = raw !== null && typeof raw === 'object' && !Array.isArray(raw)
+      ? raw as Record<string, unknown>
+      : {};
+
+    const result = await withTenantTransaction(context, async (client) => {
+      if (!(await hasLearningAuthoringRole(client, context.subjectId))) return { forbidden: true } as const;
+      return {
+        question: await createLearningQuestion(client, {
+          tenantId: context.tenantId,
+          actorSubjectId: context.subjectId,
+          questionBankId,
+          questionKey: body.questionKey,
+          draft: body.draft,
+        }),
+      } as const;
+    });
+    if ('forbidden' in result) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'FORBIDDEN', message: 'Learning assessment authoring requires a tenant administrator role.' },
+        { status: 403 },
+      );
+    }
+    return NextResponse.json(result.question, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
+    const mapped = learningApiError(error);
+    if (mapped !== null) return NextResponse.json(mapped.body, { status: mapped.status, headers: { 'Cache-Control': 'private, no-store' } });
+    const { body, status } = deniedResponse(error);
+    return NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
+  }
+}
