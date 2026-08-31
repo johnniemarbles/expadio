@@ -48,7 +48,7 @@ CREATE INDEX learning_automation_rules_event_idx
 CREATE OR REPLACE FUNCTION platform.enforce_learning_automation_rule_revision()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'learning automation rules are durable; disable instead of deleting'
