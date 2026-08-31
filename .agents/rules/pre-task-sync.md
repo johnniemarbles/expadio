@@ -1,10 +1,14 @@
-# Mandatory Pre-Task Remote Sync Protocol
+# Remote GitHub is the Sole Source of Truth
 
-Before executing any user task, code edit, proposal review, or test run:
+> **FUNDAMENTAL INVARIANT**: Remote GitHub (`https://github.com/johnniemarbles/expadio.git`) is the authoritative source of truth for the entire EXPADIO platform. Local environments, chat windows, and ephemeral memory are clients.
 
-1. **Check Remote State**:
-   - Always run `git fetch --all --prune` to check for incoming commits or branches from `origin`.
-2. **Synchronize Local Branch**:
-   - Ensure the working branch is cleanly aligned with `origin/main` (or the respective remote tracking branch) before beginning work.
+Before executing any task, code edit, proposal review, or test run:
+
+1. **Check Remote State First**:
+   - Always run `git fetch --all --prune` to inspect incoming commits or PR merges from `origin`.
+2. **Synchronize Local State to Remote**:
+   - Ensure local `main` and working branches are updated to match remote state before any action is taken.
 3. **Verify Clean Working Tree**:
-   - Confirm `git status` before making edits or branching to prevent accidental drift or merge conflicts.
+   - Confirm `git status` to prevent drift, phantom conflicts, or stale assumptions.
+4. **Push Completed Work**:
+   - All accepted decisions, implementations, and verified tests must be committed and pushed to remote GitHub to maintain persistent shared memory.
