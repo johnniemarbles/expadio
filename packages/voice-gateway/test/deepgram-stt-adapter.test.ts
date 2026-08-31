@@ -181,3 +181,61 @@ test("DeepgramSttAdapter resolves a logical media reference to a provider fetch 
   assert.equal(observation.provenance.audioDurationMilliseconds, undefined);
   assert.equal(observation.provenance.costMinorUnits, undefined);
 });
+
+test("DeepgramSttAdapter rejects blank transcripts before artifact persistence", async () => {
+  let artifactWrites = 0;
+  const adapter = new DeepgramSttAdapter({
+    apiToken: async () => "mock-token",
+    artifactSink: {
+      write: async () => {
+        artifactWrites += 1;
+        return assert.fail("Blank transcript must not be persisted");
+      },
+    },
+    inputResolver,
+    fetchImpl: async () => new Response(
+      JSON.stringify({
+        results: {
+          channels: [{ alternatives: [{ transcript: "   " }] }],
+        },
+        metadata: { duration: 12 },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  });
+
+  await assert.rejects(
+    adapter.invoke({ intent, connector }),
+    /VOICE_PROVIDER_OUTPUT_EMPTY: Deepgram returned no transcript/,
+  );
+  assert.equal(artifactWrites, 0);
+});
+
+test("DeepgramSttAdapter rejects invalid provider duration before artifact persistence", async () => {
+  let artifactWrites = 0;
+  const adapter = new DeepgramSttAdapter({
+    apiToken: async () => "mock-token",
+    artifactSink: {
+      write: async () => {
+        artifactWrites += 1;
+        return assert.fail("Invalid duration must not be persisted");
+      },
+    },
+    inputResolver,
+    fetchImpl: async () => new Response(
+      JSON.stringify({
+        results: {
+          channels: [{ alternatives: [{ transcript: "usable transcript" }] }],
+        },
+        metadata: { duration: -1 },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  });
+
+  await assert.rejects(
+    adapter.invoke({ intent, connector }),
+    /VOICE_PROVIDER_DURATION_INVALID/,
+  );
+  assert.equal(artifactWrites, 0);
+});
