@@ -1,6 +1,6 @@
 # Social Communication wiring (EXPADIO)
 
-**Status:** freeze-exception slice on `feat/social-communication-wiring-0086`. Connector is **disabled**.  
+**Status:** dark wiring on `main` via #491 (`0086_communication_social_channel.sql`). Connector is **disabled**. Seed-tenant catalog proof is the SQL smoke `infra/db/tests/social_linkedin_connector_smoke.sql`.  
 **Lab contract:** `expadio-social-content` 0.6.2 `docs/architecture/COMMUNICATION-ADAPTER-REGISTRATION.md`.  
 **Binding ADR:** lab ADR-007 — social send is a Communication connector, not `PUBLISH_SOCIAL`.
 
@@ -22,6 +22,18 @@
 Recipient addressing uses `subjectId` (LinkedIn person id or `urn:li:person:…`). Social is **not** a sender-identity channel: do not add it to `CommunicationSenderChannel` or `communication_sender_identities`.
 
 After Decision Fabric `APPROVED`, file a Communication intent / `COMMUNICATE` action. Author cannot file that intent (SoD). Calendar expands to N intents — never a batch `send()` and never a new executor.
+
+## Seed-tenant proof (catalog)
+
+After migrations, a seed tenant can observe:
+
+1. `platform.capabilities.capability_key = communication.social.send` exists and is enabled as vocabulary.
+2. `platform.connectors.connector_key = social.linkedin` exists with `enabled = false`, `ownership_scope = PLATFORM`, `tenant_id` NULL, `provider_type = social`, `provider_key = linkedin`.
+3. `platform.connector_capabilities` binds that connector to that capability exactly once.
+4. `communication_deliveries.channel` CHECK includes `social`.
+5. `communication_sender_identities.channel` CHECK rejects `social`.
+
+This is not COMMUNICATE proof and not a live send.
 
 ## Explicitly not done here
 
