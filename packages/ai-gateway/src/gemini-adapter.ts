@@ -147,8 +147,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
 
     const firstCandidate = data.candidates?.[0];
     const generatedText = firstCandidate?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-    const totalTokens = data.usageMetadata?.totalTokenCount ?? 0;
-    const costMinorUnits = Math.ceil((totalTokens / 1_000) * 1);
+    const totalTokens = data.usageMetadata?.totalTokenCount;
 
     const provenance: AiProvenance = {
       connectorKey: connector.connectorKey,
@@ -162,12 +161,19 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       ],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      estimatedCostMinorUnits: costMinorUnits,
-      providerUsage: {
-        inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-        outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
-        totalTokens,
-      },
+      ...(data.usageMetadata === undefined
+        ? {}
+        : {
+            providerUsage: {
+              ...(data.usageMetadata.promptTokenCount === undefined
+                ? {}
+                : { inputTokens: data.usageMetadata.promptTokenCount }),
+              ...(data.usageMetadata.candidatesTokenCount === undefined
+                ? {}
+                : { outputTokens: data.usageMetadata.candidatesTokenCount }),
+              ...(totalTokens === undefined ? {} : { totalTokens }),
+            },
+          }),
     };
 
     const artifact = await this.#artifactSink.write({
@@ -255,7 +261,6 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
-      estimatedCostMinorUnits: 1,
     };
 
     return {
