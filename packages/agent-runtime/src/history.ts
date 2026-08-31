@@ -1,6 +1,7 @@
 export interface AgentRunRecord {
   readonly runId: string;
   readonly tenantId: string;
+  readonly organizationId: string;
   readonly agentId: string;
   readonly purpose: string;
   readonly contextBundleReference: string;
@@ -30,6 +31,7 @@ export interface AgentRunEventRecord {
   readonly eventId: string;
   readonly runId: string;
   readonly tenantId: string;
+  readonly organizationId: string;
   readonly sequence: number;
   readonly eventType: AgentRunEventType;
   readonly eventReference: string;
@@ -96,6 +98,7 @@ export function validateAgentRunHistory(
     if (
       event.runId !== history.run.runId
       || event.tenantId !== history.run.tenantId
+      || event.organizationId !== history.run.organizationId
       || event.correlationId !== history.run.correlationId
     ) {
       throw new AgentRunHistoryError(
@@ -134,6 +137,7 @@ function validateRun(run: AgentRunRecord): void {
   if (
     !nonBlank(run.runId)
     || !nonBlank(run.tenantId)
+    || !nonBlank(run.organizationId)
     || !nonBlank(run.agentId)
     || !nonBlank(run.purpose)
     || !nonBlank(run.contextBundleReference)
@@ -158,6 +162,7 @@ function validateEvent(event: AgentRunEventRecord): void {
     !nonBlank(event.eventId)
     || !nonBlank(event.runId)
     || !nonBlank(event.tenantId)
+    || !nonBlank(event.organizationId)
     || !Number.isInteger(event.sequence)
     || event.sequence <= 0
     || !nonBlank(event.eventReference)

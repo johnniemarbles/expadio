@@ -1,52 +1,47 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authorize } from '@expadio/authorization';
+import { PostgresAuthorizationPolicyRepository } from '@expadio/postgres-runtime/authorization';
 import type { ActivityItem } from '../../../lib/contracts';
-import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
+import { ContextDenied, resolveRequestContext, withTenantTransaction, deniedResponse } from '../../../lib/request-context';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'UNAUTHENTICATED',
-      message: 'User is not authenticated'
-    };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
   try {
-    const effectiveContext = await authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      {
-        credential: userId,
-        tenantId: '00000000-0000-0000-0000-000000000001',
-        organizationId: '00000000-0000-0000-0000-000000000002'
-      }
-    );
-
+    const context = await resolveRequestContext(request);
+    if (!context.effectiveContext || !context.organizationId) {
+      throw new ContextDenied('WORKSPACE_SCOPE_REQUIRED', 'Select a valid workspace.', 403);
+    }
+    const effective = context.effectiveContext;
+    const { agentEventsRes, readEventsRes } = await withTenantTransaction(context, async client => {
+      const policy = await new PostgresAuthorizationPolicyRepository(client).loadPolicy(effective);
+      const decision = authorize({ context: effective, ...policy, query: {
+        action: 'audit.activity.read', intent: 'read',
+        resource: { type: 'audit-activity', id: effective.organizationId,
+          tenantId: effective.tenantId, organizationId: effective.organizationId, classification: 'restricted' },
+      } });
+      if (!decision.allowed) throw new ContextDenied('AUDIT_ACCESS_DENIED', 'Audit access is not authorized in this scope.', 403);
     // Fetch Agent Run Events
-    const agentEventsRes = await dbPool.query(
-      `SELECT e.event_id as id, e.event_type as action, e.event_reference as target, e.occurred_at as time, 
+    const agentEventsRes = await client.query(
+      `SELECT e.event_id as id, e.event_type as action, e.event_reference as target, e.occurred_at as time,
               COALESCE(r.agent_id, e.actor_subject_id, 'System') as actor
        FROM platform.agent_run_events e
        JOIN platform.agent_runs r ON e.run_id = r.run_id AND e.tenant_id = r.tenant_id
-       WHERE e.tenant_id = $1
+       WHERE e.tenant_id = $1 AND e.organization_id = $2 AND r.organization_id = $2
        ORDER BY e.occurred_at DESC LIMIT 25`,
-      [effectiveContext.tenantId]
+      [context.tenantId, context.organizationId]
     );
 
     // Fetch Sensitive Read Events
-    const readEventsRes = await dbPool.query(
-      `SELECT event_id as id, outcome, resource_type, resource_id, recorded_at as time, 
+    const readEventsRes = await client.query(
+      `SELECT event_id as id, outcome, resource_type, resource_id, recorded_at as time,
               COALESCE(requested_by_subject_id, 'System') as actor
-       FROM platform.sensitive_read_events 
-       WHERE tenant_id = $1 
+       FROM platform.sensitive_read_events
+       WHERE tenant_id = $1 AND organization_id = $2
        ORDER BY recorded_at DESC LIMIT 25`,
-      [effectiveContext.tenantId]
+      [context.tenantId, context.organizationId]
     );
+
+      return { agentEventsRes, readEventsRes };
+    });
 
     let items: ActivityItem[] = [];
 
@@ -99,13 +94,8 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(items);
-  } catch (error: any) {
-    console.error("Activity API Error:", error);
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'INTERNAL_ERROR',
-      message: error.message || 'An unknown error occurred.'
-    };
-    return NextResponse.json(denied, { status: 500 });
+  } catch (error) {
+    const { body, status } = deniedResponse(error);
+    return NextResponse.json(body, { status });
   }
 }

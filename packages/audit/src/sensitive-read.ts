@@ -1,6 +1,7 @@
 export interface SensitiveReadRequest {
   readonly requestId: string;
   readonly tenantId: string;
+  readonly organizationId: string;
   readonly requestedBySubjectId: string;
   readonly resourceReference: {
     readonly type: string;
@@ -28,6 +29,7 @@ export interface SensitiveReadAuthorizer {
 export interface SensitiveReadObservation {
   readonly requestId: string;
   readonly tenantId: string;
+  readonly organizationId: string;
   readonly resourceReference: SensitiveReadRequest['resourceReference'];
   readonly resultReference: string;
   readonly classifications: readonly string[];
@@ -153,6 +155,7 @@ export class GovernedSensitiveReadService {
     if (
       result.event.eventId !== event.eventId
       || result.event.request.tenantId !== event.request.tenantId
+      || result.event.request.organizationId !== event.request.organizationId
       || result.event.request.requestId !== event.request.requestId
       || result.event.outcome !== event.outcome
     ) {
@@ -167,6 +170,7 @@ function validateRequest(request: SensitiveReadRequest): void {
   const values = [
     request.requestId,
     request.tenantId,
+    request.organizationId,
     request.requestedBySubjectId,
     request.resourceReference.type,
     request.resourceReference.id,
@@ -190,6 +194,7 @@ function validateObservation(
 ): void {
   const exact = observation.requestId === request.requestId
     && observation.tenantId === request.tenantId
+    && observation.organizationId === request.organizationId
     && observation.resourceReference.type === request.resourceReference.type
     && observation.resourceReference.id === request.resourceReference.id;
   const values = [

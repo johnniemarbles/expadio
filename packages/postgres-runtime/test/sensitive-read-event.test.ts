@@ -24,6 +24,7 @@ const event: SensitiveReadAuditEvent = {
   request: {
     requestId: 'read-1',
     tenantId: '39000000-0000-0000-0000-000000000001',
+    organizationId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
     requestedBySubjectId: 'subject-1',
     resourceReference: { type: 'regulated-record', id: 'record-1' },
     purpose: 'authorized case review',
@@ -47,6 +48,7 @@ function row() {
     event_id: event.eventId,
     request_id: event.request.requestId,
     tenant_id: event.request.tenantId,
+    organization_id: event.request.organizationId,
     requested_by_subject_id: event.request.requestedBySubjectId,
     resource_type: event.request.resourceReference.type,
     resource_id: event.request.resourceReference.id,

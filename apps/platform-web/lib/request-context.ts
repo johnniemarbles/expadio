@@ -1,32 +1,26 @@
 import { auth } from '@clerk/nextjs/server';
 import { headers } from 'next/headers';
+import type { EffectiveContext } from '@expadio/tenancy';
+import { authorize } from '@expadio/authorization';
+import { PostgresAuthorizationPolicyRepository } from '@expadio/postgres-runtime/authorization';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
 import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
 
-/**
- * Design spec §0.2 G5 — un-scaffolding.
- *
- * Communications API routes used to hardcode
- *   tenantId: '00000000-0000-0000-0000-000000000001'
- *   organizationId: '00000000-0000-0000-0000-000000000002'
- *
- * That was scaffolding presenting as wiring. Tenant selection now arrives on
- * the `x-expadio-tenant-id` / `x-expadio-organization-id` request headers,
- * which `proxy.ts` injects from the shell's active workspace
- * (`?account=<tenantId>&org=<organizationId>`, with a cookie fallback).
- * Membership is verified below, so the header is a *request* for a tenant, not
- * proof of access.
- *
- * The demo UUID survives only as a bootstrap default: a cold request that
- * carries no selection at all (first load before the shell threads a
- * workspace) resolves to it. Any real selection overrides it, and any
- * selection the caller is not a member of is denied.
- */
+/** Live selection is untrusted until canonical membership verification succeeds. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const DEMO_TENANT = '00000000-0000-0000-0000-000000000001';
+function selectedScope(params: URLSearchParams, keys: string[], fallback: string | null): string {
+  const explicit = keys.flatMap(key => params.getAll(key));
+  const values = explicit.length ? explicit : [fallback];
+  if (values.some(value => !value || !UUID.test(value)) || new Set(values.map(value => value?.toLowerCase())).size !== 1) {
+    throw new ContextDenied('WORKSPACE_SCOPE_REQUIRED', 'Select a valid workspace.', 403);
+  }
+  return values[0]!.toLowerCase();
+}
 
 export interface ResolvedRequestContext {
+  readonly effectiveContext?: EffectiveContext;
   readonly subjectId: string;
   readonly tenantId: string;
   readonly organizationId: string | null;
@@ -56,21 +50,14 @@ export class ContextDenied extends Error {
  */
 export async function resolveRequestContext(request?: Request): Promise<ResolvedRequestContext> {
   const { userId } = await auth();
-  if (userId === null || userId === undefined) {
+  if (!userId) {
     throw new ContextDenied('UNAUTHENTICATED', 'Sign in to continue.', 401);
   }
 
   const headerList = await headers();
-  let requestedTenant = headerList.get('x-expadio-tenant-id');
-  let requestedOrganization = headerList.get('x-expadio-organization-id');
-  if (request) {
-    const url = new URL(request.url);
-    if (url.searchParams.has('account')) requestedTenant = url.searchParams.get('account');
-    if (url.searchParams.has('org')) requestedOrganization = url.searchParams.get('org');
-  }
-  requestedTenant = requestedTenant || DEMO_TENANT;
-  requestedOrganization = requestedOrganization || '00000000-0000-0000-0000-000000000002';
-  
+  const params = request ? new URL(request.url).searchParams : new URLSearchParams();
+  const requestedTenant = selectedScope(params, ['account'], headerList.get('x-expadio-tenant-id'));
+  const requestedOrganization = selectedScope(params, ['org', 'organizationId'], headerList.get('x-expadio-organization-id'));
 
   let effective;
   try {
@@ -95,17 +82,31 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   const tenantId = effective.tenantId;
   const organizationId = effective.organizationId ?? null;
 
-  return {
-    subjectId: userId,
+  const context: ResolvedRequestContext = {
+    effectiveContext: effective,
+    subjectId: effective.subjectId,
     tenantId,
     organizationId: organizationId ?? '',
-    platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
+    platformScope: false,
     applyTo: async (client) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
       // Setting this is what makes platform.current_tenant_id() resolve.
       await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', tenantId]);
+      await client.query('SELECT set_config($1, $2, true)', ['app.organization_id', organizationId ?? '']);
+      await client.query('SELECT set_config($1, $2, true)', ['app.subject_id', effective.subjectId]);
     },
   };
+  if (headerList.get('x-expadio-scope') !== 'PLATFORM') return context;
+  // A requested platform view is not platform authority. Use persisted policy.
+  return withTenantTransaction(context, async client => {
+    const policy = await new PostgresAuthorizationPolicyRepository(client).loadPolicy(effective);
+    const decision = authorize({ context: effective, ...policy, query: {
+      action: 'platform.scope.use', intent: 'act',
+      resource: { type: 'platform', id: 'platform', tenantId, organizationId: effective.organizationId },
+    } });
+    if (!decision.allowed) throw new ContextDenied('PLATFORM_ACCESS_DENIED', 'Platform scope is not authorized.', 403);
+    return { ...context, platformScope: true };
+  });
 }
 
 /** Runs `work` with a pooled client that already has the tenant GUC applied. */
@@ -183,4 +184,19 @@ export function deniedResponse(error: unknown): { body: DeniedResult; status: nu
     status: 500,
   };
 }
-export type RouteSearchParams = { [key: string]: string | string[] | undefined }; export function requestedOrganizationId(_request?: any) { return '00000000-0000-0000-0000-000000000002'; }
+export type RouteSearchParams = { [key: string]: string | string[] | undefined };
+export async function requestedOrganizationId(searchParams?: RouteSearchParams | Promise<RouteSearchParams>): Promise<string> {
+  const values = await searchParams ?? {};
+  const params = new URLSearchParams();
+  for (const key of ['org', 'organizationId']) {
+    const value = values[key];
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) params.append(key, item);
+  }
+  try {
+    return selectedScope(params, ['org', 'organizationId'], (await headers()).get('x-expadio-organization-id'));
+  } catch (error) {
+    if (!(error instanceof ContextDenied)) throw error;
+    // Let the protected API return its normal denied state; never fabricate an org.
+    return '';
+  }
+}
