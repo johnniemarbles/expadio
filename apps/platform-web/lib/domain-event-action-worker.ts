@@ -98,40 +98,49 @@ export async function processOneDomainEventActionWorkItem(
       claim.event.aggregateType === 'learning.learner'
       && claim.event.eventType === 'learning.learner.created'
     ) {
-      const learningAssignments = await evaluateLearningAssignmentRulesForLearner(
-        client,
-        {
-          tenantId: claim.tenantId,
-          learnerId: claim.event.aggregateId,
-          actorSubjectId: 'system:learning-assignment-automation',
-          correlationId: claim.event.correlationId,
-          triggerEventId: claim.eventId,
-          evaluatedAt: now,
-        },
-      );
+      await client.query('BEGIN');
+      try {
+        const learningAssignments = await evaluateLearningAssignmentRulesForLearner(
+          client,
+          {
+            tenantId: claim.tenantId,
+            learnerId: claim.event.aggregateId,
+            actorSubjectId: 'system:learning-assignment-automation',
+            correlationId: claim.event.correlationId,
+            triggerEventId: claim.eventId,
+            evaluatedAt: now,
+          },
+        );
 
-      const completed = await completeDomainEventOutbox(client, {
-        tenantId: claim.tenantId,
-        outboxId: claim.outboxId,
-        claimedAt: claim.claimedAt,
-        completedAt: now,
-      });
-      if (!completed) {
+        const completed = await completeDomainEventOutbox(client, {
+          tenantId: claim.tenantId,
+          outboxId: claim.outboxId,
+          claimedAt: claim.claimedAt,
+          completedAt: now,
+        });
+        if (!completed) {
+          await client.query('ROLLBACK');
+          return {
+            status: 'STALE_CLAIM',
+            claim,
+            reason: 'Claim was superseded before completion.',
+          };
+        }
+
+        await client.query('COMMIT');
         return {
-          status: 'STALE_CLAIM',
+          status: 'PUBLISHED',
           claim,
-          reason: 'Claim was superseded before completion.',
+          actions: [],
+          communications: [],
+          schedules: [],
+          tasks: [],
+          learningAssignments,
         };
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
       }
-      return {
-        status: 'PUBLISHED',
-        claim,
-        actions: [],
-        communications: [],
-        schedules: [],
-        tasks: [],
-        learningAssignments,
-      };
     }
 
     if (claim.event.aggregateType !== 'crm.case') {
