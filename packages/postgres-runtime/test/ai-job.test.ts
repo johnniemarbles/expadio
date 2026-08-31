@@ -164,3 +164,43 @@ test('returns the expected sequence after a database sequence rejection', async 
   });
   assert.equal(client.calls.length, 4);
 });
+
+
+test('PostgresAiJobRepository restores persisted correlation into reconstructed AI intent', async () => {
+  const correlationId = '33333333-3333-4333-8333-333333333333';
+  const client = new ScriptedClient();
+  client.responses.push({
+    rowCount: 1,
+    rows: [{
+      job_id: '11111111-1111-4111-8111-111111111111',
+      tenant_id: '22222222-2222-4222-8222-222222222222',
+      invocation_id: 'invocation-1',
+      operation: 'EXTRACT',
+      purpose: 'Extract facts',
+      input_reference: 'artifact://input/1',
+      context_reference: null,
+      prompt_configuration_key: 'prompt.extract',
+      prompt_configuration_version: 1,
+      required_residency_tags: ['US'],
+      required_compliance_tags: ['SOC2'],
+      maximum_cost_minor_units: null,
+      maximum_attempts: 3,
+      idempotency_key: 'idem-1',
+      requested_at: new Date('2026-08-31T03:00:00.000Z'),
+      created_by_subject_id: 'service-ai',
+      created_at: new Date('2026-08-31T03:00:00.000Z'),
+      reason: 'test',
+      correlation_id: correlationId,
+      evidence_refs: ['evidence://1'],
+    }],
+  });
+
+  const repository = new PostgresAiJobRepository(client);
+  const job = await repository.findById({
+    tenantId: '22222222-2222-4222-8222-222222222222',
+    jobId: '11111111-1111-4111-8111-111111111111',
+  });
+
+  assert.equal(job?.correlationId, correlationId);
+  assert.equal(job?.intent.correlationId, correlationId);
+});
