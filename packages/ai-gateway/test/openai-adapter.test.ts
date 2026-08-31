@@ -52,6 +52,7 @@ const intent: AiInvocationIntent = {
     requiredComplianceTags: ["SOC2"],
   },
   idempotencyKey: "idem_openai_999",
+  correlationId: "corr-openai-999",
   requestedAt: "2026-08-30T12:00:00.000Z",
 };
 
