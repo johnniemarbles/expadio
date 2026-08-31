@@ -1,7 +1,11 @@
+export const VOICE_INTELLIGENCE_OPERATIONS = [
+  'TRANSCRIBE',
+  'SYNTHESIZE',
+  'STREAM_CONVERSATION',
+] as const;
+
 export type VoiceIntelligenceOperation =
-  | 'TRANSCRIBE'
-  | 'SYNTHESIZE'
-  | 'STREAM_CONVERSATION';
+  (typeof VOICE_INTELLIGENCE_OPERATIONS)[number];
 
 export interface VoiceIntelligenceIntent {
   readonly requestId: string;
@@ -62,6 +66,7 @@ export interface VoiceIntelligenceProvenance {
 
 export type VoiceContractValidationCode =
   | 'VOICE_REQUEST_ID_REQUIRED'
+  | 'VOICE_OPERATION_INVALID'
   | 'VOICE_TENANT_REQUIRED'
   | 'VOICE_CALL_ID_REQUIRED'
   | 'VOICE_PURPOSE_REQUIRED'
@@ -100,6 +105,9 @@ export function validateVoiceIntelligenceIntent(
 ): VoiceContractValidationResult {
   const issues: VoiceContractValidationIssue[] = [];
   required(intent.requestId, 'VOICE_REQUEST_ID_REQUIRED', 'requestId', issues);
+  if (!VOICE_INTELLIGENCE_OPERATIONS.includes(intent.operation)) {
+    issues.push({ code: 'VOICE_OPERATION_INVALID', path: 'operation' });
+  }
   required(intent.tenantId, 'VOICE_TENANT_REQUIRED', 'tenantId', issues);
   required(intent.callId, 'VOICE_CALL_ID_REQUIRED', 'callId', issues);
   required(intent.purpose, 'VOICE_PURPOSE_REQUIRED', 'purpose', issues);
