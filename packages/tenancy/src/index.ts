@@ -73,6 +73,8 @@ export type {
   JourneyExecutorFact,
   FrozenExecutorRow,
 } from './brand-journey.ts';
+export { parsePlatformProvisionInput, platformProvisionResult } from './platform-provision.ts';
+export type { PlatformProvisionInput, PlatformProvisionCommand, PlatformProvisionResult } from './platform-provision.ts';
 
 export interface IdentityContext {
   readonly subjectId: string;
