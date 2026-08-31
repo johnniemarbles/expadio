@@ -125,3 +125,16 @@ test('requires correlation identity for Voice requests', () => {
     true,
   );
 });
+
+test('rejects unknown runtime Voice operations', () => {
+  const result = validateVoiceIntelligenceIntent({
+    ...intent,
+    operation: 'UNKNOWN' as VoiceIntelligenceIntent['operation'],
+  });
+  assert.equal(result.valid, false);
+  if (result.valid) return;
+  assert.equal(
+    result.issues.some((issue) => issue.code === 'VOICE_OPERATION_INVALID'),
+    true,
+  );
+});
