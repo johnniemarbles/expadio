@@ -208,3 +208,54 @@ test("OpenAiAiAdapter rejects unsupported modalities before credential acquisiti
     /AI_OPERATION_UNSUPPORTED:VISION_ANALYZE/,
   );
 });
+
+test("OpenAiAiAdapter rejects empty successful provider output before artifact persistence", async () => {
+  let artifactWrites = 0;
+  const adapter = new OpenAiAiAdapter({
+    apiToken: async () => "mock-openai-key",
+    artifactSink: {
+      write: async () => {
+        artifactWrites += 1;
+        return assert.fail("Empty provider output must not be persisted");
+      },
+    },
+    inputResolver,
+    fetchImpl: async () => new Response(
+      JSON.stringify({ choices: [{ message: { content: "   " } }] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  });
+
+  await assert.rejects(
+    adapter.invoke({ intent, connector }),
+    /AI_PROVIDER_OUTPUT_EMPTY: OpenAI returned no usable text/,
+  );
+  assert.equal(artifactWrites, 0);
+});
+
+test("OpenAiAiAdapter rejects empty embedding vectors before artifact persistence", async () => {
+  let artifactWrites = 0;
+  const adapter = new OpenAiAiAdapter({
+    apiToken: async () => "mock-openai-key",
+    artifactSink: {
+      write: async () => {
+        artifactWrites += 1;
+        return assert.fail("Empty embedding must not be persisted");
+      },
+    },
+    inputResolver,
+    fetchImpl: async () => new Response(
+      JSON.stringify({ data: [{ embedding: [] }] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  });
+
+  await assert.rejects(
+    adapter.invoke({
+      intent: { ...intent, operation: "EMBED" },
+      connector,
+    }),
+    /AI_PROVIDER_OUTPUT_EMPTY: OpenAI returned no embedding vector/,
+  );
+  assert.equal(artifactWrites, 0);
+});
