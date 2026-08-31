@@ -12,6 +12,7 @@ import type { PostgresClient } from './index.ts';
 interface RunRow {
   readonly run_id: string;
   readonly tenant_id: string;
+  readonly organization_id: string;
   readonly agent_id: string;
   readonly purpose: string;
   readonly context_bundle_reference: string;
@@ -29,6 +30,7 @@ interface EventRow {
   readonly event_id: string;
   readonly run_id: string;
   readonly tenant_id: string;
+  readonly organization_id: string;
   readonly sequence: number;
   readonly event_type: AgentRunEventRecord['eventType'];
   readonly event_reference: string;
@@ -53,10 +55,10 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
          run_id, tenant_id, agent_id, purpose,
          context_bundle_reference, budget_policy_reference,
          idempotency_key, requested_by_subject_id,
-         requested_at, created_at, reason, correlation_id, evidence_refs
+         requested_at, created_at, reason, correlation_id, evidence_refs, organization_id
        ) VALUES (
          $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8,
-         $9::timestamptz, $10::timestamptz, $11, $12::uuid, $13::text[]
+         $9::timestamptz, $10::timestamptz, $11, $12::uuid, $13::text[], $14::uuid
        )
        ON CONFLICT DO NOTHING`,
       runValues(run),
@@ -89,10 +91,10 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
         `INSERT INTO platform.agent_run_events (
            event_id, run_id, tenant_id, sequence, event_type,
            event_reference, occurred_at, actor_subject_id, reason,
-           correlation_id, evidence_refs, cost_minor_units
+           correlation_id, evidence_refs, cost_minor_units, organization_id
          ) VALUES (
            $1::uuid, $2::uuid, $3::uuid, $4, $5, $6,
-           $7::timestamptz, $8, $9, $10::uuid, $11::text[], $12
+           $7::timestamptz, $8, $9, $10::uuid, $11::text[], $12, $13::uuid
          )`,
         eventValues(event),
       );
@@ -135,7 +137,7 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
     if (row === undefined) return undefined;
 
     const eventResult = await this.#client.query<EventRow>(
-      `SELECT event_id, run_id, tenant_id, sequence, event_type,
+      `SELECT event_id, run_id, tenant_id, organization_id, sequence, event_type,
               event_reference, occurred_at, actor_subject_id, reason,
               correlation_id, evidence_refs, cost_minor_units
          FROM platform.agent_run_events
@@ -170,7 +172,7 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
     eventId: string,
   ): Promise<AgentRunEventRecord | null> {
     const result = await this.#client.query<EventRow>(
-      `SELECT event_id, run_id, tenant_id, sequence, event_type,
+      `SELECT event_id, run_id, tenant_id, organization_id, sequence, event_type,
               event_reference, occurred_at, actor_subject_id, reason,
               correlation_id, evidence_refs, cost_minor_units
          FROM platform.agent_run_events
@@ -200,7 +202,7 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
 }
 
 const RUN_SELECT =
-  `SELECT run_id, tenant_id, agent_id, purpose,
+  `SELECT run_id, tenant_id, organization_id, agent_id, purpose,
           context_bundle_reference, budget_policy_reference,
           idempotency_key, requested_by_subject_id,
           requested_at, created_at, reason, correlation_id, evidence_refs
@@ -221,6 +223,7 @@ function runValues(run: AgentRunRecord): readonly unknown[] {
     run.reason,
     run.correlationId,
     [...run.evidenceRefs],
+    run.organizationId,
   ];
 }
 
@@ -238,6 +241,7 @@ function eventValues(event: AgentRunEventRecord): readonly unknown[] {
     event.correlationId,
     [...event.evidenceRefs],
     event.costMinorUnits,
+    event.organizationId,
   ];
 }
 
@@ -245,6 +249,7 @@ function mapRun(row: RunRow): AgentRunRecord {
   return {
     runId: row.run_id,
     tenantId: row.tenant_id,
+    organizationId: row.organization_id,
     agentId: row.agent_id,
     purpose: row.purpose,
     contextBundleReference: row.context_bundle_reference,
@@ -264,6 +269,7 @@ function mapEvent(row: EventRow): AgentRunEventRecord {
     eventId: row.event_id,
     runId: row.run_id,
     tenantId: row.tenant_id,
+    organizationId: row.organization_id,
     sequence: row.sequence,
     eventType: row.event_type,
     eventReference: row.event_reference,

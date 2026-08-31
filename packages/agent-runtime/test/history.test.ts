@@ -10,6 +10,7 @@ import {
 const run: AgentRunRecord = {
   runId: 'run-1',
   tenantId: 'tenant-1',
+  organizationId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   agentId: 'agent-1',
   purpose: 'Prepare an authorized account proposal.',
   contextBundleReference: 'context://bundle/1',
@@ -32,6 +33,7 @@ function event(
     eventId: 'event-' + sequence,
     runId: run.runId,
     tenantId: run.tenantId,
+    organizationId: run.organizationId,
     sequence,
     eventType,
     eventReference: 'event://run/1/' + sequence,
@@ -136,4 +138,9 @@ test('rejects negative event cost', () => {
       error instanceof AgentRunHistoryError
       && error.code === 'AGENT_RUN_EVENT_INVALID',
   );
+});
+
+test('rejects an event from another organization in the same tenant', () => {
+  assert.throws(() => validateAgentRunHistory({ run, events: [event(1, 'STARTED', { organizationId: 'other-org' })] }),
+    (error: unknown) => error instanceof AgentRunHistoryError && error.code === 'AGENT_RUN_EVENT_IDENTITY_MISMATCH');
 });

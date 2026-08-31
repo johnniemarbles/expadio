@@ -15,17 +15,21 @@ const state = {
 (globalThis as any)[key] = state;
 const accessState = "globalThis[Symbol.for('expadio.activity-route.test')]";
 const modules: Record<string, string> = {
-  '@clerk/nextjs/server': `export async function auth() { return { userId: ${accessState}.userId }; }`,
-  '@expadio/iam': `export async function authenticateAndResolveContext() { return { tenantId: 'test-tenant' }; }`,
-  '../../../lib/iam-adapter': `
-    export const identityVerifier = {};
-    export const membershipRepository = {};
-    export const dbPool = { async query(sql) {
+  '@expadio/authorization': `export function authorize() { return { allowed: true }; }`,
+  '@expadio/postgres-runtime/authorization': `export class PostgresAuthorizationPolicyRepository { async loadPolicy() { return {}; } }`,
+  '../../../lib/request-context': `
+    export class ContextDenied extends Error { constructor(key, message, status) { super(message); this.status = status; } }
+    export async function resolveRequestContext() {
+      if (!${accessState}.userId) throw new ContextDenied('UNAUTHENTICATED', 'Sign in.', 401);
+      return { tenantId: 'test-tenant', organizationId: 'test-org', effectiveContext: { tenantId: 'test-tenant', organizationId: 'test-org' } };
+    }
+    export function deniedResponse(error) { return { status: error.status || 500, body: { denied: true } }; }
+    export async function withTenantTransaction(context, work) { return work({ async query(sql) {
       const state = ${accessState};
       state.queries++;
       if (state.failQuery) throw new Error('Database unavailable');
       return { rows: sql.includes('platform.agent_run_events') ? state.agentRows : state.readRows };
-    } };
+    } }); }
   `,
 };
 const routeUrl = new URL('../app/api/activity/route.ts', import.meta.url).href;
