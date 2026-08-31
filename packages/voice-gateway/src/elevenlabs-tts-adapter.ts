@@ -111,6 +111,7 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
       providerKey: connector.providerKey,
       connectorKey: connector.connectorKey,
       modelKey: this.#modelKey,
+      correlationId: intent.correlationId,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
