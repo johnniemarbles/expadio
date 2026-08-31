@@ -71,10 +71,19 @@ export class PostgresProviderRegistryRepository implements ProviderRegistryRepos
          c.enabled,
          c.fallback_enabled
        FROM platform.connectors c
-       JOIN platform.connector_capabilities cc ON cc.connector_id = c.connector_id
-       JOIN platform.capabilities cap ON cap.capability_id = cc.capability_id
-       WHERE cap.capability_key = $2
-         AND (c.tenant_id IS NULL OR c.tenant_id = $1::uuid)
+       JOIN platform.connector_capabilities cc_all
+         ON cc_all.connector_id = c.connector_id
+       JOIN platform.capabilities cap
+         ON cap.capability_id = cc_all.capability_id
+       WHERE (c.tenant_id IS NULL OR c.tenant_id = $1::uuid)
+         AND EXISTS (
+           SELECT 1
+             FROM platform.connector_capabilities cc_required
+             JOIN platform.capabilities cap_required
+               ON cap_required.capability_id = cc_required.capability_id
+            WHERE cc_required.connector_id = c.connector_id
+              AND cap_required.capability_key = $2
+         )
        GROUP BY c.connector_id
        ORDER BY c.priority, c.connector_key`,
       [tenantId, capabilityKey],
