@@ -106,6 +106,7 @@ test("RoutedVoiceGateway routes TRANSCRIBE operation to DeepgramSttAdapter", asy
       maximumCostMinorUnits: 50,
     },
     idempotencyKey: "idem_stt_01",
+    correlationId: "corr-stt-01",
     requestedAt: "2026-08-30T12:00:00.000Z",
   };
 
@@ -157,6 +158,7 @@ test("RoutedVoiceGateway routes SYNTHESIZE operation to ElevenLabsTtsAdapter", a
       maximumCostMinorUnits: 50,
     },
     idempotencyKey: "idem_tts_01",
+    correlationId: "corr-tts-01",
     requestedAt: "2026-08-30T12:00:00.000Z",
   };
 
