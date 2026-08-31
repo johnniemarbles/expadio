@@ -7,41 +7,41 @@
 
 ## Problem / Opportunity
 
-Human was routing every Accept / Counter / Reject between agents in chat. That does not scale and breaks when sessions do not overlap. The repo already has suggestion files and Decision trails; they must be the closed loop.
+Human was routing every Accept / Counter / Reject between agents in chat. Agents need a closed loop in the repo with a clear who-suggests / who-executes split.
 
 ## Proposal
 
-Standing order (human 2026-08-31):
+Standing order (human 2026-08-31, roster refined same day):
 
-1. **Grok** audits and suggests in-repo (default Primary).
-2. **ChatGPT** reviews: Accept / Counter / Reject on the Decision trail — autonomously when Open items appear.
-3. On **Counter**, Grok **Accepts or Rejects the counter** on the same trail (revise body if Accept).
-4. Either peer may set suggestion **Status** to Accepted / Rejected when the trail supports it, without waiting for a human message each turn.
-5. **Everything durable is in the repo**; agents must not rely on the human to “tell the other agent.”
-6. **Active roster: Grok + ChatGPT only.** Gemini, Claude, and **Hermes are paused** until the human re-enables them in `OPERATING-MODEL.md`.
-7. **Implementation** of Accepted packs: Grok and/or ChatGPT (not Hermes).
-8. **Human-only:** freeze/checklist gate amendments, vertical unpause, waiving required CI, unauthorized production side effects, changing the active agent roster.
+1. **Grok and Claude** may **suggest / audit** (Primary lane).
+2. **Gemini and ChatGPT** may **execute** Accepted packs.
+3. Any active peer may **review** (Accept / Counter / Reject) on the Decision trail.
+4. On **Counter**, Primary Accepts (revises) or Rejects the counter on the same trail.
+5. Status Accepted/Rejected in-repo without human message-passing each turn.
+6. **Hermes remains paused** — not Executor/Memory until human re-enables.
+7. **Human-only:** freeze/checklist gates, vertical unpause, waive required CI, production side effects, roster/Hermes changes.
 
-Canonical text lives in `OPERATING-MODEL.md` and `SYNC.md`.
+Canonical text: `OPERATING-MODEL.md`, `SYNC.md`.
 
 ## Expected benefits
 
-- Two-agent loop without human as message bus.
-- Full audit history of decisions.
-- No dependency on Hermes for current execution.
+- Clear suggest vs execute lanes reduce collision.
+- Two proposers (Grok, Claude) and two executors (Gemini, ChatGPT).
+- No Hermes dependency for current program.
 
 ## Risks / trade-offs
 
-- Only one reviewer (ChatGPT) — ties go to human.
-- No Hermes automation until re-enabled; pack execution is manual by Grok/ChatGPT sessions.
+- Executors must still respect pack STOP and human-only gates.
+- Role swap is allowed if recorded on the trail; default split should be preferred.
 
 ## Implementation notes
 
-- Docs-only; encoded in operating model + sync.
-- Re-enable Hermes/Gemini/Claude only via human-directed update to `OPERATING-MODEL.md`.
+- Docs-only updates to operating model and sync.
+- Prompt files for all four active agents remain in force; Hermes prompt kept but not obligatory.
 
 ## Decision trail
 
-- **2026-08-31** — Proposed by Grok from human standing order: audit/suggest; peers review Accept/Counter/Reject; Primary resolves counters; all in-repo; autonomous so human need not relay.
-- **2026-08-31** — Accepted by human instruction in session (binding standing order). Encoded into OPERATING-MODEL.md and SYNC.md.
-- **2026-08-31** — Human narrowed active roster: **Grok + ChatGPT only; no Hermes for now.** Gemini and Claude also paused. OPERATING-MODEL and SYNC updated; implementation and review obligations apply only to Grok and ChatGPT.
+- **2026-08-31** — Proposed by Grok: autonomous peer Decision trail; human not the router.
+- **2026-08-31** — Accepted by human instruction.
+- **2026-08-31** — Human: active Grok + ChatGPT only; no Hermes.
+- **2026-08-31** — Human correction: **Claude may suggest like Grok; Gemini and ChatGPT both may execute.** Hermes still paused. OPERATING-MODEL + SYNC updated to match.
