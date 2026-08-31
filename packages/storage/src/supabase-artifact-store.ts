@@ -243,7 +243,11 @@ implements DurableArtifactSink, DurableArtifactSource {
       ? raw
       : `${this.#projectUrl}/storage/v1${raw.startsWith('/') ? '' : '/'}${raw}`;
     const parsed = new URL(providerFetchUrl);
-    if (parsed.protocol !== 'https:') {
+    const projectOrigin = new URL(this.#projectUrl).origin;
+    if (
+      parsed.protocol !== 'https:'
+      || parsed.origin !== projectOrigin
+    ) {
       throw new Error('SUPABASE_STORAGE_SIGN_RESPONSE_INVALID');
     }
 
