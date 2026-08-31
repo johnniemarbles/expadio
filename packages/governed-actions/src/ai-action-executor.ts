@@ -20,7 +20,6 @@ export interface GovernedAiActionConfiguration {
   readonly requiredResidencyTags?: readonly string[];
   readonly requiredComplianceTags?: readonly string[];
   readonly maximumCostMinorUnits?: number;
-  readonly autoApproveConfidenceThreshold?: number;
 }
 
 export type GovernedAiActionResult =
@@ -80,18 +79,8 @@ export function parseGovernedAiActionConfiguration(
     throw new Error("AI_ACTION_MAXIMUM_COST_INVALID");
   }
 
-  const autoApproveConfidenceThreshold = config.autoApproveConfidenceThreshold === undefined
-    ? undefined
-    : Number(config.autoApproveConfidenceThreshold);
-  if (
-    autoApproveConfidenceThreshold !== undefined
-    && (
-      !Number.isFinite(autoApproveConfidenceThreshold)
-      || autoApproveConfidenceThreshold < 0
-      || autoApproveConfidenceThreshold > 1
-    )
-  ) {
-    throw new Error("AI_ACTION_CONFIDENCE_THRESHOLD_INVALID");
+  if (config.autoApproveConfidenceThreshold !== undefined) {
+    throw new Error("AI_ACTION_AUTO_APPROVAL_UNSUPPORTED");
   }
 
   const requiredResidencyTags = config.requiredResidencyTags ?? [];
@@ -119,7 +108,6 @@ export function parseGovernedAiActionConfiguration(
     requiredResidencyTags,
     requiredComplianceTags,
     ...(maximumCostMinorUnits !== undefined ? { maximumCostMinorUnits } : {}),
-    ...(autoApproveConfidenceThreshold !== undefined ? { autoApproveConfidenceThreshold } : {}),
   };
 }
 
