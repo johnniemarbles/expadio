@@ -1,5 +1,6 @@
 import type { BrandCode, LocationCode, LocationView, ShellScope, ShellScopeStorageKeys, TenantCode } from './shell-scope.ts';
 import { shellViewSelection } from './shell-scope.ts';
+import type { ScopeDirectory } from './scope-directory.ts';
 
 export class ScopeMappingError extends Error {
   readonly code: string;
@@ -37,15 +38,17 @@ export function parseLocationCode(value: string): LocationCode {
 }
 
 /**
- * Verified T/B/L → storage mapping.
- * No table is registered in this slice. Do not invent UUIDs from codes.
- * Compatibility account/org query params stay on the read-model lab only.
+ * T/B/L → storage keys. Requires a verified directory.
+ * Does not invent UUIDs from product codes. account/org query params stay lab-only.
  */
-export function mapShellScopeToStorageKeys(_scope: ShellScope): ShellScopeStorageKeys {
-  throw new ScopeMappingError(
-    'PRODUCT_SCOPE_MAPPING_UNAVAILABLE',
-    'T/B/L ownership mapping is not verified. Leave storage keys unresolved. Do not infer UUIDs from product codes.',
-  );
+export function mapShellScopeToStorageKeys(scope: ShellScope, directory?: ScopeDirectory): ShellScopeStorageKeys {
+  if (!directory) {
+    throw new ScopeMappingError(
+      'PRODUCT_SCOPE_MAPPING_UNAVAILABLE',
+      'T/B/L ownership mapping is not verified. Leave storage keys unresolved. Do not infer UUIDs from product codes.',
+    );
+  }
+  return directory.resolve(scope);
 }
 
 export function requireResolvedView(scope: ShellScope) {
