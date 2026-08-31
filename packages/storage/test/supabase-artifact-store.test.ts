@@ -182,3 +182,31 @@ test('SupabaseDurableArtifactStore rejects cross-tenant artifact references befo
     /SUPABASE_STORAGE_REFERENCE_TENANT_MISMATCH/,
   );
 });
+
+
+test('SupabaseDurableArtifactStore recognizes Supabase duplicate 400 responses without accepting generic bad requests', async () => {
+  let duplicateCalls = 0;
+  const duplicateStore = store(async (_resource, init) => {
+    duplicateCalls += 1;
+    if (init?.method === 'POST') {
+      return new Response('The resource already exists', { status: 400 });
+    }
+    return new Response('hello world', { status: 200 });
+  });
+
+  const replay = await duplicateStore.write(input);
+  assert.equal(duplicateCalls, 2);
+  assert.equal(replay.byteLength, 11);
+
+  let malformedCalls = 0;
+  const malformedStore = store(async () => {
+    malformedCalls += 1;
+    return new Response('invalid bucket request', { status: 400 });
+  });
+
+  await assert.rejects(
+    malformedStore.write(input),
+    /SUPABASE_STORAGE_UPLOAD_FAILED:400/,
+  );
+  assert.equal(malformedCalls, 1);
+});
