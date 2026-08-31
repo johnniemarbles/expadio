@@ -8,23 +8,19 @@ const lib = read('../lib/governance-review-queue.ts');
 const route = read('../app/api/governance/queue/route.ts');
 const client = read('../app/(shell)/governance/queue/ReviewQueueClient.tsx');
 const page = read('../app/(shell)/governance/queue/page.tsx');
-const nav = read('../app/api/workspaces/route.ts');
+const productNav = read('../lib/platform-product-surface.ts');
 
 test('the queue returns open instances awaiting the given subject, not yet decided', () => {
   assert.match(lib, /FROM platform\.workflow_participant_assignments/);
   assert.match(lib, /JOIN platform\.workflow_instances/);
-  // Assigned to this user, on the stage the instance currently sits at.
   assert.match(lib, /pa\.target_kind = 'USER'/);
   assert.match(lib, /pa\.target_key = \$1/);
   assert.match(lib, /pa\.status = 'ASSIGNED'/);
   assert.match(lib, /pa\.stage_key = i\.current_stage_key/);
-  // Open only, and only while no decision has been recorded for that stage.
   assert.match(lib, /state NOT IN \('COMPLETED','CANCELLED','FAILED'\)/);
   assert.match(lib, /NOT EXISTS/);
   assert.match(lib, /FROM platform\.workflow_stage_decisions/);
-  // Worked by age — oldest waiting first.
   assert.match(lib, /ORDER BY i\.updated_at ASC/);
-  // Resolves a human subject label per vertical.
   assert.match(lib, /COALESCE\(ve\.legal_name, cc\.subject, er\.purpose, ar\.resource\) AS subject_label/);
   assert.match(lib, /LEFT JOIN platform\.vendors ve/);
 });
@@ -36,16 +32,14 @@ test('the queue route is a membership read behind RLS, scoped to the caller', ()
   assert.match(route, /subjectId: context\.subjectId/);
 });
 
-test('the queue surface lists pending work and links to each vertical', () => {
+test('the queue surface lists pending work and is the Platform My work href', () => {
   assert.match(page, /ReviewQueueClient/);
   assert.match(client, /Your review queue/);
-  assert.match(client, /style=\{badge\}>\{items\.length\}/); // at-a-glance count
-  // Actionable in place: load available actions, record a decision, drop the row.
+  assert.match(client, /style=\{badge\}>\{items\.length\}/);
   assert.match(client, /\/api\/governance\/actions\?workType=/);
   assert.match(client, /action: 'DECIDE'/);
   assert.match(client, /method: 'POST'/);
   assert.match(client, /setItems\(\(prev\) => prev\.filter/);
-  // Pack-aware: work type and stage read the active vertical's language.
   assert.match(page, /\/api\/tenancy\/vertical/);
   assert.match(page, /verticalKey=\{verticalKey\}/);
   assert.match(client, /resolveWorkTypeLabel\(pack, d\.workTypeKey\)/);
@@ -54,5 +48,5 @@ test('the queue surface lists pending work and links to each vertical', () => {
   assert.match(client, /'vendor\.onboarding': '\/vendors'/);
   assert.match(client, /'expense\.reimbursement': '\/expenses'/);
   assert.match(client, /'access\.request': '\/access-requests'/);
-  assert.match(nav, /href: '\/governance\/queue'/);
+  assert.match(productNav, /href: '\/governance\/queue'/);
 });

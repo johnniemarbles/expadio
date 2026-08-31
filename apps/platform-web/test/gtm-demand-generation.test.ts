@@ -23,7 +23,7 @@ const prospectRoute = read('../app/api/gtm/prospects/route.ts');
 const enginesSeam = read('../lib/gtm-engines.ts');
 const communicate = read('../app/api/gtm/sequences/[id]/communicate/route.ts');
 const client = read('../app/(shell)/gtm/GtmClient.tsx');
-const nav = read('../app/api/workspaces/route.ts');
+const productNav = read('../lib/platform-product-surface.ts');
 const lead = read('../../../packages/lead/src/index.ts');
 const queue = read('../app/(shell)/governance/queue/ReviewQueueClient.tsx');
 const engines = read('../../../packages/gtm/src/index.ts');
@@ -72,7 +72,7 @@ test('verticals and factory routes bind the four GTM work types', () => {
   assert.doesNotMatch(communicate, /executeGovernedCommunicateAction/);
 });
 
-test('console, nav, lead source and review queue know AutoGTM', () => {
+test('console, queue and lead source know AutoGTM; product nav does not', () => {
   assert.match(client, /Propose ICP/);
   assert.match(client, /File sequence draft/);
   assert.match(client, /File campaign draft/);
@@ -86,7 +86,7 @@ test('console, nav, lead source and review queue know AutoGTM', () => {
   assert.doesNotMatch(client, /gtm-email-lab-v1/);
   assert.doesNotMatch(client, /executeGovernedCommunicateAction/);
   assert.doesNotMatch(client, /proposedClass/);
-  assert.match(nav, /href: '\/gtm'/);
+  assert.doesNotMatch(productNav, /href: '\/gtm'/);
   assert.match(lead, /OUTBOUND_GTM_LEAD_SOURCE = 'outbound_gtm'/);
   assert.match(queue, /'gtm\.campaign\.launch': '\/gtm'/);
   assert.match(engines, /scoringMayAutoApprove/);

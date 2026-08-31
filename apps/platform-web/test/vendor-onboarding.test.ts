@@ -11,7 +11,7 @@ const decisionRoute = read('../app/api/vendors/[id]/workflow/decision/route.ts')
 const migration = read('../../../infra/db/migrations/0053_vendor_onboarding.sql');
 const approvalMigration = read('../../../infra/db/migrations/0054_vendor_onboarding_approval.sql');
 const client = read('../app/(shell)/vendors/VendorsClient.tsx');
-const nav = read('../app/api/workspaces/route.ts');
+const productNav = read('../lib/platform-product-surface.ts');
 
 test('the vendors list/create route is governed and RLS-scoped', () => {
   assert.match(vendorsRoute, /export async function GET/);
@@ -23,16 +23,13 @@ test('the vendors list/create route is governed and RLS-scoped', () => {
 });
 
 test('the vendor workflow route runs the generic Decision Fabric runtime', () => {
-  // The route delegates to the shared factory with the vendor's shared binding.
   assert.match(workflowRoute, /createVerticalWorkflowRoute\(VENDOR_WORKFLOW\)/);
   assert.match(workflowRoute, /export const \{ GET, POST, PATCH \}/);
-  // The binding lives once in lib/verticals.ts.
   const verticals = read('../lib/verticals.ts');
   assert.match(verticals, /table: 'platform\.vendors'/);
   assert.match(verticals, /idColumn: 'vendor_id'/);
   assert.match(verticals, /subjectType: 'vendor'/);
   assert.match(verticals, /stageKey === 'ACTIVE' \? 'ACTIVE' : 'PENDING'/);
-  // The shared factory carries the generic runtime orchestration.
   const factory = read('../lib/vertical-workflow-route.ts');
   assert.match(factory, /startWorkflow/);
   assert.match(factory, /transitionWorkflow/);
@@ -62,16 +59,14 @@ test('the Vendors surface can register, start, screen, approve and activate', ()
   assert.match(client, /Advance to approval/);
   assert.match(client, /Approve &amp; activate/);
   assert.match(client, /approveAndActivate/);
-  assert.match(nav, /href: '\/vendors'/);
+  assert.doesNotMatch(productNav, /href: '\/vendors'/);
 });
 
 test('v2 adds a governed decision stage and the vendor decision route captures it', () => {
-  // The blueprint gains a decision-required APPROVAL stage; v1 is superseded.
   assert.match(approvalMigration, /'vendor\.onboarding', 2/);
   assert.match(approvalMigration, /"stageKey": "APPROVAL"/);
   assert.match(approvalMigration, /"decisionRequired": true/);
   assert.match(approvalMigration, /SET state = 'SUPERSEDED'/);
-  // The route records the decision through the shared governed-capture factory.
   assert.match(decisionRoute, /createVerticalDecisionRoute\(VENDOR_WORKFLOW\)/);
   const factory = read('../lib/vertical-workflow-route.ts');
   assert.match(factory, /recordCaseDecision/);

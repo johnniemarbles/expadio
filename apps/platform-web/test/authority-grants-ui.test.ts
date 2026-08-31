@@ -7,7 +7,7 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const route = read('../app/api/authority/grants/route.ts');
 const client = read('../app/(shell)/authority/AuthorityClient.tsx');
 const page = read('../app/(shell)/authority/page.tsx');
-const nav = read('../app/api/workspaces/route.ts');
+const productNav = read('../lib/platform-product-surface.ts');
 
 test('the authority grants route lists and records grants, governed', () => {
   assert.match(route, /export async function GET/);
@@ -20,20 +20,19 @@ test('the authority grants route lists and records grants, governed', () => {
 test('the Approval Authority surface can grant and inspect authority', () => {
   assert.match(client, /Grant authority/);
   assert.match(client, /monetary\.approval/);
-  // Grants a ceiling and looks a subject's grants up through the governed route.
   assert.match(client, /thresholdMinorUnits/);
   assert.match(client, /\/api\/authority\/grants/);
   assert.match(page, /Approval Authority/);
-  assert.match(nav, /href: '\/authority'/);
+  assert.doesNotMatch(productNav, /href: '\/authority'/);
 });
 
 test('a workflow authority denial links to the Approval Authority page', () => {
   const expenses = read('../app/(shell)/expenses/ExpensesClient.tsx');
   const vendors = read('../app/(shell)/vendors/VendorsClient.tsx');
   const crm = read('../app/(shell)/crm/CrmClient.tsx');
-  for (const client of [expenses, vendors, crm]) {
-    assert.match(client, /WORKFLOW_AUTHORITY/);
-    assert.match(client, /Grant approval authority/);
-    assert.match(client, /href=\{`\/authority/);
+  for (const surface of [expenses, vendors, crm]) {
+    assert.match(surface, /WORKFLOW_AUTHORITY/);
+    assert.match(surface, /Grant approval authority/);
+    assert.match(surface, /href=\{`\/authority/);
   }
 });

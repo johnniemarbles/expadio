@@ -10,7 +10,7 @@ const listRoute = read('../app/api/expenses/route.ts');
 const workflowRoute = read('../app/api/expenses/[id]/workflow/route.ts');
 const decisionRoute = read('../app/api/expenses/[id]/workflow/decision/route.ts');
 const client = read('../app/(shell)/expenses/ExpensesClient.tsx');
-const nav = read('../app/api/workspaces/route.ts');
+const productNav = read('../lib/platform-product-surface.ts');
 
 test('the expense.reimbursement blueprint and table are seeded, RLS-forced', () => {
   assert.match(migration, /CREATE TABLE platform\.expense_reports/);
@@ -27,7 +27,6 @@ test('expense authority is derived from the expense\'s own amount, via the regis
   assert.match(derivation, /platform\.expense_reports/);
   assert.match(derivation, /amount_minor_units/);
   assert.match(derivation, /monetary\.approval/);
-  // A different basis than CRM: the expense's own amount, not an account agreement.
   assert.doesNotMatch(derivation.split("expenseReimbursementAuthorityDeriver")[1] ?? '', /crm_agreements/);
 });
 
@@ -38,12 +37,10 @@ test('the expense routes are governed and run the generic runtime', () => {
   assert.match(listRoute, /hasGovernanceWriteRole/);
   assert.match(workflowRoute, /createVerticalWorkflowRoute\(EXPENSE_WORKFLOW\)/);
   assert.match(decisionRoute, /createVerticalDecisionRoute\(EXPENSE_WORKFLOW\)/);
-  // The expense's binding lives once in lib/verticals.ts.
   const verticals = read('../lib/verticals.ts');
   assert.match(verticals, /table: 'platform\.expense_reports'/);
   assert.match(verticals, /subjectType: 'expense\.reimbursement'/);
   assert.match(verticals, /stageKey === 'PAID' \? 'PAID' : 'SUBMITTED'/);
-  // The shared factory carries the governed decision capture.
   const factory = read('../lib/vertical-workflow-route.ts');
   assert.match(factory, /recordCaseDecision/);
 });
@@ -54,7 +51,7 @@ test('the Expenses surface can file, review, approve and pay', () => {
   assert.match(client, /Assign manager/);
   assert.match(client, /Approve &amp; pay/);
   assert.match(client, /approveAndPay/);
-  assert.match(nav, /href: '\/expenses'/);
+  assert.doesNotMatch(productNav, /href: '\/expenses'/);
 });
 
 test('the expense workflow exposes its governed trace', () => {

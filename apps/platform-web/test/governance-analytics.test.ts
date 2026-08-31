@@ -19,16 +19,17 @@ test('the analytics query groups the decision log by work type and counts approv
   assert.match(lib, /FILTER \(WHERE outcome ILIKE '%APPROVE%'\)/);
 });
 
-test('the analytics route is a membership read behind RLS and the page links from nav', () => {
+test('the analytics route is a membership read behind RLS and the hub links to it', () => {
   const route = read('../app/api/governance/analytics/route.ts');
   assert.match(route, /export async function GET/);
   assert.match(route, /resolveRequestContext\(request\)/);
   assert.match(route, /loadDecisionAnalytics/);
   const page = read('../app/(shell)/governance/analytics/page.tsx');
   assert.match(page, /Approval rate by work type/);
-  const nav = read('../app/api/workspaces/route.ts');
-  assert.match(nav, /href: '\/governance\/analytics'/);
-  // Pack-aware: the work-type column reads the active vertical's language.
+  const hub = read('../app/(shell)/governance/GovernanceToolsDirectory.tsx');
+  const productNav = read('../lib/platform-product-surface.ts');
+  assert.match(hub, /href: '\/governance\/analytics'/);
+  assert.doesNotMatch(productNav, /href: '\/governance\/analytics'/);
   assert.match(page, /\/api\/tenancy\/vertical/);
   assert.match(page, /resolveWorkTypeLabel\(pack, s\.workTypeKey\)/);
   assert.match(page, /resolveWorkTypeLabel\(pack, cyc\.workTypeKey\)/);
