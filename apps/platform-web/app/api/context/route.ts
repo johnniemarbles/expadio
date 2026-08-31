@@ -3,15 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { membershipRepository, dbPool } from '../../../lib/iam-adapter';
 import type { PlatformWorkspaceContext } from '../../../lib/contracts';
-
-/**
- * Workspace context for the shell's account/org picker, built from the caller's
- * REAL memberships rather than a hardcoded demo tenant. Each tenant the operator
- * belongs to becomes an account; its organizations become selectable workspaces.
- * A first-time operator is auto-provisioned into the demo tenant by the
- * membership repository, so the picker is never empty; a multi-tenant operator
- * sees every tenant they actually belong to.
- */
+import { PLATFORM_PRODUCT_CACHE, platformProductDenied } from '../../../lib/platform-product-surface';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +19,7 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) {
     const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
+    return NextResponse.json(denied, { status: 401, headers: PLATFORM_PRODUCT_CACHE });
   }
 
   try {
@@ -35,11 +27,13 @@ export async function GET() {
       subjectId: userId,
       issuer: ISSUER,
       actorKind: 'user',
-    } as any);
+    } as never);
 
-    const tenantIds = [...new Set(memberships.map((m) => m.tenantId))];
+    const tenantIds = [...new Set(memberships.map((m: { tenantId: string }) => m.tenantId))];
     if (tenantIds.length === 0) {
-      return NextResponse.json({ accounts: [], organizations: [] } satisfies PlatformWorkspaceContext);
+      return NextResponse.json({ accounts: [], organizations: [] } satisfies PlatformWorkspaceContext, {
+        headers: PLATFORM_PRODUCT_CACHE,
+      });
     }
 
     const [tenantRows, orgRows] = await Promise.all([
@@ -50,9 +44,9 @@ export async function GET() {
       ),
     ]);
 
-    const tenantName = new Map<string, string>(tenantRows.rows.map((r: any) => [r.tenant_id, r.name]));
+    const tenantName = new Map<string, string>(tenantRows.rows.map((r: { tenant_id: string; name: string }) => [r.tenant_id, r.name]));
     const orgsByTenant = new Map<string, { id: string; name: string }[]>();
-    for (const row of orgRows.rows as any[]) {
+    for (const row of orgRows.rows as { tenant_id: string; organization_id: string; name: string }[]) {
       const list = orgsByTenant.get(row.tenant_id) ?? [];
       list.push({ id: row.organization_id, name: row.name });
       orgsByTenant.set(row.tenant_id, list);
@@ -70,7 +64,7 @@ export async function GET() {
       };
     });
 
-    const organizations = (orgRows.rows as any[]).map((row) => ({
+    const organizations = (orgRows.rows as { organization_id: string; name: string }[]).map((row) => ({
       id: row.organization_id,
       name: row.name,
       environment: 'production',
@@ -78,10 +72,10 @@ export async function GET() {
       parentId: null,
     }));
 
-    return NextResponse.json({ accounts, organizations } satisfies PlatformWorkspaceContext);
-  } catch (error: any) {
-    console.error('Workspace Context API Error:', error);
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: error.message || 'An unknown error occurred.' };
-    return NextResponse.json(denied, { status: 500 });
+    return NextResponse.json({ accounts, organizations } satisfies PlatformWorkspaceContext, {
+      headers: PLATFORM_PRODUCT_CACHE,
+    });
+  } catch {
+    return NextResponse.json(platformProductDenied(), { status: 500, headers: PLATFORM_PRODUCT_CACHE });
   }
 }
