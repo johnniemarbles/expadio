@@ -75,12 +75,14 @@ export type AiContractValidationCode =
   | 'AI_TENANT_REQUIRED'
   | 'AI_PURPOSE_REQUIRED'
   | 'AI_INPUT_REFERENCE_REQUIRED'
+  | 'AI_CONTEXT_REFERENCE_INVALID'
   | 'AI_PROMPT_KEY_REQUIRED'
   | 'AI_PROMPT_VERSION_INVALID'
   | 'AI_IDEMPOTENCY_KEY_REQUIRED'
   | 'AI_CORRELATION_ID_REQUIRED'
   | 'AI_REQUESTED_AT_INVALID'
   | 'AI_COST_LIMIT_INVALID'
+  | 'AI_GOVERNANCE_TAGS_INVALID'
   | 'AI_PROPOSAL_INVOCATION_MISMATCH'
   | 'AI_PROPOSAL_TENANT_MISMATCH'
   | 'AI_OUTPUT_REFERENCE_REQUIRED'
@@ -109,53 +111,83 @@ export function validateAiInvocationIntent(
   intent: AiInvocationIntent,
 ): AiContractValidationResult {
   const issues: AiContractValidationIssue[] = [];
-  required(intent.invocationId, 'AI_INVOCATION_ID_REQUIRED', 'invocationId', issues);
-  if (!AI_OPERATIONS.includes(intent.operation)) {
+  const runtime = intent as unknown as Record<string, unknown>;
+
+  required(runtime.invocationId, 'AI_INVOCATION_ID_REQUIRED', 'invocationId', issues);
+  if (
+    typeof runtime.operation !== 'string'
+    || !AI_OPERATIONS.includes(runtime.operation as AiOperation)
+  ) {
     issues.push({ code: 'AI_OPERATION_INVALID', path: 'operation' });
   }
-  required(intent.tenantId, 'AI_TENANT_REQUIRED', 'tenantId', issues);
-  required(intent.purpose, 'AI_PURPOSE_REQUIRED', 'purpose', issues);
+  required(runtime.tenantId, 'AI_TENANT_REQUIRED', 'tenantId', issues);
+  required(runtime.purpose, 'AI_PURPOSE_REQUIRED', 'purpose', issues);
   required(
-    intent.inputReference,
+    runtime.inputReference,
     'AI_INPUT_REFERENCE_REQUIRED',
     'inputReference',
     issues,
   );
+
+  if (
+    runtime.contextReference !== undefined
+    && (
+      typeof runtime.contextReference !== 'string'
+      || runtime.contextReference.trim() === ''
+    )
+  ) {
+    issues.push({
+      code: 'AI_CONTEXT_REFERENCE_INVALID',
+      path: 'contextReference',
+    });
+  }
+
+  const prompt = isRecord(runtime.promptConfiguration)
+    ? runtime.promptConfiguration
+    : undefined;
   required(
-    intent.promptConfiguration.key,
+    prompt?.key,
     'AI_PROMPT_KEY_REQUIRED',
     'promptConfiguration.key',
     issues,
   );
   if (
-    !Number.isInteger(intent.promptConfiguration.version)
-    || intent.promptConfiguration.version <= 0
+    typeof prompt?.version !== 'number'
+    || !Number.isInteger(prompt.version)
+    || prompt.version <= 0
   ) {
     issues.push({
       code: 'AI_PROMPT_VERSION_INVALID',
       path: 'promptConfiguration.version',
     });
   }
+
   required(
-    intent.idempotencyKey,
+    runtime.idempotencyKey,
     'AI_IDEMPOTENCY_KEY_REQUIRED',
     'idempotencyKey',
     issues,
   );
   required(
-    intent.correlationId,
+    runtime.correlationId,
     'AI_CORRELATION_ID_REQUIRED',
     'correlationId',
     issues,
   );
-  if (!validInstant(intent.requestedAt)) {
+  if (!validInstant(runtime.requestedAt)) {
     issues.push({ code: 'AI_REQUESTED_AT_INVALID', path: 'requestedAt' });
   }
+
+  const governance = isRecord(runtime.governance)
+    ? runtime.governance
+    : undefined;
+  const maximumCost = governance?.maximumCostMinorUnits;
   if (
-    intent.governance.maximumCostMinorUnits !== undefined
+    maximumCost !== undefined
     && (
-      !Number.isInteger(intent.governance.maximumCostMinorUnits)
-      || intent.governance.maximumCostMinorUnits < 0
+      typeof maximumCost !== 'number'
+      || !Number.isInteger(maximumCost)
+      || maximumCost < 0
     )
   ) {
     issues.push({
@@ -163,6 +195,18 @@ export function validateAiInvocationIntent(
       path: 'governance.maximumCostMinorUnits',
     });
   }
+
+  if (
+    governance === undefined
+    || !validStringArray(governance.requiredResidencyTags)
+    || !validStringArray(governance.requiredComplianceTags)
+  ) {
+    issues.push({
+      code: 'AI_GOVERNANCE_TAGS_INVALID',
+      path: 'governance',
+    });
+  }
+
   return result(issues);
 }
 
@@ -171,67 +215,82 @@ export function validateAiProposal(
   proposal: AiProposal,
 ): AiContractValidationResult {
   const issues: AiContractValidationIssue[] = [];
-  if (proposal.invocationId !== intent.invocationId) {
+  const runtime = proposal as unknown as Record<string, unknown>;
+  const provenance = isRecord(runtime.provenance)
+    ? runtime.provenance
+    : undefined;
+
+  if (runtime.invocationId !== intent.invocationId) {
     issues.push({
       code: 'AI_PROPOSAL_INVOCATION_MISMATCH',
       path: 'invocationId',
     });
   }
-  if (proposal.tenantId !== intent.tenantId) {
+  if (runtime.tenantId !== intent.tenantId) {
     issues.push({ code: 'AI_PROPOSAL_TENANT_MISMATCH', path: 'tenantId' });
   }
   required(
-    proposal.outputReference,
+    runtime.outputReference,
     'AI_OUTPUT_REFERENCE_REQUIRED',
     'outputReference',
     issues,
   );
+
+  const confidence = runtime.confidence;
   if (
-    proposal.confidence !== undefined
+    confidence !== undefined
     && (
-      !Number.isFinite(proposal.confidence)
-      || proposal.confidence < 0
-      || proposal.confidence > 1
+      typeof confidence !== 'number'
+      || !Number.isFinite(confidence)
+      || confidence < 0
+      || confidence > 1
     )
   ) {
     issues.push({ code: 'AI_CONFIDENCE_INVALID', path: 'confidence' });
   }
 
   for (const [path, value] of [
-    ['provenance.connectorKey', proposal.provenance.connectorKey],
-    ['provenance.providerKey', proposal.provenance.providerKey],
-    ['provenance.modelKey', proposal.provenance.modelKey],
+    ['provenance.connectorKey', provenance?.connectorKey],
+    ['provenance.providerKey', provenance?.providerKey],
+    ['provenance.modelKey', provenance?.modelKey],
   ] as const) {
     required(value, 'AI_PROVENANCE_REQUIRED', path, issues);
   }
+
   if (
-    proposal.provenance.promptConfigurationKey
-      !== intent.promptConfiguration.key
-    || proposal.provenance.promptConfigurationVersion
-      !== intent.promptConfiguration.version
+    provenance?.promptConfigurationKey !== intent.promptConfiguration.key
+    || provenance?.promptConfigurationVersion !== intent.promptConfiguration.version
   ) {
     issues.push({
       code: 'AI_PROVENANCE_PROMPT_MISMATCH',
       path: 'provenance.promptConfiguration',
     });
   }
-  if (proposal.provenance.sourceReferences.length === 0) {
+
+  if (
+    provenance === undefined
+    || !validNonBlankStringArray(provenance.sourceReferences)
+  ) {
     issues.push({
       code: 'AI_PROVENANCE_SOURCE_REQUIRED',
       path: 'provenance.sourceReferences',
     });
   }
-  if (!validInstant(proposal.provenance.processedAt)) {
+
+  if (!validInstant(provenance?.processedAt)) {
     issues.push({
       code: 'AI_PROVENANCE_PROCESSED_AT_INVALID',
       path: 'provenance.processedAt',
     });
   }
+
+  const cost = provenance?.costMinorUnits;
   if (
-    proposal.provenance.costMinorUnits !== undefined
+    cost !== undefined
     && (
-      !Number.isInteger(proposal.provenance.costMinorUnits)
-      || proposal.provenance.costMinorUnits < 0
+      typeof cost !== 'number'
+      || !Number.isInteger(cost)
+      || cost < 0
     )
   ) {
     issues.push({
@@ -239,11 +298,14 @@ export function validateAiProposal(
       path: 'provenance.costMinorUnits',
     });
   }
+
+  const estimatedCost = provenance?.estimatedCostMinorUnits;
   if (
-    proposal.provenance.estimatedCostMinorUnits !== undefined
+    estimatedCost !== undefined
     && (
-      !Number.isInteger(proposal.provenance.estimatedCostMinorUnits)
-      || proposal.provenance.estimatedCostMinorUnits < 0
+      typeof estimatedCost !== 'number'
+      || !Number.isInteger(estimatedCost)
+      || estimatedCost < 0
     )
   ) {
     issues.push({
@@ -251,11 +313,21 @@ export function validateAiProposal(
       path: 'provenance.estimatedCostMinorUnits',
     });
   }
-  const usage = proposal.provenance.providerUsage;
+
+  const usage = provenance?.providerUsage;
   if (
     usage !== undefined
-    && Object.values(usage).some(
-      (value) => value !== undefined && (!Number.isInteger(value) || value < 0),
+    && (
+      !isRecord(usage)
+      || Object.values(usage).some(
+        (value) =>
+          value !== undefined
+          && (
+            typeof value !== 'number'
+            || !Number.isInteger(value)
+            || value < 0
+          ),
+      )
     )
   ) {
     issues.push({
@@ -263,7 +335,23 @@ export function validateAiProposal(
       path: 'provenance.providerUsage',
     });
   }
+
   return result(issues);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validStringArray(value: unknown): boolean {
+  return Array.isArray(value)
+    && value.every(
+      (entry) => typeof entry === 'string' && entry.trim() !== '',
+    );
+}
+
+function validNonBlankStringArray(value: unknown): boolean {
+  return validStringArray(value) && (value as readonly unknown[]).length > 0;
 }
 
 function required(
