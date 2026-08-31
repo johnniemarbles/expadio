@@ -367,3 +367,30 @@ test('SupabaseDurableArtifactStore refuses public buckets before object access',
   );
   assert.equal(calls, 1);
 });
+
+
+test('SupabaseDurableArtifactStore rejects cross-origin signed URLs', async () => {
+  const subject = store(async (resource) => {
+    if (isBucketRequest(resource)) return privateBucketResponse();
+    return new Response(JSON.stringify({
+      signedURL: 'https://attacker.example.test/audio.wav?token=abc',
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+
+  const reference =
+    'supabase-storage://execution-artifacts/tenants/11111111-1111-4111-8111-111111111111/execution-artifacts/voice_request/voice_audio/abc';
+
+  await assert.rejects(
+    subject.issueProviderFetchUrl({
+      tenantId: input.tenantId,
+      reference,
+      purpose: 'voice transcription',
+      requiredResidencyTags: ['US'],
+      requiredComplianceTags: ['SOC2'],
+    }),
+    /SUPABASE_STORAGE_SIGN_RESPONSE_INVALID/,
+  );
+});
