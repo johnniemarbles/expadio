@@ -48,7 +48,8 @@ test('sending-health product APIs scan operational payloads and stay private', (
   assert.match(health, /assertPlatformProductSendingHealth/);
   assert.match(health, /PLATFORM_PRODUCT_CACHE/);
   assert.doesNotMatch(health, /metadata:/);
-  assert.doesNotMatch(health, /recipient/);
+  // Source scan includes comments. Do not name address-field tokens in this route.
+  assert.doesNotMatch(health, /recipient|to_address|from_address/);
   const commsOverview = readFileSync(new URL('../app/api/communications/overview/route.ts', import.meta.url), 'utf8');
   assert.match(commsOverview, /assertPlatformProductSendingHealth/);
   assert.match(commsOverview, /PLATFORM_PRODUCT_CACHE/);

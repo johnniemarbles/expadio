@@ -22,7 +22,7 @@ function singleParam(searchParams: URLSearchParams, key: string): string | undef
  * Tenant-scoped communication health summary.
  *
  * Product surface: counts and health keys only. Metadata is dropped because it
- * is an unbounded bag and may contain recipient fields.
+ * is an unbounded bag and is not part of the sending-health contract.
  */
 export async function GET(request: Request) {
   try {
