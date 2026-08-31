@@ -162,6 +162,9 @@ export async function executePersistedGovernedAiAction(
       client,
       input.options.artifactBlobSink,
     );
+    const inputResolver = governedArtifactAiInputResolver(
+      input.options.artifactSource,
+    );
     const adapters = new Map<string, AiProviderAdapter>();
     for (const connector of connectors) {
       const token = governedApiTokenProvider({
