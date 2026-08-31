@@ -1,12 +1,15 @@
-export type AiOperation =
-  | 'GENERATE'
-  | 'CLASSIFY'
-  | 'SUMMARIZE'
-  | 'EXTRACT'
-  | 'EMBED'
-  | 'RERANK'
-  | 'VISION_ANALYZE'
-  | 'TRANSLATE';
+export const AI_OPERATIONS = [
+  'GENERATE',
+  'CLASSIFY',
+  'SUMMARIZE',
+  'EXTRACT',
+  'EMBED',
+  'RERANK',
+  'VISION_ANALYZE',
+  'TRANSLATE',
+] as const;
+
+export type AiOperation = (typeof AI_OPERATIONS)[number];
 
 export interface AiInvocationIntent {
   readonly invocationId: string;
@@ -68,6 +71,7 @@ export interface AiProvenance {
 
 export type AiContractValidationCode =
   | 'AI_INVOCATION_ID_REQUIRED'
+  | 'AI_OPERATION_INVALID'
   | 'AI_TENANT_REQUIRED'
   | 'AI_PURPOSE_REQUIRED'
   | 'AI_INPUT_REFERENCE_REQUIRED'
@@ -106,6 +110,9 @@ export function validateAiInvocationIntent(
 ): AiContractValidationResult {
   const issues: AiContractValidationIssue[] = [];
   required(intent.invocationId, 'AI_INVOCATION_ID_REQUIRED', 'invocationId', issues);
+  if (!AI_OPERATIONS.includes(intent.operation)) {
+    issues.push({ code: 'AI_OPERATION_INVALID', path: 'operation' });
+  }
   required(intent.tenantId, 'AI_TENANT_REQUIRED', 'tenantId', issues);
   required(intent.purpose, 'AI_PURPOSE_REQUIRED', 'purpose', issues);
   required(
