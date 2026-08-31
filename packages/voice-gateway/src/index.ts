@@ -53,7 +53,10 @@ export interface VoiceIntelligenceProvenance {
   readonly processedAt: string;
   readonly region?: string;
   readonly audioDurationMilliseconds?: number;
+  /** Reconciled/authoritative cost only. */
   readonly costMinorUnits?: number;
+  /** Provider-usage-derived estimate; never billing evidence. */
+  readonly estimatedCostMinorUnits?: number;
 }
 
 export type VoiceContractValidationCode =
@@ -75,7 +78,8 @@ export type VoiceContractValidationCode =
   | 'VOICE_PROVENANCE_SOURCE_REQUIRED'
   | 'VOICE_PROCESSED_AT_INVALID'
   | 'VOICE_AUDIO_DURATION_INVALID'
-  | 'VOICE_COST_INVALID';
+  | 'VOICE_COST_INVALID'
+  | 'VOICE_ESTIMATED_COST_INVALID';
 
 export interface VoiceContractValidationIssue {
   readonly code: VoiceContractValidationCode;
@@ -220,6 +224,16 @@ export function validateVoiceIntelligenceObservation(
   const cost = observation.provenance.costMinorUnits;
   if (cost !== undefined && (!Number.isInteger(cost) || cost < 0)) {
     issues.push({ code: 'VOICE_COST_INVALID', path: 'provenance.costMinorUnits' });
+  }
+  const estimatedCost = observation.provenance.estimatedCostMinorUnits;
+  if (
+    estimatedCost !== undefined
+    && (!Number.isInteger(estimatedCost) || estimatedCost < 0)
+  ) {
+    issues.push({
+      code: 'VOICE_ESTIMATED_COST_INVALID',
+      path: 'provenance.estimatedCostMinorUnits',
+    });
   }
   return result(issues);
 }
