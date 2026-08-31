@@ -24,6 +24,40 @@ export function learningApiError(error: unknown): LearningApiError | null {
 
   if (!(error instanceof Error)) return null;
 
+  const validationErrors = new Set([
+    'LEARNING_LEARNER_INVALID',
+    'LEARNING_LEARNER_IDENTITY_REQUIRED',
+    'LEARNING_SUBJECT_ID_REQUIRED',
+    'LEARNING_SUBJECT_ID_TOO_LONG',
+    'LEARNING_CONTACT_ID_INVALID',
+    'LEARNING_EXTERNAL_REF_REQUIRED',
+    'LEARNING_EXTERNAL_REF_TOO_LONG',
+    'LEARNING_FULL_NAME_REQUIRED',
+    'LEARNING_FULL_NAME_TOO_LONG',
+    'LEARNING_EMAIL_INVALID',
+    'LEARNING_EMAIL_TOO_LONG',
+    'LEARNING_AUDIENCE_TYPE_INVALID',
+    'LEARNING_METADATA_INVALID',
+    'LEARNING_ENROLLMENT_INVALID',
+    'LEARNING_ASSIGNMENT_KEY_REQUIRED',
+    'LEARNING_ASSIGNMENT_KEY_TOO_LONG',
+    'LEARNING_ASSIGNMENT_KEY_INVALID',
+    'LEARNING_LEARNER_ID_INVALID',
+    'LEARNING_COURSE_ID_INVALID',
+    'LEARNING_ENROLLMENT_SOURCE_INVALID',
+    'LEARNING_SOURCE_REF_TOO_LONG',
+    'LEARNING_DUE_AT_INVALID',
+  ]);
+  if (validationErrors.has(error.message)) {
+    return {
+      status: 400,
+      body: {
+        reasonKey: error.message,
+        message: 'The Learning request is invalid.',
+      },
+    };
+  }
+
   switch (error.message) {
     case 'MODULE_LOCKED_BY_PLAN':
       return {
@@ -91,6 +125,29 @@ export function learningApiError(error: unknown): LearningApiError | null {
         body: {
           reasonKey: error.message,
           message: 'The course version cannot be published from its current state.',
+        },
+      };
+    case 'LEARNING_LEARNER_NOT_FOUND':
+    case 'LEARNING_LEARNER_CONTACT_NOT_FOUND':
+    case 'LEARNING_ENROLLMENT_NOT_FOUND':
+    case 'LEARNING_LESSON_NOT_IN_ENROLLMENT':
+      return {
+        status: 404,
+        body: {
+          reasonKey: error.message,
+          message: 'The requested Learning resource was not found.',
+        },
+      };
+    case 'LEARNING_LEARNER_IDENTITY_EXISTS':
+    case 'LEARNING_LEARNER_NOT_ACTIVE':
+    case 'LEARNING_ASSIGNMENT_KEY_CONFLICT':
+    case 'LEARNING_COURSE_NOT_PUBLISHED':
+    case 'LEARNING_ENROLLMENT_NOT_PROGRESSABLE':
+      return {
+        status: 409,
+        body: {
+          reasonKey: error.message,
+          message: 'The Learning request conflicts with the current resource state.',
         },
       };
     default:
