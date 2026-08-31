@@ -1183,6 +1183,27 @@ async function issueEligibleCredentials(
   return issued;
 }
 
+export async function reconcileMyLearningProgramEnrollment(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly subjectId: string;
+    readonly subjectIssuer: string | null;
+    readonly programEnrollmentId: string;
+    readonly correlationId: string;
+  },
+): Promise<LearningProgramReconciliation> {
+  await requireLearning(client, input.tenantId);
+  const learnerId = await resolveActiveLearnerId(client, input);
+  return reconcileLearningProgramEnrollment(client, {
+    tenantId: input.tenantId,
+    programEnrollmentId: input.programEnrollmentId,
+    actorSubjectId: input.subjectId,
+    correlationId: input.correlationId,
+    expectedLearnerId: learnerId,
+  });
+}
+
 export async function listMyLearningCredentials(
   client: PostgresClient,
   input: {
@@ -1286,6 +1307,27 @@ export async function reconcileLearningCredentialStatuses(
   return listLearningCredentials(client, {
     tenantId: input.tenantId,
     ...(input.learnerId === undefined ? {} : { learnerId: input.learnerId }),
+  });
+}
+
+export async function reconcileMyLearningCredentialStatuses(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly subjectId: string;
+    readonly subjectIssuer: string | null;
+    readonly correlationId: string;
+    readonly now?: Date;
+  },
+): Promise<readonly LearningCredentialSummary[]> {
+  await requireLearning(client, input.tenantId);
+  const learnerId = await resolveActiveLearnerId(client, input);
+  return reconcileLearningCredentialStatuses(client, {
+    tenantId: input.tenantId,
+    learnerId,
+    actorSubjectId: input.subjectId,
+    correlationId: input.correlationId,
+    ...(input.now === undefined ? {} : { now: input.now }),
   });
 }
 
