@@ -238,7 +238,9 @@ export async function executeGovernedAiAction(input: {
         confidence,
         modelKey: proposal.provenance.modelKey,
         connectorKey: proposal.provenance.connectorKey,
-        costMinorUnits: proposal.provenance.costMinorUnits,
+        costMinorUnits: proposal.provenance.costMinorUnits ?? null,
+        estimatedCostMinorUnits: proposal.provenance.estimatedCostMinorUnits ?? null,
+        providerUsage: proposal.provenance.providerUsage ?? null,
         approved: isApproved,
       },
     };
