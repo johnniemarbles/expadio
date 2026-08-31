@@ -15,6 +15,7 @@ type Result = {
   sourceLogScan?: string;
   runtimeLogFile?: string;
   cache?: string;
+  source?: string;
 };
 
 export default function ProvisionScopeForm() {
@@ -67,40 +68,17 @@ export default function ProvisionScopeForm() {
         <input type="checkbox" checked={createTenant} onChange={(event) => setCreateTenant(event.target.checked)} />
         Create a new storage tenant (otherwise bind the current one)
       </label>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() =>
-          void call('/api/tenants/provision', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ tenantCode, brandCode, locationCode, organizationLabel, createTenant }),
-          })
-        }
-      >
+      <button type="button" disabled={busy} onClick={() => void call('/api/tenants/provision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenantCode, brandCode, locationCode, organizationLabel, createTenant }) })}>
         {busy ? 'Working…' : 'Provision Brand scope'}
       </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() =>
-          void call('/api/tenants/cs104-observe', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ tenantCode, brandCode }),
-          })
-        }
-      >
+      <button type="button" disabled={busy} onClick={() => void call('/api/tenants/cs104-observe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenantCode, brandCode }) })}>
         {busy ? 'Working…' : 'Seed CS-104 observation'}
       </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() =>
-          void call(`/api/journey-correlation?tenant=${encodeURIComponent(tenantCode)}&brand=${encodeURIComponent(brandCode)}&correlation=CS-104`)
-        }
-      >
+      <button type="button" disabled={busy} onClick={() => void call(`/api/journey-correlation?tenant=${encodeURIComponent(tenantCode)}&brand=${encodeURIComponent(brandCode)}&correlation=CS-104`)}>
         {busy ? 'Working…' : 'Read CS-104 on Platform'}
+      </button>
+      <button type="button" disabled={busy} onClick={() => void call(`/api/tenants/delivery-proof?tenant=${encodeURIComponent(tenantCode)}&brand=${encodeURIComponent(brandCode)}`)}>
+        {busy ? 'Working…' : 'Read provider delivery'}
       </button>
       <button type="button" disabled={busy} onClick={() => void call('/api/tenants/pii-proof')}>
         {busy ? 'Working…' : 'Run source PII proof'}
@@ -109,7 +87,8 @@ export default function ProvisionScopeForm() {
       {result ? (
         <p>
           {result.payloadScan ? `PII proof ${result.payloadScan}. Logs ${result.runtimeLogFile ?? ''}. ` : null}
-          {result.correlation ? `CS-104 communicate ${result.communicate ?? ''} · delivery ${result.delivery ?? ''}. ` : null}
+          {result.source === 'communication_deliveries' ? `Provider delivery ${result.delivery ?? ''} · claimed ${String(result.deliveryClaimed)}. ` : null}
+          {result.correlation && result.source !== 'communication_deliveries' ? `CS-104 communicate ${result.communicate ?? ''} · delivery ${result.delivery ?? ''}. ` : null}
           {result.tenant || result.brandHref ? `Bound ${result.tenant ?? tenantCode} / ${result.brand ?? brandCode}. ` : null}
           {result.brandHref ? <a href={result.brandHref}>Open Brand</a> : null}
         </p>
