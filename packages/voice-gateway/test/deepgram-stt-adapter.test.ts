@@ -7,6 +7,14 @@ import {
   type VoiceIntelligenceIntent,
 } from "../src/index.ts";
 
+const artifactSink = {
+  write: async (input: any) => ({
+    contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
+    sha256: "d".repeat(64),
+    byteLength: typeof input.content === "string" ? input.content.length : input.content.byteLength,
+  }),
+};
+
 const connector: ConnectorDefinition = {
   connectorKey: "connector.voice.deepgram.primary",
   providerType: "deepgram",
@@ -80,6 +88,7 @@ test("DeepgramSttAdapter transcribes audio and produces valid observation", asyn
 
   const adapter = new DeepgramSttAdapter({
     apiToken: async () => "mock-deepgram-token-xyz",
+    artifactSink,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:05.000Z",
   });
@@ -97,6 +106,7 @@ test("DeepgramSttAdapter transcribes audio and produces valid observation", asyn
   assert.equal(observation.operation, "TRANSCRIBE");
   assert.equal(observation.provenance.modelKey, "nova-2");
   assert.equal(observation.provenance.audioDurationMilliseconds, 45500);
+  assert.equal(observation.outputReference, `artifact://VOICE_TRANSCRIPT/${intent.requestId}`);
 
   const validation = validateVoiceIntelligenceObservation(intent, observation);
   assert.equal(validation.valid, true);
@@ -105,6 +115,7 @@ test("DeepgramSttAdapter transcribes audio and produces valid observation", asyn
 test("DeepgramSttAdapter rejects unsupported operation", async () => {
   const adapter = new DeepgramSttAdapter({
     apiToken: async () => "mock-token",
+    artifactSink,
   });
 
   const invalidIntent: VoiceIntelligenceIntent = {
