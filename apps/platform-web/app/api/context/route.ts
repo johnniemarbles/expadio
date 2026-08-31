@@ -3,7 +3,11 @@ import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
 import { membershipRepository, dbPool } from '../../../lib/iam-adapter';
 import type { PlatformWorkspaceContext } from '../../../lib/contracts';
-import { PLATFORM_PRODUCT_CACHE, platformProductDenied } from '../../../lib/platform-product-surface';
+import {
+  PLATFORM_PRODUCT_CACHE,
+  assertPlatformProductPayload,
+  platformProductDenied,
+} from '../../../lib/platform-product-surface';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +35,9 @@ export async function GET() {
 
     const tenantIds = [...new Set(memberships.map((m: { tenantId: string }) => m.tenantId))];
     if (tenantIds.length === 0) {
-      return NextResponse.json({ accounts: [], organizations: [] } satisfies PlatformWorkspaceContext, {
+      const empty = { accounts: [], organizations: [] } satisfies PlatformWorkspaceContext;
+      assertPlatformProductPayload(empty);
+      return NextResponse.json(empty, {
         headers: PLATFORM_PRODUCT_CACHE,
       });
     }
@@ -72,10 +78,18 @@ export async function GET() {
       parentId: null,
     }));
 
-    return NextResponse.json({ accounts, organizations } satisfies PlatformWorkspaceContext, {
+    const body = { accounts, organizations } satisfies PlatformWorkspaceContext;
+    assertPlatformProductPayload(body);
+    return NextResponse.json(body, {
       headers: PLATFORM_PRODUCT_CACHE,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'PLATFORM_PII_BOUNDARY') {
+      return NextResponse.json(platformProductDenied('PLATFORM_PII_BOUNDARY'), {
+        status: 500,
+        headers: PLATFORM_PRODUCT_CACHE,
+      });
+    }
     return NextResponse.json(platformProductDenied(), { status: 500, headers: PLATFORM_PRODUCT_CACHE });
   }
 }

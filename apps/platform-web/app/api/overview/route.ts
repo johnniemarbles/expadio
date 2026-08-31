@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { resolveRequestContext, deniedResponse } from '../../../lib/request-context';
 import { dbPool } from '../../../lib/iam-adapter';
-import { PLATFORM_PRODUCT_CACHE, platformProductDenied } from '../../../lib/platform-product-surface';
+import {
+  PLATFORM_PRODUCT_CACHE,
+  assertPlatformProductPayload,
+  platformProductDenied,
+} from '../../../lib/platform-product-surface';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -103,12 +107,19 @@ export async function GET(request: Request) {
       reviews,
       activity,
     };
+    assertPlatformProductPayload(overview);
 
     return NextResponse.json(overview, { headers: PLATFORM_PRODUCT_CACHE });
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'denied' in error) {
       const { body, status } = deniedResponse(error as { denied: true });
       return NextResponse.json(body, { status, headers: PLATFORM_PRODUCT_CACHE });
+    }
+    if (error instanceof Error && error.message === 'PLATFORM_PII_BOUNDARY') {
+      return NextResponse.json(platformProductDenied('PLATFORM_PII_BOUNDARY'), {
+        status: 500,
+        headers: PLATFORM_PRODUCT_CACHE,
+      });
     }
     return NextResponse.json(platformProductDenied(), { status: 500, headers: PLATFORM_PRODUCT_CACHE });
   }
