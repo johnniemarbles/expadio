@@ -47,7 +47,8 @@
     "./operational-task": "./src/operational-task.ts",
     "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts",
     "./product-module": "./src/product-module.ts",
-    "./learning": "./src/learning.ts"
+    "./learning": "./src/learning.ts",
+    "./learning-enrollment": "./src/learning-enrollment.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
