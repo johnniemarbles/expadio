@@ -160,6 +160,9 @@ export class GeminiAiAdapter implements AiProviderAdapter {
 
     const firstCandidate = data.candidates?.[0];
     const generatedText = firstCandidate?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    if (generatedText.trim() === "") {
+      throw new Error("AI_PROVIDER_OUTPUT_EMPTY: Gemini returned no usable text");
+    }
     const totalTokens = data.usageMetadata?.totalTokenCount;
 
     const provenance: AiProvenance = {
@@ -251,7 +254,15 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       throw new Error(`AI_PROVIDER_ERROR: Gemini responded with status ${response.status}: ${errorText}`);
     }
 
-    const embeddingPayload = await response.json() as unknown;
+    const embeddingPayload = await response.json() as {
+      embedding?: { values?: unknown[] };
+    };
+    if (
+      !Array.isArray(embeddingPayload.embedding?.values)
+      || embeddingPayload.embedding.values.length === 0
+    ) {
+      throw new Error("AI_PROVIDER_OUTPUT_EMPTY: Gemini returned no embedding vector");
+    }
     const artifact = await this.#artifactSink.write({
       tenantId: intent.tenantId,
       artifactKind: "AI_EMBEDDING",
