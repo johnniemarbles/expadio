@@ -16,6 +16,10 @@ type Result = {
   runtimeLogFile?: string;
   cache?: string;
   source?: string;
+  publicOrigin?: string;
+  deployed?: boolean;
+  currentIsFallback?: boolean;
+  productHost?: string;
 };
 
 export default function ProvisionScopeForm() {
@@ -83,9 +87,13 @@ export default function ProvisionScopeForm() {
       <button type="button" disabled={busy} onClick={() => void call('/api/tenants/pii-proof')}>
         {busy ? 'Working…' : 'Run source PII proof'}
       </button>
+      <button type="button" disabled={busy} onClick={() => void call('/api/tenants/brand-host')}>
+        {busy ? 'Working…' : 'Read Brand host contract'}
+      </button>
       {error ? <p role="alert">{error}</p> : null}
       {result ? (
         <p>
+          {result.publicOrigin ? `Brand host ${result.productHost ?? ''} · deployed ${String(result.deployed)} · fallback ${String(result.currentIsFallback)} · ${result.publicOrigin}. ` : null}
           {result.payloadScan ? `PII proof ${result.payloadScan}. Logs ${result.runtimeLogFile ?? ''}. ` : null}
           {result.source === 'communication_deliveries' ? `Provider delivery ${result.delivery ?? ''} · claimed ${String(result.deliveryClaimed)}. ` : null}
           {result.correlation && result.source !== 'communication_deliveries' ? `CS-104 communicate ${result.communicate ?? ''} · delivery ${result.delivery ?? ''}. ` : null}
