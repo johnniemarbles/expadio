@@ -1,7 +1,17 @@
 export type ActorKind = 'user' | 'party' | 'service' | 'agent';
 export { SHELL_NAVIGATION, shellViewSelection, unresolvedShellScope } from './shell-scope.ts';
 export type { ShellAudience, ShellScope, ShellScopeStorageKeys, ScopeValue, TenantCode, BrandCode, LocationCode, LocationView, RoleHome } from './shell-scope.ts';
-export { PLATFORM_HOST, BRAND_HOST, hostForAudience } from './hosts.ts';
+export {
+  PLATFORM_HOST,
+  BRAND_HOST,
+  BRAND_PUBLIC_ORIGIN,
+  BRAND_FALLBACK_PREFIX,
+  hostForAudience,
+  isBrandProductHost,
+  isPlatformProductHost,
+  brandPublicPath,
+  brandHostStatus,
+} from './hosts.ts';
 export {
   ScopeMappingError,
   assertProductCode,
