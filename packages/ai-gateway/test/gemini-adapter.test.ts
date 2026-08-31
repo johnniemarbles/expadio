@@ -7,6 +7,13 @@ import {
   type AiInvocationIntent,
 } from "../src/index.ts";
 
+const inputResolver = {
+  resolveText: async (input: any) => ({
+    content: input.reference,
+    sourceReference: input.reference,
+  }),
+};
+
 const artifactSink = {
   write: async (input: any) => ({
     contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
@@ -83,6 +90,7 @@ test("GeminiAiAdapter invokes generateContent, parses response and sets provenan
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "mock-gemini-key-123",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:01.000Z",
   });
@@ -125,6 +133,7 @@ test("GeminiAiAdapter handles EMBED operation with embedContent API", async () =
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "mock-gemini-key-123",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:01.000Z",
   });
@@ -148,6 +157,7 @@ test("GeminiAiAdapter rejects empty leased token with clear error", async () => 
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "",
     artifactSink,
+    inputResolver,
   });
 
   await assert.rejects(
@@ -164,6 +174,7 @@ test("GeminiAiAdapter throws on provider error response", async () => {
   const adapter = new GeminiAiAdapter({
     apiToken: async () => "mock-key",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
   });
 
