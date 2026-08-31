@@ -1,4 +1,4 @@
-import { LearningAssessmentValidationError, LearningProgramValidationError, LearningValidationError } from '@expadio/learning';
+import { LearningAssessmentValidationError, LearningCompetencyValidationError, LearningProgramValidationError, LearningValidationError } from '@expadio/learning';
 
 export interface LearningApiError {
   readonly status: number;
@@ -15,6 +15,7 @@ export function learningApiError(error: unknown): LearningApiError | null {
     error instanceof LearningValidationError
     || error instanceof LearningAssessmentValidationError
     || error instanceof LearningProgramValidationError
+    || error instanceof LearningCompetencyValidationError
   ) {
     return {
       status: 400,
@@ -62,6 +63,10 @@ export function learningApiError(error: unknown): LearningApiError | null {
     'LEARNING_PROGRAM_ASSIGNMENT_KEY_INVALID',
     'LEARNING_PROGRAM_SOURCE_TYPE_INVALID',
     'LEARNING_CREDENTIAL_REVOCATION_REASON_INVALID',
+    'LEARNING_COMPETENCY_FRAMEWORK_KEY_REQUIRED',
+    'LEARNING_COMPETENCY_FRAMEWORK_KEY_INVALID',
+    'LEARNING_COMPETENCY_FRAMEWORK_ID_INVALID',
+    'LEARNING_LEARNER_ID_INVALID',
   ]);
   if (validationErrors.has(error.message)) {
     return {
@@ -158,6 +163,8 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_CERTIFICATION_NOT_FOUND':
     case 'LEARNING_CERTIFICATION_VERSION_NOT_FOUND':
     case 'LEARNING_CREDENTIAL_NOT_FOUND':
+    case 'LEARNING_COMPETENCY_FRAMEWORK_NOT_FOUND':
+    case 'LEARNING_COMPETENCY_FRAMEWORK_VERSION_NOT_FOUND':
       return {
         status: 404,
         body: {
@@ -202,6 +209,12 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_CERTIFICATION_PROGRAM_VERSION_NOT_PUBLISHED':
     case 'LEARNING_CERTIFICATION_VERSION_NOT_PUBLISHABLE':
     case 'LEARNING_CREDENTIAL_REVOCATION_REASON_INVALID':
+    case 'LEARNING_COMPETENCY_FRAMEWORK_KEY_EXISTS':
+    case 'LEARNING_COMPETENCY_FRAMEWORK_VERSION_NOT_PUBLISHABLE':
+    case 'LEARNING_COMPETENCY_COURSE_VERSION_NOT_PUBLISHED':
+    case 'LEARNING_COMPETENCY_ASSESSMENT_VERSION_NOT_PUBLISHED':
+    case 'LEARNING_COMPETENCY_PROGRAM_VERSION_NOT_PUBLISHED':
+    case 'LEARNING_COMPETENCY_CERTIFICATION_VERSION_NOT_PUBLISHED':
       return {
         status: 409,
         body: {
