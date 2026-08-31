@@ -103,7 +103,6 @@ test("RoutedVoiceGateway routes TRANSCRIBE operation to DeepgramSttAdapter", asy
       jurisdictionTags: ["US"],
       requiredResidencyTags: ["US"],
       requiredComplianceTags: ["HIPAA"],
-      maximumCostMinorUnits: 50,
     },
     idempotencyKey: "idem_stt_01",
     correlationId: "corr-stt-01",
