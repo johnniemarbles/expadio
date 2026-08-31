@@ -54,6 +54,7 @@ export async function POST(request: Request) {
           tenantId: context.tenantId,
           actorSubjectId: context.subjectId,
           learner: body,
+          correlationId: request.headers.get('x-correlation-id')?.trim() || undefined,
         }),
       } as const;
     });
