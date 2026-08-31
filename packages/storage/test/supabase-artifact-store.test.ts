@@ -2,8 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   SupabaseDurableArtifactStore,
+  governedSupabaseStorageAccessTokenProvider,
   type DurableArtifactWriteInput,
 } from '../src/index.ts';
+import {
+  credentialReference,
+  type ConnectorDefinition,
+} from '@expadio/provider-registry';
 
 const input: DurableArtifactWriteInput = {
   tenantId: '11111111-1111-4111-8111-111111111111',
@@ -209,4 +214,115 @@ test('SupabaseDurableArtifactStore recognizes Supabase duplicate 400 responses w
     /SUPABASE_STORAGE_UPLOAD_FAILED:400/,
   );
   assert.equal(malformedCalls, 1);
+});
+
+
+test('governedSupabaseStorageAccessTokenProvider leases Supabase credentials before secret resolution', async () => {
+  const reference = credentialReference('vault://platform/supabase-storage/v1');
+  const connector: ConnectorDefinition = {
+    connectorKey: 'connector.storage.supabase.primary',
+    providerType: 'supabase-storage',
+    providerKey: 'supabase',
+    ownership: 'PLATFORM',
+    capabilityKeys: ['storage.store', 'storage.read'],
+    residencyTags: ['US'],
+    complianceTags: ['SOC2'],
+    health: 'HEALTHY',
+    priority: 1,
+    enabled: true,
+    fallbackEnabled: false,
+  };
+  const calls: string[] = [];
+
+  const provider = governedSupabaseStorageAccessTokenProvider({
+    connector,
+    credentialRepository: {
+      loadCredentialReference: async () => {
+        calls.push('credential-reference');
+        return reference;
+      },
+    },
+    leaseService: {
+      issue: async (request, leasedConnector) => {
+        calls.push('lease');
+        assert.equal(request.connectorKey, connector.connectorKey);
+        assert.equal(request.purpose, 'storage.store:artifact write');
+        assert.equal(leasedConnector.credentialRef, reference);
+        return {
+          leaseReference: 'lease://storage/1',
+          tenantId: request.tenantId,
+          connectorKey: request.connectorKey,
+          credentialReference: reference,
+          authorizationDecisionId: 'decision-storage-1',
+          issuedAt: '2026-08-31T03:00:00.000Z',
+          expiresAt: '2026-08-31T03:05:00.000Z',
+          auditReference: 'audit://storage/1',
+        };
+      },
+    },
+    secretResolver: {
+      resolve: async () => {
+        calls.push('secret');
+        return { value: 'supabase-service-token' };
+      },
+    },
+    requestedBySubjectId: 'service-artifact-runtime',
+    requestId: () => 'credential-request-1',
+    correlationId: () => 'corr-storage-1',
+    now: () => '2026-08-31T03:01:00.000Z',
+  });
+
+  const token = await provider({
+    tenantId: input.tenantId,
+    operation: 'STORE',
+    purpose: 'artifact write',
+    idempotencyKey: 'storage:store:abc',
+    requestedAt: '2026-08-31T03:00:00.000Z',
+  });
+
+  assert.equal(token, 'supabase-service-token');
+  assert.deepEqual(calls, ['credential-reference', 'lease', 'secret']);
+});
+
+test('governedSupabaseStorageAccessTokenProvider refuses missing storage capabilities', async () => {
+  const connector: ConnectorDefinition = {
+    connectorKey: 'connector.storage.supabase.write-only',
+    providerType: 'supabase-storage',
+    providerKey: 'supabase',
+    ownership: 'PLATFORM',
+    capabilityKeys: ['storage.store'],
+    residencyTags: ['US'],
+    complianceTags: ['SOC2'],
+    health: 'HEALTHY',
+    priority: 1,
+    enabled: true,
+    fallbackEnabled: false,
+  };
+
+  const provider = governedSupabaseStorageAccessTokenProvider({
+    connector,
+    credentialRepository: {
+      loadCredentialReference: async () => assert.fail('credential lookup must not run'),
+    },
+    leaseService: {
+      issue: async () => assert.fail('lease must not run'),
+    },
+    secretResolver: {
+      resolve: async () => assert.fail('secret resolution must not run'),
+    },
+    requestedBySubjectId: 'service-artifact-runtime',
+    requestId: () => 'credential-request-2',
+    correlationId: () => 'corr-storage-2',
+  });
+
+  await assert.rejects(
+    provider({
+      tenantId: input.tenantId,
+      operation: 'READ',
+      purpose: 'artifact read',
+      idempotencyKey: 'storage:read:abc',
+      requestedAt: '2026-08-31T03:00:00.000Z',
+    }),
+    /SUPABASE_STORAGE_CONNECTOR_CAPABILITY_UNAVAILABLE/,
+  );
 });
