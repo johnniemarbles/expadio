@@ -304,6 +304,7 @@ function mapJob(row: JobRow): AiJobRegistration {
           : { maximumCostMinorUnits: row.maximum_cost_minor_units }),
       },
       idempotencyKey: row.idempotency_key,
+      correlationId: row.correlation_id,
       requestedAt: iso(row.requested_at),
     },
     maximumAttempts: row.maximum_attempts,
