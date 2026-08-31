@@ -19,6 +19,7 @@ test('unresolved scope does not pretend customer reads exist', () => {
   const workspace = brandWorkspace();
   assert.equal(workspace.surfaces.home.state, 'unresolved-scope');
   assert.equal(workspace.surfaces.customers.state, 'unresolved-scope');
+  assert.equal(workspace.surfaces.communications.state, 'unresolved-scope');
   assert.equal(workspace.surfaces.growth.state, 'planned');
 });
 
@@ -30,9 +31,10 @@ test('resolved codes still cannot read without a verified directory', () => {
     location: { state: 'resolved', value: { kind: 'all-permitted' } },
   });
   assert.equal(workspace.surfaces.customers.state, 'mapping-unavailable');
+  assert.equal(workspace.surfaces.communications.state, 'mapping-unavailable');
 });
 
-test('verified directory maps Home and Customers without opening planned surfaces', () => {
+test('verified directory maps Home, Customers and Communications without opening planned surfaces', () => {
   const directory = createScopeDirectory([{
     tenant: 'T-1048', brand: 'B-0001', location: 'all-permitted',
     tenantId: '10000000-0000-0000-0000-000000000001',
@@ -46,7 +48,8 @@ test('verified directory maps Home and Customers without opening planned surface
     location: { state: 'resolved', value: { kind: 'all-permitted' } },
   }, directory);
   assert.equal(workspace.surfaces.customers.state, 'mapped');
-  assert.equal(workspace.surfaces.communications.state, 'planned');
+  assert.equal(workspace.surfaces.communications.state, 'mapped');
+  assert.equal(workspace.surfaces.growth.state, 'planned');
 });
 
 test('Platform audience cannot open the Brand workspace helper', () => {

@@ -42,6 +42,7 @@ export {
   customerPiiPresent,
   redactCustomerPii,
   assertPlatformPayloadHasNoCustomerPii,
+  assertPlatformSendingHealthPayload,
   assertPlatformLogHasNoCustomerPii,
   platformSafeLogLine,
   platformSafeErrorBody,

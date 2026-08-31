@@ -10,6 +10,7 @@ import {
   assertBrandNavIsNotInsidePlatform,
   assertPlatformLogHasNoCustomerPii,
   assertPlatformPayloadHasNoCustomerPii,
+  assertPlatformSendingHealthPayload,
   classifyRequestPath,
   hostForAudience,
   platformSafeErrorBody,
@@ -44,6 +45,8 @@ test('request paths split product, brand and lab', () => {
   assert.equal(classifyRequestPath('/api/overview'), 'platform-product');
   assert.equal(classifyRequestPath('/api/workspaces'), 'platform-product');
   assert.equal(classifyRequestPath('/api/journey-correlation'), 'platform-product');
+  assert.equal(classifyRequestPath('/api/communications/health'), 'platform-product');
+  assert.equal(classifyRequestPath('/api/communications/overview'), 'platform-product');
   assert.equal(classifyRequestPath('/brand/api/customers'), 'brand');
   assert.equal(classifyRequestPath('/brand/api/journey'), 'brand');
   assert.equal(classifyRequestPath('/api/crm/contacts'), 'lab');
@@ -62,4 +65,25 @@ test('platform errors and logs stay generic', () => {
   assert.equal(platformSafeLogLine('retry CS-104 tenant T-1048'), 'retry CS-104 tenant T-1048');
   assert.equal(platformSafeLogLine('bounce a@b.invalid'), `bounce ${REDACTED_ADDR}`);
   assert.throws(() => platformSafeLogLine('dump full_name=Ada'), /PLATFORM_PII_LOG_BOUNDARY/);
+});
+
+test('sending health may name a channel but not a recipient', () => {
+  assert.doesNotThrow(() =>
+    assertPlatformSendingHealthPayload({
+      channels: [{ channel: 'email', total: 3, delivered: 2, failed: 1 }],
+      recentDeliveries: [{ id: 'd1', channel: 'sms', state: 'FAILED', connectorKey: 'twilio' }],
+    }),
+  );
+  assert.throws(
+    () => assertPlatformSendingHealthPayload({ recipient: 'a@b.invalid' }),
+    /PLATFORM_PII_BOUNDARY/,
+  );
+  assert.throws(
+    () => assertPlatformSendingHealthPayload({ channel: 'email', to_address: 'a@b.invalid' }),
+    /PLATFORM_PII_BOUNDARY/,
+  );
+  assert.throws(
+    () => assertPlatformSendingHealthPayload({ note: 'bounce a@b.invalid' }),
+    /PLATFORM_PII_BOUNDARY/,
+  );
 });
