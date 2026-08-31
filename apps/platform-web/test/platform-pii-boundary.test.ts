@@ -42,3 +42,17 @@ test('product API sources refuse lab dump and raw error leakage', () => {
   assert.doesNotMatch(journey, /export async function POST/);
   assert.equal(classifyRequestPath(PLATFORM_JOURNEY_CORRELATION_ROUTE), 'platform-product');
 });
+
+test('sending-health product APIs scan operational payloads and stay private', () => {
+  const health = readFileSync(new URL('../app/api/communications/health/route.ts', import.meta.url), 'utf8');
+  assert.match(health, /assertPlatformProductSendingHealth/);
+  assert.match(health, /PLATFORM_PRODUCT_CACHE/);
+  assert.doesNotMatch(health, /metadata:/);
+  assert.doesNotMatch(health, /recipient/);
+  const commsOverview = readFileSync(new URL('../app/api/communications/overview/route.ts', import.meta.url), 'utf8');
+  assert.match(commsOverview, /assertPlatformProductSendingHealth/);
+  assert.match(commsOverview, /PLATFORM_PRODUCT_CACHE/);
+  assert.match(commsOverview, /writePlatformProductLog/);
+  assert.doesNotMatch(commsOverview, /console\.error\("Communications overview API error:"/);
+  assert.doesNotMatch(commsOverview, /recipient_key/);
+});

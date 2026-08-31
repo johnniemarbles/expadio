@@ -9,9 +9,11 @@ Keep #499 draft. This is a contract and source scan, not authenticated e2e.
 - Those routes no longer echo `error.message`.
 - `/api/overview`, `/api/context`, and `/api/workspaces` run `assertPlatformProductPayload` before JSON leaves. A customer-field token fails closed with the generic error body.
 - `platformSafeLogLine` redacts addresses to `[redacted-addr]` / `[redacted-tel]` and refuses leftover customer-field tokens. Placeholders do not contain `email` or `phone`, so the scanner does not fight itself.
+- Sending health product APIs `/api/communications/health` and `/api/communications/overview` use `assertPlatformSendingHealthPayload`. Channel names `email` / `whatsapp` are allowed. Recipient keys and address values are not. Health metadata is dropped on the product response.
 - Deployed log capture is still unproven.
 - `/api/workspaces` is locked to `SHELL_PLATFORM_SECTIONS` and uses the generic denied body for unauthenticated callers.
 - Brand CS-104 GET `/brand/api/journey` authorizes T/B/L + membership, then reads intents + latest attempt + `communication_deliveries.state` for COMMUNICATE. No configuration/metadata/snapshot/recipient columns.
+- Brand Communications surface now observes COMMUNICATE + DELIVERY from that same read. Still no mutations.
 - `delivered` is only claimed when provider state is `DELIVERED`.
 - Platform `/api/journey-correlation` does not query executor or delivery tables.
 - POST `/brand/api/journey` stays 405.
