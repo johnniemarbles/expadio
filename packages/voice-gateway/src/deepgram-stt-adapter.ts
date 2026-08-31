@@ -126,6 +126,9 @@ export class DeepgramSttAdapter implements VoiceProviderAdapter {
       sourceId: intent.requestId,
       content: transcript,
       contentType: "text/plain; charset=utf-8",
+      providerKey: connector.providerKey,
+      connectorKey: connector.connectorKey,
+      modelKey: this.#modelKey,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
