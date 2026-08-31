@@ -156,8 +156,8 @@ test('governed Voice STT/TTS persist lease and artifact evidence without autonom
   try {
     await client.query('BEGIN');
     await client.query(
-      `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Governed Voice E2E tenant', 'dentex')`,
+      `INSERT INTO platform.tenants (tenant_id, name)
+       VALUES ($1::uuid, 'Governed Voice E2E tenant')`,
       [tenantId],
     );
     await client.query(
