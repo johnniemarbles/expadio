@@ -154,6 +154,9 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
 
     const choice = data.choices?.[0];
     const generatedText = choice?.message?.content ?? "";
+    if (generatedText.trim() === "") {
+      throw new Error("AI_PROVIDER_OUTPUT_EMPTY: OpenAI returned no usable text");
+    }
     const totalTokens = data.usage?.total_tokens;
 
     const provenance: AiProvenance = {
@@ -246,7 +249,15 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       throw new Error(`AI_PROVIDER_ERROR: OpenAI responded with status ${response.status}: ${errorText}`);
     }
 
-    const embeddingPayload = await response.json() as unknown;
+    const embeddingPayload = await response.json() as {
+      data?: Array<{ embedding?: unknown[] }>;
+    };
+    if (
+      !Array.isArray(embeddingPayload.data?.[0]?.embedding)
+      || embeddingPayload.data[0]!.embedding!.length === 0
+    ) {
+      throw new Error("AI_PROVIDER_OUTPUT_EMPTY: OpenAI returned no embedding vector");
+    }
     const artifact = await this.#artifactSink.write({
       tenantId: intent.tenantId,
       artifactKind: "AI_EMBEDDING",
