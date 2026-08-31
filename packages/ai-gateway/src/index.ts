@@ -267,16 +267,20 @@ export function validateAiProposal(
 }
 
 function required(
-  value: string,
+  value: unknown,
   code: AiContractValidationCode,
   path: string,
   issues: AiContractValidationIssue[],
 ): void {
-  if (value.trim() === '') issues.push({ code, path });
+  if (typeof value !== 'string' || value.trim() === '') {
+    issues.push({ code, path });
+  }
 }
 
-function validInstant(value: string): boolean {
-  return value.trim() !== '' && Number.isFinite(Date.parse(value));
+function validInstant(value: unknown): boolean {
+  return typeof value === 'string'
+    && value.trim() !== ''
+    && Number.isFinite(Date.parse(value));
 }
 
 function result(
