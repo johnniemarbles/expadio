@@ -180,6 +180,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       providerKey: connector.providerKey,
       connectorKey: connector.connectorKey,
       modelKey: modelKey,
+      correlationId: intent.correlationId,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
@@ -243,6 +244,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
       providerKey: connector.providerKey,
       connectorKey: connector.connectorKey,
       modelKey: embeddingModelKey,
+      correlationId: intent.correlationId,
       requiredResidencyTags: intent.governance.requiredResidencyTags,
       requiredComplianceTags: intent.governance.requiredComplianceTags,
     });
