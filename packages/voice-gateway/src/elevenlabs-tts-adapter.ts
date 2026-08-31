@@ -100,6 +100,9 @@ export class ElevenLabsTtsAdapter implements VoiceProviderAdapter {
     }
 
     const audioBytes = new Uint8Array(await response.arrayBuffer());
+    if (audioBytes.byteLength === 0) {
+      throw new Error("VOICE_PROVIDER_OUTPUT_EMPTY: ElevenLabs returned no audio");
+    }
     const contentType = response.headers.get("content-type") ?? "audio/mpeg";
     const artifact = await this.#artifactSink.write({
       tenantId: intent.tenantId,
