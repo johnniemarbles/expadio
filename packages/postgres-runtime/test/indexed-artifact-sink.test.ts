@@ -30,7 +30,7 @@ test('PostgresIndexedDurableArtifactSink indexes the durable blob before success
           source_kind: input.sourceKind,
           source_id: input.sourceId,
           storage_reference: 'storage://ai/inv_123.txt',
-          content_sha256: 'a'.repeat(64),
+          content_sha256: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
           media_type: input.contentType,
           byte_length: 11,
           provider_key: input.providerKey,
@@ -48,7 +48,7 @@ test('PostgresIndexedDurableArtifactSink indexes the durable blob before success
       calls.push('blob');
       return {
         contentReference: 'storage://ai/inv_123.txt',
-        sha256: 'a'.repeat(64),
+        sha256: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
         byteLength: 11,
       };
     },
@@ -70,11 +70,86 @@ test('PostgresIndexedDurableArtifactSink fails closed when indexing fails', asyn
   const delegate = {
     write: async () => ({
       contentReference: 'storage://ai/inv_123.txt',
-      sha256: 'a'.repeat(64),
+      sha256: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
       byteLength: 11,
     }),
   };
 
   const sink = new PostgresIndexedDurableArtifactSink(client, delegate);
   await assert.rejects(sink.write(input), /INDEX_UNAVAILABLE/);
+});
+
+
+test('PostgresIndexedDurableArtifactSink rejects a storage digest that does not match the bytes', async () => {
+  const client = {
+    query: async () => assert.fail('index must not run for an invalid digest'),
+  };
+  const delegate = {
+    write: async () => ({
+      contentReference: 'storage://ai/inv_123.txt',
+      sha256: '0'.repeat(64),
+      byteLength: 11,
+    }),
+  };
+
+  const sink = new PostgresIndexedDurableArtifactSink(client, delegate);
+  await assert.rejects(
+    sink.write(input),
+    /EXECUTION_ARTIFACT_STORAGE_DIGEST_MISMATCH/,
+  );
+});
+
+test('PostgresIndexedDurableArtifactSink rejects a storage byte length that does not match the bytes', async () => {
+  const client = {
+    query: async () => assert.fail('index must not run for an invalid byte length'),
+  };
+  const delegate = {
+    write: async () => ({
+      contentReference: 'storage://ai/inv_123.txt',
+      sha256: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
+      byteLength: 99,
+    }),
+  };
+
+  const sink = new PostgresIndexedDurableArtifactSink(client, delegate);
+  await assert.rejects(
+    sink.write(input),
+    /EXECUTION_ARTIFACT_STORAGE_BYTE_LENGTH_MISMATCH/,
+  );
+});
+
+test('PostgresIndexedDurableArtifactSink measures UTF-8 bytes rather than string characters', async () => {
+  const unicodeInput = { ...input, sourceId: 'inv_unicode', content: 'é' };
+  const client = {
+    query: async (sql: string) => ({
+      rows: [{
+        artifact_id: '33333333-3333-4333-8333-333333333333',
+        tenant_id: unicodeInput.tenantId,
+        artifact_kind: unicodeInput.artifactKind,
+        source_kind: unicodeInput.sourceKind,
+        source_id: unicodeInput.sourceId,
+        storage_reference: 'storage://ai/inv_unicode.txt',
+        content_sha256: '4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c',
+        media_type: unicodeInput.contentType,
+        byte_length: 2,
+        provider_key: unicodeInput.providerKey,
+        connector_key: unicodeInput.connectorKey,
+        model_key: unicodeInput.modelKey,
+        correlation_id: null,
+        created_at: new Date('2026-08-31T02:00:00.000Z'),
+      }],
+      rowCount: 1,
+    }),
+  };
+  const delegate = {
+    write: async () => ({
+      contentReference: 'storage://ai/inv_unicode.txt',
+      sha256: '4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c',
+      byteLength: 2,
+    }),
+  };
+
+  const sink = new PostgresIndexedDurableArtifactSink(client, delegate);
+  const result = await sink.write(unicodeInput);
+  assert.equal(result.byteLength, 2);
 });
