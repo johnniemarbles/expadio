@@ -14,3 +14,8 @@ test('tenant route is labeled as a draft read-model lab, not the completed Brand
   assert.match(workspace, /Draft read-model lab/);
   assert.match(workspace, /Not the Brand product/);
 });
+test('Brand product package is separate from Platform chrome', () => {
+  assert.equal(existsSync(new URL('../../../apps/brand-web/src/index.ts', import.meta.url)), true);
+  const shell = readFileSync(new URL('../components/ShellFrame/ShellFrame.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(shell, /brand-web|@expadio\/brand-web/);
+});
