@@ -5,6 +5,24 @@ import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
 import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
 
+function recordedText(value: unknown): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error('Activity evidence is incomplete.');
+  }
+  return value;
+}
+
+function recordedTime(value: unknown): string {
+  if (!(value instanceof Date) && (typeof value !== 'string' || value.trim() === '')) {
+    throw new Error('Activity evidence has no valid recorded timestamp.');
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    throw new Error('Activity evidence has no valid recorded timestamp.');
+  }
+  return date.toISOString();
+}
+
 export async function GET(request: Request) {
   const { userId } = await auth();
 
@@ -30,7 +48,7 @@ export async function GET(request: Request) {
     // Fetch Agent Run Events
     const agentEventsRes = await dbPool.query(
       `SELECT e.event_id as id, e.event_type as action, e.event_reference as target, e.occurred_at as time, 
-              COALESCE(r.agent_id, e.actor_subject_id, 'System') as actor
+              e.actor_subject_id as actor
        FROM platform.agent_run_events e
        JOIN platform.agent_runs r ON e.run_id = r.run_id AND e.tenant_id = r.tenant_id
        WHERE e.tenant_id = $1
@@ -41,7 +59,7 @@ export async function GET(request: Request) {
     // Fetch Sensitive Read Events
     const readEventsRes = await dbPool.query(
       `SELECT event_id as id, outcome, resource_type, resource_id, recorded_at as time, 
-              COALESCE(requested_by_subject_id, 'System') as actor
+              requested_by_subject_id as actor
        FROM platform.sensitive_read_events 
        WHERE tenant_id = $1 
        ORDER BY recorded_at DESC LIMIT 25`,
@@ -53,11 +71,11 @@ export async function GET(request: Request) {
     // Map Agent Events
     agentEventsRes.rows.forEach((row: any) => {
       items.push({
-        id: row.id,
-        actor: row.actor,
-        action: (row.action || 'performed action').toLowerCase().replace(/_/g, ' '),
-        target: row.target || 'Resource',
-        time: row.time || new Date().toISOString(),
+        id: recordedText(row.id),
+        actor: recordedText(row.actor),
+        action: recordedText(row.action).toLowerCase().replace(/_/g, ' '),
+        target: recordedText(row.target),
+        time: recordedTime(row.time),
         timeLabel: 'recently'
       });
     });
@@ -65,11 +83,11 @@ export async function GET(request: Request) {
     // Map Sensitive Read Events
     readEventsRes.rows.forEach((row: any) => {
       items.push({
-        id: row.id,
-        actor: row.actor,
-        action: `read access ${row.outcome.toLowerCase()}`,
-        target: `${row.resource_type} ${row.resource_id}`,
-        time: row.time || new Date().toISOString(),
+        id: recordedText(row.id),
+        actor: recordedText(row.actor),
+        action: `read access ${recordedText(row.outcome).toLowerCase()}`,
+        target: `${recordedText(row.resource_type)} ${recordedText(row.resource_id)}`,
+        time: recordedTime(row.time),
         timeLabel: 'recently'
       });
     });
@@ -77,13 +95,6 @@ export async function GET(request: Request) {
     // Sort combined unified timeline
     items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
     items = items.slice(0, 50); // Keep top 50
-
-    if (items.length === 0) {
-      return NextResponse.json([
-        { id: 'activity_live_1', actor: 'Platform System', action: 'provisioned membership', target: 'New user account', time: new Date().toISOString(), timeLabel: 'just now' },
-        { id: 'activity_live_2', actor: 'Knowledge Curator', action: 'indexed document', target: 'Policy handbook', time: new Date(Date.now() - 3600000).toISOString(), timeLabel: '1 hr ago' }
-      ] as ActivityItem[]);
-    }
 
     // Assign dynamic time labels for UI Polish
     const now = Date.now();
