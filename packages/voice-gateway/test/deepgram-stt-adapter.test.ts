@@ -141,3 +141,42 @@ test("DeepgramSttAdapter rejects unsupported operation", async () => {
     /VOICE_OPERATION_UNSUPPORTED/
   );
 });
+
+test("DeepgramSttAdapter resolves a logical media reference to a provider fetch URL", async () => {
+  let requestBody: any = null;
+  const logicalReference = "ref://voice-recording/recording-001";
+  const providerFetchUrl = "https://signed.example.test/recording-001.wav";
+
+  const adapter = new DeepgramSttAdapter({
+    apiToken: async () => "mock-token",
+    artifactSink,
+    inputResolver: {
+      resolveText: inputResolver.resolveText,
+      resolveProviderFetchUrl: async (input) => ({
+        providerFetchUrl,
+        sourceReference: input.reference,
+      }),
+    },
+    fetchImpl: async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body));
+      return new Response(
+        JSON.stringify({
+          results: { channels: [{ alternatives: [{ transcript: "resolved transcript" }] }] },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  });
+
+  const resolvedIntent: VoiceIntelligenceIntent = {
+    ...intent,
+    inputReference: logicalReference,
+  };
+
+  const observation = await adapter.invoke({ intent: resolvedIntent, connector });
+
+  assert.equal(requestBody.url, providerFetchUrl);
+  assert.deepEqual(observation.provenance.sourceReferences, [logicalReference]);
+  assert.equal(observation.provenance.audioDurationMilliseconds, undefined);
+  assert.equal(observation.provenance.costMinorUnits, undefined);
+});
