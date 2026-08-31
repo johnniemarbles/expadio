@@ -7,6 +7,17 @@ import {
   type VoiceIntelligenceIntent,
 } from "../src/index.ts";
 
+const inputResolver = {
+  resolveText: async (input: any) => ({
+    content: input.reference,
+    sourceReference: input.reference,
+  }),
+  resolveProviderFetchUrl: async (input: any) => ({
+    providerFetchUrl: input.reference,
+    sourceReference: input.reference,
+  }),
+};
+
 const artifactSink = {
   write: async (input: any) => ({
     contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
@@ -89,6 +100,7 @@ test("DeepgramSttAdapter transcribes audio and produces valid observation", asyn
   const adapter = new DeepgramSttAdapter({
     apiToken: async () => "mock-deepgram-token-xyz",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:05.000Z",
   });
@@ -116,6 +128,7 @@ test("DeepgramSttAdapter rejects unsupported operation", async () => {
   const adapter = new DeepgramSttAdapter({
     apiToken: async () => "mock-token",
     artifactSink,
+    inputResolver,
   });
 
   const invalidIntent: VoiceIntelligenceIntent = {
