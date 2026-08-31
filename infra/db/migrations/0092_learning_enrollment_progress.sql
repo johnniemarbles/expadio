@@ -166,42 +166,39 @@ CREATE INDEX learning_lesson_progress_enrollment_idx
 CREATE OR REPLACE FUNCTION platform.enforce_learning_enrollment_published_version()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+AS $
 DECLARE
   version_state text;
 BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.tenant_id IS DISTINCT FROM NEW.tenant_id
+       OR OLD.learner_id IS DISTINCT FROM NEW.learner_id
+       OR OLD.course_id IS DISTINCT FROM NEW.course_id
+       OR OLD.course_version_id IS DISTINCT FROM NEW.course_version_id
+       OR OLD.assignment_key IS DISTINCT FROM NEW.assignment_key THEN
+      RAISE EXCEPTION 'learning enrollment identity and pinned version are immutable'
+        USING ERRCODE = 'check_violation';
+    END IF;
+
+    -- Historical enrollments remain valid after their pinned course version is
+    -- superseded. Only immutable identity/version changes are prohibited here.
+    RETURN NEW;
+  END IF;
+
   SELECT state INTO version_state
     FROM platform.learning_course_versions
    WHERE course_version_id = NEW.course_version_id
      AND tenant_id = NEW.tenant_id
      AND course_id = NEW.course_id;
 
-  IF version_state IS DISTINCT FROM 'PUBLISHED'
-     AND NOT EXISTS (
-       SELECT 1
-         FROM platform.learning_enrollments existing
-        WHERE existing.enrollment_id = NEW.enrollment_id
-          AND existing.tenant_id = NEW.tenant_id
-          AND existing.course_version_id = NEW.course_version_id
-     ) THEN
+  IF version_state IS DISTINCT FROM 'PUBLISHED' THEN
     RAISE EXCEPTION 'new learning enrollments must pin a published course version'
-      USING ERRCODE = 'check_violation';
-  END IF;
-
-  IF TG_OP = 'UPDATE' AND (
-       OLD.tenant_id IS DISTINCT FROM NEW.tenant_id
-       OR OLD.learner_id IS DISTINCT FROM NEW.learner_id
-       OR OLD.course_id IS DISTINCT FROM NEW.course_id
-       OR OLD.course_version_id IS DISTINCT FROM NEW.course_version_id
-       OR OLD.assignment_key IS DISTINCT FROM NEW.assignment_key
-     ) THEN
-    RAISE EXCEPTION 'learning enrollment identity and pinned version are immutable'
       USING ERRCODE = 'check_violation';
   END IF;
 
   RETURN NEW;
 END;
-$$;
+$;
 
 CREATE TRIGGER learning_enrollment_published_version
 BEFORE INSERT OR UPDATE ON platform.learning_enrollments
