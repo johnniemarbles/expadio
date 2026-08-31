@@ -281,7 +281,6 @@ test('governed Voice STT/TTS persist lease and artifact evidence without autonom
           ...baseGovernance,
           recordingConsentEvidenceReference: 'consent://voice/stt-1',
           callerDisclosureEvidenceReference: 'disclosure://voice/stt-1',
-          maximumCostMinorUnits: 10,
         },
         idempotencyKey: `voice:stt:${callId}`,
         correlationId: sttCorrelationId,
