@@ -7,6 +7,7 @@ import type {
   AiProvenance,
 } from "./index.ts";
 import type { AiProviderAdapter } from "./routing.ts";
+import type { AiInputResolver } from "./input-resolution.ts";
 
 export interface AiCredentialRequest {
   readonly tenantId: string;
@@ -22,6 +23,7 @@ export type AiApiTokenProvider = (request: AiCredentialRequest) => Promise<strin
 export interface GeminiAiAdapterOptions {
   readonly apiToken: AiApiTokenProvider;
   readonly artifactSink: DurableArtifactSink;
+  readonly inputResolver: AiInputResolver;
   readonly modelKey?: string;
   readonly endpointBaseUrl?: string;
   readonly fetchImpl?: typeof fetch;
@@ -32,6 +34,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
   readonly adapterKey = "gemini-v1";
   readonly #apiToken: AiApiTokenProvider;
   readonly #artifactSink: DurableArtifactSink;
+  readonly #inputResolver: AiInputResolver;
   readonly #defaultModelKey: string;
   readonly #endpointBaseUrl: string;
   readonly #fetch: typeof fetch;
@@ -40,6 +43,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
   constructor(options: GeminiAiAdapterOptions) {
     this.#apiToken = options.apiToken;
     this.#artifactSink = options.artifactSink;
+    this.#inputResolver = options.inputResolver;
     this.#defaultModelKey = options.modelKey ?? "gemini-2.0-flash";
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://generativelanguage.googleapis.com").replace(/\/+$/u, "");
     this.#fetch = options.fetchImpl ?? fetch;
@@ -85,7 +89,23 @@ export class GeminiAiAdapter implements AiProviderAdapter {
 
     const url = `${this.#endpointBaseUrl}/v1beta/models/${encodeURIComponent(modelKey)}:generateContent?key=${encodeURIComponent(token)}`;
 
-    const promptText = intent.inputReference;
+    const resolvedInput = await this.#inputResolver.resolveText({
+      tenantId: intent.tenantId,
+      reference: intent.inputReference,
+      purpose: intent.purpose,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+    const resolvedContext = intent.contextReference
+      ? await this.#inputResolver.resolveText({
+          tenantId: intent.tenantId,
+          reference: intent.contextReference,
+          purpose: intent.purpose,
+          requiredResidencyTags: intent.governance.requiredResidencyTags,
+          requiredComplianceTags: intent.governance.requiredComplianceTags,
+        })
+      : undefined;
+    const promptText = resolvedInput.content;
     const requestBody: Record<string, unknown> = {
       contents: [
         {
@@ -98,9 +118,9 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       },
     };
 
-    if (intent.contextReference) {
+    if (resolvedContext) {
       requestBody.systemInstruction = {
-        parts: [{ text: `Context: ${intent.contextReference}` }],
+        parts: [{ text: `Context: ${resolvedContext.content}` }],
       };
     }
 
@@ -141,7 +161,10 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       modelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
-      sourceReferences: [intent.inputReference, ...(intent.contextReference ? [intent.contextReference] : [])],
+      sourceReferences: [
+        resolvedInput.sourceReference,
+        ...(resolvedContext ? [resolvedContext.sourceReference] : []),
+      ],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
       costMinorUnits,
@@ -179,9 +202,17 @@ export class GeminiAiAdapter implements AiProviderAdapter {
 
     const url = `${this.#endpointBaseUrl}/v1beta/models/${encodeURIComponent(modelKey)}:embedContent?key=${encodeURIComponent(token)}`;
 
+    const resolvedInput = await this.#inputResolver.resolveText({
+      tenantId: intent.tenantId,
+      reference: intent.inputReference,
+      purpose: intent.purpose,
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+
     const requestBody = {
       content: {
-        parts: [{ text: intent.inputReference }],
+        parts: [{ text: resolvedInput.content }],
       },
     };
 
@@ -216,7 +247,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       modelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
-      sourceReferences: [intent.inputReference],
+      sourceReferences: [resolvedInput.sourceReference],
       processedAt,
       ...(connector.region !== undefined ? { region: connector.region } : {}),
       costMinorUnits: 1,
