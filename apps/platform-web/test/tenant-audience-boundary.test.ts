@@ -19,3 +19,6 @@ test('Brand product package is separate from Platform chrome', () => {
   const shell = readFileSync(new URL('../components/ShellFrame/ShellFrame.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(shell, /brand-web|@expadio\/brand-web/);
 });
+test('Platform API tree does not mount Brand customer routes', () => {
+  assert.equal(existsSync(new URL('../app/api/brand', import.meta.url)), false);
+});

@@ -1,20 +1,21 @@
 # Dual-shell proposition — accepted shape
 
-Status: Brand shell + verified T/B/L directory, now persisted as `platform.product_scope_bindings` (0088) on the draft branch. Not deployed. Not merged.
+Status: Brand host kernel can authorize and serve `/api/brand/customers` after mapped keys + membership. Next app is not mounted. Not deployed. Not merged.
 Hosts: `platform.expadio.com` (Platform), `app.expadio.com` (Brand).
 
 ## This increment
 
-- Restored `memberships` on `ResolveEffectiveContextInput` (CI typecheck).
-- `0088_product_scope_bindings.sql` is the mapping table. Codes are not allocated.
-- `loadScopeDirectory` in `@expadio/tenancy-persistence` feeds `createScopeDirectoryFromRows`.
-- `planBrandCustomerRead` binds Home/Customers to `app.expadio.com` `/api/brand/customers` with `served: false`.
-- Brand reads refuse Platform `/api/tenant`.
-- Empty directory still fails closed. `ALL` still does not satisfy `L-####`.
+- `BRAND_HOST` / `PLATFORM_HOST` are literal product hosts.
+- `authorizeBrandCustomerRequest` + `serveBrandCustomerRead` are the Brand host kernel.
+- Host must be `app.expadio.com`. Path must be `/api/brand/customers`.
+- Storage keys come from `platform.product_scope_bindings` via the shared directory.
+- Membership is checked through `resolveEffectiveContext`. Platform `/api/tenant` is refused.
+- `L-####` and SELECTED workspace/unit membership stay fail-closed. CRM still has no unit ownership.
+- No Brand Next host, no lockfile change, no mutation, no auto-send.
 
 ## Still open
 
-1. Server-authorized Brand host that serves the reserved Brand route.
-2. Membership-checked Brand CRM reads on the mapped keys.
+1. Mount a server-authorized Brand Next host on `app.expadio.com` (or `/brand/*` same-origin fallback with Brand chrome).
+2. Wire the injected reader to canonical CRM under membership-checked mapped keys.
 3. Platform PII proof on URLs/APIs/errors/logs/caches.
 4. One Brand case → SCHEDULE → CREATE_TASK → COMMUNICATE → observed delivery.

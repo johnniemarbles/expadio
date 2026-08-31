@@ -58,8 +58,11 @@ audience switch must reauthorize and clear prior audience data. Frontend labels,
 a shared session, a scope query parameter or removal of a link do not establish
 a server boundary.
 
-Brand customer reads are planned at `app.expadio.com` `/api/brand/customers`.
-They are not served yet. They must not call Platform `/api/tenant`.
+Brand customer reads are authorized at `app.expadio.com` `/api/brand/customers`
+by `authorizeBrandCustomerRequest`. The kernel can serve an injected reader after
+membership resolution. A Next Brand host is not mounted. These reads must not
+call Platform `/api/tenant`. `L-####` and SELECTED membership stay fail-closed
+until CRM unit ownership is proven.
 
 ## Integration gate — still open
 

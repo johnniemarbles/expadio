@@ -16,8 +16,19 @@ export { createScopeDirectory, createScopeDirectoryFromRows, bindingsFromPersist
 export type { ScopeDirectory, VerifiedScopeBinding, ScopeBindingRow } from './scope-directory.ts';
 export { BRAND_APP, brandWorkspace } from './brand-shell.ts';
 export type { BrandSurface, BrandSurfaceState } from './brand-shell.ts';
-export { planBrandCustomerRead, assertNotPlatformTenantLab } from './brand-reads.ts';
+export {
+  BRAND_CUSTOMER_ROUTE,
+  PLATFORM_TENANT_LAB_ROUTE,
+  planBrandCustomerRead,
+  assertNotPlatformTenantLab,
+} from './brand-reads.ts';
 export type { BrandCustomerReadPlan } from './brand-reads.ts';
+export {
+  BrandHostError,
+  authorizeBrandCustomerRequest,
+  serveBrandCustomerRead,
+} from './brand-host.ts';
+export type { BrandIncomingRequest, BrandAuthorizedCustomerRead } from './brand-host.ts';
 export {
   platformSafeRef,
   assertPlatformPayloadHasNoCustomerPii,
