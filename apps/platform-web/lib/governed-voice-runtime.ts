@@ -6,6 +6,7 @@ import {
   RoutedVoiceGateway,
   voiceCapabilityKey,
   type VoiceInputResolver,
+  type VoiceProviderAdapter,
   type VoiceIntelligenceIntent,
   type VoiceIntelligenceObservation,
 } from '@expadio/voice-gateway';
@@ -101,7 +102,7 @@ export async function invokeGovernedVoiceIntelligence(
     input.options.artifactBlobSink,
   );
 
-  const adapters = new Map();
+  const adapters = new Map<string, VoiceProviderAdapter>();
   for (const connector of connectors) {
     const token = governedApiTokenProvider({
       connector,
