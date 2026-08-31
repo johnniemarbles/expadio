@@ -2,7 +2,7 @@
 
 Status: active project memory  
 Owner: platform program  
-Last updated: 2026-08-30  
+Last updated: 2026-08-31  
 Current strategy: platform completion before vertical expansion
 
 This checklist is the durable project memory for autonomous execution. Update it in every platform PR when a task is completed, paused, or newly discovered.
@@ -71,6 +71,41 @@ This checklist is the durable project memory for autonomous execution. Update it
 
 - [x] Foundation freeze document created.
 - [x] Platform completion checklist created.
+
+## AutoGTM / Demand Generation Control Plane (#483)
+
+Freeze exception 2026-08-31. Native Explee-like demand generation on EXPADIO. Not a vendor integration. Engines stay in `johnniemarbles/expadio-demand-generation` until COMMUNICATE is proven on a tenant-bound connector.
+
+### Done on main
+
+- [x] Platform slice: `platform.gtm_*` + forced RLS (#487).
+- [x] Four PLATFORM Decision Fabric work types: `gtm.icp.publish`, `gtm.sequence.publish`, `gtm.campaign.launch`, `gtm.meeting_request` (#487).
+- [x] Connector `gtm.email` seeded DISABLED on `communication.email.send` / `resend` (#487).
+- [x] CRM lead ingest `source=outbound_gtm` + `raw_payload` first (#487/#488).
+- [x] File Communication intent after DF APPROVE; keep `gtm.email` dark (#488).
+- [x] Sequence and meeting-request list/create APIs (#488).
+- [x] Reply observation ingest onto existing CRM leads (#488).
+
+### Next on EXPADIO
+
+- [ ] Seed-tenant proof: file ICP / sequence / campaign, bind DF, APPROVE as a second subject.
+- [ ] Seed-tenant proof: `POST /api/gtm/sequences/:id/communicate` returns `sent: false` while `gtm.email` is disabled.
+- [ ] Seed-tenant proof: `POST /api/gtm/replies` with `interested` / `meeting_requested` creates a CRM lead `source=outbound_gtm`.
+- [ ] Persist the filed Communication intent as a real `COMMUNICATE` Action Intent — do not dispatch while `gtm.email` is dark.
+- [ ] `/gtm` console: bind workflow, assign reviewer, APPROVE in-place (SoD, no auto-approve).
+- [ ] Meeting-request create + owner review in the governance queue.
+- [ ] Prospect observation rows as observations only (no second CRM).
+- [ ] Enable `gtm.email` only after tenant BYOC + sender identity.
+- [ ] Prove COMMUNICATE delivery on that tenant-bound connector.
+- [ ] Merge `gtm-*` engines from `expadio-demand-generation` after that proof.
+
+### Forbidden
+
+- [ ] Auto-approve / auto-send.
+- [ ] New Action Fabric type `SEND_OUTBOUND`.
+- [ ] Lab adapter `gtm-email-lab-v1` on platform.
+- [ ] Second CRM.
+- [ ] Merge extract `apps/*` / lab UI onto main.
 
 ## P0 — platform hardening and operations
 
