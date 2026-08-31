@@ -61,6 +61,7 @@ const intent: VoiceIntelligenceIntent = {
     maximumCostMinorUnits: 25,
   },
   idempotencyKey: "idem_voice_111",
+  correlationId: "corr-voice-111",
   requestedAt: "2026-08-30T12:00:00.000Z",
 };
 
