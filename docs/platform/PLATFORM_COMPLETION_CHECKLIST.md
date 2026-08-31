@@ -50,8 +50,8 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Provider webhook lifecycle transition matrix implemented.
 - [x] Out-of-order provider lifecycle events recorded without stale state regression.
 - [x] Replayed provider webhook events with distinct provider event ids recorded without duplicate delivery lifecycle mutation.
-- [ ] Social channel `social` + capability `communication.social.send` on main (wired on #489; not merged).
-- [ ] Disabled connector `social.linkedin` on main (wired on #489; not merged).
+- [x] Social channel `social` + capability `communication.social.send` on main (#491).
+- [x] Disabled connector `social.linkedin` on main (#491, `0086_communication_social_channel.sql`).
 - [ ] Delivery-worker social dispatch — forbidden until COMMUNICATE proof + explicit enable.
 
 ### Observability
@@ -127,6 +127,7 @@ Binding keys:
 | provider / adapter | `linkedin` / `linkedin-social-text-v1` |
 | lease purpose | `communication.social.send:{purpose}` |
 | evidence | `PublishEvidence.externalPostId` → `communication_provider_attempts.provider_message_id` |
+| migration | `0086_communication_social_channel.sql` |
 
 ### Done off-platform (lab closed)
 
@@ -136,15 +137,17 @@ Binding keys:
 - [x] ADR-007: Communication connector, not `PUBLISH_SOCIAL`.
 - [x] Lab registration contract: `docs/architecture/COMMUNICATION-ADAPTER-REGISTRATION.md` on the lab repo.
 
-### In flight on EXPADIO (not on main)
+### Done on EXPADIO main
 
-- [x] Dark Communication wiring branch `feat/social-communication-wiring` (#489): channel union, capability seed, disabled `social.linkedin`, LinkedIn text adapter, Resend-shaped lease binding, CHECK widen, adapter-key map.
-- [ ] Merge #489 onto main after migration-number reconciliation (see hygiene).
+- [x] Dark Communication wiring merged via #491 (clean replay of dirty #489): channel union, capability seed, disabled `social.linkedin`, LinkedIn text adapter, Resend-shaped lease binding, CHECK widen, adapter-key map.
+- [x] Migration numbered `0086_communication_social_channel.sql` so draft #481 keeps `0085_audit_organization_provenance.sql` and #475 keeps 0083/0084.
+
+### Still HOLD
+
 - [ ] Decision Fabric sketch `social.content_publish` (#482) — **HOLD**. Do not merge under freeze.
 
 ### Next on EXPADIO
 
-- [ ] Reconcile migration number on #489 before merge. Draft #481 already uses `0085_audit_organization_provenance.sql`; #475 uses 0083/0084. Renumber social if those land first.
 - [ ] Seed-tenant proof: connector `social.linkedin` exists, `enabled=false`, capability `communication.social.send`.
 - [ ] File a Communication intent after DF APPROVE; author cannot file (SoD). Return dark / `CONNECTOR_DISABLED` while the connector is off.
 - [ ] Do not add `social` to `CommunicationSenderChannel` / `isSenderChannel()`.
@@ -415,4 +418,4 @@ Binding keys:
 - [ ] Remove obsolete Communications `route.ts.tmp` artifact if still present.
 - [ ] Audit production code for implicit demo tenant/default connector fallbacks.
 - [ ] Add source-contract guard against production demo fallbacks.
-- [ ] Reconcile migration 0085 collision before merging #489 and #481 (`0085_communication_social_channel.sql` vs `0085_audit_organization_provenance.sql`).
+- [x] Reconcile migration 0085 collision before merging social and #481 (social is `0086_communication_social_channel.sql` on main via #491; #481 keeps `0085_audit_organization_provenance.sql`).
