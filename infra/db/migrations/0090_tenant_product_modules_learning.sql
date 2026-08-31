@@ -104,6 +104,7 @@ CREATE TABLE platform.learning_academies (
   source_vertical_key text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (academy_id, tenant_id),
   FOREIGN KEY (tenant_module_id, tenant_id)
     REFERENCES platform.tenant_modules(tenant_module_id, tenant_id)
     ON DELETE CASCADE,
