@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto';
+import {
+  governedApiTokenProvider,
+  type GovernedApiTokenProviderOptions,
+} from '@expadio/provider-registry';
 import type {
   DurableArtifactReadContext,
   DurableArtifactSink,
@@ -15,10 +19,50 @@ export interface SupabaseStorageCredentialRequest {
   readonly tenantId: string;
   readonly operation: SupabaseStorageCredentialOperation;
   readonly purpose: string;
+  readonly idempotencyKey: string;
+  readonly requestedAt: string;
 }
 
 export type SupabaseStorageAccessTokenProvider =
   (request: SupabaseStorageCredentialRequest) => Promise<string>;
+
+
+export function governedSupabaseStorageAccessTokenProvider(
+  options: GovernedApiTokenProviderOptions,
+): SupabaseStorageAccessTokenProvider {
+  const connector = options.connector;
+  const providerType = connector.providerType.trim().toLowerCase();
+  const providerKey = connector.providerKey.trim().toLowerCase();
+  if (
+    !connector.enabled
+    || (
+      providerType !== 'supabase'
+      && providerType !== 'supabase-storage'
+      && providerKey !== 'supabase'
+      && providerKey !== 'supabase-storage'
+    )
+  ) {
+    throw new Error('SUPABASE_STORAGE_CONNECTOR_INVALID');
+  }
+
+  const tokenProvider = governedApiTokenProvider(options);
+  return async (request) => {
+    const requiredCapability = request.operation === 'STORE'
+      ? 'storage.store'
+      : 'storage.read';
+    if (!connector.capabilityKeys.includes(requiredCapability)) {
+      throw new Error('SUPABASE_STORAGE_CONNECTOR_CAPABILITY_UNAVAILABLE');
+    }
+    return tokenProvider({
+      tenantId: request.tenantId,
+      connectorKey: connector.connectorKey,
+      operation: `storage.${request.operation.toLowerCase()}`,
+      purpose: request.purpose,
+      idempotencyKey: request.idempotencyKey,
+      requestedAt: request.requestedAt,
+    });
+  };
+}
 
 export interface SupabaseDurableArtifactStoreOptions {
   readonly projectUrl: string;
@@ -80,7 +124,12 @@ implements DurableArtifactSink, DurableArtifactSource {
       : input.content;
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     const path = this.#artifactPath(input);
-    const token = await this.#token(input.tenantId, 'STORE', input.sourceId);
+    const token = await this.#token(
+      input.tenantId,
+      'STORE',
+      `artifact.write:${input.artifactKind}`,
+      input.sourceId,
+    );
     const response = await this.#fetch(this.#objectUrl(path), {
       method: 'POST',
       headers: {
@@ -154,7 +203,12 @@ implements DurableArtifactSink, DurableArtifactSource {
       input.requiredComplianceTags,
     );
     const path = this.#pathFromReference(input.tenantId, input.reference);
-    const token = await this.#token(input.tenantId, 'SIGN', input.purpose);
+    const token = await this.#token(
+      input.tenantId,
+      'SIGN',
+      input.purpose,
+      input.reference,
+    );
     const response = await this.#fetch(this.#signUrl(path), {
       method: 'POST',
       headers: {
@@ -215,7 +269,12 @@ implements DurableArtifactSink, DurableArtifactSource {
       input.requiredComplianceTags,
     );
     const path = this.#pathFromReference(input.tenantId, input.reference);
-    const token = await this.#token(input.tenantId, 'READ', input.purpose);
+    const token = await this.#token(
+      input.tenantId,
+      'READ',
+      input.purpose,
+      input.reference,
+    );
     const response = await this.#fetch(this.#authenticatedObjectUrl(path), {
       method: 'GET',
       headers: {
@@ -240,11 +299,21 @@ implements DurableArtifactSink, DurableArtifactSource {
     tenantId: string,
     operation: SupabaseStorageCredentialOperation,
     purpose: string,
+    evidenceKey: string,
   ): Promise<string> {
+    const now = this.#now();
+    if (Number.isNaN(now.getTime())) {
+      throw new Error('SUPABASE_STORAGE_CLOCK_INVALID');
+    }
+    const evidenceHash = createHash('sha256')
+      .update(evidenceKey)
+      .digest('hex');
     const token = await this.#accessToken({
       tenantId,
       operation,
       purpose,
+      idempotencyKey: `storage:${operation.toLowerCase()}:${evidenceHash}`,
+      requestedAt: now.toISOString(),
     });
     if (token.trim() === '') {
       throw new Error('SUPABASE_STORAGE_CREDENTIAL_UNAVAILABLE');
