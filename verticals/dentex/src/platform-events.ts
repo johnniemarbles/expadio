@@ -36,6 +36,11 @@ export function toDentexPlatformDomainEvent(
     ? event.audit.correlationId.trim()
     : event.eventId.trim();
 
+  const subjectId = trimOptional(event.audit.subjectId);
+  const decisionTraceId = trimOptional(event.decision?.decisionTraceId);
+  const policyVersion = trimOptional(event.decision?.policyVersion);
+  const workflowBlueprintKey = trimOptional(event.decision?.workflowBlueprintKey);
+
   return {
     eventId: event.eventId.trim(),
     eventType: event.eventType,
@@ -45,15 +50,15 @@ export function toDentexPlatformDomainEvent(
     aggregateType: event.aggregateType,
     aggregateId: event.aggregateId.trim(),
     occurredAt: event.occurredAt.trim(),
-    subjectId: trimOptional(event.audit.subjectId),
+    ...(subjectId !== undefined ? { subjectId } : {}),
     correlationId,
     idempotencyKey: dentexDomainEventIdempotencyKey(event),
-    decisionTraceId: trimOptional(event.decision?.decisionTraceId),
+    ...(decisionTraceId !== undefined ? { decisionTraceId } : {}),
     payload: event.payload,
     metadata: {
       source: event.audit.source,
-      policyVersion: trimOptional(event.decision?.policyVersion),
-      workflowBlueprintKey: trimOptional(event.decision?.workflowBlueprintKey),
+      ...(policyVersion !== undefined ? { policyVersion } : {}),
+      ...(workflowBlueprintKey !== undefined ? { workflowBlueprintKey } : {}),
     },
   };
 }
