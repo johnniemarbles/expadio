@@ -51,6 +51,7 @@
       "@expadio/party": ["packages/party/src/index.ts"],
       "@expadio/relationship": ["packages/relationship/src/index.ts"],
       "@expadio/lead": ["packages/lead/src/index.ts"],
+      "@expadio/gtm": ["packages/gtm/src/index.ts"],
       "@expadio/case": ["packages/case/src/index.ts"],
       "@expadio/agreement": ["packages/agreement/src/index.ts"],
       "@expadio/business-config": ["packages/business-config/src/index.ts"],
