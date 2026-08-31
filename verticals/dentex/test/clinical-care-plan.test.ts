@@ -55,6 +55,7 @@ test("extractDentexClinicalConsultation surfaces only explicitly stated tooth an
     consultationNotes: "Patient presented with fractured mesial-lingual cusp on tooth #19. Recommend ceramic crown D2740.",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_01",
+      correlationId: "corr-consult-01",
   });
 
   assert.equal(result.proposedTreatmentAttributes.tooth, "19");
@@ -95,6 +96,7 @@ test("extractDentexClinicalConsultation never invents clinical facts when identi
     consultationNotesReference: "artifact://clinical-note/pat_002/consult_02",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_02",
+      correlationId: "corr-consult-02",
   });
 
   assert.deepEqual(result.proposedTreatmentAttributes, {});
@@ -131,6 +133,7 @@ test("extractDentexClinicalConsultation ignores unsupported or implicit procedur
     consultationNotesReference: "artifact://clinical-note/pat_003/consult_03",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_03",
+      correlationId: "corr-consult-03",
   });
 
   assert.equal(result.proposedTreatmentAttributes.tooth, "12");
@@ -154,6 +157,7 @@ test("extractDentexClinicalConsultation requires a governed consultation-note re
       consultationNotesReference: "   ",
       aiGateway: mockAiGateway,
       idempotencyKey: "idem_consult_04",
+      correlationId: "corr-consult-04",
     }),
     /DENTEX_CONSULTATION_NOTES_REFERENCE_REQUIRED/,
   );
