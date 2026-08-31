@@ -110,15 +110,17 @@ export class RoutedVoiceGateway implements VoiceGateway {
     }
 
     const maximumCost = intent.governance.maximumCostMinorUnits;
-    const actualCost = observation.provenance.costMinorUnits;
+    const costForCeiling =
+      observation.provenance.costMinorUnits
+      ?? observation.provenance.estimatedCostMinorUnits;
     if (
       maximumCost !== undefined
-      && actualCost !== undefined
-      && actualCost > maximumCost
+      && costForCeiling !== undefined
+      && costForCeiling > maximumCost
     ) {
       throw new RoutedVoiceGatewayError(
         'VOICE_COST_LIMIT_EXCEEDED',
-        `Voice cost ${actualCost} exceeds the request ceiling ${maximumCost}.`,
+        `Voice reported/estimated cost ${costForCeiling} exceeds the request ceiling ${maximumCost}.`,
       );
     }
     return observation;
