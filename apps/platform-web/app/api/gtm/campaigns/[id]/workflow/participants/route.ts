@@ -1,7 +1,7 @@
 import { createVerticalParticipantsRoute } from '../../../../../../../lib/vertical-workflow-route';
-import { GTM_SEQUENCE_WORKFLOW } from '../../../../../../../lib/verticals';
+import { GTM_CAMPAIGN_WORKFLOW } from '../../../../../../../lib/verticals';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export const { POST } = createVerticalParticipantsRoute(GTM_SEQUENCE_WORKFLOW);
+export const { POST } = createVerticalParticipantsRoute(GTM_CAMPAIGN_WORKFLOW);
