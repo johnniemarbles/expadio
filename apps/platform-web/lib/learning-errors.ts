@@ -1,4 +1,4 @@
-import { LearningAssessmentValidationError, LearningValidationError } from '@expadio/learning';
+import { LearningAssessmentValidationError, LearningProgramValidationError, LearningValidationError } from '@expadio/learning';
 
 export interface LearningApiError {
   readonly status: number;
@@ -14,6 +14,7 @@ export function learningApiError(error: unknown): LearningApiError | null {
   if (
     error instanceof LearningValidationError
     || error instanceof LearningAssessmentValidationError
+    || error instanceof LearningProgramValidationError
   ) {
     return {
       status: 400,
@@ -140,6 +141,12 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSESSMENT_NOT_FOUND':
     case 'LEARNING_ASSESSMENT_VERSION_NOT_FOUND':
     case 'LEARNING_ASSESSMENT_ATTEMPT_NOT_FOUND':
+    case 'LEARNING_PROGRAM_NOT_FOUND':
+    case 'LEARNING_PROGRAM_VERSION_NOT_FOUND':
+    case 'LEARNING_PROGRAM_ENROLLMENT_NOT_FOUND':
+    case 'LEARNING_CERTIFICATION_NOT_FOUND':
+    case 'LEARNING_CERTIFICATION_VERSION_NOT_FOUND':
+    case 'LEARNING_CREDENTIAL_NOT_FOUND':
       return {
         status: 404,
         body: {
@@ -170,6 +177,20 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSESSMENT_ATTEMPT_NOT_SUBMITTABLE':
     case 'LEARNING_ASSESSMENT_ATTEMPT_EXPIRED':
     case 'LEARNING_ASSESSMENT_ITEMS_MISSING':
+    case 'LEARNING_PROGRAM_KEY_EXISTS':
+    case 'LEARNING_PROGRAM_VERSION_NOT_PUBLISHABLE':
+    case 'LEARNING_PROGRAM_COURSE_VERSION_NOT_FOUND':
+    case 'LEARNING_PROGRAM_COURSE_VERSION_NOT_PUBLISHED':
+    case 'LEARNING_PROGRAM_ASSESSMENT_VERSION_NOT_FOUND':
+    case 'LEARNING_PROGRAM_ASSESSMENT_VERSION_NOT_PUBLISHED':
+    case 'LEARNING_PROGRAM_ASSIGNMENT_KEY_CONFLICT':
+    case 'LEARNING_PROGRAM_NOT_PUBLISHED':
+    case 'LEARNING_PROGRAM_ENROLLMENT_CANCELLED':
+    case 'LEARNING_PROGRAM_REQUIRED_ITEMS_MISSING':
+    case 'LEARNING_CERTIFICATION_KEY_EXISTS':
+    case 'LEARNING_CERTIFICATION_PROGRAM_VERSION_NOT_PUBLISHED':
+    case 'LEARNING_CERTIFICATION_VERSION_NOT_PUBLISHABLE':
+    case 'LEARNING_CREDENTIAL_REVOCATION_REASON_INVALID':
       return {
         status: 409,
         body: {
