@@ -60,7 +60,8 @@ A tenant Learning automation rule declares:
 - one already-supported executor class
 - action key
 - enabled state
-- optional policy keys
+- optional policy keys, which may be staged only while the rule is disabled
+  until a Learning policy evaluator exists
 - configuration/binding template
 - optimistic revision
 
@@ -121,7 +122,12 @@ This is deliberate:
 
 ## Failure behavior
 
-A configured rule fails closed when:
+An enabled rule with policy keys is rejected at authoring/database boundaries
+until a Learning policy evaluator is configured. This prevents a tenant from
+saving a knowingly non-executable enabled rule that would force deterministic
+outbox retries.
+
+A configured rule otherwise fails closed when:
 
 - a required binding cannot be materialized;
 - the rule declares policy keys but no evaluator is supplied;
