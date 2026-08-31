@@ -54,12 +54,12 @@ export function parseGovernedAiActionConfiguration(
   if (typeof operation !== "string" || !allowedOperations.includes(operation)) {
     throw new Error("AI_ACTION_OPERATION_INVALID");
   }
-  const purpose = config.purpose as string;
-  if (!purpose || typeof purpose !== "string") {
+  const purpose = config.purpose;
+  if (typeof purpose !== "string" || purpose.trim() === "") {
     throw new Error("AI_ACTION_PURPOSE_REQUIRED");
   }
-  const inputReference = config.inputReference as string;
-  if (!inputReference || typeof inputReference !== "string") {
+  const inputReference = config.inputReference;
+  if (typeof inputReference !== "string" || inputReference.trim() === "") {
     throw new Error("AI_ACTION_INPUT_REFERENCE_REQUIRED");
   }
   const promptKey = typeof config.promptKey === "string" && config.promptKey.trim() !== ""
@@ -111,8 +111,8 @@ export function parseGovernedAiActionConfiguration(
 
   return {
     operation,
-    purpose,
-    inputReference,
+    purpose: purpose.trim(),
+    inputReference: inputReference.trim(),
     ...(config.contextReference ? { contextReference: String(config.contextReference) } : {}),
     promptKey,
     promptVersion,
@@ -213,10 +213,11 @@ export async function executeGovernedAiAction(input: {
   try {
     const proposal = await aiGateway.invoke(aiIntent);
     const completedAt = now();
-    const confidence = proposal.confidence ?? 0;
-    // Provider/model confidence is evidence only. It must never authorize a
-    // consequential governed action by itself. A separate policy/reviewer
-    // decision must convert an AI proposal into an approved command.
+    const confidence = proposal.confidence;
+    // Provider/model confidence, when present, is evidence only. It must never
+    // authorize a consequential governed action by itself. A separate
+    // policy/reviewer decision must convert an AI proposal into an approved
+    // command.
     const isApproved = false;
 
     const attempt: GovernedActionExecutionAttempt = {
@@ -231,11 +232,11 @@ export async function executeGovernedAiAction(input: {
       startedAt,
       completedAt,
       reasonCode: "AI_PROPOSAL_REQUIRES_REVIEW",
-      reason: `AI confidence ${confidence} is advisory evidence only; independent approval is required`,
+      reason: "AI proposal requires an independent governed approval decision.",
       outputReference: proposal.outputReference,
       metadata: {
         proposalStatus: proposal.status,
-        confidence,
+        confidence: confidence ?? null,
         modelKey: proposal.provenance.modelKey,
         connectorKey: proposal.provenance.connectorKey,
         costMinorUnits: proposal.provenance.costMinorUnits ?? null,
