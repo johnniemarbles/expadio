@@ -254,3 +254,5 @@ export * from './routing.ts';
 export * from './deepgram-stt-adapter.ts';
 
 export * from './elevenlabs-tts-adapter.ts';
+
+export * from './input-resolution.ts';
