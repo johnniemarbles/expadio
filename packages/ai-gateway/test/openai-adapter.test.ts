@@ -7,6 +7,13 @@ import {
   type AiInvocationIntent,
 } from "../src/index.ts";
 
+const inputResolver = {
+  resolveText: async (input: any) => ({
+    content: input.reference,
+    sourceReference: input.reference,
+  }),
+};
+
 const artifactSink = {
   write: async (input: any) => ({
     contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
@@ -82,6 +89,7 @@ test("OpenAiAiAdapter invokes chat completions and returns validated proposal", 
   const adapter = new OpenAiAiAdapter({
     apiToken: async () => "mock-openai-key-abc",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:02.000Z",
   });
@@ -118,6 +126,7 @@ test("OpenAiAiAdapter handles embeddings via /v1/embeddings", async () => {
   const adapter = new OpenAiAiAdapter({
     apiToken: async () => "mock-openai-key-abc",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:02.000Z",
   });
