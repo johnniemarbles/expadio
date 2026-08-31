@@ -182,3 +182,5 @@ export * from './credential-rotation-activation.ts';
 export * from './credential-rotation-revocation.ts';
 
 export * from './persisted-credential-lease-authorizer.ts';
+
+export * from './governed-api-token-provider.ts';
