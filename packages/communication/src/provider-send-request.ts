@@ -88,6 +88,9 @@ export async function prepareCommunicationProviderSendRequest(
       ...(sender === undefined ? {} : { sender }),
       rendered: input.dispatch.rendered,
       idempotencyKey: input.dispatch.idempotencyKey,
+      ...(input.dispatch.providerIdempotencyKey === undefined ? {} : {
+        providerIdempotencyKey: input.dispatch.providerIdempotencyKey,
+      }),
       requestedAt: input.dispatch.requestedAt,
     },
   };

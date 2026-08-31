@@ -159,3 +159,16 @@ test('sender repository failures propagate instead of producing a sendable reque
     /sender store unavailable/,
   );
 });
+
+test('preparation preserves pinned provider keys and never upgrades legacy snapshots', async () => {
+  for (const providerIdempotencyKey of [undefined, 'expadio:tenant:v1:pinned']) {
+    const result = await prepareCommunicationProviderSendRequest({
+      dispatch: { ...dispatch, ...(providerIdempotencyKey === undefined ? {} : { providerIdempotencyKey }) },
+      senderRepository: senderRepository().repository, platformFallback: 'DENY',
+    });
+    assert.ok(result.ok);
+    if (!result.ok) return;
+    assert.equal(result.request.idempotencyKey, dispatch.idempotencyKey);
+    assert.equal(result.request.providerIdempotencyKey, providerIdempotencyKey);
+  }
+});

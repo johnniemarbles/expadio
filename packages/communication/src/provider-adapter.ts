@@ -23,6 +23,8 @@ export interface CommunicationProviderSendRequest {
   readonly sender?: CommunicationProviderSender;
   readonly rendered: RenderedCommunicationTemplate;
   readonly idempotencyKey: string;
+  /** Pinned by the durable dispatch; must not replace the local audit key. */
+  readonly providerIdempotencyKey?: string;
   readonly requestedAt: string;
 }
 

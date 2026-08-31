@@ -158,7 +158,7 @@ function delivery(
       return record;
     },
     async findByIdempotencyKey() {
-      return record;
+      return null;
     },
     async findByProviderMessageId() {
       return null;
@@ -191,6 +191,7 @@ test('governed action queues through the existing Communications delivery bounda
 
   assert.equal(result.communicationIntent.idempotencyKey, actionIntent.idempotencyKey);
   assert.equal(result.preparedDispatch.idempotencyKey, actionIntent.idempotencyKey);
+  assert.match(result.preparedDispatch.providerIdempotencyKey!, /^expadio:tenant:v1:[a-f0-9]{64}$/);
   assert.equal(result.connector.connectorKey, 'resend-primary');
   assert.equal(result.delivery.adapterKey, 'resend-email-v1');
   assert.deepEqual(writes, [{
@@ -219,4 +220,44 @@ test('execution-time suppression prevents delivery creation', async () => {
   assert.equal(result.reasonCode, 'SUPPRESSED');
   assert.deepEqual(writes, []);
   assert.deepEqual(evaluatedAt, ['2026-08-30T10:10:00.000Z']);
+});
+
+test('re-enqueue preserves both legacy absence and existing pinned provider keys', async () => {
+  for (const pinned of [undefined, 'expadio:tenant:v1:original']) {
+    const repository = delivery([]);
+    const first = await queueGovernedCommunicateAction(actionIntent, {
+      compliance: { consent: consent(), suppression: suppression([]) },
+      templates: templates(), delivery: repository, connectors: [connector()],
+      now: () => '2026-08-30T10:10:00.000Z',
+    });
+    assert.ok(first.queued);
+    if (!first.queued) return;
+    const { providerIdempotencyKey: _newKey, ...legacyDispatch } = first.preparedDispatch;
+    const persisted = JSON.parse(JSON.stringify({
+      ...first.delivery,
+      dispatchSnapshot: { dispatch: { ...legacyDispatch, ...(pinned === undefined ? {} : { providerIdempotencyKey: pinned }) }, consentRequired: false },
+    })) as CommunicationDeliveryRecord;
+    let writes = 0;
+    const result = await queueGovernedCommunicateAction(actionIntent, {
+      compliance: { consent: consent(), suppression: suppression([]) },
+      templates: templates(), connectors: [connector()],
+      now: () => '2026-08-30T10:10:00.000Z',
+      delivery: { ...repository,
+        async findByIdempotencyKey(input) {
+          assert.equal(input.tenantId, actionIntent.tenantId);
+          assert.equal(input.idempotencyKey, actionIntent.idempotencyKey);
+          return persisted;
+        },
+        async createOrGet(input) {
+          writes++;
+          assert.equal(input.dispatchSnapshot?.dispatch.providerIdempotencyKey, pinned);
+          assert.equal(input.idempotencyKey, actionIntent.idempotencyKey);
+          return persisted;
+        },
+      },
+    });
+    assert.ok(result.queued);
+    assert.equal(writes, 1);
+    assert.equal(persisted.dispatchSnapshot?.dispatch.providerIdempotencyKey, pinned);
+  }
 });

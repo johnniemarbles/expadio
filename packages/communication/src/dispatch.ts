@@ -39,6 +39,8 @@ export interface PreparedCommunicationDispatch {
   readonly recipient: CommunicationRecipient;
   readonly recipientKey: string;
   readonly idempotencyKey: string;
+  /** Immutable provider key on new durable dispatches; absent means legacy. */
+  readonly providerIdempotencyKey?: string;
   readonly templateScope: Exclude<CommunicationTemplateMatchedScope, 'NONE'>;
   readonly rendered: RenderedCommunicationTemplate;
   readonly compliance: CommunicationDispatchComplianceEvidence;

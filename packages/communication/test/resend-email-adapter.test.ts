@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { CommunicationProviderSendRequest } from '../src/provider-adapter.ts';
 import { ResendEmailAdapter } from '../src/resend-email-adapter.ts';
+import { tenantProviderIdempotencyKey } from '../src/provider-idempotency.ts';
 
 const baseRequest: CommunicationProviderSendRequest = {
   tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -30,6 +31,37 @@ const baseRequest: CommunicationProviderSendRequest = {
   idempotencyKey: 'welcome-1',
   requestedAt: '2026-08-26T18:00:00.000Z',
 };
+
+test('new brand-scoped sends stay separate and retries keep the pinned wire key', async () => {
+  const wireKeys: string[] = [];
+  const localKeys: string[] = [];
+  const adapter = new ResendEmailAdapter({
+    apiToken: async request => { localKeys.push(request.idempotencyKey); return 'shared_token'; },
+    fetchImpl: async (_url, init) => {
+      wireKeys.push(new Headers(init?.headers).get('Idempotency-Key')!);
+      return Response.json({ id: 'message' });
+    },
+  });
+  for (const tenantId of ['brand-a', 'brand-b', 'brand-a']) {
+    await adapter.send({ ...baseRequest, tenantId,
+      providerIdempotencyKey: tenantProviderIdempotencyKey(tenantId, baseRequest.idempotencyKey) });
+  }
+  await adapter.send(baseRequest); // Already-persisted legacy request.
+  assert.notEqual(wireKeys[0], wireKeys[1]);
+  assert.equal(wireKeys[0], wireKeys[2]);
+  assert.equal(wireKeys[3], baseRequest.idempotencyKey);
+  assert.deepEqual(localKeys, Array(4).fill(baseRequest.idempotencyKey));
+});
+
+test('an invalid pinned key fails before credentials or provider I/O', async () => {
+  const adapter = new ResendEmailAdapter({
+    apiToken: async () => { throw new Error('must not lease'); },
+    fetchImpl: async () => { throw new Error('must not send'); },
+  });
+  for (const providerIdempotencyKey of ['', 'x'.repeat(257), 'bad\r\nkey']) {
+    assert.equal((await adapter.send({ ...baseRequest, providerIdempotencyKey })).status, 'REJECTED');
+  }
+});
 
 test('sends a provider-neutral HTML request through the Resend HTTP boundary', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];

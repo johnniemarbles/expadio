@@ -172,3 +172,40 @@ provider account need provider-level tenant namespacing. Implement with an
 explicit transition for pending/in-flight retries; blindly changing the key can
 duplicate an already accepted send. This continuation deliberately does not
 change provider idempotency keys or perform live sends.
+
+## Continuation: brand-scoped queued provider idempotency
+
+- New governed queue deliveries pin `providerIdempotencyKey` in the immutable
+  dispatch snapshot: `expadio:tenant:v1:` plus SHA-256 of the JSON tuple containing
+  tenant ID and local idempotency key. Brands sharing a Resend account therefore
+  receive distinct provider keys, while retries of one delivery reuse its key.
+- Re-enqueue reads the existing delivery and preserves its pinned key, including
+  absence on legacy snapshots. Repository snapshot equality remains the final
+  conflict check. Existing rows are not rewritten or backfilled.
+- Request preparation carries the pinned key to Resend's HTTP header. Database
+  identity, credential lease requests and audit attribution retain the original
+  tenant-scoped local key. Invalid explicit provider keys fail before credentials
+  or network calls; they never silently fall back to the legacy key.
+- Legacy deliveries without a pinned key retain their original wire key to
+  avoid changing the identity of an already accepted send. Their original
+  cross-brand collision risk remains. The separate operator test-send path is
+  unchanged and still needs its own transition.
+
+Deployment is coordinated, not a mixed-version rolling rollout: pause queue
+producers, stop/drain old workers and in-flight provider calls, deploy all
+producers/workers, then resume. Old workers ignore the new snapshot field and
+must not process new snapshots. Rolling back to old workers after new snapshots
+have been produced requires draining or isolating those deliveries first. Do
+not recompute keys for legacy pending deliveries during deployment or rollback.
+
+Validation: 28 focused communication tests passed, covering key isolation,
+bounded deterministic hashing, queue replay with JSON-roundtripped snapshot
+fixtures, provider preparation, wire headers, invalid keys and existing lease
+checks. Communication source and these tests passed strict TypeScript checking.
+Repository/network test doubles were used; persisted two-brand delivery E2E,
+live provider sends and deployment were not performed. CI must pass on this
+commit. The preceding commit passed all four CI workflows.
+
+Resend retains idempotency keys for 24 hours; this namespace change does not
+extend that window or guarantee exactly-once delivery beyond it. See
+https://resend.com/docs/dashboard/emails/idempotency-keys.

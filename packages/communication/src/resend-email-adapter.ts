@@ -64,7 +64,9 @@ export class ResendEmailAdapter implements CommunicationProviderAdapter {
       return rejected('PROVIDER_REJECTED', 'Email subject is required.');
     }
 
-    if (!validIdempotencyKey(request.idempotencyKey)) {
+    const providerIdempotencyKey = request.providerIdempotencyKey === undefined
+      ? request.idempotencyKey : request.providerIdempotencyKey;
+    if (!validIdempotencyKey(providerIdempotencyKey)) {
       return rejected('PROVIDER_REJECTED', 'Email idempotency key is invalid.');
     }
 
@@ -91,7 +93,7 @@ export class ResendEmailAdapter implements CommunicationProviderAdapter {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Idempotency-Key': request.idempotencyKey,
+        'Idempotency-Key': providerIdempotencyKey,
       },
       body: JSON.stringify({
         from,
@@ -170,8 +172,8 @@ function validToken(value: string): boolean {
   return value.length > 0 && value === value.trim() && !/[\r\n\t ]/u.test(value);
 }
 
-function validIdempotencyKey(value: string): boolean {
-  return value.length > 0 && value.length <= 256 && value === value.trim() && !/[\r\n\t]/u.test(value);
+function validIdempotencyKey(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= 256 && value === value.trim() && !/[\r\n\t]/u.test(value);
 }
 
 function parseRetryAfter(value: string | null): number | undefined {

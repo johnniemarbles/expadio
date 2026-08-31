@@ -1,4 +1,5 @@
 import type { GovernedActionIntent } from '@expadio/governed-actions';
+import { tenantProviderIdempotencyKey } from './provider-idempotency.ts';
 import type {
   ConnectorDefinition,
   RoutingPolicy,
@@ -305,6 +306,14 @@ export async function queueGovernedCommunicateAction(
     };
   }
 
+  // Preserve the original provider key on re-enqueue, including its absence
+  // on legacy snapshots. createOrGet remains the authoritative conflict check.
+  const existing = await ports.delivery.findByIdempotencyKey({
+    tenantId: actionIntent.tenantId, idempotencyKey: actionIntent.idempotencyKey,
+  });
+  const providerIdempotencyKey = existing === null
+    ? tenantProviderIdempotencyKey(actionIntent.tenantId, actionIntent.idempotencyKey)
+    : existing.dispatchSnapshot?.dispatch.providerIdempotencyKey;
   const preparedDispatch: PreparedCommunicationDispatch = {
     tenantId: actionIntent.tenantId,
     ...(config.organizationId === undefined
@@ -317,6 +326,7 @@ export async function queueGovernedCommunicateAction(
     recipientKey: identity.recipientKey,
     idempotencyKey: actionIntent.idempotencyKey,
     templateScope: rendered.matchedScope,
+    ...(providerIdempotencyKey === undefined ? {} : { providerIdempotencyKey }),
     rendered: rendered.rendered,
     compliance: {
       preflight: {
