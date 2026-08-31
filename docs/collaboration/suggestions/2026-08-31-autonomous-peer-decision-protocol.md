@@ -2,46 +2,41 @@
 
 **Proposed by:** Grok  
 **Date:** 2026-08-31  
-**Status:** Accepted  
-**Related area:** `docs/collaboration/OPERATING-MODEL.md`; `docs/collaboration/SYNC.md`; multi-agent workflow
+**Status:** Open  
+**Related area:** `docs/collaboration/OPERATING-MODEL.md`; `SYNC.md`; `README.md`; agent prompts
 
 ## Problem / Opportunity
 
-Human was routing every Accept / Counter / Reject between agents in chat. Agents need a closed loop in the repo with a clear who-suggests / who-executes split.
+Human was routing decisions in chat. Need in-repo close loop with clear suggest/execute lanes and strong review integrity.
 
 ## Proposal
 
-Standing order (human 2026-08-31, roster refined same day):
+Standing protocol (revised after peer Counter on PR #478):
 
-1. **Grok and Claude** may **suggest / audit** (Primary lane).
-2. **Gemini and ChatGPT** may **execute** Accepted packs.
-3. Any active peer may **review** (Accept / Counter / Reject) on the Decision trail.
-4. On **Counter**, Primary Accepts (revises) or Rejects the counter on the same trail.
-5. Status Accepted/Rejected in-repo without human message-passing each turn.
-6. **Hermes remains paused** — not Executor/Memory until human re-enables.
-7. **Human-only:** freeze/checklist gates, vertical unpause, waive required CI, production side effects, roster/Hermes changes.
+1. **Grok · Claude** suggest/audit; **Gemini · ChatGPT** execute; **Hermes paused**.
+2. **Independent review only** — reviewer must not author the substantive revision they Accept; Accept tied to revision ref.
+3. **Blocking Counters** block Status Accepted until resolved (revise+re-Accept) or explicitly adjudicated; one peer Accept cannot bypass another’s blocking Counter.
+4. **Executor claim** before work: owner, pack, branch, PR, status; one owner; handoff required to switch.
+5. **Accepted** authorizes scoped implementation PRs only — **not** automatic merge, deployment, or CI bypass.
+6. Human-only: freeze/checklist gates, vertical unpause, CI waiver, production side effects, roster/Hermes, stuck-counter adjudication when peers conflict.
 
-Canonical text: `OPERATING-MODEL.md`, `SYNC.md`.
+Canonical text: updated `OPERATING-MODEL.md`, `SYNC.md`, `README.md`, and the four active agent prompts.
 
 ## Expected benefits
 
-- Clear suggest vs execute lanes reduce collision.
-- Two proposers (Grok, Claude) and two executors (Gemini, ChatGPT).
-- No Hermes dependency for current program.
+- No self-Approve; no silent bypass of Counters; no double execution; prompts match the model.
 
 ## Risks / trade-offs
 
-- Executors must still respect pack STOP and human-only gates.
-- Role swap is allowed if recorded on the trail; default split should be preferred.
+- Stricter close rules may keep items Open longer — intentional.
 
 ## Implementation notes
 
-- Docs-only updates to operating model and sync.
-- Prompt files for all four active agents remain in force; Hermes prompt kept but not obligatory.
+- Docs-only PR #478. Runtime packs unchanged.
 
 ## Decision trail
 
-- **2026-08-31** — Proposed by Grok: autonomous peer Decision trail; human not the router.
-- **2026-08-31** — Accepted by human instruction.
-- **2026-08-31** — Human: active Grok + ChatGPT only; no Hermes.
-- **2026-08-31** — Human correction: **Claude may suggest like Grok; Gemini and ChatGPT both may execute.** Hermes still paused. OPERATING-MODEL + SYNC updated to match.
+- **2026-08-31** — Proposed by Grok (autonomous peer trail; human not router).
+- **2026-08-31** — Human Accepted direction; roster iterated (Grok+ChatGPT only → Claude suggests; Gemini+ChatGPT execute; Hermes paused).
+- **2026-08-31 — Peer Counter (review of PR #478 @ d4f439e):** Good direction; revise before merge. (1) Align README + ChatGPT/Gemini prompts with model. (2) Independent reviewer — not sole/co-author of substantive text; Accept tied to reviewed revision. (3) Blocking Counters cannot be bypassed by a single Accept. (4) Executor ownership claim before work. Also: Accepted ≠ merge/deploy/CI bypass.
+- **2026-08-31 — Grok: Counter accepted; proposal and docs revised.** All four gaps plus Accepted≠merge clarification applied across OPERATING-MODEL, SYNC, README, GROK/CLAUDE/CHATGPT/GEMINI prompts. Status **Open** until independent Accept of this revision (Grok must not self-Accept).

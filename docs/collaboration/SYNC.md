@@ -4,7 +4,7 @@
 **Suggest / audit:** Grok · Claude  
 **Execute:** Gemini · ChatGPT  
 **Paused:** Hermes  
-**Purpose:** Keep active agents and the human aligned without chat history or human message-passing between agents.
+**Purpose:** Shared memory and session rules for autonomous peer decisions.
 
 ---
 
@@ -15,88 +15,60 @@ Chat sessions are ephemeral.
 GitHub (this repository) is the only shared memory.
 ```
 
-| Durable | Ephemeral |
-|---------|-----------|
-| `docs/collaboration/**` | Model chat windows |
-| Code and docs on `main` / open PRs | Uncommitted local edits |
-| Suggestion Decision trails | Verbal Accept / Counter / Reject |
-
 **Rule:** If a decision is not in the repo, it did not happen for the team.
 
 ---
 
-## Autonomous peer decisions
+## Decision close rules (short)
 
-See `OPERATING-MODEL.md`.
+Full text: `OPERATING-MODEL.md`.
 
-- **Grok / Claude** propose → peers Accept / Counter / Reject on the Decision trail.
-- Primary accepts or rejects **Counter** on the same trail; revises body when accepting.
-- **Gemini / ChatGPT** execute **Accepted** packs (bounded PRs).
-- **Hermes is paused** — do not assign packs or sync automation to Hermes.
-- Human-only: freeze/checklist gates, vertical unpause, waive required CI, production side effects, roster/Hermes re-enable.
-
-Do not ask the human to relay decisions. Write the trail; the other agent pulls next session.
+- **Independent review:** Accept only if you did not author the substantive revision under review.
+- **Blocking Counters:** Status cannot become Accepted until each blocking Counter is resolved or explicitly adjudicated on the trail.
+- **Executor claim:** Before implementation, one of Gemini/ChatGPT records owner, pack, branch, PR, status on the trail. No double-pickup without handoff.
+- **Accepted** = scoped implementation authorized. **Not** automatic merge, deploy, or CI bypass. Repo protections still apply.
 
 ---
 
 ## Mandatory session start
 
-### Grok · Claude (suggest/audit)
-
-1. Fetch/pull `main` (or agreed branch).
-2. Load `GROK_COLLABORATION_PROMPT.md` or `CLAUDE_COLLABORATION_PROMPT.md`.
-3. Read `OPERATING-MODEL.md` + this file (confirm roster).
-4. Scan `suggestions/` for Open items, unanswered Counters, Accepted pending pack design.
-5. Propose, revise, or review as appropriate.
-
-### Gemini · ChatGPT (execute + review)
-
 1. Fetch/pull `main`.
-2. Load `GEMINI_COLLABORATION_PROMPT.md` or `CHATGPT_COLLABORATION_PROMPT.md`.
+2. Load your prompt (`GROK_` / `CLAUDE_` / `CHATGPT_` / `GEMINI_COLLABORATION_PROMPT.md`).
 3. Read `OPERATING-MODEL.md` + this file.
-4. Scan for Open items to **review** and **Accepted** items with pending implementation.
-5. Review on trail and/or execute packs within SCOPE/STOP.
+4. Scan `suggestions/` for:
+   - Open items needing independent review
+   - Blocking Counters without Primary response
+   - Accepted items missing executor claim
+   - Your claimed packs (if executor)
+5. Work only in-lane (suggest vs execute defaults).
 
-### Hermes
-
-No session obligation while paused.
+Hermes: no session obligation while paused.
 
 ---
 
 ## How work stays in sync
 
-1. **Propose** (Grok/Claude) → `suggestions/YYYY-MM-DD-title.md`
-2. **Review** → Decision trail Accept / Counter / Reject
-3. **Resolve Counter** → Primary revises or rejects counter on trail
-4. **Status** → Accepted / Rejected in-repo
-5. **Implement** (Gemini/ChatGPT) → one pack per PR; link PR; set Implemented when done
-
----
-
-## Auto checks (CI)
-
-`.github/workflows/collaboration-sync.yml` validates suggestion structure/Status under `docs/collaboration/**`.
-
----
-
-## Agent GitHub access
-
-See `CONNECTING-AGENTS.md`. Grok, Claude, ChatGPT, and Gemini need write access for the current roster. Hermes may stay provisioned but unused.
+1. Propose (Grok/Claude) → suggestion file  
+2. Independent review → Accept / Counter / Reject  
+3. Resolve blocking Counters  
+4. Status Accepted  
+5. Executor claim → implement → PR → required CI → merge per repo rules  
+6. Set Implemented + link PR  
 
 ---
 
 ## Anti-patterns
 
-- Chat-only Accept/Counter/Reject
-- Asking the human to tell the other agent
-- Assigning work to **Hermes** while paused
-- Executing before Status Accepted (unless human explicitly assigns)
-- Leaving Counter unanswered
-- Autonomous Accept of freeze/checklist gate changes
+- Chat-only decisions  
+- Self-Accept of your own substantive revision  
+- Accepted while a blocking Counter is open  
+- Two executors on one pack without handoff  
+- Treating Accepted as merge/deploy permission  
+- Assigning Hermes while paused  
+- Asking the human to relay decisions between agents  
 
 ---
 
 ## Summary
 
-**Suggest:** Grok · Claude · **Execute:** Gemini · ChatGPT · **Paused:** Hermes  
-Pull → trail → packs in-repo. Human = override and gates, not the router.
+Pull → independent review → resolve blocking counters → claim → PR under normal protections. Human = gates and override, not the router.

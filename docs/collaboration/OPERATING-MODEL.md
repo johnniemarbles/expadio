@@ -1,140 +1,150 @@
 # EXPADIO Continuous Multi-AI Operating Model
 
 **Status:** Active  
-**Active participants (current):** Grok · Claude · ChatGPT · Gemini · Human Owner  
-**Paused:** Hermes Agent (until human re-enables)  
-**Authority:** Human owner retains override and sole authority to amend freeze/checklist/release gates. **Day-to-day suggestion decisions (Accept / Counter / Reject) close among active reasoning AIs in the repo** so the human is not required to route every turn.
-
----
-
-## Role split (current roster)
-
-| Lane | Who | Does |
-|------|-----|------|
-| **Suggest / audit (Primary)** | **Grok · Claude** | Audit code/docs, open suggestions, write packs, revise on accepted counters |
-| **Review** | Any active peer not sole author of the item | Accept / Counter / Reject on Decision trail with evidence |
-| **Execute** | **Gemini · ChatGPT** | Implement Accepted packs via bounded PRs; report evidence on trail/PR |
-| **Paused** | **Hermes** | Do not assign Executor/Memory automation to Hermes |
-| **Override / gates** | **Human Owner** | Freeze, checklist gates, vertical unpause, waive required CI, production side-effect policy, roster changes |
-
-Grok and Claude may also help execute if needed; Gemini and ChatGPT may open a suggestion if they find a gap — but the **default** split is as above. Record role on the Decision trail when non-default.
+**Suggest / audit (Primary):** Grok · Claude  
+**Execute:** Gemini · ChatGPT  
+**Review:** Any active peer who did **not** author the substantive revision under review  
+**Paused:** Hermes Agent  
+**Authority:** Human owner retains override and sole authority to amend freeze/checklist/release gates. Day-to-day suggestion Accept / Counter / Reject closes among active peers **in the repo** under the rules below.
 
 ---
 
 ## Core Model
 
 ```text
-Primary (Grok or Claude) audits / proposes → suggestion file on GitHub
+Primary (Grok or Claude) proposes → suggestion file + PR as needed
         │
         ▼
-Peer reviewer (ChatGPT, Gemini, and/or the other Primary) → Decision trail:
-  Accept | Counter | Reject
+Independent reviewer (did not author substantive changes) →
+  Accept | Counter (blocking or non-blocking) | Reject
         │
         ▼
-If Counter → Primary responds on Decision trail:
-  Accept counter (revise body) | Reject counter (rationale)
+All blocking Counters resolved (Primary accept+revise, or explicit adjudication)
         │
         ▼
-When a peer Accepts the current body:
-  Status → Accepted
+Independent Accept of the *current* revision → Status: Accepted
         │
         ▼
-Executors (Gemini and/or ChatGPT) run bounded packs → PRs → evidence on trail
+One executor claims the pack (name, branch, PR, handoff) → implements
         │
         ▼
-Human override any time; human-only for freeze, checklist gates, vertical unpause, production risk
+Merge/deploy only via normal repo protections + required CI — never implied by Accepted alone
 ```
 
-Chat is not the bus. GitHub is.
+**Accepted authorizes scoped implementation work only.** It does **not** mean automatic merge, deployment, or CI bypass.
 
 ---
 
-## Autonomous Decision trail protocol (standing order)
+## Roles
 
-Effective from human instruction 2026-08-31 (roster refined same day). Active agents follow without waiting for a human prompt each turn.
+| Lane | Who | Rules |
+|------|-----|--------|
+| **Suggest / audit** | Grok · Claude | Open suggestions; revise on accepted counters; may draft packs |
+| **Review** | ChatGPT · Gemini · the other Primary | Must be **independent**: reviewer must not be the author of the substantive changes being accepted. Co-authors do not Accept their own revision. |
+| **Execute** | Gemini · ChatGPT | After Accepted + **executor claim** recorded; one owner per pack |
+| **Paused** | Hermes | No assignments |
+| **Override / gates** | Human | Freeze, checklist gates, vertical unpause, waive required CI, production side effects, roster/Hermes, break ties on unresolved blocking counters |
 
-### 1. Propose (Grok or Claude)
+---
 
-- Primary writes `docs/collaboration/suggestions/YYYY-MM-DD-title.md` (structure per `suggestions/README.md`).
-- Opens PR if required by repo norms; Decision trail starts with “Proposed by …”.
-- Status: **Open**.
+## Autonomous Decision trail protocol
 
-### 2. Review (peer)
+### 1. Propose
 
-- On session start, peers scan `suggestions/` for `Status: Open` and trails awaiting reply (`SYNC.md`).
-- Append: **Accept** | **Counter** | **Reject** + rationale and evidence (files, tests, freeze/checklist cites).
-- **Counter** lists required revisions (High/Medium/Low).
+- Primary writes `docs/collaboration/suggestions/YYYY-MM-DD-title.md`.
+- Status: **Open**. Decision trail: “Proposed by …”.
 
-### 3. Primary response to Counter
+### 2. Independent review
 
-- **Accept counter** → revise Proposal body; trail: “Counter accepted; proposal revised.” Status stays Open until a peer **Accept**s the revision (or human Accepts).
-- **Reject counter** → trail rationale; Status stays Open; human may break ties.
-- Do not leave Counter unanswered across sessions.
+- Reviewer must **not** have authored the substantive proposal text (or the latest substantive revision) they are Accepting.
+- Append **Accept** | **Counter** | **Reject** with evidence.
+- Mark each Counter as **blocking** or **non-blocking**.
+- **Accept is always tied to a specific revision** (commit SHA or “body as of DATE/trail entry”). Accept of an old revision does not close a newer revision.
 
-### 4. Close among peers
+### 3. Blocking counters cannot be bypassed
 
-- After peer **Accept** on current body → set **Status: Accepted** and record who Accepted.
-- **Reject** for freeze/architecture violation → **Rejected** (or Open if disputed → human).
-- **Implemented** only when code/docs landed and linked (PR number).
+- Status must **not** move to Accepted while any **blocking** Counter remains without:
+  - Primary **Accept counter** + revised body + new independent Accept of that revision, or
+  - Primary **Reject counter** with rationale **and** human or a second independent peer **explicit adjudication** on the trail, or
+  - Human override on the trail.
+- A single peer Accept does **not** close the item if another peer’s blocking Counter is still open.
 
-### 5. Human-only (no autonomous Accept)
+### 4. Primary response to Counter
 
-- Amend `FOUNDATION_FREEZE.md` or checklist **release / vertical / Voice gates**
-- Unpause DENTEX product depth or additional verticals
-- Waive red required CI for production paths
-- Authorize real patient/production side effects outside controlled test policy
-- Re-enable **Hermes** or change this roster
+- **Accept counter** → revise body; trail “Counter accepted; proposal revised @ <ref>.”
+- **Reject counter** → trail rationale; leave Status Open until adjudication.
+- Do not leave blocking Counters unanswered across sessions.
 
-### 6. Implementation (Gemini · ChatGPT)
+### 5. Close
 
-- Accepted suggestions → bounded packs (SCOPE / DON’T / ACCEPT / STOP), one pack per PR.
-- **Gemini and ChatGPT** are the default executors. Respect pack STOP and human-only gates.
-- Do **not** assign execution to Hermes while paused.
+- **Accepted** only when: independent Accept of **current** revision + no unresolved blocking Counters.
+- **Rejected** on freeze/architecture violation per independent review (or human).
+- **Implemented** when merged work is linked (PR number).
+
+### 6. Executor ownership (before implementation starts)
+
+On the suggestion Decision trail (or pack section), record **before** coding:
+
+```text
+Executor claim:
+  owner: Gemini | ChatGPT
+  pack: <name or number>
+  branch: <branch>
+  pr: <url or TBD>
+  status: claimed | in_progress | handoff | done | abandoned
+```
+
+- Only **one** active owner per pack. Second executor must not start the same pack without trail **handoff** (previous owner → abandoned or handoff + new claim).
+- Claim does not bypass review rules or repo protections.
+
+### 7. Accepted ≠ merge/deploy
+
+- Accepted → permission to open implementation PRs within SCOPE.
+- Merge requires normal branch protection, reviews if configured, and **required CI green**.
+- Agents must not waive required checks. Human-only to waive.
+
+### 8. Human-only
+
+Freeze/checklist gate edits, vertical unpause, CI waiver, unauthorized production side effects, re-enable Hermes, roster change, final adjudication of stuck blocking counters when peers disagree.
 
 ---
 
 ## Operating Rhythm
 
-1. Pull `main` / load your prompt / read roster in this file + `SYNC.md`.
-2. Scan Open suggestions and unanswered Counters.
-3. Grok/Claude propose or revise; peers review; Gemini/ChatGPT execute Accepted packs.
-4. Status and evidence stay in-repo — no human message-passing between agents.
-5. Human overrides or settles gate-level conflicts when needed.
+1. Pull `main` / load prompt / read this file + `SYNC.md`.
+2. Scan Open suggestions, blocking Counters, Accepted items without executor claim, claimed packs in progress.
+3. Propose / independent review / resolve counters / claim / execute.
+4. All durable state on the Decision trail and PRs.
 
 ---
 
 ## Rules of Engagement
 
-- **Repo is the bus.** If it is not on the Decision trail, it did not happen for the team.
-- **Reviewers act without being asked** when they see Open items.
-- **Primary resolves Counters in-repo** (accept/revise or reject counter).
-- **Architecture and freeze docs remain source of truth.**
-- **No silent scope expansion** past pack STOP or human-only gates.
-- **Hermes paused** — no Executor/Memory assignments.
-- **Disagreement is recorded**, not chat-only.
+- Repo is the bus.
+- Independent review only for Accept.
+- Blocking Counters block Accepted.
+- One executor claim per pack.
+- Accepted ≠ auto-merge or CI bypass.
+- Hermes paused.
+- Architecture and freeze docs are source of truth.
 
 ---
 
 ## Artefacts
 
-| Artefact | Location | Purpose |
-|----------|----------|---------|
-| Shared Evaluation Template | `docs/collaboration/README.md` | Review format |
-| Suggestions + Decision trail | `docs/collaboration/suggestions/` | Proposals and history |
-| This operating model | `docs/collaboration/OPERATING-MODEL.md` | Rules + roster |
-| Sync rules | `docs/collaboration/SYNC.md` | Session start |
-| Prompts | `GROK_`, `CLAUDE_`, `CHATGPT_`, `GEMINI_COLLABORATION_PROMPT.md` | Standing orders |
-| Paused | `HERMES_COLLABORATION_PROMPT.md` | Future re-enable only |
+| Artefact | Location |
+|----------|----------|
+| This model | `OPERATING-MODEL.md` |
+| Sync | `SYNC.md` |
+| Framework index | `README.md` |
+| Suggestions | `suggestions/` |
+| Prompts | `GROK_`, `CLAUDE_`, `CHATGPT_`, `GEMINI_COLLABORATION_PROMPT.md` |
+| Paused | `HERMES_COLLABORATION_PROMPT.md` |
 
 ---
 
 ## Summary
 
-- **Suggest/audit:** Grok · Claude  
-- **Execute:** Gemini · ChatGPT  
-- **Review:** any active peer  
-- **Paused:** Hermes  
-- Propose → Accept/Counter/Reject → resolve counters → Accepted packs executed in-repo  
-- Human = override + gates, not the message router  
+Grok/Claude suggest · independent peers review · blocking counters resolved · Gemini/ChatGPT claim and execute · Hermes paused · human gates and override · Accepted authorizes scoped PRs only, not merge/deploy/CI bypass.
 
 This model is now active.
