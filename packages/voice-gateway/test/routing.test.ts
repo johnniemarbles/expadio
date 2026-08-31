@@ -124,3 +124,31 @@ test('fails closed when voice cost exceeds the request ceiling', async () => {
       && error.code === 'VOICE_COST_LIMIT_EXCEEDED',
   );
 });
+
+
+test('fails closed when a declared Voice cost ceiling has no cost evidence', async () => {
+  const adapter: VoiceProviderAdapter = {
+    async invoke() {
+      const withCost = observation();
+      return {
+        ...withCost,
+        provenance: {
+          ...withCost.provenance,
+          costMinorUnits: undefined,
+          estimatedCostMinorUnits: undefined,
+        },
+      };
+    },
+  };
+  const gateway = new RoutedVoiceGateway({
+    connectors: [connector],
+    adapters: new Map([['tenant-stt', adapter]]),
+  });
+
+  await assert.rejects(
+    () => gateway.invoke(intent),
+    (error: unknown) =>
+      error instanceof RoutedVoiceGatewayError
+      && error.code === 'VOICE_COST_EVIDENCE_REQUIRED',
+  );
+});
