@@ -35,6 +35,8 @@ export {
 export type { BrandIncomingRequest, BrandAuthorizedCustomerRead } from './brand-host.ts';
 export {
   PLATFORM_SAFE_ERROR_MESSAGE,
+  REDACTED_ADDR,
+  REDACTED_TEL,
   platformSafeRef,
   classifyRequestPath,
   customerPiiPresent,

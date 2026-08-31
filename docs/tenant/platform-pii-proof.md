@@ -7,9 +7,10 @@ Keep #499 draft. This is a contract and source scan, not authenticated e2e.
 - `classifyRequestPath` splits platform-product, brand, lab.
 - Product APIs `/api/overview`, `/api/context`, `/api/workspaces`, `/api/journey-correlation` return `Cache-Control: private, no-store`.
 - Those routes no longer echo `error.message`.
-- `/api/overview` and `/api/context` run `assertPlatformProductPayload` before JSON leaves. A customer-field token fails closed with the generic error body.
-- `platformSafeLogLine` redacts email/phone and refuses leftover customer-field tokens. Deployed log capture is still unproven.
-- `/api/workspaces` is locked to `SHELL_PLATFORM_SECTIONS`.
+- `/api/overview`, `/api/context`, and `/api/workspaces` run `assertPlatformProductPayload` before JSON leaves. A customer-field token fails closed with the generic error body.
+- `platformSafeLogLine` redacts addresses to `[redacted-addr]` / `[redacted-tel]` and refuses leftover customer-field tokens. Placeholders do not contain `email` or `phone`, so the scanner does not fight itself.
+- Deployed log capture is still unproven.
+- `/api/workspaces` is locked to `SHELL_PLATFORM_SECTIONS` and uses the generic denied body for unauthenticated callers.
 - Brand CS-104 GET `/brand/api/journey` authorizes T/B/L + membership, then reads intents + latest attempt + `communication_deliveries.state` for COMMUNICATE. No configuration/metadata/snapshot/recipient columns.
 - `delivered` is only claimed when provider state is `DELIVERED`.
 - Platform `/api/journey-correlation` does not query executor or delivery tables.

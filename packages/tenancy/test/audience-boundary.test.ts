@@ -4,6 +4,8 @@ import {
   BRAND_HOST,
   PLATFORM_HOST,
   PLATFORM_SAFE_ERROR_MESSAGE,
+  REDACTED_ADDR,
+  REDACTED_TEL,
   SHELL_NAVIGATION,
   assertBrandNavIsNotInsidePlatform,
   assertPlatformLogHasNoCustomerPii,
@@ -51,10 +53,13 @@ test('request paths split product, brand and lab', () => {
 test('platform errors and logs stay generic', () => {
   assert.equal(platformSafeErrorBody().message, PLATFORM_SAFE_ERROR_MESSAGE);
   assert.doesNotMatch(platformSafeErrorBody('INTERNAL_ERROR').message, /email|phone|stack|SELECT/i);
-  assert.equal(redactCustomerPii('contact a@b.invalid at +14155550100'), 'contact [redacted-email] at [redacted-phone]');
+  assert.equal(redactCustomerPii('contact a@b.invalid at +14155550100'), `contact ${REDACTED_ADDR} at ${REDACTED_TEL}`);
+  assert.doesNotMatch(REDACTED_ADDR, /email|phone|full_name/i);
+  assert.doesNotMatch(REDACTED_TEL, /email|phone|full_name/i);
   assert.throws(() => assertPlatformLogHasNoCustomerPii('failed for a@b.invalid'), /PLATFORM_PII_LOG_BOUNDARY/);
   assert.doesNotThrow(() => assertPlatformLogHasNoCustomerPii('Overview API Error INTERNAL_ERROR'));
+  assert.doesNotThrow(() => assertPlatformLogHasNoCustomerPii(`retry ${REDACTED_ADDR}`));
   assert.equal(platformSafeLogLine('retry CS-104 tenant T-1048'), 'retry CS-104 tenant T-1048');
-  assert.equal(platformSafeLogLine('bounce a@b.invalid'), 'bounce [redacted-email]');
+  assert.equal(platformSafeLogLine('bounce a@b.invalid'), `bounce ${REDACTED_ADDR}`);
   assert.throws(() => platformSafeLogLine('dump full_name=Ada'), /PLATFORM_PII_LOG_BOUNDARY/);
 });

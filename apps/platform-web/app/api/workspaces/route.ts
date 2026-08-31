@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import type { DeniedResult } from '@expadio/ui/contracts';
 import { authenticateAndResolveContext } from '@expadio/iam';
 import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
 import {
   PLATFORM_PRODUCT_CACHE,
   SHELL_PLATFORM_SECTIONS,
+  assertPlatformProductPayload,
   assertPlatformSectionsMatchContract,
   platformProductDenied,
 } from '../../../lib/platform-product-surface';
 
-export async function GET(request: Request) {
+export async function GET() {
   const { userId } = await auth();
 
   if (!userId) {
-    const denied: DeniedResult = {
-      denied: true,
-      reasonKey: 'UNAUTHENTICATED',
-      message: 'User is not authenticated',
-    };
-    return NextResponse.json(denied, { status: 401, headers: PLATFORM_PRODUCT_CACHE });
+    return NextResponse.json(platformProductDenied('UNAUTHENTICATED'), {
+      status: 401,
+      headers: PLATFORM_PRODUCT_CACHE,
+    });
   }
 
   const resolve = () => authenticateAndResolveContext(
@@ -54,10 +52,15 @@ export async function GET(request: Request) {
       await resolve();
     }
 
+    assertPlatformProductPayload(SHELL_PLATFORM_SECTIONS);
     return NextResponse.json(SHELL_PLATFORM_SECTIONS, { headers: PLATFORM_PRODUCT_CACHE });
-  } catch {
-    return NextResponse.json(platformProductDenied('UNAUTHORIZED_OR_UNMAPPED'), {
-      status: 403,
+  } catch (error) {
+    const reason =
+      error instanceof Error && error.message === 'PLATFORM_PII_BOUNDARY'
+        ? 'PLATFORM_PII_BOUNDARY'
+        : 'UNAUTHORIZED_OR_UNMAPPED';
+    return NextResponse.json(platformProductDenied(reason), {
+      status: reason === 'PLATFORM_PII_BOUNDARY' ? 500 : 403,
       headers: PLATFORM_PRODUCT_CACHE,
     });
   }

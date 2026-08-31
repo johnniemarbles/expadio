@@ -5,6 +5,10 @@ const CUSTOMER_PII_TOKEN =
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 const PHONE = /\+?\d[\d\s().-]{8,}\d/;
 
+/** Placeholders must not contain customer-field tokens. `[redacted-email]` fails that test. */
+export const REDACTED_ADDR = '[redacted-addr]';
+export const REDACTED_TEL = '[redacted-tel]';
+
 export const PLATFORM_SAFE_ERROR_MESSAGE =
   'This information could not be loaded. Please try again.';
 
@@ -74,7 +78,7 @@ export function customerPiiPresent(value: unknown): boolean {
 }
 
 export function redactCustomerPii(value: string): string {
-  return value.replace(EMAIL, '[redacted-email]').replace(PHONE, '[redacted-phone]');
+  return value.replace(EMAIL, REDACTED_ADDR).replace(PHONE, REDACTED_TEL);
 }
 
 export function assertPlatformPayloadHasNoCustomerPii(payload: unknown): void {

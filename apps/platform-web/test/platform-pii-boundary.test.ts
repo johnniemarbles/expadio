@@ -24,7 +24,10 @@ test('Platform product nav matches the shared contract and excludes lab surfaces
 test('product API sources refuse lab dump and raw error leakage', () => {
   const workspaces = readFileSync(new URL('../app/api/workspaces/route.ts', import.meta.url), 'utf8');
   assert.match(workspaces, /SHELL_PLATFORM_SECTIONS/);
+  assert.match(workspaces, /assertPlatformProductPayload/);
+  assert.match(workspaces, /platformProductDenied/);
   assert.doesNotMatch(workspaces, /href: '\/crm'|href: '\/gtm'|href: '\/dentex'|href: '\/vendors'|href: '\/expenses'/);
+  assert.doesNotMatch(workspaces, /User is not authenticated/);
   const overview = readFileSync(new URL('../app/api/overview/route.ts', import.meta.url), 'utf8');
   assert.match(overview, /assertPlatformProductPayload/);
   assert.match(overview, /platformProductDenied|PLATFORM_SAFE_ERROR_MESSAGE/);
