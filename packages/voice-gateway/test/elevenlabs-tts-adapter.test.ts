@@ -7,6 +7,17 @@ import {
   type VoiceIntelligenceIntent,
 } from "../src/index.ts";
 
+const inputResolver = {
+  resolveText: async (input: any) => ({
+    content: input.reference,
+    sourceReference: input.reference,
+  }),
+  resolveProviderFetchUrl: async (input: any) => ({
+    providerFetchUrl: input.reference,
+    sourceReference: input.reference,
+  }),
+};
+
 const artifactSink = {
   write: async (input: any) => ({
     contentReference: `artifact://${input.artifactKind}/${input.sourceId}`,
@@ -72,6 +83,7 @@ test("ElevenLabsTtsAdapter persists synthesized audio before success", async () 
   const adapter = new ElevenLabsTtsAdapter({
     apiToken: async () => "mock-elevenlabs-key-999",
     artifactSink,
+    inputResolver,
     fetchImpl: mockFetch,
     now: () => "2026-08-30T12:00:06.000Z",
   });
