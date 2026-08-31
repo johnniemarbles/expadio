@@ -86,25 +86,48 @@ export async function createGovernedSupabaseArtifactStore(
   );
 
   const registry = new PostgresProviderRegistryRepository(client);
-  const [connectors, routingPolicy] = await Promise.all([
+  const [
+    storeConnectors,
+    storeRoutingPolicy,
+    readConnectors,
+    readRoutingPolicy,
+  ] = await Promise.all([
     registry.listConnectors(tenantId, 'storage.store'),
     registry.loadRoutingPolicy(tenantId, 'storage.store'),
+    registry.listConnectors(tenantId, 'storage.read'),
+    registry.loadRoutingPolicy(tenantId, 'storage.read'),
   ]);
 
-  const route = routeConnector(
-    {
-      tenantId,
-      capabilityKey: 'storage.store',
-      requiredResidencyTags: options.requiredResidencyTags,
-      requiredComplianceTags: options.requiredComplianceTags,
-    },
-    connectors,
-    routingPolicy ?? undefined,
+  const routeRequest = {
+    tenantId,
+    requiredResidencyTags: options.requiredResidencyTags,
+    requiredComplianceTags: options.requiredComplianceTags,
+  };
+  const storeRoute = routeConnector(
+    { ...routeRequest, capabilityKey: 'storage.store' },
+    storeConnectors,
+    storeRoutingPolicy ?? undefined,
   );
-  const connector = route.connector;
+  const readRoute = routeConnector(
+    { ...routeRequest, capabilityKey: 'storage.read' },
+    readConnectors,
+    readRoutingPolicy ?? undefined,
+  );
+
+  const connector = storeRoute.connector;
   if (connector === null) {
     throw new Error(
-      `GOVERNED_ARTIFACT_STORAGE_CONNECTOR_UNAVAILABLE:${route.reason}`,
+      `GOVERNED_ARTIFACT_STORAGE_CONNECTOR_UNAVAILABLE:STORE:${storeRoute.reason}`,
+    );
+  }
+  if (readRoute.connector === null) {
+    throw new Error(
+      `GOVERNED_ARTIFACT_STORAGE_CONNECTOR_UNAVAILABLE:READ:${readRoute.reason}`,
+    );
+  }
+  if (readRoute.connector.connectorKey !== connector.connectorKey) {
+    throw new Error(
+      'GOVERNED_ARTIFACT_STORAGE_ROUTE_SPLIT_UNSUPPORTED',
     );
   }
   if (!supportsRequiredStorageCapabilities(connector)) {
