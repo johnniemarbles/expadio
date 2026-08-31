@@ -16,7 +16,7 @@ import {
   SupabaseDurableArtifactStore,
   governedSupabaseStorageAccessTokenProvider,
 } from '@expadio/storage';
-import { delegatedSecretResolver } from './vault-secret-resolver';
+import { delegatedSecretResolver } from './vault-secret-resolver.ts';
 
 export interface GovernedArtifactStorageOptions {
   readonly tenantId: string;
