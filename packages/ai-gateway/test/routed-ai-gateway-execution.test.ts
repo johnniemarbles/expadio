@@ -104,6 +104,7 @@ test("RoutedAiGateway routes US HIPAA intent through GeminiAiAdapter", async () 
       maximumCostMinorUnits: 10,
     },
     idempotencyKey: "idem_us_01",
+    correlationId: "corr-us-01",
     requestedAt: "2026-08-30T12:00:00.000Z",
   };
 
@@ -171,6 +172,7 @@ test("RoutedAiGateway routes EU GDPR intent to tenant-owned OpenAI adapter", asy
       maximumCostMinorUnits: 20,
     },
     idempotencyKey: "idem_eu_01",
+    correlationId: "corr-eu-01",
     requestedAt: "2026-08-30T12:00:00.000Z",
   };
 
