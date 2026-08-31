@@ -48,8 +48,13 @@ CREATE INDEX learning_automation_rules_event_idx
 CREATE OR REPLACE FUNCTION platform.enforce_learning_automation_rule_revision()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+AS $
 BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'learning automation rules are durable; disable instead of deleting'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
   IF OLD.tenant_id IS DISTINCT FROM NEW.tenant_id
      OR OLD.rule_key IS DISTINCT FROM NEW.rule_key
      OR OLD.created_by_subject_id IS DISTINCT FROM NEW.created_by_subject_id
@@ -69,7 +74,7 @@ END;
 $$;
 
 CREATE TRIGGER learning_automation_rules_revision_guard
-BEFORE UPDATE ON platform.learning_automation_rules
+BEFORE UPDATE OR DELETE ON platform.learning_automation_rules
 FOR EACH ROW EXECUTE FUNCTION platform.enforce_learning_automation_rule_revision();
 
 ALTER TABLE platform.learning_automation_rules ENABLE ROW LEVEL SECURITY;
