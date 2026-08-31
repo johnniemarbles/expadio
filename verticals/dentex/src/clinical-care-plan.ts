@@ -70,6 +70,7 @@ export interface ClinicalConsultationExtractionInput {
   readonly consultationNotesReference: string;
   readonly aiGateway: AiGateway;
   readonly idempotencyKey: string;
+  readonly correlationId: string;
 }
 
 export interface ClinicalConsultationExtractionResult {
@@ -109,6 +110,7 @@ export async function extractDentexClinicalConsultation(
       requiredComplianceTags: ["HIPAA"],
     },
     idempotencyKey: input.idempotencyKey,
+    correlationId: input.correlationId,
     requestedAt: new Date().toISOString(),
   };
 
