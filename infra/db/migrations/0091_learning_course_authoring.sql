@@ -205,6 +205,10 @@ BEGIN
    WHERE course_version_id = target_version_id
      AND tenant_id = target_tenant_id;
 
+  IF parent_state IS NULL AND TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
   IF parent_state IS DISTINCT FROM 'DRAFT' THEN
     RAISE EXCEPTION 'learning modules and lessons may mutate only while course version is DRAFT'
       USING ERRCODE = 'check_violation';
@@ -218,9 +222,12 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
-$$;
+$;
 
 CREATE TRIGGER learning_course_modules_draft_only
 BEFORE INSERT OR UPDATE OR DELETE ON platform.learning_course_modules
