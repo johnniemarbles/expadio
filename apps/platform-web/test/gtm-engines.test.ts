@@ -7,7 +7,7 @@ import {
   scoreFit,
   scoringMayAutoApprove,
   shouldConvertReplyToLead,
-} from '@expadio/gtm';
+} from '../../../packages/gtm/src/index.ts';
 
 test('fit scoring is explainable and never auto-approves', () => {
   const result = scoreFit(
