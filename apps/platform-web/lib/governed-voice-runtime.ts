@@ -5,7 +5,6 @@ import {
   ElevenLabsTtsAdapter,
   RoutedVoiceGateway,
   voiceCapabilityKey,
-  type VoiceInputResolver,
   type VoiceProviderAdapter,
   type VoiceIntelligenceIntent,
   type VoiceIntelligenceObservation,
@@ -22,15 +21,16 @@ import {
   PostgresConnectorCredentialRepository,
   PostgresProviderRegistryRepository,
 } from '@expadio/postgres-runtime/provider-registry';
-import type { DurableArtifactSink } from '@expadio/storage';
+import type { DurableArtifactSink, DurableArtifactSource } from '@expadio/storage';
 import { delegatedSecretResolver } from './vault-secret-resolver';
+import { governedArtifactVoiceInputResolver } from './governed-artifact-input-resolvers';
 
 export interface GovernedVoiceRuntimeOptions {
   readonly serviceSubjectId: string;
   readonly organizationId: string;
   /** Concrete durable blob/object sink; PostgreSQL indexing is added here. */
   readonly artifactBlobSink: DurableArtifactSink;
-  readonly inputResolver: VoiceInputResolver;
+  readonly artifactSource: DurableArtifactSource;
   readonly secretResolver?: SecretResolver;
   readonly fetchImpl?: typeof fetch;
   readonly now?: () => Date;
@@ -124,7 +124,7 @@ export async function invokeGovernedVoiceIntelligence(
         new DeepgramSttAdapter({
           apiToken: token,
           artifactSink,
-          inputResolver: input.options.inputResolver,
+          inputResolver,
           ...(input.options.fetchImpl === undefined
             ? {}
             : { fetchImpl: input.options.fetchImpl }),
@@ -140,7 +140,7 @@ export async function invokeGovernedVoiceIntelligence(
         new ElevenLabsTtsAdapter({
           apiToken: token,
           artifactSink,
-          inputResolver: input.options.inputResolver,
+          inputResolver,
           ...(input.options.fetchImpl === undefined
             ? {}
             : { fetchImpl: input.options.fetchImpl }),
