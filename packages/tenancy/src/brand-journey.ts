@@ -41,11 +41,12 @@ export type JourneyExecutorFact = {
   readonly state: Exclude<JourneyObservationState, 'not-observed'>;
 };
 
-/** One intent plus latest attempt status. No configuration, no recipient. */
+/** Intent + latest attempt + optional provider delivery state. No recipient. */
 export type FrozenExecutorRow = {
   readonly correlation: string;
   readonly executor: string;
   readonly attemptStatus: string | null;
+  readonly providerDeliveryState?: string | null;
 };
 
 const STEP_EXECUTOR: Record<BrandJourneyStep, FrozenExecutorClass | null> = {
@@ -156,9 +157,26 @@ function observationStateFromAttempt(
   return 'uncertain';
 }
 
+function observationStateFromProviderDelivery(
+  providerDeliveryState: string,
+): Exclude<JourneyObservationState, 'not-observed'> {
+  if (providerDeliveryState === 'DELIVERED') return 'delivered';
+  if (providerDeliveryState === 'SENT' || providerDeliveryState === 'ACCEPTED') return 'sent';
+  if (
+    providerDeliveryState === 'FAILED' ||
+    providerDeliveryState === 'BOUNCED' ||
+    providerDeliveryState === 'COMPLAINED' ||
+    providerDeliveryState === 'CANCELLED'
+  ) {
+    return 'failed';
+  }
+  if (providerDeliveryState === 'PENDING') return 'queued';
+  return 'uncertain';
+}
+
 /**
- * Map persisted intent/attempt rows into observation facts.
- * SUCCEEDED COMMUNICATE is sent, not delivered. Delivery needs a later provider proof.
+ * Map persisted intent/attempt/provider rows into observation facts.
+ * Delivery is only claimed from communication_deliveries.state = DELIVERED.
  */
 export function factsFromFrozenExecutorRows(
   correlation: string,
@@ -170,10 +188,14 @@ export function factsFromFrozenExecutorRows(
     if (row.correlation !== parsed) continue;
     if (!FROZEN_EXECUTORS.has(row.executor)) continue;
     const executor = row.executor as FrozenExecutorClass;
+    const providerState =
+      executor === 'COMMUNICATE' && row.providerDeliveryState
+        ? observationStateFromProviderDelivery(row.providerDeliveryState)
+        : null;
     facts.push({
       correlation: parsed,
       executor,
-      state: observationStateFromAttempt(executor, row.attemptStatus),
+      state: providerState ?? observationStateFromAttempt(executor, row.attemptStatus),
     });
   }
   return facts;
