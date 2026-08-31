@@ -5,11 +5,11 @@ Keep #499 draft. This is a contract and source scan, not authenticated e2e.
 ## Landed on this tip
 
 - `classifyRequestPath` splits platform-product, brand, lab.
-- Product APIs `/api/overview`, `/api/context`, `/api/workspaces` return `Cache-Control: private, no-store`.
+- Product APIs `/api/overview`, `/api/context`, `/api/workspaces`, `/api/journey-correlation` return `Cache-Control: private, no-store`.
 - Those routes no longer echo `error.message`.
 - `/api/workspaces` is locked to `SHELL_PLATFORM_SECTIONS` (Home / My work / Tenants / Capabilities / Sending health / Providers / Approvals / Safety / Audit). CRM, GTM, DENTEX, vendors and expenses are not product nav.
 - `assertPlatformPayloadHasNoCustomerPii` / `assertPlatformLogHasNoCustomerPii` reject email, phone and customer-field tokens. Organization names are allowed.
-- Brand CS-104 is an observation plan only (`emptyBrandJourneyObservation`). Mutations stay off.
+- Brand CS-104 is GET-only (`/brand/api/journey`). Platform keeps only the correlation (`/api/journey-correlation`). Mutations stay off.
 
 ## Still open
 
