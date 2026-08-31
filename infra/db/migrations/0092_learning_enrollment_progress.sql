@@ -166,7 +166,7 @@ CREATE INDEX learning_lesson_progress_enrollment_idx
 CREATE OR REPLACE FUNCTION platform.enforce_learning_enrollment_published_version()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 DECLARE
   version_state text;
 BEGIN
@@ -198,7 +198,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER learning_enrollment_published_version
 BEFORE INSERT OR UPDATE ON platform.learning_enrollments
