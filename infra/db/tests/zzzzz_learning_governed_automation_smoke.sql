@@ -90,7 +90,7 @@ BEGIN
 END;
 $$;
 
-DO $
+DO $$
 BEGIN
   BEGIN
     DELETE FROM platform.learning_automation_rules
@@ -106,9 +106,9 @@ BEGIN
     END IF;
   END;
 END;
-$;
+$$;
 
-DO $
+DO $$
 BEGIN
   BEGIN
     INSERT INTO platform.learning_automation_rules (
@@ -132,7 +132,7 @@ BEGIN
     NULL;
   END;
 END;
-$;
+$$;
 
 DROP ROLE IF EXISTS expadio_learning_automation_smoke;
 CREATE ROLE expadio_learning_automation_smoke NOLOGIN;
