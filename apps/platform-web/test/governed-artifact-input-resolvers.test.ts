@@ -4,7 +4,7 @@ import type { DurableArtifactSource } from '@expadio/storage';
 import {
   governedArtifactAiInputResolver,
   governedArtifactVoiceInputResolver,
-} from '../lib/governed-artifact-input-resolvers';
+} from '../lib/governed-artifact-input-resolvers.ts';
 
 test('governedArtifactAiInputResolver propagates tenant and governance requirements', async () => {
   let captured: any = null;
