@@ -29,6 +29,7 @@ import {
   evaluateLearningAssignmentRulesForLearner,
   type LearningAssignmentExecutionResult,
 } from '@expadio/postgres-runtime/learning-assignment-automation';
+import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 
 export type DomainEventGovernedActionResult =
   | CrmCaseGovernedActionResult
@@ -81,36 +82,45 @@ async function evaluateLearningAssignmentsIfApplicable(
   now: Date,
 ): Promise<readonly LearningAssignmentExecutionResult[] | undefined> {
   if (
-    claim.event.aggregateType !== 'learning.learner'
-    || claim.event.eventType !== 'learning.learner.created'
+    claim.event.aggregateType === 'learning.learner'
+    && claim.event.eventType === 'learning.learner.created'
   ) {
-    return undefined;
+    // A learner-created event can outlive the tenant's commercial entitlement.
+    // Consume it without assignments when Learning is no longer operational,
+    // matching the governed-action suspension behavior below.
+    const module = await loadTenantProductModule(client, {
+      tenantId: claim.tenantId,
+      moduleKey: 'learning',
+    });
+    if (module === null || module.availability !== 'ACTIVE') return [];
+
+    // Assignment evaluation owns a transaction-scoped advisory lock. Commit the
+    // idempotent assignment outcomes before horizontal side-effect executors
+    // run; COMMUNICATE owns its own transaction boundary and must not be nested.
+    //
+    // If later materialization/execution fails, the Domain Event outbox retries.
+    // Assignment execution rows and target-assignment checks make that retry
+    // deterministic and duplicate-safe.
+    await client.query('BEGIN');
+    try {
+      const learningAssignments =
+        await evaluateLearningAssignmentRulesForLearner(client, {
+          tenantId: claim.tenantId,
+          learnerId: claim.event.aggregateId,
+          actorSubjectId: 'system:learning-assignment-automation',
+          correlationId: claim.event.correlationId,
+          triggerEventId: claim.eventId,
+          evaluatedAt: now,
+        });
+      await client.query('COMMIT');
+      return learningAssignments;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
   }
 
-  // Assignment evaluation owns a transaction-scoped advisory lock. Commit the
-  // idempotent assignment outcomes before horizontal side-effect executors run;
-  // COMMUNICATE owns its own transaction boundary and must not be nested.
-  //
-  // If later materialization/execution fails, the Domain Event outbox retries.
-  // Assignment execution rows and target-assignment checks make that retry
-  // deterministic and duplicate-safe.
-  await client.query('BEGIN');
-  try {
-    const learningAssignments =
-      await evaluateLearningAssignmentRulesForLearner(client, {
-        tenantId: claim.tenantId,
-        learnerId: claim.event.aggregateId,
-        actorSubjectId: 'system:learning-assignment-automation',
-        correlationId: claim.event.correlationId,
-        triggerEventId: claim.eventId,
-        evaluatedAt: now,
-      });
-    await client.query('COMMIT');
-    return learningAssignments;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  }
+  return undefined;
 }
 
 async function materializeActions(
