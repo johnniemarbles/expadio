@@ -7,15 +7,13 @@ Keep #499 draft. This is a contract and source scan, not authenticated e2e.
 - `classifyRequestPath` splits platform-product, brand, lab.
 - Product APIs `/api/overview`, `/api/context`, `/api/workspaces`, `/api/journey-correlation` return `Cache-Control: private, no-store`.
 - Those routes no longer echo `error.message`.
-- `/api/workspaces` is locked to `SHELL_PLATFORM_SECTIONS` (Home / My work / Tenants / Capabilities / Sending health / Providers / Approvals / Safety / Audit).
-- Lab surfaces (`/crm`, `/gtm`, `/dentex`, `/vendors`, `/expenses`, `/access-requests`, `/authority`) still exist. Contract tests pin those pages, not product nav.
-- Governance subtools stay under `/governance/*` and the Governance Center directory. Product nav has one Approvals entry (`/governance`) and My work (`/governance/queue`).
-- `assertPlatformPayloadHasNoCustomerPii` / `assertPlatformLogHasNoCustomerPii` reject email, phone and customer-field tokens. Organization names are allowed.
-- Brand CS-104 GET `/brand/api/journey` authorizes with the same T/B/L + membership gate, then reads `governed_action_intents` + latest attempt + `communication_deliveries.state` joined on tenant + idempotency key for COMMUNICATE only.
-- The query does not select `configuration`, `metadata`, `dispatch_snapshot`, `last_reason`, or recipient fields.
-- SUCCEEDED COMMUNICATE maps to `sent`. `delivered` is only claimed when `communication_deliveries.state = DELIVERED`. SCHEDULE / CREATE_TASK success stays `queued`.
-- Platform `/api/journey-correlation` still returns only `platformViewOfJourney` and does not query executor or delivery tables.
-- POST `/brand/api/journey` stays 405. No auto-send.
+- `/api/overview` and `/api/context` run `assertPlatformProductPayload` before JSON leaves. A customer-field token fails closed with the generic error body.
+- `platformSafeLogLine` redacts email/phone and refuses leftover customer-field tokens. Deployed log capture is still unproven.
+- `/api/workspaces` is locked to `SHELL_PLATFORM_SECTIONS`.
+- Brand CS-104 GET `/brand/api/journey` authorizes T/B/L + membership, then reads intents + latest attempt + `communication_deliveries.state` for COMMUNICATE. No configuration/metadata/snapshot/recipient columns.
+- `delivered` is only claimed when provider state is `DELIVERED`.
+- Platform `/api/journey-correlation` does not query executor or delivery tables.
+- POST `/brand/api/journey` stays 405.
 
 ## Still open
 

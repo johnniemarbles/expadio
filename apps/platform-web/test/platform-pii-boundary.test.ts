@@ -26,9 +26,11 @@ test('product API sources refuse lab dump and raw error leakage', () => {
   assert.match(workspaces, /SHELL_PLATFORM_SECTIONS/);
   assert.doesNotMatch(workspaces, /href: '\/crm'|href: '\/gtm'|href: '\/dentex'|href: '\/vendors'|href: '\/expenses'/);
   const overview = readFileSync(new URL('../app/api/overview/route.ts', import.meta.url), 'utf8');
+  assert.match(overview, /assertPlatformProductPayload/);
   assert.match(overview, /platformProductDenied|PLATFORM_SAFE_ERROR_MESSAGE/);
   assert.doesNotMatch(overview, /message: error\.message/);
   const context = readFileSync(new URL('../app/api/context/route.ts', import.meta.url), 'utf8');
+  assert.match(context, /assertPlatformProductPayload/);
   assert.match(context, /platformProductDenied|PLATFORM_SAFE_ERROR_MESSAGE/);
   assert.doesNotMatch(context, /message: error\.message/);
   const journey = readFileSync(new URL('../app/api/journey-correlation/route.ts', import.meta.url), 'utf8');

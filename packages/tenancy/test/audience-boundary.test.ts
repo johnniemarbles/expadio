@@ -11,6 +11,7 @@ import {
   classifyRequestPath,
   hostForAudience,
   platformSafeErrorBody,
+  platformSafeLogLine,
   platformSafeRef,
   redactCustomerPii,
 } from '../src/index.ts';
@@ -53,4 +54,7 @@ test('platform errors and logs stay generic', () => {
   assert.equal(redactCustomerPii('contact a@b.invalid at +14155550100'), 'contact [redacted-email] at [redacted-phone]');
   assert.throws(() => assertPlatformLogHasNoCustomerPii('failed for a@b.invalid'), /PLATFORM_PII_LOG_BOUNDARY/);
   assert.doesNotThrow(() => assertPlatformLogHasNoCustomerPii('Overview API Error INTERNAL_ERROR'));
+  assert.equal(platformSafeLogLine('retry CS-104 tenant T-1048'), 'retry CS-104 tenant T-1048');
+  assert.equal(platformSafeLogLine('bounce a@b.invalid'), 'bounce [redacted-email]');
+  assert.throws(() => platformSafeLogLine('dump full_name=Ada'), /PLATFORM_PII_LOG_BOUNDARY/);
 });
