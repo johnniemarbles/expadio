@@ -6,7 +6,6 @@ import {
   RoutedAiGateway,
   aiCapabilityKey,
   type AiGateway,
-  type AiInputResolver,
   type AiProviderAdapter,
 } from '@expadio/ai-gateway';
 import {
@@ -36,15 +35,16 @@ import {
 import {
   PostgresIndexedDurableArtifactSink,
 } from '@expadio/postgres-runtime/indexed-artifact-sink';
-import type { DurableArtifactSink } from '@expadio/storage';
+import type { DurableArtifactSink, DurableArtifactSource } from '@expadio/storage';
 import { delegatedSecretResolver } from './vault-secret-resolver';
+import { governedArtifactAiInputResolver } from './governed-artifact-input-resolvers';
 
 export interface GovernedAiExecutionRuntimeOptions {
   readonly serviceSubjectId: string;
   readonly organizationId: string;
   /** Concrete durable blob/object sink; PostgreSQL indexing is added here. */
   readonly artifactBlobSink: DurableArtifactSink;
-  readonly inputResolver: AiInputResolver;
+  readonly artifactSource: DurableArtifactSource;
   readonly secretResolver?: SecretResolver;
   readonly fetchImpl?: typeof fetch;
   readonly now?: () => Date;
@@ -184,7 +184,7 @@ export async function executePersistedGovernedAiAction(
           new OpenAiAiAdapter({
             apiToken: token,
             artifactSink,
-            inputResolver: input.options.inputResolver,
+            inputResolver,
             ...(input.options.fetchImpl === undefined
               ? {}
               : { fetchImpl: input.options.fetchImpl }),
@@ -200,7 +200,7 @@ export async function executePersistedGovernedAiAction(
           new GeminiAiAdapter({
             apiToken: token,
             artifactSink,
-            inputResolver: input.options.inputResolver,
+            inputResolver,
             ...(input.options.fetchImpl === undefined
               ? {}
               : { fetchImpl: input.options.fetchImpl }),
