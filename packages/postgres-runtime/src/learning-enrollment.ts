@@ -191,6 +191,7 @@ export async function createLearningLearner(
     readonly tenantId: string;
     readonly actorSubjectId: string;
     readonly learner: unknown;
+    readonly correlationId?: string;
   },
 ): Promise<LearningLearner> {
   await requireLearning(client, input.tenantId);
@@ -223,6 +224,27 @@ export async function createLearningLearner(
     );
     const row = result.rows[0];
     if (row === undefined) throw new Error('LEARNING_LEARNER_INSERT_FAILED');
+
+    await appendDomainEventWithOutbox(client, {
+      event: {
+        eventId: randomUUID(),
+        tenantId: input.tenantId,
+        aggregateType: 'learning.learner',
+        aggregateId: row.learner_id,
+        eventType: 'learning.learner.created',
+        eventVersion: 1,
+        occurredAt: new Date(),
+        actorSubjectId: input.actorSubjectId,
+        correlationId: input.correlationId?.trim() || randomUUID(),
+        payload: {
+          learnerId: row.learner_id,
+          audienceType: row.audience_type,
+          subjectBound: row.subject_id !== null,
+        },
+        metadata: { source: 'learning.learner.lifecycle' },
+      },
+    });
+
     return learner(row);
   } catch (error: any) {
     if (error?.code === '23505') throw new Error('LEARNING_LEARNER_IDENTITY_EXISTS');
