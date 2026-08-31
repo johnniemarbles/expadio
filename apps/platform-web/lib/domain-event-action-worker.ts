@@ -10,6 +10,10 @@ import {
   type CrmCaseGovernedActionResult,
 } from './crm-case-governed-actions';
 import {
+  materializeLearningGovernedActionsForEvent,
+  type LearningGovernedActionResult,
+} from './learning-governed-actions';
+import {
   executeGovernedCommunicateAction,
   type GovernedCommunicateExecutionResult,
 } from './governed-communicate-executor';
@@ -22,12 +26,16 @@ import {
   type GovernedCreateTaskExecutionResult,
 } from './governed-create-task-executor';
 
+export type DomainEventGovernedActionResult =
+  | CrmCaseGovernedActionResult
+  | LearningGovernedActionResult;
+
 export type DomainEventActionWorkerResult =
   | { readonly status: 'IDLE' }
   | {
       readonly status: 'PUBLISHED';
       readonly claim: DomainEventOutboxClaim;
-      readonly actions: readonly CrmCaseGovernedActionResult[];
+      readonly actions: readonly DomainEventGovernedActionResult[];
       readonly communications: readonly GovernedCommunicateExecutionResult[];
       readonly schedules: readonly GovernedScheduleExecutionResult[];
       readonly tasks: readonly GovernedCreateTaskExecutionResult[];
@@ -66,8 +74,9 @@ async function failClaim(
  * Process one tenant-scoped Domain Event outbox item.
  *
  * This is the composition boundary: generic outbox leasing remains horizontal;
- * crm.case materialization and COMMUNICATE execution stay in the application
- * layer where the relevant aggregate context and communication runtime exist.
+ * aggregate-specific materialization stays in the application layer while
+ * executor classes remain horizontal. crm.case and Learning events therefore
+ * share one leased outbox worker and the same governed execution runtimes.
  */
 export async function processOneDomainEventActionWorkItem(
   client: PoolClient,
@@ -89,22 +98,42 @@ export async function processOneDomainEventActionWorkItem(
   if (claim === null) return { status: 'IDLE' };
 
   try {
-    if (claim.event.aggregateType !== 'crm.case') {
+    let actions: readonly DomainEventGovernedActionResult[];
+    if (claim.event.aggregateType === 'crm.case') {
+      actions = await materializeCrmCaseGovernedActionsForEvent(client, {
+        tenantId: claim.tenantId,
+        eventId: claim.eventId,
+        now: () => now,
+      });
+    } else if (claim.event.aggregateType.startsWith('learning.')) {
+      actions = await materializeLearningGovernedActionsForEvent(client, {
+        tenantId: claim.tenantId,
+        eventId: claim.eventId,
+        now: () => now,
+      });
+    } else {
       const completed = await completeDomainEventOutbox(client, {
         tenantId: claim.tenantId,
         outboxId: claim.outboxId,
         claimedAt: claim.claimedAt,
         completedAt: now,
       });
-      if (!completed) return { status: 'STALE_CLAIM', claim, reason: 'Claim was superseded before completion.' };
-      return { status: 'PUBLISHED', claim, actions: [], communications: [], schedules: [], tasks: [] };
+      if (!completed) {
+        return {
+          status: 'STALE_CLAIM',
+          claim,
+          reason: 'Claim was superseded before completion.',
+        };
+      }
+      return {
+        status: 'PUBLISHED',
+        claim,
+        actions: [],
+        communications: [],
+        schedules: [],
+        tasks: [],
+      };
     }
-
-    const actions = await materializeCrmCaseGovernedActionsForEvent(client, {
-      tenantId: claim.tenantId,
-      eventId: claim.eventId,
-      now: () => now,
-    });
 
     const skipped = actions.find((action) => action.status === 'SKIPPED');
     if (skipped !== undefined) {
