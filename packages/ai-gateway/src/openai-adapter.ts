@@ -146,7 +146,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
     const provenance: AiProvenance = {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
-      modelKey: embeddingModelKey,
+      modelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
       sourceReferences: [
@@ -250,7 +250,7 @@ export class OpenAiAiAdapter implements AiProviderAdapter {
     const provenance: AiProvenance = {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
-      modelKey,
+      modelKey: embeddingModelKey,
       promptConfigurationKey: intent.promptConfiguration.key,
       promptConfigurationVersion: intent.promptConfiguration.version,
       sourceReferences: [resolvedInput.sourceReference],
