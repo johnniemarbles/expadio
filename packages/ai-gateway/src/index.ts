@@ -54,7 +54,15 @@ export interface AiProvenance {
   readonly sourceReferences: readonly string[];
   readonly processedAt: string;
   readonly region?: string;
+  /** Reconciled/authoritative cost only. */
   readonly costMinorUnits?: number;
+  /** Provider-usage-derived estimate; never billing evidence. */
+  readonly estimatedCostMinorUnits?: number;
+  readonly providerUsage?: {
+    readonly inputTokens?: number;
+    readonly outputTokens?: number;
+    readonly totalTokens?: number;
+  };
 }
 
 export type AiContractValidationCode =
@@ -75,7 +83,9 @@ export type AiContractValidationCode =
   | 'AI_PROVENANCE_PROMPT_MISMATCH'
   | 'AI_PROVENANCE_SOURCE_REQUIRED'
   | 'AI_PROVENANCE_PROCESSED_AT_INVALID'
-  | 'AI_PROVENANCE_COST_INVALID';
+  | 'AI_PROVENANCE_COST_INVALID'
+  | 'AI_PROVENANCE_ESTIMATED_COST_INVALID'
+  | 'AI_PROVENANCE_USAGE_INVALID';
 
 export interface AiContractValidationIssue {
   readonly code: AiContractValidationCode;
@@ -212,6 +222,30 @@ export function validateAiProposal(
     issues.push({
       code: 'AI_PROVENANCE_COST_INVALID',
       path: 'provenance.costMinorUnits',
+    });
+  }
+  if (
+    proposal.provenance.estimatedCostMinorUnits !== undefined
+    && (
+      !Number.isInteger(proposal.provenance.estimatedCostMinorUnits)
+      || proposal.provenance.estimatedCostMinorUnits < 0
+    )
+  ) {
+    issues.push({
+      code: 'AI_PROVENANCE_ESTIMATED_COST_INVALID',
+      path: 'provenance.estimatedCostMinorUnits',
+    });
+  }
+  const usage = proposal.provenance.providerUsage;
+  if (
+    usage !== undefined
+    && Object.values(usage).some(
+      (value) => value !== undefined && (!Number.isInteger(value) || value < 0),
+    )
+  ) {
+    issues.push({
+      code: 'AI_PROVENANCE_USAGE_INVALID',
+      path: 'provenance.providerUsage',
     });
   }
   return result(issues);
