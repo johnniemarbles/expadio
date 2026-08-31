@@ -1,4 +1,5 @@
 import type { ConnectorDefinition } from "@expadio/provider-registry";
+import type { DurableArtifactSink } from "@expadio/storage";
 import type {
   AiInvocationIntent,
   AiOperation,
@@ -20,6 +21,7 @@ export type AiApiTokenProvider = (request: AiCredentialRequest) => Promise<strin
 
 export interface GeminiAiAdapterOptions {
   readonly apiToken: AiApiTokenProvider;
+  readonly artifactSink: DurableArtifactSink;
   readonly modelKey?: string;
   readonly endpointBaseUrl?: string;
   readonly fetchImpl?: typeof fetch;
@@ -29,6 +31,7 @@ export interface GeminiAiAdapterOptions {
 export class GeminiAiAdapter implements AiProviderAdapter {
   readonly adapterKey = "gemini-v1";
   readonly #apiToken: AiApiTokenProvider;
+  readonly #artifactSink: DurableArtifactSink;
   readonly #defaultModelKey: string;
   readonly #endpointBaseUrl: string;
   readonly #fetch: typeof fetch;
@@ -36,6 +39,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
 
   constructor(options: GeminiAiAdapterOptions) {
     this.#apiToken = options.apiToken;
+    this.#artifactSink = options.artifactSink;
     this.#defaultModelKey = options.modelKey ?? "gemini-2.0-flash";
     this.#endpointBaseUrl = (options.endpointBaseUrl ?? "https://generativelanguage.googleapis.com").replace(/\/+$/u, "");
     this.#fetch = options.fetchImpl ?? fetch;
@@ -143,11 +147,22 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       costMinorUnits,
     };
 
+    const artifact = await this.#artifactSink.write({
+      tenantId: intent.tenantId,
+      artifactKind: "AI_TEXT",
+      sourceKind: "AI_INVOCATION",
+      sourceId: intent.invocationId,
+      content: generatedText,
+      contentType: "text/plain; charset=utf-8",
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+
     return {
       invocationId: intent.invocationId,
       tenantId: intent.tenantId,
       status: intent.operation === "EXTRACT" || intent.operation === "CLASSIFY" ? "PROPOSAL" : "OBSERVATION",
-      outputReference: `ref://ai-output/${intent.invocationId}#${encodeURIComponent(generatedText.slice(0, 120))}`,
+      outputReference: artifact.contentReference,
       confidence: 0.95,
       provenance,
     };
@@ -183,6 +198,18 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       throw new Error(`AI_PROVIDER_ERROR: Gemini responded with status ${response.status}: ${errorText}`);
     }
 
+    const embeddingPayload = await response.json() as unknown;
+    const artifact = await this.#artifactSink.write({
+      tenantId: intent.tenantId,
+      artifactKind: "AI_EMBEDDING",
+      sourceKind: "AI_INVOCATION",
+      sourceId: intent.invocationId,
+      content: JSON.stringify(embeddingPayload),
+      contentType: "application/json",
+      requiredResidencyTags: intent.governance.requiredResidencyTags,
+      requiredComplianceTags: intent.governance.requiredComplianceTags,
+    });
+
     const provenance: AiProvenance = {
       connectorKey: connector.connectorKey,
       providerKey: connector.providerKey,
@@ -199,7 +226,7 @@ export class GeminiAiAdapter implements AiProviderAdapter {
       invocationId: intent.invocationId,
       tenantId: intent.tenantId,
       status: "OBSERVATION",
-      outputReference: `ref://ai-embedding/${intent.invocationId}`,
+      outputReference: artifact.contentReference,
       confidence: 1.0,
       provenance,
     };
