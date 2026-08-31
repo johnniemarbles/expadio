@@ -214,3 +214,27 @@ test("executeGovernedAiAction binds attempts to the persisted Action Intent ID",
   assert.equal(result.attempt.actionIntentId, persistedActionIntentId);
   assert.match(result.attempt.attemptKey, new RegExp(persistedActionIntentId));
 });
+
+
+test("executeGovernedAiAction rejects malformed context references before provider invocation", async () => {
+  const invalidIntent: GovernedActionIntent = {
+    ...intent,
+    configuration: {
+      ...intent.configuration,
+      contextReference: { unsafe: true },
+    },
+  };
+
+  const mockGateway: AiGateway = {
+    invoke: async () => assert.fail("Should not invoke gateway"),
+  };
+
+  const result = await executeGovernedAiAction({
+    intent: invalidIntent,
+    aiGateway: mockGateway,
+  });
+
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
+  assert.match(result.reason, /AI_ACTION_CONTEXT_REFERENCE_INVALID/);
+});
