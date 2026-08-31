@@ -22,7 +22,8 @@ and role. Each context field is explicitly resolved or unresolved.
 
 Codes use the namespace prefix followed by at least four decimal digits. This
 contract does not allocate codes. Persistence lives in
-`platform.product_scope_bindings` (migration 0088). An empty table is still
+`platform.product_scope_bindings` (migration 0088). Lookup is
+`platform.lookup_product_scope_binding` (migration 0089). An empty table is still
 unresolved mapping. An unresolved pack must not silently become the neutral pack.
 
 `ShellScopeStorageKeys` describes tenantId, organizationId and operatingUnitId
@@ -58,11 +59,12 @@ audience switch must reauthorize and clear prior audience data. Frontend labels,
 a shared session, a scope query parameter or removal of a link do not establish
 a server boundary.
 
-Brand customer reads are authorized at `app.expadio.com` `/api/brand/customers`
-by `authorizeBrandCustomerRequest`. The kernel can serve an injected reader after
-membership resolution. A Next Brand host is not mounted. These reads must not
-call Platform `/api/tenant`. `L-####` and SELECTED membership stay fail-closed
-until CRM unit ownership is proven.
+Brand customer reads are authorized by `authorizeBrandCustomerRequest` on
+`app.expadio.com` `/api/brand/customers`, or the same-origin fallback
+`/brand/api/customers`. The kernel serves an injected canonical CRM reader after
+membership resolution. These reads must not call Platform `/api/tenant`.
+`L-####` and SELECTED membership stay fail-closed until CRM unit ownership is
+proven. Platform `ShellFrame` must not link `/brand` or `/tenant`.
 
 ## Integration gate — still open
 
@@ -70,8 +72,8 @@ until CRM unit ownership is proven.
    to /tenant and remove the superseded Northstar Dental HTML from the PR tip.
 2. Establish the separate Brand app/shell composition (target apps/brand-web),
    importing this shared contract. The current /tenant in apps/platform-web is
-   only a draft read-model lab. No app extraction or two-shell integration is
-   claimed by this correction.
+   only a draft read-model lab. `/brand` is a same-origin fallback, not the
+   completed Brand deploy.
 3. Implement the verified product/storage mappings and server scope adapters in
    both apps. Role homes remain owner, manager, operator and approver. Restricted
    location/workspace access stays fail-closed until its ownership is verified.

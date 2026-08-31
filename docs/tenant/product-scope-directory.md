@@ -1,8 +1,8 @@
 # Product scope directory — migration review
 
-Status: table added on draft #499 as `0088_product_scope_bindings.sql`. Not merged.
+Status: table `0088_product_scope_bindings.sql` and lookup `0089_product_scope_lookup.sql` on draft #499. Not merged.
 
-## Why 0088
+## Why 0088 / 0089
 
 - `0083`–`0085` are unused numbers.
 - `0086` is reserved by the social draft.
@@ -18,24 +18,26 @@ Status: table added on draft #499 as `0088_product_scope_bindings.sql`. Not merg
 - Empty table = mapping unavailable. No code is invented from a UUID and no UUID is invented from a code.
 - One T-code cannot point at two tenant ids. One B-code cannot change tenant or organization. `ALL` cannot carry a unit id.
 
+`platform.lookup_product_scope_binding(tenant, brand, location)` returns one ACTIVE row. It exists because the table is RLS-bound to `current_tenant_id()` and Brand requests only know product codes until mapping succeeds.
+
 ## What this table is not
 
 - Not a second membership, IAM, or authorization engine.
-- Not a Brand host and not a live CRM read.
+- Not a completed Brand deploy on `app.expadio.com`.
 - Not an allocator of product codes.
 - Not Platform `/api/tenant`.
 - No seed of Northstar / DENTEX / customer names.
 
 ## Application path
 
-1. Repository lists active rows.
-2. `@expadio/tenancy-persistence` `loadScopeDirectory` passes rows to `createScopeDirectoryFromRows`.
-3. Both shells call `mapShellScopeToStorageKeys(scope, directory)`.
-4. Brand customer reads use `planBrandCustomerRead` → `app.expadio.com` `/api/brand/customers` with `served: false` until a Brand host exists.
+1. Brand request carries `tenant` / `brand` / `location` product codes.
+2. `lookup_product_scope_binding` returns at most one row.
+3. `createScopeDirectoryFromRows` feeds `authorizeBrandCustomerRequest`.
+4. Membership is loaded after the mapped tenant GUC is set.
+5. Canonical `readCustomers` runs on those keys. Same-origin route: `/brand/api/customers`.
 
 ## Still open
 
-- Server-authorized Brand host that actually serves `/api/brand/customers`.
-- Membership check on the mapped keys before any CRM read.
+- Separate Brand Next host on `app.expadio.com`.
 - Platform PII proof.
 - CS-104 journey on frozen executors.
