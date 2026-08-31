@@ -1,4 +1,5 @@
 import { BRAND_HOST } from './hosts.ts';
+import { ScopeMappingError } from './scope-adapter.ts';
 import { BRAND_CUSTOMER_ROUTE, assertNotPlatformTenantLab, planBrandCustomerRead } from './brand-reads.ts';
 import type { ShellScope, ShellScopeStorageKeys } from './shell-scope.ts';
 import type { ScopeDirectory } from './scope-directory.ts';
@@ -61,6 +62,17 @@ function requestPath(path: string): string {
   return bare.startsWith('/') ? bare : `/${bare}`;
 }
 
+function refusePlatformLab(target: string): void {
+  try {
+    assertNotPlatformTenantLab(target);
+  } catch (error) {
+    if (error instanceof ScopeMappingError) {
+      throw new BrandHostError(403, error.code, error.message);
+    }
+    throw error;
+  }
+}
+
 /**
  * Server-side Brand audience gate. Host + route + mapped keys + current membership.
  * CRM unit ownership is still unproven, so L-#### and SELECTED membership stay closed.
@@ -75,7 +87,7 @@ export function authorizeBrandCustomerRequest(
 
   const host = requestHost(request.host);
   const path = requestPath(request.path);
-  assertNotPlatformTenantLab(`${host}${path}`);
+  refusePlatformLab(`${host}${path}`);
 
   if (host !== BRAND_HOST) {
     throw new BrandHostError(403, 'BRAND_HOST_REQUIRED', 'Brand reads are served on app.expadio.com.');
