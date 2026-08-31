@@ -1,4 +1,4 @@
-import { LearningValidationError } from '@expadio/learning';
+import { LearningAssessmentValidationError, LearningValidationError } from '@expadio/learning';
 
 export interface LearningApiError {
   readonly status: number;
@@ -11,7 +11,10 @@ export interface LearningApiError {
 }
 
 export function learningApiError(error: unknown): LearningApiError | null {
-  if (error instanceof LearningValidationError) {
+  if (
+    error instanceof LearningValidationError
+    || error instanceof LearningAssessmentValidationError
+  ) {
     return {
       status: 400,
       body: {
@@ -131,6 +134,12 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_LEARNER_CONTACT_NOT_FOUND':
     case 'LEARNING_ENROLLMENT_NOT_FOUND':
     case 'LEARNING_LESSON_NOT_IN_ENROLLMENT':
+    case 'LEARNING_QUESTION_BANK_NOT_FOUND':
+    case 'LEARNING_QUESTION_NOT_FOUND':
+    case 'LEARNING_QUESTION_VERSION_NOT_FOUND':
+    case 'LEARNING_ASSESSMENT_NOT_FOUND':
+    case 'LEARNING_ASSESSMENT_VERSION_NOT_FOUND':
+    case 'LEARNING_ASSESSMENT_ATTEMPT_NOT_FOUND':
       return {
         status: 404,
         body: {
@@ -145,6 +154,22 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSIGNMENT_KEY_CONFLICT':
     case 'LEARNING_COURSE_NOT_PUBLISHED':
     case 'LEARNING_ENROLLMENT_NOT_PROGRESSABLE':
+    case 'LEARNING_QUESTION_BANK_KEY_EXISTS':
+    case 'LEARNING_QUESTION_KEY_EXISTS':
+    case 'LEARNING_QUESTION_VERSION_NOT_PUBLISHABLE':
+    case 'LEARNING_ASSESSMENT_KEY_EXISTS':
+    case 'LEARNING_ASSESSMENT_VERSION_NOT_PUBLISHABLE':
+    case 'LEARNING_ASSESSMENT_ITEMS_REQUIRED':
+    case 'LEARNING_ASSESSMENT_QUESTION_NOT_FOUND':
+    case 'LEARNING_ASSESSMENT_QUESTION_NOT_PUBLISHED':
+    case 'LEARNING_ASSESSMENT_COURSE_VERSION_NOT_AVAILABLE':
+    case 'LEARNING_ASSESSMENT_ATTEMPT_KEY_CONFLICT':
+    case 'LEARNING_ASSESSMENT_ATTEMPT_LIMIT_REACHED':
+    case 'LEARNING_ASSESSMENT_NOT_ASSIGNED':
+    case 'LEARNING_ASSESSMENT_ENROLLMENT_MISMATCH':
+    case 'LEARNING_ASSESSMENT_ATTEMPT_NOT_SUBMITTABLE':
+    case 'LEARNING_ASSESSMENT_ATTEMPT_EXPIRED':
+    case 'LEARNING_ASSESSMENT_ITEMS_MISSING':
       return {
         status: 409,
         body: {
