@@ -22,11 +22,11 @@ test('learner administration is tenant-contextual and admin-only', () => {
 });
 
 test('learner self-service binds both subject and verified issuer', () => {
-  assert.match(context, /readonly issuer: string \| null/);
+  assert.match(context, /readonly issuer\?: string \| null/);
   assert.match(context, /issuer: effective\.issuer \?\? null/);
   for (const source of [mine, complete, transcript]) {
     assert.match(source, /subjectId: context\.subjectId/);
-    assert.match(source, /subjectIssuer: context\.issuer/);
+    assert.match(source, /subjectIssuer: context\.issuer \?\? null/);
     assert.doesNotMatch(source, /hasLearningAuthoringRole/);
   }
   assert.match(runtime, /subject_issuer IS NOT DISTINCT FROM \$3/);
