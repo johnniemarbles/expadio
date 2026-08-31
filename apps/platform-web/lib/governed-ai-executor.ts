@@ -36,8 +36,8 @@ import {
   PostgresIndexedDurableArtifactSink,
 } from '@expadio/postgres-runtime/indexed-artifact-sink';
 import type { DurableArtifactSink, DurableArtifactSource } from '@expadio/storage';
-import { delegatedSecretResolver } from './vault-secret-resolver';
-import { governedArtifactAiInputResolver } from './governed-artifact-input-resolvers';
+import { delegatedSecretResolver } from './vault-secret-resolver.ts';
+import { governedArtifactAiInputResolver } from './governed-artifact-input-resolvers.ts';
 
 export interface GovernedAiExecutionRuntimeOptions {
   readonly serviceSubjectId: string;
