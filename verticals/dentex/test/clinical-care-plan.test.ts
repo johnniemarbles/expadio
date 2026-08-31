@@ -15,6 +15,8 @@ test("validateToothNumber validates universal 1-32 numbering and primary letters
   assert.equal(validateToothNumber("A"), true);
   assert.equal(validateToothNumber("T"), true);
   assert.equal(validateToothNumber("Z"), false);
+  assert.equal(validateToothNumber("19abc"), false);
+  assert.equal(validateToothNumber("019"), false);
 });
 
 test("STANDARD_CDT_PROCEDURES contains standard categories", () => {
@@ -23,7 +25,7 @@ test("STANDARD_CDT_PROCEDURES contains standard categories", () => {
   assert.equal(STANDARD_CDT_PROCEDURES.D3330.category, "ENDODONTICS");
 });
 
-test("extractDentexClinicalConsultation extracts tooth, CDT procedure, and urgency from crown notes", async () => {
+test("extractDentexClinicalConsultation surfaces only explicitly stated tooth and CDT code", async () => {
   const mockProposal: AiProposal = {
     invocationId: "inv_crown_1",
     tenantId: "tenant_dentex_01",
@@ -57,13 +59,12 @@ test("extractDentexClinicalConsultation extracts tooth, CDT procedure, and urgen
 
   assert.equal(result.proposedTreatmentAttributes.tooth, "19");
   assert.equal(result.proposedTreatmentAttributes.procedureCode, "D2740");
-  assert.equal(result.proposedTreatmentAttributes.urgency, "Priority");
-  assert.equal(result.extractedFindings.length, 1);
-  assert.equal(result.extractedFindings[0].tooth, "19");
-  assert.equal(result.extractedFindings[0].severity, "MODERATE");
+  assert.equal(result.proposedTreatmentAttributes.urgency, undefined);
+  assert.equal(result.recommendedUrgency, null);
+  assert.equal(result.extractedFindings.length, 0);
 });
 
-test("extractDentexClinicalConsultation flags emergency urgency for root canal / severe abscess", async () => {
+test("extractDentexClinicalConsultation never invents clinical facts when identifiers are absent", async () => {
   const mockProposal: AiProposal = {
     invocationId: "inv_endo_1",
     tenantId: "tenant_dentex_01",
@@ -90,13 +91,48 @@ test("extractDentexClinicalConsultation flags emergency urgency for root canal /
     tenantId: "tenant_dentex_01",
     patientId: "pat_002",
     practiceId: "prac_001",
-    consultationNotes: "Severe pain on tooth #14 with acute apical abscess. Immediate root canal D3330 required.",
+    consultationNotes: "Patient reports severe pain and may need a root canal. Tooth and diagnosis not yet confirmed.",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_02",
   });
 
-  assert.equal(result.proposedTreatmentAttributes.tooth, "14");
-  assert.equal(result.proposedTreatmentAttributes.procedureCode, "D3330");
-  assert.equal(result.proposedTreatmentAttributes.urgency, "Emergency");
-  assert.equal(result.extractedFindings[0].severity, "SEVERE");
+  assert.deepEqual(result.proposedTreatmentAttributes, {});
+  assert.equal(result.recommendedUrgency, null);
+  assert.deepEqual(result.extractedFindings, []);
+});
+
+test("extractDentexClinicalConsultation ignores unsupported or implicit procedure codes", async () => {
+  const mockProposal: AiProposal = {
+    invocationId: "inv_unknown_code",
+    tenantId: "tenant_dentex_01",
+    status: "PROPOSAL",
+    outputReference: "ref://ai-output/unknown_code",
+    confidence: 0.95,
+    provenance: {
+      connectorKey: "connector.ai.gemini.us",
+      providerKey: "google-ai",
+      modelKey: "gemini-2.0-flash",
+      promptConfigurationKey: "prompt.dentex.clinical_extraction",
+      promptConfigurationVersion: 1,
+      sourceReferences: ["notes"],
+      processedAt: new Date().toISOString(),
+      costMinorUnits: 1,
+    },
+  };
+
+  const mockAiGateway: AiGateway = { invoke: async () => mockProposal };
+
+  const result = await extractDentexClinicalConsultation({
+    tenantId: "tenant_dentex_01",
+    patientId: "pat_003",
+    practiceId: "prac_001",
+    consultationNotes: "Discussed possible crown on tooth #12; no procedure code selected. Reference D9999 is not in the governed registry.",
+    aiGateway: mockAiGateway,
+    idempotencyKey: "idem_consult_03",
+  });
+
+  assert.equal(result.proposedTreatmentAttributes.tooth, "12");
+  assert.equal(result.proposedTreatmentAttributes.procedureCode, undefined);
+  assert.equal(result.recommendedUrgency, null);
+  assert.deepEqual(result.extractedFindings, []);
 });
