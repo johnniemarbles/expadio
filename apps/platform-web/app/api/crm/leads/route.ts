@@ -25,6 +25,8 @@ export function toLead(row: any): CrmLead & { accountName: string | null } {
     source: row.source ?? null,
     rawPayload: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {},
     ownerSubjectId: row.owner_subject_id ?? null,
+    captureLeadId: row.capture_lead_id ?? null,
+    captureLayerId: row.capture_layer_id ?? null,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     accountName: row.account_name ?? null,
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
       const result = await client.query(
         `SELECT l.lead_id, l.tenant_id, l.account_id, l.contact_id, l.title, l.stage,
                 l.amount_minor_units, l.currency, l.source, l.raw_payload, l.owner_subject_id,
-                l.created_at, l.updated_at, a.name AS account_name
+                l.capture_lead_id, l.capture_layer_id, l.created_at, l.updated_at, a.name AS account_name
            FROM platform.crm_leads l
            LEFT JOIN platform.crm_accounts a ON a.account_id = l.account_id
           WHERE ($1 = '' OR l.stage = $1)
@@ -84,7 +86,8 @@ export async function POST(request: Request) {
              (tenant_id, account_id, contact_id, title, stage, amount_minor_units, currency, source, raw_payload, owner_subject_id)
            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
            RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
-                     amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at`,
+                     amount_minor_units, currency, source, raw_payload, owner_subject_id,
+                     capture_lead_id, capture_layer_id, created_at, updated_at`,
           [
             context.tenantId, input.accountId, input.contactId, input.title, input.stage,
             input.amountMinorUnits, input.currency, input.source, JSON.stringify(input.rawPayload), context.subjectId,
