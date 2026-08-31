@@ -1437,7 +1437,8 @@ async function loadCompetencyProgress(
     [tenantId, learnerId],
   );
 
-  const groups = new Map<string, typeof rows.rows>();
+  type CompetencyProgressRow = (typeof rows.rows)[number];
+  const groups = new Map<string, CompetencyProgressRow[]>();
   for (const row of rows.rows) {
     const current = groups.get(row.competency_definition_id) ?? [];
     current.push(row);
