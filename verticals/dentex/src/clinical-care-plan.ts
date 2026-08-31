@@ -67,6 +67,7 @@ export interface ClinicalConsultationExtractionInput {
   readonly patientId: string;
   readonly practiceId: string;
   readonly consultationNotes: string;
+  readonly consultationNotesReference: string;
   readonly aiGateway: AiGateway;
   readonly idempotencyKey: string;
 }
@@ -86,12 +87,19 @@ export function validateToothNumber(tooth: string): boolean {
 export async function extractDentexClinicalConsultation(
   input: ClinicalConsultationExtractionInput
 ): Promise<ClinicalConsultationExtractionResult> {
+  if (input.consultationNotes.trim() === "") {
+    throw new Error("DENTEX_CONSULTATION_NOTES_REQUIRED");
+  }
+  if (input.consultationNotesReference.trim() === "") {
+    throw new Error("DENTEX_CONSULTATION_NOTES_REFERENCE_REQUIRED");
+  }
+
   const intent: AiInvocationIntent = {
     invocationId: `inv_consultation_${input.idempotencyKey}`,
     tenantId: input.tenantId,
     operation: "EXTRACT",
     purpose: "Extract dental findings, tooth numbers, and CDT procedure codes from clinical notes",
-    inputReference: input.consultationNotes,
+    inputReference: input.consultationNotesReference,
     promptConfiguration: {
       key: "prompt.dentex.clinical_extraction",
       version: 1,
