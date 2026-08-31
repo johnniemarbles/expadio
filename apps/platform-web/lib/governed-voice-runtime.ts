@@ -115,7 +115,7 @@ export async function invokeGovernedVoiceIntelligence(
       secretResolver,
       requestedBySubjectId: serviceSubjectId,
       requestId: () => randomUUID(),
-      correlationId: () => input.intent.idempotencyKey,
+      correlationId: () => input.intent.correlationId,
       now: credentialNow,
     });
 
