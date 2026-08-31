@@ -63,6 +63,15 @@ export async function POST(request: Request) {
       'programId',
     );
     const assignmentKey = body.assignmentKey ?? request.headers.get('idempotency-key');
+    const sourceType = body.sourceType ?? 'MANUAL';
+    if (
+      sourceType !== 'MANUAL'
+      && sourceType !== 'RULE'
+      && sourceType !== 'IMPORT'
+      && sourceType !== 'SELF'
+    ) {
+      throw new Error('LEARNING_PROGRAM_SOURCE_TYPE_INVALID');
+    }
 
     const result = await withTenantTransaction(context, async (client) => {
       if (!(await hasLearningAuthoringRole(client, context.subjectId))) return { forbidden: true } as const;
@@ -74,12 +83,7 @@ export async function POST(request: Request) {
           learnerId,
           programId,
           assignmentKey,
-          sourceType:
-            body.sourceType === 'RULE'
-            || body.sourceType === 'IMPORT'
-            || body.sourceType === 'SELF'
-              ? body.sourceType
-              : 'MANUAL',
+          sourceType,
         }),
       } as const;
     });
