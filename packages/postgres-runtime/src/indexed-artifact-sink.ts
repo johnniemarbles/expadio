@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type {
   DurableArtifactSink,
   DurableArtifactWriteInput,
@@ -32,6 +33,20 @@ export class PostgresIndexedDurableArtifactSink implements DurableArtifactSink {
     input: DurableArtifactWriteInput,
   ): Promise<DurableArtifactWriteResult> {
     const stored = await this.#delegate.write(input);
+
+    const contentBytes = typeof input.content === 'string'
+      ? new TextEncoder().encode(input.content)
+      : input.content;
+    const expectedSha256 = createHash('sha256')
+      .update(contentBytes)
+      .digest('hex');
+
+    if (stored.sha256.toLowerCase() !== expectedSha256) {
+      throw new Error('EXECUTION_ARTIFACT_STORAGE_DIGEST_MISMATCH');
+    }
+    if (stored.byteLength !== contentBytes.byteLength) {
+      throw new Error('EXECUTION_ARTIFACT_STORAGE_BYTE_LENGTH_MISMATCH');
+    }
 
     await persistExecutionArtifact(this.#client, {
       tenantId: input.tenantId,
