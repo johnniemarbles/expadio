@@ -15,6 +15,9 @@
 | adapter | `linkedin-social-text-v1` |
 | lease purpose | `communication.social.send:{purpose}` |
 | migration | `0086_communication_social_channel.sql` |
+| addressKind | `subject` |
+| requiresConsent | `true` |
+| supportsSuppression | `false` (revoke the connector; do not use a bounce list) |
 
 Recipient addressing uses `subjectId` (LinkedIn person id or `urn:li:person:…`). Social is **not** a sender-identity channel: do not add it to `CommunicationSenderChannel` or `communication_sender_identities`.
 

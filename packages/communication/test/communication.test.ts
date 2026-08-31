@@ -23,7 +23,7 @@ test('communication channel registry preserves consent and suppression semantics
   assert.equal(communicationChannelMetadata('email').supportsSuppression, true);
   assert.equal(communicationChannelMetadata('in_app').supportsSuppression, false);
   assert.equal(communicationChannelMetadata('social').requiresConsent, true);
-  assert.equal(communicationChannelMetadata('social').supportsSuppression, true);
+  assert.equal(communicationChannelMetadata('social').supportsSuppression, false);
   assert.equal(communicationChannelMetadata('social').addressKind, 'subject');
   assert.equal(listCommunicationChannels().length, 8);
 });
@@ -114,4 +114,19 @@ test('social preflight requires subjectId and consent', () => {
   });
   assert.equal(noConsent.allowed, false);
   assert.equal(noConsent.reasonCode, 'CONSENT_MISSING');
+});
+
+test('social ignores bounce-list suppression; revoke the connector instead', () => {
+  const decision = evaluateCommunicationPreflight({
+    intent: {
+      ...baseIntent,
+      recipient: { subjectId: 'urn:li:person:abc' },
+      channel: 'social',
+    },
+    channel: 'social',
+    consentGranted: true,
+    suppression: { reason: 'OPT_OUT' },
+  });
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.reasonCode, 'OK');
 });

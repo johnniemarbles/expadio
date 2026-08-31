@@ -32,7 +32,7 @@ const CHANNELS: Readonly<Record<CommunicationChannel, CommunicationChannelMetada
   in_app: { channel: 'in_app', addressKind: 'subject', requiresConsent: false, supportsSuppression: false },
   push: { channel: 'push', addressKind: 'push', requiresConsent: true, supportsSuppression: true },
   rcs: { channel: 'rcs', addressKind: 'phone', requiresConsent: true, supportsSuppression: true },
-  social: { channel: 'social', addressKind: 'subject', requiresConsent: true, supportsSuppression: true },
+  social: { channel: 'social', addressKind: 'subject', requiresConsent: true, supportsSuppression: false },
 };
 
 export function communicationChannelMetadata(channel: CommunicationChannel): CommunicationChannelMetadata {
