@@ -53,6 +53,7 @@ test("extractDentexClinicalConsultation surfaces only explicitly stated tooth an
     patientId: "pat_001",
     practiceId: "prac_001",
     consultationNotes: "Patient presented with fractured mesial-lingual cusp on tooth #19. Recommend ceramic crown D2740.",
+    consultationNotesReference: "artifact://clinical-note/pat_001/consult_01",
     aiGateway: mockAiGateway,
     idempotencyKey: "idem_consult_01",
       correlationId: "corr-consult-01",
