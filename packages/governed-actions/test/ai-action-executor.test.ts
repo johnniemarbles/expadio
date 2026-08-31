@@ -38,7 +38,7 @@ const intent: GovernedActionIntent = {
   },
 };
 
-test("executeGovernedAiAction executes AI_ACTION and auto-approves when confidence meets threshold", async () => {
+test("executeGovernedAiAction never auto-approves from provider confidence alone", async () => {
   const mockProposal: AiProposal = {
     invocationId: `inv_${intent.idempotencyKey}`,
     tenantId: intent.tenantId,
@@ -73,10 +73,10 @@ test("executeGovernedAiAction executes AI_ACTION and auto-approves when confiden
 
   assert.equal(result.status, "SUCCEEDED");
   if (result.status === "SUCCEEDED") {
-    assert.equal(result.approved, true);
+    assert.equal(result.approved, false);
     assert.equal(result.proposal.confidence, 0.95);
     assert.equal(result.attempt.status, "SUCCEEDED");
-    assert.equal(result.attempt.reasonCode, "AI_PROPOSAL_AUTO_APPROVED");
+    assert.equal(result.attempt.reasonCode, "AI_PROPOSAL_REQUIRES_REVIEW");
   }
 });
 
@@ -133,4 +133,51 @@ test("executeGovernedAiAction refuses intent with executorClass mismatch", async
   assert.equal(result.status, "FAILED");
   assert.equal(result.reasonCode, "EXECUTOR_CLASS_MISMATCH");
   assert.equal(result.attempt.status, "REFUSED");
+});
+
+
+test("executeGovernedAiAction rejects invalid confidence thresholds before provider invocation", async () => {
+  const invalidIntent: GovernedActionIntent = {
+    ...intent,
+    configuration: {
+      ...intent.configuration,
+      autoApproveConfidenceThreshold: 7,
+    },
+  };
+
+  const mockGateway: AiGateway = {
+    invoke: async () => assert.fail("Should not invoke gateway"),
+  };
+
+  const result = await executeGovernedAiAction({
+    intent: invalidIntent,
+    aiGateway: mockGateway,
+  });
+
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
+  assert.match(result.reason, /CONFIDENCE_THRESHOLD_INVALID/);
+});
+
+test("executeGovernedAiAction rejects invalid operations before provider invocation", async () => {
+  const invalidIntent: GovernedActionIntent = {
+    ...intent,
+    configuration: {
+      ...intent.configuration,
+      operation: "BANANA",
+    },
+  };
+
+  const mockGateway: AiGateway = {
+    invoke: async () => assert.fail("Should not invoke gateway"),
+  };
+
+  const result = await executeGovernedAiAction({
+    intent: invalidIntent,
+    aiGateway: mockGateway,
+  });
+
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.reasonCode, "INVALID_AI_CONFIGURATION");
+  assert.match(result.reason, /OPERATION_INVALID/);
 });
