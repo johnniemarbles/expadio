@@ -146,3 +146,41 @@ test("OpenAiAiAdapter handles embeddings via /v1/embeddings", async () => {
   const validation = validateAiProposal(embedIntent, proposal);
   assert.equal(validation.valid, true);
 });
+
+test("OpenAiAiAdapter resolves logical references before provider invocation", async () => {
+  let requestBody: any = null;
+  const logicalReference = "ref://clinical-note/note-123";
+
+  const adapter = new OpenAiAiAdapter({
+    apiToken: async () => "mock-openai-key",
+    artifactSink,
+    inputResolver: {
+      resolveText: async (input) => ({
+        content: input.reference === logicalReference ? "resolved clinical note" : input.reference,
+        sourceReference: input.reference,
+      }),
+    },
+    fetchImpl: async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body));
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "provider result" } }],
+          usage: { total_tokens: 10 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  });
+
+  const resolvedIntent: AiInvocationIntent = {
+    ...intent,
+    inputReference: logicalReference,
+    contextReference: undefined,
+    operation: "GENERATE",
+  };
+
+  const proposal = await adapter.invoke({ intent: resolvedIntent, connector });
+
+  assert.equal(requestBody.messages[0].content, "resolved clinical note");
+  assert.deepEqual(proposal.provenance.sourceReferences, [logicalReference]);
+});
