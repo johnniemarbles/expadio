@@ -512,7 +512,10 @@ export async function loadLearningAiRequestStatus(
     readonly allowAdminRead?: boolean;
   },
 ): Promise<LearningAiRequestStatus> {
-  await requireLearningAi(client, input.tenantId);
+  await requireTenantModuleOperational(client, {
+    tenantId: input.tenantId,
+    moduleKey: 'learning',
+  });
   const result = await client.query<RequestRow>(
     `SELECT learning_ai_request_id, tenant_id, job_id, request_type,
             learner_id, course_id, course_version_id,
