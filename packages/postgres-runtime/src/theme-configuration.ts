@@ -63,7 +63,7 @@ async function definitionVersion(client:PostgresClient,settingKey:string):Promis
   return row.version;
 }
 
-export async function appendPlatformThemeProfile<Value extends Readonly<Record<string,unknown>>>(
+export async function appendPlatformThemeProfile<Value extends object>(
   client:PostgresClient,
   input:{
     readonly valueId:string;
@@ -105,7 +105,7 @@ export async function appendPlatformThemeProfile<Value extends Readonly<Record<s
   return record<Value>(row);
 }
 
-export async function appendTenantThemeOverride<Value extends Readonly<Record<string,unknown>>>(
+export async function appendTenantThemeOverride<Value extends object>(
   client:PostgresClient,
   input:{
     readonly valueId:string;
