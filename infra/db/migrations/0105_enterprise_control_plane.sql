@@ -21,6 +21,48 @@ CREATE UNIQUE INDEX enterprise_profiles_active_name_uq
   ON platform.enterprise_profiles (tenant_id, lower(name))
   WHERE status = 'ACTIVE';
 
+-- Every operational organization belongs to an enterprise profile. Existing
+-- tenants receive one bootstrap profile so migration preserves all current
+-- organizations without inventing a second tenant boundary.
+ALTER TABLE platform.organizations
+  ADD COLUMN enterprise_id uuid;
+
+INSERT INTO platform.enterprise_profiles (
+  enterprise_id, tenant_id, name, mode, status, created_by_subject_id
+)
+SELECT
+  gen_random_uuid(),
+  tenant.tenant_id,
+  tenant.name,
+  'SIMPLE',
+  'ACTIVE',
+  'enterprise-migration-bootstrap'
+FROM platform.tenants tenant;
+
+UPDATE platform.organizations organization
+   SET enterprise_id = enterprise.enterprise_id
+  FROM platform.enterprise_profiles enterprise
+ WHERE enterprise.tenant_id = organization.tenant_id;
+
+ALTER TABLE platform.organizations
+  ALTER COLUMN enterprise_id SET NOT NULL;
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_enterprise_same_tenant_fk
+  FOREIGN KEY (enterprise_id, tenant_id)
+  REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_id_tenant_enterprise_uq
+  UNIQUE (organization_id, tenant_id, enterprise_id);
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_parent_same_enterprise_fk
+  FOREIGN KEY (parent_organization_id, tenant_id, enterprise_id)
+  REFERENCES platform.organizations(organization_id, tenant_id, enterprise_id)
+  DEFERRABLE INITIALLY DEFERRED;
+
 CREATE TABLE platform.legal_entities (
   legal_entity_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
@@ -61,6 +103,67 @@ CREATE TABLE platform.legal_entities (
 
 CREATE INDEX legal_entities_tenant_enterprise_idx
   ON platform.legal_entities (tenant_id, enterprise_id, status, legal_name);
+
+
+CREATE OR REPLACE FUNCTION platform.legal_entity_parent_would_cycle(
+  p_tenant_id uuid,
+  p_legal_entity_id uuid,
+  p_parent_legal_entity_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $
+  WITH RECURSIVE ancestors AS (
+    SELECT
+      entity.legal_entity_id,
+      entity.parent_legal_entity_id,
+      ARRAY[entity.legal_entity_id]::uuid[] AS path
+    FROM platform.legal_entities entity
+    WHERE entity.tenant_id = p_tenant_id
+      AND entity.legal_entity_id = p_parent_legal_entity_id
+
+    UNION ALL
+
+    SELECT
+      parent.legal_entity_id,
+      parent.parent_legal_entity_id,
+      ancestors.path || parent.legal_entity_id
+    FROM ancestors
+    JOIN platform.legal_entities parent
+      ON parent.tenant_id = p_tenant_id
+     AND parent.legal_entity_id = ancestors.parent_legal_entity_id
+    WHERE NOT parent.legal_entity_id = ANY(ancestors.path)
+  )
+  SELECT
+    p_parent_legal_entity_id = p_legal_entity_id
+    OR EXISTS (
+      SELECT 1 FROM ancestors WHERE legal_entity_id = p_legal_entity_id
+    );
+$;
+
+CREATE OR REPLACE FUNCTION platform.reject_legal_entity_cycle()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.parent_legal_entity_id IS NOT NULL
+     AND platform.legal_entity_parent_would_cycle(
+       NEW.tenant_id,
+       NEW.legal_entity_id,
+       NEW.parent_legal_entity_id
+     ) THEN
+    RAISE EXCEPTION 'legal entity hierarchy cycle rejected'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER legal_entities_reject_cycles
+BEFORE INSERT OR UPDATE OF parent_legal_entity_id, tenant_id, enterprise_id
+ON platform.legal_entities
+FOR EACH ROW EXECUTE FUNCTION platform.reject_legal_entity_cycle();
 
 CREATE TABLE platform.legal_entity_registration_identifiers (
   registration_identifier_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
