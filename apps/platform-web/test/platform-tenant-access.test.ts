@@ -65,3 +65,21 @@ test('pending invitation empty state is explicitly workspace-scoped',()=>{
   const manager=read('../components/TenantAccessManager/TenantAccessManager.tsx');
   assert.match(manager,/No pending invitations for this workspace/);
 });
+
+
+test('post-Clerk audit failure is compensated and never leaves a silent orphan',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/Invitation audit persistence failed/);
+  assert.match(route,/revokeInvitation\(invitation\.id\)/);
+  assert.match(route,/INVITATION_AUDIT_FAILED_ROLLED_BACK/);
+  assert.match(route,/INVITATION_STATE_UNCERTAIN/);
+});
+
+test('tenant access errors return safe actionable reasons with correlation ids',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/tenantAccessErrorResponse/);
+  assert.match(route,/TENANT_ACCESS_ORGANIZATION_INVALID/);
+  assert.match(route,/TENANT_ACCESS_WRITE_FAILED/);
+  assert.match(route,/Unhandled tenant invitation failure/);
+  assert.match(route,/correlationId/);
+});
