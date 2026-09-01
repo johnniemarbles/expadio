@@ -60,6 +60,16 @@ export type OrganizationSetupParticipantRole =
   | 'CONTRIBUTOR'
   | 'REVIEWER';
 
+export interface OrganizationSetupParticipant {
+  readonly participantId: string;
+  readonly subjectId: string;
+  readonly issuer: string | null;
+  readonly role: OrganizationSetupParticipantRole;
+  readonly status: 'ACTIVE' | 'REVOKED';
+  readonly validFrom: string;
+  readonly validUntil: string | null;
+}
+
 export interface OrganizationSetupPlan {
   readonly setupPlanId: string;
   readonly tenantId: string;
@@ -705,6 +715,167 @@ export async function addOrganizationSetupParticipant(
   }
 
   return { participantId, idempotent: false };
+}
+
+export async function listOrganizationSetupParticipants(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+  },
+): Promise<readonly OrganizationSetupParticipant[]> {
+  const result = await client.query<{
+    readonly setup_participant_id: string;
+    readonly subject_id: string;
+    readonly issuer: string | null;
+    readonly role: OrganizationSetupParticipantRole;
+    readonly status: 'ACTIVE' | 'REVOKED';
+    readonly valid_from: Date | string;
+    readonly valid_until: Date | string | null;
+  }>(
+    `SELECT
+       setup_participant_id,
+       subject_id,
+       issuer,
+       role,
+       status,
+       valid_from,
+       valid_until
+     FROM platform.organization_setup_participants
+     WHERE tenant_id = $1::uuid
+       AND setup_plan_id = $2::uuid
+     ORDER BY
+       CASE status WHEN 'ACTIVE' THEN 0 ELSE 1 END,
+       CASE role WHEN 'OWNER' THEN 0 WHEN 'REVIEWER' THEN 1 ELSE 2 END,
+       created_at ASC,
+       setup_participant_id ASC`,
+    [input.tenantId, input.setupPlanId],
+  );
+  return result.rows.map((row) => ({
+    participantId: row.setup_participant_id,
+    subjectId: row.subject_id,
+    issuer: row.issuer,
+    role: row.role,
+    status: row.status,
+    validFrom: iso(row.valid_from),
+    validUntil: nullableIso(row.valid_until),
+  }));
+}
+
+export async function designateOrganizationSetupPrimaryAdministrator(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly subjectId: string;
+    readonly issuer: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+  },
+): Promise<{
+  readonly plan: OrganizationSetupPlan;
+  readonly idempotent: boolean;
+}> {
+  const plan = await loadPlanById(client, input.tenantId, input.setupPlanId, true);
+  if (plan.state === 'ACTIVATED' || plan.state === 'CANCELLED') {
+    throw new Error('ORGANIZATION_SETUP_PLAN_CLOSED');
+  }
+
+  const subjectId = input.subjectId.trim();
+  const issuer = input.issuer.trim();
+  if (!subjectId || !issuer) {
+    throw new Error('ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED');
+  }
+
+  const participant = await client.query<{ readonly setup_participant_id: string }>(
+    `SELECT setup_participant_id
+       FROM platform.organization_setup_participants
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+        AND subject_id = $3
+        AND issuer IS NOT DISTINCT FROM $4
+        AND role = 'OWNER'
+        AND status = 'ACTIVE'
+        AND valid_from <= now()
+        AND (valid_until IS NULL OR valid_until > now())
+      LIMIT 1
+      FOR UPDATE`,
+    [input.tenantId, input.setupPlanId, subjectId, issuer],
+  );
+  if (!participant.rows[0]) {
+    throw new Error('ORGANIZATION_SETUP_PRIMARY_ADMIN_OWNER_REQUIRED');
+  }
+
+  if (
+    plan.primaryAdministratorSubjectId === subjectId
+    && plan.primaryAdministratorIssuer === issuer
+  ) {
+    return { plan, idempotent: true };
+  }
+
+  const existingEvent = await client.query<SetupEventRow>(
+    `SELECT event_id, event_type, setup_plan_id, setup_requirement_id,
+            from_state, to_state, actor_subject_id, reason, evidence_refs,
+            correlation_id, idempotency_key, payload
+       FROM platform.organization_setup_events
+      WHERE tenant_id = $1::uuid
+        AND idempotency_key = $2
+      LIMIT 1`,
+    [input.tenantId, input.idempotencyKey],
+  );
+  if (existingEvent.rows[0]) {
+    throw new Error('ORGANIZATION_SETUP_IDEMPOTENCY_CONFLICT');
+  }
+
+  await client.query(
+    `UPDATE platform.organization_setup_plans
+        SET primary_administrator_subject_id = $3,
+            primary_administrator_issuer = $4,
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid`,
+    [input.tenantId, input.setupPlanId, subjectId, issuer],
+  );
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    eventType: 'PRIMARY_ADMINISTRATOR_DESIGNATED',
+    actorSubjectId: input.actorSubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: {
+      previousSubjectId: plan.primaryAdministratorSubjectId,
+      previousIssuer: plan.primaryAdministratorIssuer,
+      subjectId,
+      issuer,
+      participantId: participant.rows[0].setup_participant_id,
+    },
+  });
+  if (!setupEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: input.setupPlanId,
+      eventType: 'organization.setup.primary_administrator_designated',
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        previousSubjectId: plan.primaryAdministratorSubjectId,
+        previousIssuer: plan.primaryAdministratorIssuer,
+        subjectId,
+        issuer,
+        participantId: participant.rows[0].setup_participant_id,
+      },
+    });
+  }
+
+  const evaluated = await evaluateOrganizationSetupAutomatedRequirements(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    correlationId: input.correlationId,
+  });
+  return { plan: evaluated.plan, idempotent: false };
 }
 
 export async function startOrganizationSetup(
