@@ -429,6 +429,46 @@ test('approved child is configured through governed readiness before activation'
     );
     assert.equal(activeChild.rows[0]?.status, 'ACTIVE');
 
+    const setupOwnerMembership = await c.query(
+      `SELECT membership_id, status, organization_scope_mode
+         FROM platform.memberships
+        WHERE tenant_id = $1::uuid
+          AND organization_id = $2::uuid
+          AND subject_id = 'setup-owner'
+          AND issuer IS NOT DISTINCT FROM 'https://clerk.expadio.com'
+        LIMIT 1`,
+      [tenantId, approved.organizationId],
+    );
+    assert.equal(setupOwnerMembership.rows[0]?.status, 'ACTIVE');
+    assert.equal(setupOwnerMembership.rows[0]?.organization_scope_mode, 'SELF');
+
+    const setupOwnerRoles = await c.query(
+      `SELECT r.role_key
+         FROM platform.authorization_assignments a
+         JOIN platform.authorization_roles r ON r.role_id = a.role_id
+        WHERE a.tenant_id = $1::uuid
+          AND a.organization_id = $2::uuid
+          AND a.subject_id = 'setup-owner'
+          AND a.status = 'ACTIVE'
+        ORDER BY r.role_key`,
+      [tenantId, approved.organizationId],
+    );
+    assert.deepEqual(setupOwnerRoles.rows, []);
+
+    const setupOwnerWorkspaces = await c.query(
+      `SELECT organization_id
+         FROM platform.active_memberships_for_subject(
+           'setup-owner',
+           'https://clerk.expadio.com'
+         )
+        WHERE tenant_id = $1::uuid`,
+      [tenantId],
+    );
+    assert.deepEqual(
+      setupOwnerWorkspaces.rows.map((row) => row.organization_id),
+      [approved.organizationId],
+    );
+
     const expanded = await c.query(
       `SELECT organization_id
          FROM platform.active_memberships_for_subject(
@@ -498,6 +538,7 @@ test('approved child is configured through governed readiness before activation'
     assert.ok(domainEventTypes.includes('organization.setup.operating_entity_assigned'));
     assert.ok(domainEventTypes.includes('organization.setup.activated'));
     assert.ok(domainEventTypes.includes('organization.activated'));
+    assert.ok(domainEventTypes.includes('tenant.membership.handed_off_from_setup'));
   } finally {
     try {
       await c.query('RESET ROLE');
