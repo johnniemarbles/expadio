@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
   findOrganizationSetupPlan,
+  listOrganizationOperatingEntities,
   listOrganizationSetupRequirements,
+  listVerifiedEnterpriseLegalEntities,
 } from '@expadio/postgres-runtime/enterprise-onboarding';
 import {
   enterpriseSetupErrorResponse,
@@ -28,7 +30,12 @@ export async function GET(
           throw new Error('ORGANIZATION_SETUP_PLAN_NOT_FOUND');
         }
 
-        const [requirements, dependencyRows] = await Promise.all([
+        const [
+          requirements,
+          dependencyRows,
+          verifiedLegalEntities,
+          operatingEntities,
+        ] = await Promise.all([
           listOrganizationSetupRequirements(client, {
             tenantId: context.tenantId,
             setupPlanId: planId,
@@ -44,6 +51,14 @@ export async function GET(
               ORDER BY setup_requirement_id, depends_on_requirement_id`,
             [context.tenantId, planId],
           ),
+          listVerifiedEnterpriseLegalEntities(client, {
+            tenantId: context.tenantId,
+            enterpriseId: context.enterpriseId,
+          }),
+          listOrganizationOperatingEntities(client, {
+            tenantId: context.tenantId,
+            organizationId: context.organizationId,
+          }),
         ]);
 
         return {
@@ -54,6 +69,8 @@ export async function GET(
             requirementId: row.setup_requirement_id,
             dependsOnRequirementId: row.depends_on_requirement_id,
           })),
+          verifiedLegalEntities,
+          operatingEntities,
         };
       },
     );
