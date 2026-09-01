@@ -17,15 +17,16 @@ export default async function PlatformAppearancePage(){
       history:await listPlatformThemeProfiles<unknown>(client,20),
     })),
   ]);
-  const history=state.history
-    .filter((item)=>isExpadioThemeDefinition(item.value))
-    .map((item)=>({
+  const history=state.history.flatMap((item)=>{
+    if(!isExpadioThemeDefinition(item.value))return [];
+    return [{
       recordVersion:item.recordVersion,
       authoredAt:item.authoredAt,
       reason:item.reason,
       themeKey:item.value.key,
       themeName:item.value.name,
-    }));
+    }];
+  });
 
   return <div className={styles.page}>
     <header className={styles.pageHead}><div><p>Design system governance</p><h1>Platform Appearance</h1><span>Publish the presentation profile inherited by Platform, Brands and compliant modules. Product structure and Industry Packs remain independent.</span></div></header>
