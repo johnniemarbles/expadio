@@ -96,6 +96,10 @@ export async function POST(
             setupPlanId: planId,
             requirementId: created.requirement.setupRequirementId,
             dependsOnRequirementId: dependencyId,
+            actorSubjectId: context.subjectId,
+            correlationId,
+            idempotencyKey:
+              idempotencyKey + ':dependency:' + dependencyId,
           });
         }
 
