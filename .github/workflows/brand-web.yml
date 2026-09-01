@@ -6,6 +6,7 @@ on:
       - 'packages/learning/**'
       - 'packages/postgres-runtime/**'
       - 'packages/tenancy/**'
+      - 'packages/ui/**'
       - 'infra/db/migrations/009*.sql'
       - 'package.json'
       - 'pnpm-lock.yaml'

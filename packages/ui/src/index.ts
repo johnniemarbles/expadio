@@ -11,3 +11,6 @@ export * from './components/WiringBanner';
 export * from './components/DeniedState';
 export * from './components/SearchField';
 export * from './components/ActivityTimeline';
+
+export * from './theme';
+export * from './components/ThemeModeControl';
