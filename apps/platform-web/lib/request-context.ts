@@ -76,15 +76,34 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     );
   }
 
-  const selectedMembership =
-    memberships.find((membership) =>
-      (!requestedTenant || membership.tenantId === requestedTenant)
-      && (!requestedOrganization || membership.organizationId === requestedOrganization)
-    )
-    ?? memberships.find((membership) =>
-      !requestedTenant || membership.tenantId === requestedTenant
-    )
-    ?? memberships[0];
+  let selectedMembership;
+  if (requestedOrganization) {
+    selectedMembership = memberships.find(
+      (membership) =>
+        membership.organizationId === requestedOrganization
+        && (!requestedTenant || membership.tenantId === requestedTenant),
+    );
+    if (!selectedMembership) {
+      throw new ContextDenied(
+        'TENANT_ACCESS_DENIED',
+        'You do not have access to this workspace.',
+        403,
+      );
+    }
+  } else if (requestedTenant) {
+    selectedMembership = memberships.find(
+      (membership) => membership.tenantId === requestedTenant,
+    );
+    if (!selectedMembership) {
+      throw new ContextDenied(
+        'TENANT_ACCESS_DENIED',
+        'You do not have access to this workspace.',
+        403,
+      );
+    }
+  } else {
+    selectedMembership = memberships[0];
+  }
 
   requestedTenant = selectedMembership.tenantId;
   requestedOrganization = selectedMembership.organizationId;
