@@ -98,6 +98,7 @@ test('Brand resolves and injects governed effective theme server-side', () => {
   assert.match(layout, /data-expadio-effective-theme="brand"/);
   assert.match(runtime, /verticalKey/);
   assert.match(runtime, /tenantId:context\.tenantId/);
-  assert.match(runtime, /brandId:context\.organizationId/);
+  assert.match(runtime, /brandId:context\.tenantId/);
+  assert.match(runtime, /workspaceId:context\.organizationId/);
   assert.match(shell, /data-expadio-theme="brand"/);
 });

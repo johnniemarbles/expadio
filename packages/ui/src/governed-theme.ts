@@ -2,17 +2,22 @@ import {
   RepositoryEffectiveConfigurationService,
   type ConfigurationOverrideValidation,
   type ConfigurationResolutionContext,
+  type ConfigurationResolutionLevel,
   type ConfigurationValueCandidate,
+  type ConfigurationValueCandidateRepository,
   type EffectiveConfigurationService,
 } from '@expadio/business-config';
 import {
   EXPADIO_COMMAND_OBSIDIAN,
   type ExpadioThemeDefinition,
+  type ThemeOverride,
   type ThemeOverridePolicy,
+  resolveThemeOverride,
   themeVariableMap,
 } from './theme';
 
-export const THEME_CONFIGURATION_SETTING_KEY = 'appearance.theme';
+export const THEME_PROFILE_SETTING_KEY = 'appearance.theme.profile';
+export const THEME_OVERRIDE_SETTING_KEY = 'appearance.theme.override';
 
 export interface GovernedThemeResolution {
   readonly theme: ExpadioThemeDefinition;
@@ -32,6 +37,12 @@ const CSS_VALUE_BLOCKLIST = /[;{}<>\r\n]/u;
 const CSS_URL = /url\s*\(/iu;
 const SAFE_KEY = /^[a-z0-9][a-z0-9._/-]{0,127}$/i;
 const SAFE_HEX = /^#[0-9a-f]{6}$/i;
+const OVERRIDE_KEYS = new Set([
+  'primary','secondary','accent',
+  'uiFamily','displayFamily','monoFamily',
+  'brandName','logoUrl',
+  'density','controlRadius','cardRadius',
+]);
 
 function safeCssValue(value: string): boolean {
   return value.length > 0
@@ -107,130 +118,212 @@ export function isExpadioThemeDefinition(value: unknown): value is ExpadioThemeD
   return validPolicy(value.overridePolicy);
 }
 
-function permittedBrandCandidate(
-  current: ExpadioThemeDefinition,
-  candidate: ExpadioThemeDefinition,
-): boolean {
-  const policy = current.overridePolicy;
-  if (!same(current.overridePolicy, candidate.overridePolicy)) return false;
-  if (!same(current.schemaVersion, candidate.schemaVersion)) return false;
-  if (!same(current.key, candidate.key)) return false;
-  if (!same(current.name, candidate.name)) return false;
-  if (!same(current.description, candidate.description)) return false;
-  if (!same(current.material, candidate.material)) return false;
-  if (!same(current.motion, candidate.motion)) return false;
-  if (!same(current.shell, candidate.shell)) return false;
+export function isThemeOverride(value: unknown): value is ThemeOverride {
+  if (!stringRecord(value)) return false;
+  if (Object.keys(value).some((key) => !OVERRIDE_KEYS.has(key))) return false;
 
-  const lightProtected = {
-    ...current.light,
-    ...(policy.allowPrimary ? { primary: candidate.light.primary } : {}),
-    ...(policy.allowSecondary ? { secondary: candidate.light.secondary } : {}),
-    ...(policy.allowAccent ? { accent: candidate.light.accent, focus: candidate.light.focus } : {}),
-  };
-  const darkProtected = {
-    ...current.dark,
-    ...(policy.allowPrimary ? { primary: candidate.dark.primary } : {}),
-    ...(policy.allowSecondary ? { secondary: candidate.dark.secondary } : {}),
-    ...(policy.allowAccent ? { accent: candidate.dark.accent, focus: candidate.dark.focus } : {}),
-  };
-  if (!same(lightProtected, candidate.light) || !same(darkProtected, candidate.dark)) return false;
+  for (const field of ['primary','secondary','accent'] as const) {
+    const candidate = value[field];
+    if (candidate !== undefined && (typeof candidate !== 'string' || !SAFE_HEX.test(candidate))) return false;
+  }
 
-  if (!policy.allowTypography && !same(current.typography, candidate.typography)) return false;
-  if (!policy.allowGeometry && !same(current.geometry, candidate.geometry)) return false;
-  if (!policy.allowAssets && !same(current.assets, candidate.assets)) return false;
+  for (const field of ['uiFamily','displayFamily','monoFamily','controlRadius','cardRadius'] as const) {
+    const candidate = value[field];
+    if (candidate !== undefined && (typeof candidate !== 'string' || !safeCssValue(candidate))) return false;
+  }
 
-  if (policy.allowPrimary && (!SAFE_HEX.test(candidate.light.primary) || !SAFE_HEX.test(candidate.dark.primary))) return false;
-  if (policy.allowSecondary && (!SAFE_HEX.test(candidate.light.secondary) || !SAFE_HEX.test(candidate.dark.secondary))) return false;
-  if (policy.allowAccent && (
-    !SAFE_HEX.test(candidate.light.accent)
-    || !SAFE_HEX.test(candidate.dark.accent)
-    || !SAFE_HEX.test(candidate.light.focus)
-    || !SAFE_HEX.test(candidate.dark.focus)
+  if (value.brandName !== undefined && (
+    typeof value.brandName !== 'string'
+    || value.brandName.trim() === ''
+    || value.brandName.length > 100
+    || CSS_VALUE_BLOCKLIST.test(value.brandName)
   )) return false;
 
+  if (value.logoUrl !== undefined && (
+    typeof value.logoUrl !== 'string'
+    || !/^https:\/\//i.test(value.logoUrl)
+  )) return false;
+
+  if (value.density !== undefined && value.density !== 'comfortable' && value.density !== 'compact') return false;
   return true;
 }
 
 /**
- * Bounded validator registered for appearance.theme.
- * Platform policy remains authoritative. PLAN/VERTICAL can select a complete
- * approved presentation profile but cannot weaken override governance.
+ * PLAN and VERTICAL may select a complete presentation profile but cannot
+ * weaken the Platform's brand-override policy.
  */
-export function governedThemeOverrideValidator(input: {
+export function governedThemeProfileValidator(input: {
   readonly current: ConfigurationValueCandidate;
   readonly candidate: ConfigurationValueCandidate;
 }): ConfigurationOverrideValidation {
   if (!isExpadioThemeDefinition(input.current.value) || !isExpadioThemeDefinition(input.candidate.value)) {
     return {
       allowed: false,
-      code: 'THEME_DEFINITION_INVALID',
-      reason: 'Theme value does not satisfy the EXPADIO theme schema.',
+      code: 'THEME_PROFILE_INVALID',
+      reason: 'Theme profile does not satisfy the EXPADIO theme schema.',
     };
   }
 
-  if (input.candidate.level === 'PLAN' || input.candidate.level === 'VERTICAL') {
-    if (!same(input.current.value.overridePolicy, input.candidate.value.overridePolicy)) {
-      return {
-        allowed: false,
-        code: 'THEME_OVERRIDE_POLICY_PROTECTED',
-        reason: 'Plan and vertical profiles cannot change Platform override governance.',
-      };
-    }
-    return {
-      allowed: true,
-      code: 'THEME_PROFILE_ALLOWED',
-      reason: 'The complete presentation profile is valid and preserves Platform governance.',
-    };
-  }
-
-  if (!['TENANT','BRAND','WORKSPACE'].includes(input.candidate.level)) {
+  if (input.candidate.level !== 'PLAN' && input.candidate.level !== 'VERTICAL') {
     return {
       allowed: false,
-      code: 'THEME_OVERRIDE_LEVEL_NOT_SUPPORTED',
-      reason: 'This scope cannot override the corporate theme.',
+      code: 'THEME_PROFILE_LEVEL_NOT_SUPPORTED',
+      reason: 'Only Plan and Vertical defaults may replace the inherited Platform profile.',
     };
   }
 
-  return permittedBrandCandidate(input.current.value, input.candidate.value)
-    ? {
-        allowed: true,
-        code: 'THEME_OVERRIDE_WITHIN_POLICY',
-        reason: 'The candidate changes only fields allowed by the inherited Platform policy.',
-      }
-    : {
-        allowed: false,
-        code: 'THEME_OVERRIDE_OUTSIDE_POLICY',
-        reason: 'The candidate changes protected theme fields.',
-      };
-}
-
-export async function resolveGovernedTheme(
-  service: EffectiveConfigurationService,
-  context: ConfigurationResolutionContext,
-  effectiveAt: string = new Date().toISOString(),
-): Promise<GovernedThemeResolution> {
-  const result = await service.resolve({
-    settingKey: THEME_CONFIGURATION_SETTING_KEY,
-    context,
-    effectiveAt,
-  });
-
-  if (result.status !== 'RESOLVED' || !isExpadioThemeDefinition(result.effectiveValue)) {
+  if (!same(input.current.value.overridePolicy, input.candidate.value.overridePolicy)) {
     return {
-      theme: EXPADIO_COMMAND_OBSIDIAN,
-      sourceLevel: 'PLATFORM_FALLBACK',
-      sourceRecordId: null,
-      fallback: true,
-      trace: result.trace,
+      allowed: false,
+      code: 'THEME_OVERRIDE_POLICY_PROTECTED',
+      reason: 'Plan and Vertical profiles cannot change Platform override governance.',
     };
   }
 
   return {
-    theme: result.effectiveValue,
-    sourceLevel: result.source.level,
-    sourceRecordId: result.source.recordId,
-    fallback: false,
-    trace: result.trace,
+    allowed: true,
+    code: 'THEME_PROFILE_ALLOWED',
+    reason: 'The complete presentation profile is valid and preserves Platform governance.',
+  };
+}
+
+function validatePatchAgainstPolicy(
+  theme: ExpadioThemeDefinition,
+  patch: ThemeOverride,
+): ConfigurationOverrideValidation {
+  const policy = theme.overridePolicy;
+
+  if ((patch.primary !== undefined && !policy.allowPrimary)
+    || (patch.secondary !== undefined && !policy.allowSecondary)
+    || (patch.accent !== undefined && !policy.allowAccent)) {
+    return {
+      allowed: false,
+      code: 'THEME_COLOR_OVERRIDE_LOCKED',
+      reason: 'The inherited Platform policy locks one or more requested brand colors.',
+    };
+  }
+
+  if ((patch.uiFamily !== undefined || patch.displayFamily !== undefined || patch.monoFamily !== undefined)
+    && !policy.allowTypography) {
+    return {
+      allowed: false,
+      code: 'THEME_TYPOGRAPHY_OVERRIDE_LOCKED',
+      reason: 'Typography overrides are locked by the inherited Platform policy.',
+    };
+  }
+
+  if ((patch.brandName !== undefined || patch.logoUrl !== undefined) && !policy.allowAssets) {
+    return {
+      allowed: false,
+      code: 'THEME_ASSET_OVERRIDE_LOCKED',
+      reason: 'Brand asset overrides are locked by the inherited Platform policy.',
+    };
+  }
+
+  if ((patch.density !== undefined || patch.controlRadius !== undefined || patch.cardRadius !== undefined)
+    && !policy.allowGeometry) {
+    return {
+      allowed: false,
+      code: 'THEME_GEOMETRY_OVERRIDE_LOCKED',
+      reason: 'Geometry overrides are locked by the inherited Platform policy.',
+    };
+  }
+
+  return {
+    allowed: true,
+    code: 'THEME_OVERRIDE_WITHIN_POLICY',
+    reason: 'The patch changes only fields permitted by the inherited Platform policy.',
+  };
+}
+
+const OVERRIDE_LEVEL_ORDER: Readonly<Record<string, number>> = {
+  TENANT: 0,
+  BRAND: 1,
+  WORKSPACE: 2,
+};
+
+function traceEntry(
+  candidate: ConfigurationValueCandidate,
+  outcome: 'APPLIED' | 'REJECTED',
+  code: string,
+) {
+  return {
+    level: candidate.level,
+    recordId: candidate.recordId,
+    version: candidate.version,
+    outcome,
+    code,
+  };
+}
+
+export async function resolveGovernedTheme(
+  profileService: EffectiveConfigurationService,
+  values: ConfigurationValueCandidateRepository,
+  context: ConfigurationResolutionContext,
+  effectiveAt: string = new Date().toISOString(),
+): Promise<GovernedThemeResolution> {
+  const profile = await profileService.resolve({
+    settingKey: THEME_PROFILE_SETTING_KEY,
+    context,
+    effectiveAt,
+  });
+
+  let theme = profile.status === 'RESOLVED' && isExpadioThemeDefinition(profile.effectiveValue)
+    ? profile.effectiveValue
+    : EXPADIO_COMMAND_OBSIDIAN;
+  let sourceLevel = profile.status === 'RESOLVED' ? profile.source.level : 'PLATFORM_FALLBACK';
+  let sourceRecordId = profile.status === 'RESOLVED' ? profile.source.recordId : null;
+  const trace = [...profile.trace];
+
+  const patches = await values.listCandidates({
+    settingKey: THEME_OVERRIDE_SETTING_KEY,
+    context,
+    effectiveAt,
+  });
+
+  const ordered = [...patches]
+    .filter((candidate) => ['TENANT','BRAND','WORKSPACE'].includes(candidate.level))
+    .sort((left,right) =>
+      (OVERRIDE_LEVEL_ORDER[left.level] ?? 99) - (OVERRIDE_LEVEL_ORDER[right.level] ?? 99)
+      || left.version - right.version
+      || left.recordId.localeCompare(right.recordId)
+    );
+
+  const selectedByLevel = new Map<ConfigurationResolutionLevel, ConfigurationValueCandidate>();
+  for (const candidate of ordered) {
+    const current = selectedByLevel.get(candidate.level);
+    if (current === undefined || candidate.version > current.version) {
+      selectedByLevel.set(candidate.level, candidate);
+    }
+  }
+
+  for (const level of ['TENANT','BRAND','WORKSPACE'] as const) {
+    const candidate = selectedByLevel.get(level);
+    if (candidate === undefined) continue;
+
+    if (!isThemeOverride(candidate.value)) {
+      trace.push(traceEntry(candidate, 'REJECTED', 'THEME_OVERRIDE_INVALID'));
+      continue;
+    }
+
+    const validation = validatePatchAgainstPolicy(theme, candidate.value);
+    if (!validation.allowed) {
+      trace.push(traceEntry(candidate, 'REJECTED', validation.code));
+      continue;
+    }
+
+    theme = resolveThemeOverride(theme, candidate.value);
+    sourceLevel = candidate.level;
+    sourceRecordId = candidate.recordId;
+    trace.push(traceEntry(candidate, 'APPLIED', validation.code));
+  }
+
+  return {
+    theme,
+    sourceLevel,
+    sourceRecordId,
+    fallback: profile.status !== 'RESOLVED',
+    trace,
   };
 }
 

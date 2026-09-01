@@ -1,8 +1,8 @@
 import {
   createEffectiveThemeService,
-  governedThemeOverrideValidator,
+  governedThemeProfileValidator,
   resolveGovernedTheme,
-  THEME_CONFIGURATION_SETTING_KEY,
+  THEME_PROFILE_SETTING_KEY,
 } from '@expadio/ui';
 import {
   PostgresConfigurationSettingDefinitionRepository,
@@ -19,14 +19,16 @@ export async function loadBrandEffectiveTheme(
     'SELECT vertical_key FROM platform.tenants WHERE tenant_id=$1::uuid LIMIT 1',
     [context.tenantId],
   );
-  const validators=new Map([[THEME_CONFIGURATION_SETTING_KEY,governedThemeOverrideValidator]]);
+  const validators=new Map([[THEME_PROFILE_SETTING_KEY,governedThemeProfileValidator]]);
+  const values=new PostgresConfigurationValueCandidateRepository(client);
   const service=createEffectiveThemeService({
     definitions:new PostgresConfigurationSettingDefinitionRepository(client,validators),
-    values:new PostgresConfigurationValueCandidateRepository(client),
+    values,
   });
-  return resolveGovernedTheme(service,{
+  return resolveGovernedTheme(service,values,{
     verticalKey:tenant.rows[0]?.vertical_key??undefined,
     tenantId:context.tenantId,
-    brandId:context.organizationId,
+    brandId:context.tenantId,
+    workspaceId:context.organizationId,
   });
 }

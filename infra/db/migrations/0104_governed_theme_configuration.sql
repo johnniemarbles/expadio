@@ -1,22 +1,42 @@
 BEGIN;
 
+-- Theme profiles and Brand overrides use the existing immutable governed
+-- configuration spine. Complete presentation profiles resolve through
+-- Platform -> Plan -> Vertical. Lower scopes store only bounded partial
+-- patches, so future parent changes continue to inherit automatically.
+
 INSERT INTO platform.configuration_setting_definitions (
   definition_id, setting_key, version, value_schema, classification,
   override_mode, allowed_override_levels, authored_by_subject_id,
   authored_at, effective_from, reason, evidence_refs
-) VALUES (
+) VALUES
+(
   '10400000-0000-0000-0000-000000000001'::uuid,
-  'appearance.theme',
+  'appearance.theme.profile',
   1,
   '{"type":"object","required":["schemaVersion","key","light","dark","overridePolicy"]}'::jsonb,
-  'INTERNAL',
+  'PUBLIC',
   'BOUNDED',
-  ARRAY['PLAN','VERTICAL','TENANT','BRAND','WORKSPACE'],
+  ARRAY['PLAN','VERTICAL'],
   'platform-theme-bootstrap',
   now(),
   '2026-09-01T00:00:00Z',
-  'Establish governed EXPADIO theme inheritance.',
+  'Establish governed EXPADIO Platform, Plan and Vertical theme profiles.',
   ARRAY['theme:expadio-command-obsidian','architecture:governed-configuration']
+),
+(
+  '10400000-0000-0000-0000-000000000002'::uuid,
+  'appearance.theme.override',
+  1,
+  '{"type":"object","additionalProperties":false,"properties":{"primary":{"type":"string"},"secondary":{"type":"string"},"accent":{"type":"string"},"uiFamily":{"type":"string"},"displayFamily":{"type":"string"},"monoFamily":{"type":"string"},"brandName":{"type":"string"},"logoUrl":{"type":"string"},"density":{"enum":["comfortable","compact"]},"controlRadius":{"type":"string"},"cardRadius":{"type":"string"}}}'::jsonb,
+  'PUBLIC',
+  'BOUNDED',
+  ARRAY['TENANT','BRAND','WORKSPACE'],
+  'platform-theme-bootstrap',
+  now(),
+  '2026-09-01T00:00:00Z',
+  'Allow bounded Brand identity and presentation overrides without copying the full Platform theme.',
+  ARRAY['theme:bounded-brand-overrides','architecture:governed-configuration']
 )
 ON CONFLICT (setting_key, version) DO NOTHING;
 
@@ -26,7 +46,7 @@ INSERT INTO platform.configuration_setting_values (
   authored_by_subject_id, authored_at, reason, correlation_id, evidence_refs
 ) VALUES (
   '10400000-0000-0000-0000-000000000011'::uuid,
-  'appearance.theme',
+  'appearance.theme.profile',
   1,
   'PLATFORM',
   NULL,
