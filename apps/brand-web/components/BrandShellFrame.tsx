@@ -50,6 +50,8 @@ export function BrandShellFrame({
           className={active?.key===module.key?styles.navActive:''}
         ><span className={styles.navIcon}>{module.iconKey.slice(0,2).toUpperCase()}</span>{module.name}</Link>)}
         <Link className={styles.allAppsLink} href="/">＋ All Apps</Link>
+        <p className={styles.navGroup}>Administration</p>
+        <Link className={pathname==='/appearance'?styles.navActive:''} href="/appearance">Appearance</Link>
       </nav>
 
       <div className={styles.sidebarBottom}>

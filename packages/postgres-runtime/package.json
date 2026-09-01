@@ -59,6 +59,7 @@
     "./learning-ai": "./src/learning-ai.ts",
     "./execution-artifact": "./src/execution-artifact.ts",
     "./indexed-artifact-sink": "./src/indexed-artifact-sink.ts",
+    "./theme-configuration": "./src/theme-configuration.ts",
     "./enterprise": "./src/enterprise.ts"
   },
   "dependencies": {
