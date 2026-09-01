@@ -1,6 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isPostgresUuid } from '@expadio/tenancy';
 
 export class InternalWorkerAuthError extends Error {
   readonly status: number;
@@ -48,7 +47,7 @@ export function authenticateInternalWorkerToken(request: Request): void {
 
 export function parseInternalWorkerTenantId(value: unknown): string {
   const tenantId = typeof value === 'string' ? value.trim() : '';
-  if (!UUID.test(tenantId)) {
+  if (!isPostgresUuid(tenantId)) {
     throw new InternalWorkerAuthError(
       400,
       'INTERNAL_WORKER_TENANT_REQUIRED',

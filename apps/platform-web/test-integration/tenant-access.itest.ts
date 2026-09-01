@@ -174,3 +174,27 @@ test('Clerk-style invitation ids append tenant access audit event and outbox row
     assert.equal(outbox.rows[0].status,'PENDING');
   }finally{try{await c.query('ROLLBACK')}catch{}c.release();await p.end()}
 });
+
+
+test('tenant invitation audit accepts PostgreSQL UUID tenant ids without RFC version bits',async()=>{
+  const p=pool();const c=await p.connect();
+  const tenantId='00000000-0000-0000-0000-00000000f501';
+  const orgId='00000000-0000-0000-0000-00000000f502';
+  const invitationId=`inv_${randomUUID().replaceAll('-','')}`;
+  try{
+    await c.query(`INSERT INTO platform.tenants(tenant_id,name)VALUES($1,'Postgres UUID tenant')`,[tenantId]);
+    await c.query(`INSERT INTO platform.organizations(organization_id,tenant_id,name)VALUES($1,$2,'Postgres UUID org')`,[orgId,tenantId]);
+    await c.query(`SELECT set_config('app.tenant_id',$1,false)`,[tenantId]);
+    await c.query('BEGIN');
+    await recordTenantInvitation(c,{
+      tenantId,organizationId:orgId,invitationId,roleKey:'TENANT_ADMIN',
+      actorSubjectId:'platform-admin',correlationId:randomUUID(),
+    });
+    await c.query('COMMIT');
+    const persisted=await c.query(`
+      SELECT aggregate_id,event_type FROM platform.domain_events
+       WHERE tenant_id=$1::uuid AND aggregate_id=$2`,[tenantId,invitationId]);
+    assert.equal(persisted.rowCount,1);
+    assert.equal(persisted.rows[0].event_type,'tenant.membership.invited');
+  }finally{try{await c.query('ROLLBACK')}catch{}c.release();await p.end()}
+});

@@ -6,6 +6,7 @@ import {
 } from '../lib/internal-worker-auth.ts';
 
 const TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const SEEDED_TENANT = '00000000-0000-0000-0000-000000000001';
 
 function request(token: string | null, tenantId = TENANT): Request {
   const headers = new Headers();
@@ -66,6 +67,21 @@ test('internal worker rejects a missing or malformed tenant UUID', () => {
         error instanceof InternalWorkerAuthError
         && error.status === 400
         && error.reasonCode === 'INTERNAL_WORKER_TENANT_REQUIRED',
+    );
+  } finally {
+    if (previous === undefined) delete process.env.EXPADIO_INTERNAL_WORKER_TOKEN;
+    else process.env.EXPADIO_INTERNAL_WORKER_TOKEN = previous;
+  }
+});
+
+
+test('internal worker accepts the persisted seeded PostgreSQL tenant UUID', () => {
+  const previous = process.env.EXPADIO_INTERNAL_WORKER_TOKEN;
+  process.env.EXPADIO_INTERNAL_WORKER_TOKEN = 'worker-secret';
+  try {
+    assert.deepEqual(
+      authenticateInternalWorkerRequest(request('worker-secret', SEEDED_TENANT)),
+      { tenantId: SEEDED_TENANT },
     );
   } finally {
     if (previous === undefined) delete process.env.EXPADIO_INTERNAL_WORKER_TOKEN;

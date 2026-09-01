@@ -242,7 +242,12 @@ importers:
 
   packages/data-orchestrator: {}
 
-  packages/domain-events: {}
+  packages/domain-events:
+    dependencies:
+      '@expadio/tenancy':
+        specifier: workspace:*
+        version: link:../tenancy
+
 
   packages/governed-actions:
     dependencies:
