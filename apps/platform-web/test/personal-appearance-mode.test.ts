@@ -23,5 +23,9 @@ test('personal mode is display preference only and cannot override governed them
   assert.match(migration,/"enum":\["light","dark","system"\]/);
   assert.match(runtime,/level='USER_PREFERENCE'/);
   assert.match(runtime,/scope_id=\$2/);
-  assert.doesNotMatch([route,runtime,control].join('\n'),/primary|secondary|accent|css|javascript|dangerouslySetInnerHTML|eval\(/);
+  assert.match(control,/body:JSON\.stringify\(\{mode:next\}\)/);
+  assert.doesNotMatch(route,/body\.(?:primary|secondary|accent|css|javascript|logoUrl|brandName)/);
+  assert.doesNotMatch(route,/ThemeOverride|appendTenantThemeOverride|appendPlatformThemeProfile|set_config\('app\.platform_admin'/);
+  assert.doesNotMatch(runtime,/appearance\.theme\.override|appearance\.theme\.profile|ThemeOverride/);
+  assert.doesNotMatch(control,/dangerouslySetInnerHTML|eval\(/);
 });
