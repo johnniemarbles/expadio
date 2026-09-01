@@ -50,6 +50,9 @@ importers:
       '@expadio/lead':
         specifier: workspace:*
         version: link:../../packages/lead
+      '@expadio/learning':
+        specifier: workspace:*
+        version: link:../../packages/learning
       '@expadio/party':
         specifier: workspace:*
         version: link:../../packages/party
@@ -230,6 +233,8 @@ importers:
 
   packages/lead: {}
 
+  packages/learning: {}
+
   packages/party: {}
 
   packages/postgres-runtime:
@@ -276,6 +281,9 @@ importers:
       '@expadio/knowledge':
         specifier: workspace:*
         version: link:../knowledge
+      '@expadio/learning':
+        specifier: workspace:*
+        version: link:../learning
       '@expadio/provider-registry':
         specifier: workspace:*
         version: link:../provider-registry

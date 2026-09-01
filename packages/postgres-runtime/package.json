@@ -45,7 +45,15 @@
     "./governed-action-execution": "./src/governed-action-execution.ts",
     "./scheduled-governed-action": "./src/scheduled-governed-action.ts",
     "./operational-task": "./src/operational-task.ts",
-    "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts"
+    "./governed-credential-lease-runtime": "./src/governed-credential-lease-runtime.ts",
+    "./product-module": "./src/product-module.ts",
+    "./learning": "./src/learning.ts",
+    "./learning-enrollment": "./src/learning-enrollment.ts",
+    "./learning-assessment": "./src/learning-assessment.ts",
+    "./learning-program-certification": "./src/learning-program-certification.ts",
+    "./learning-competency": "./src/learning-competency.ts",
+    "./learning-assignment-automation": "./src/learning-assignment-automation.ts",
+    "./learning-automation": "./src/learning-automation.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
@@ -70,6 +78,7 @@
     "@expadio/workflow": "workspace:*",
     "@types/pg": "^8.23.1",
     "pg": "^8.23.0",
-    "@expadio/industry-packs": "workspace:*"
+    "@expadio/industry-packs": "workspace:*",
+    "@expadio/learning": "workspace:*"
   }
 }

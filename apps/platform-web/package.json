@@ -33,7 +33,8 @@
     "@expadio/business-config": "workspace:*",
     "@expadio/industry-packs": "workspace:*",
     "@expadio/governed-actions": "workspace:*",
-    "@expadio/workflow": "workspace:*"
+    "@expadio/workflow": "workspace:*",
+    "@expadio/learning": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

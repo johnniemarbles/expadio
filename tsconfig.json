@@ -47,6 +47,7 @@
       "@expadio/agent-runtime": ["packages/agent-runtime/src/index.ts"],
       "@expadio/usage-metering": ["packages/usage-metering/src/index.ts"],
       "@expadio/knowledge": ["packages/knowledge/src/index.ts"],
+      "@expadio/learning": ["packages/learning/src/index.ts"],
       "@expadio/storage": ["packages/storage/src/index.ts"],
       "@expadio/party": ["packages/party/src/index.ts"],
       "@expadio/relationship": ["packages/relationship/src/index.ts"],
