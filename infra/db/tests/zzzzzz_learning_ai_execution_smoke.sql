@@ -95,7 +95,7 @@ INSERT INTO platform.learning_ai_requests (
     '{"surface":"learner"}'::jsonb
   );
 
-DO $
+DO $$
 BEGIN
   BEGIN
     INSERT INTO platform.ai_job_artifacts (
@@ -114,9 +114,9 @@ BEGIN
     NULL;
   END;
 END;
-$;
+$$;
 
-DO $
+DO $$
 BEGIN
   BEGIN
     UPDATE platform.ai_job_artifacts
