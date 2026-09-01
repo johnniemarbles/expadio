@@ -210,7 +210,8 @@ export async function createGovernedSupabaseArtifactStore(
       options.secretResolver ?? delegatedSecretResolver
     ).resolve(lease.credentialReference);
     if (
-      secret.expiresAt !== undefined
+      'expiresAt' in secret
+      && secret.expiresAt !== undefined
       && secret.expiresAt.getTime() <= resolvedAt.getTime()
     ) {
       throw new Error('GOVERNED_ARTIFACT_STORAGE_SECRET_EXPIRED');
