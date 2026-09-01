@@ -55,7 +55,11 @@ export async function GET(request: Request) {
 
     if (!row) {
       return NextResponse.json(
-        { denied: true, reasonKey: 'ORGANIZATION_NOT_FOUND' } satisfies DeniedResult,
+        {
+          denied: true,
+          reasonKey: 'ORGANIZATION_NOT_FOUND',
+          message: 'The requested organization was not found.',
+        } satisfies DeniedResult,
         { status: 404 },
       );
     }
