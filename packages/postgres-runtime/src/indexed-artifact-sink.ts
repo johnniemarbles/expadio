@@ -61,6 +61,7 @@ implements DurableArtifactSink {
       capabilityKey: input.capabilityKey,
       costMinorUnits: input.costMinorUnits,
       providerCostOwnership: input.providerCostOwnership,
+      confidence: input.confidence ?? null,
       correlationId: input.correlationId ?? null,
     });
 
