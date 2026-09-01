@@ -760,20 +760,19 @@ RETURNS TABLE (
   operating_unit_scope_mode text,
   operating_unit_ids uuid[]
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 VOLATILE
 SECURITY DEFINER
 SET search_path = pg_catalog, platform
-AS $
-  WITH bootstrap_context AS MATERIALIZED (
-    SELECT
-      set_config('app.subject_id', p_subject_id, true) AS subject_setting,
-      set_config('app.issuer', COALESCE(p_issuer, ''), true) AS issuer_setting
-  ),
-  active_membership AS (
+AS $$
+BEGIN
+  PERFORM set_config('app.subject_id', p_subject_id, true);
+  PERFORM set_config('app.issuer', COALESCE(p_issuer, ''), true);
+
+  RETURN QUERY
+  WITH active_membership AS (
     SELECT membership.*
-    FROM bootstrap_context
-    CROSS JOIN platform.memberships membership
+    FROM platform.memberships membership
     JOIN platform.tenants tenant
       ON tenant.tenant_id = membership.tenant_id
      AND tenant.status = 'ACTIVE'
@@ -841,7 +840,8 @@ AS $
    AND organization.tenant_id = expanded.tenant_id
    AND organization.status = 'ACTIVE'
   ORDER BY expanded.tenant_id, expanded.organization_id;
-$;
+END;
+$$;
 
 REVOKE ALL ON FUNCTION platform.active_memberships_for_subject(text, text) FROM PUBLIC;
 
