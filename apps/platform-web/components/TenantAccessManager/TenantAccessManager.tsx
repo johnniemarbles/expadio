@@ -46,11 +46,16 @@ export function TenantAccessManager({
       if(payload.invitation){
         setInviteRows(rows=>[payload.invitation,...rows.filter(row=>row.invitationId!==payload.invitation.invitationId)]);
       }
-      setNotice(payload.message??(
+      const baseNotice=payload.message??(
         payload.outcome==='MEMBERSHIP_GRANTED_EXISTING_USER'
           ?'Existing Clerk user: access granted immediately; no invitation email was sent.'
           :'Invitation created.'
-      ));
+      );
+      setNotice(
+        payload.outcome==='MEMBERSHIP_GRANTED_EXISTING_USER'&&payload.membership?.subjectId
+          ?baseNotice+' Clerk ID: '+payload.membership.subjectId
+          :baseNotice
+      );
       setEmail('');setValidUntil('');router.refresh();
     }catch(cause){setError(cause instanceof Error?cause.message:'Access grant failed.')}finally{setBusy(null)}
   }
@@ -130,7 +135,7 @@ export function TenantAccessManager({
       <div className={styles.panelHead}><div><h2>Active directory</h2><p>{members.length} membership record{members.length===1?'':'s'} in this organization.</p></div></div>
       <div className={styles.tableWrap}><table><thead><tr><th>User</th><th>Roles</th><th>Status</th><th>Expiry</th><th>Actions</th></tr></thead><tbody>
         {memberRows.map(member=><tr key={member.membershipId}>
-          <td><strong>{member.identity.name??member.identity.email??member.subjectId}</strong><span>{member.identity.email??member.subjectId}</span></td>
+          <td><strong>{member.identity.name??member.identity.email??member.subjectId}</strong><span>{member.identity.email??member.subjectId}</span><span>Clerk ID: {member.subjectId}</span></td>
           <td><select value={member.roleKeys[0]??''} disabled={member.status!=='ACTIVE'||busy!==null} onChange={e=>void patch(member,{roleKeys:[e.target.value]},`role:${member.membershipId}`)}><option value="" disabled>Select role</option>{roleKeys.map(r=><option key={r} value={r}>{label(r)}</option>)}</select></td>
           <td><span className={styles.status}>{label(member.status)}</span></td>
           <td>{member.validUntil?new Date(member.validUntil).toLocaleString():'No expiry'}</td>

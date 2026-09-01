@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { BrandContextError, resolveBrandContext } from '../../lib/brand-context';
+import { BrandContextError, diagnoseBrandAccess, resolveBrandContext } from '../../lib/brand-context';
+import { BrandAccessRecovery } from '../../components/BrandAccessRecovery';
 import styles from './workspace.module.css';
 
 const NAV = [
@@ -21,6 +22,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
     context = await resolveBrandContext();
   } catch (error) {
     if (error instanceof BrandContextError && error.code === 'NO_BRAND_MEMBERSHIP') {
+      const diagnostic = await diagnoseBrandAccess();
       return (
         <main className={styles.accessShell}>
           <section className={styles.accessCard}>
@@ -28,13 +30,17 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
             <p className={styles.eyebrow}>Brand workspace access</p>
             <h1>Brand access unavailable</h1>
             <p>
-              Your account does not currently have an active Brand workspace. If access
-              was recently granted or restored, refresh this page after the Platform
-              change completes. Otherwise, contact your Platform administrator.
+              EXPADIO could not resolve an active Brand workspace for the Clerk identity
+              currently signed into this browser.
             </p>
-            <div className={styles.accessHint}>
-              Brand access is controlled by the Platform tenant membership lifecycle.
-            </div>
+            {diagnostic ? (
+              <BrandAccessRecovery
+                subjectId={diagnostic.subjectId}
+                reason={diagnostic.reason}
+                membershipStatus={diagnostic.status}
+                validUntil={diagnostic.validUntil}
+              />
+            ) : null}
           </section>
         </main>
       );

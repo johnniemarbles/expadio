@@ -142,3 +142,10 @@ test('resend never creates a replacement while the previous Clerk invitation is 
   assert.match(route,/oldInvitationInactive/);
   assert.match(route,/current\?\.status === 'pending'/);
 });
+
+
+test('Platform membership rows expose Clerk subject ids for Brand identity comparison',()=>{
+  const manager=read('../components/TenantAccessManager/TenantAccessManager.tsx');
+  assert.match(manager,/Clerk ID: \{member\.subjectId\}/);
+  assert.match(manager,/payload\.membership\?\.subjectId/);
+});
