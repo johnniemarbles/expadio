@@ -11,10 +11,14 @@ import {
   type AiProviderAdapter,
 } from '@expadio/ai-gateway';
 import {
-  aiArtifactReference,
-  createAiJobArtifact,
   loadAiJobArtifact,
 } from '@expadio/postgres-runtime/ai-artifact';
+import {
+  findExecutionArtifactBySource,
+} from '@expadio/postgres-runtime/execution-artifact';
+import {
+  PostgresIndexedDurableArtifactSink,
+} from '@expadio/postgres-runtime/indexed-artifact-sink';
 import {
   claimAiJobExecution,
   completeAiJobExecution,
@@ -32,6 +36,9 @@ import {
 } from '@expadio/postgres-runtime/governed-credential-lease-runtime';
 import type { SecretResolver } from '@expadio/provider-registry/repository';
 import { delegatedSecretResolver } from './vault-secret-resolver';
+import {
+  createGovernedSupabaseArtifactStore,
+} from './governed-artifact-storage';
 
 const NO_ORGANIZATION_AUTH_CONTEXT =
   '00000000-0000-0000-0000-000000000000';
@@ -63,6 +70,13 @@ export interface AiJobWorkerOptions {
   readonly fetchImpl?: typeof fetch;
   readonly secretResolver?: SecretResolver;
   readonly leaseMs?: number;
+  readonly artifactStorage?: {
+    readonly projectUrl: string;
+    readonly bucket: string;
+    readonly requiredResidencyTags?: readonly string[];
+    readonly requiredComplianceTags?: readonly string[];
+    readonly signedUrlTtlSeconds?: number;
+  };
 }
 
 function stableServiceSubject(value: string): string {
@@ -106,58 +120,32 @@ async function reconcileUsageFromOutputArtifact(
     readonly occurredAt: string;
   },
 ): Promise<void> {
-  const artifact = await loadAiJobArtifact(client, {
+  const artifact = await findExecutionArtifactBySource(client, {
     tenantId: input.tenantId,
-    jobId: input.jobId,
-    reference: input.outputReference,
-    expectedType: 'OUTPUT',
+    artifactKind: 'AI_TEXT',
+    sourceKind: 'AI_INVOCATION',
+    sourceId: `ai-job:${input.jobId}`,
   });
-  const metadata = artifact.metadata;
-  const connectorKey =
-    typeof metadata.connectorKey === 'string' ? metadata.connectorKey : null;
-  const providerKey =
-    typeof metadata.providerKey === 'string' ? metadata.providerKey : null;
-  const modelKey =
-    typeof metadata.modelKey === 'string' ? metadata.modelKey : null;
-  const costMinorUnits =
-    typeof metadata.costMinorUnits === 'number'
-    && Number.isSafeInteger(metadata.costMinorUnits)
-    && metadata.costMinorUnits >= 0
-      ? metadata.costMinorUnits
-      : null;
-  const providerCostOwnership =
-    metadata.providerCostOwnership === 'BYOK'
-    || metadata.providerCostOwnership === 'EXPADIO_MANAGED'
-      ? metadata.providerCostOwnership
-      : null;
   if (
-    connectorKey === null
-    || providerKey === null
-    || modelKey === null
-    || costMinorUnits === null
-    || providerCostOwnership === null
+    artifact === null
+    || artifact.storageReference !== input.outputReference
   ) {
     throw new Error('AI_OUTPUT_PROVENANCE_INCOMPLETE');
   }
 
   await new PostgresIntelligenceUsageRepository(client).record({
-    // One AI job produces at most one terminal provider execution charge in
-    // this worker. Reusing jobId makes usage reconciliation replay-safe.
     eventId: input.jobId,
     tenantId: input.tenantId,
     organizationId: null,
     meter: 'AI_REQUEST',
     quantity: 1,
-    costMinorUnits,
+    costMinorUnits: artifact.costMinorUnits,
     currency: 'USD',
-    capabilityKey:
-      typeof metadata.capabilityKey === 'string'
-        ? metadata.capabilityKey
-        : 'ai.generate',
-    connectorKey,
-    providerKey,
-    modelKey,
-    providerCostOwnership,
+    capabilityKey: artifact.capabilityKey,
+    connectorKey: artifact.connectorKey,
+    providerKey: artifact.providerKey,
+    modelKey: artifact.modelKey ?? 'unknown',
+    providerCostOwnership: artifact.providerCostOwnership,
     workReference: `ai-job:${input.jobId}`,
     occurredAt: input.occurredAt,
     recordedAt: input.occurredAt,
@@ -165,6 +153,7 @@ async function reconcileUsageFromOutputArtifact(
     evidenceRefs: [
       `ai-job:${input.jobId}`,
       input.outputReference,
+      `execution-artifact:${artifact.artifactId}`,
     ],
   });
 }
@@ -307,7 +296,7 @@ export async function runAiJobWorkerOnce(
   if (snapshot.status === 'SUCCEEDED' || snapshot.status === 'CANCELLED') {
     if (
       snapshot.status === 'SUCCEEDED'
-      && snapshot.outputReference?.startsWith('ai-artifact://')
+      && snapshot.outputReference?.startsWith('supabase-storage://')
     ) {
       await reconcileUsageFromOutputArtifact(client, {
         tenantId: claim.tenantId,
@@ -372,6 +361,21 @@ export async function runAiJobWorkerOnce(
     });
   }
 
+  if (input.options.artifactStorage === undefined) {
+    return retryOrDead(client, {
+      claim,
+      repository,
+      sequence: sequence + 1,
+      actorSubjectId: serviceSubjectId,
+      correlationId: job.correlationId,
+      evidenceRefs,
+      failureCode: 'AI_ARTIFACT_STORAGE_NOT_CONFIGURED',
+      reason: 'Durable AI output storage is not configured.',
+      maximumAttempts: 1,
+      now,
+    });
+  }
+
   try {
     const inputArtifact = await loadAiJobArtifact(client, {
       tenantId: claim.tenantId,
@@ -395,6 +399,41 @@ export async function runAiJobWorkerOnce(
       registry.listConnectors(claim.tenantId, capabilityKey),
       registry.loadRoutingPolicy(claim.tenantId, capabilityKey),
     ]);
+
+    const artifactStore = await createGovernedSupabaseArtifactStore(
+      client,
+      {
+        tenantId: claim.tenantId,
+        organizationId: NO_ORGANIZATION_AUTH_CONTEXT,
+        serviceSubjectId,
+        correlationId: job.correlationId,
+        projectUrl: input.options.artifactStorage.projectUrl,
+        bucket: input.options.artifactStorage.bucket,
+        requiredResidencyTags:
+          input.options.artifactStorage.requiredResidencyTags ?? [],
+        requiredComplianceTags:
+          input.options.artifactStorage.requiredComplianceTags ?? [],
+        ...(input.options.artifactStorage.signedUrlTtlSeconds === undefined
+          ? {}
+          : {
+              signedUrlTtlSeconds:
+                input.options.artifactStorage.signedUrlTtlSeconds,
+            }),
+        ...(input.options.secretResolver === undefined
+          ? {}
+          : { secretResolver: input.options.secretResolver }),
+        ...(input.options.fetchImpl === undefined
+          ? {}
+          : { fetchImpl: input.options.fetchImpl }),
+        ...(input.options.now === undefined
+          ? {}
+          : { now: input.options.now }),
+      },
+    );
+    const artifactSink = new PostgresIndexedDurableArtifactSink(
+      client,
+      artifactStore,
+    );
 
     const credentialNow = () =>
       (input.options.now?.() ?? new Date()).toISOString();
@@ -475,52 +514,39 @@ export async function runAiJobWorkerOnce(
       throw new Error('AI_PROVIDER_OUTPUT_CONTENT_MISSING');
     }
 
-    const output =
-      proposal.outputContent === undefined
-        ? null
-        : await createAiJobArtifact(client, {
-            tenantId: claim.tenantId,
-            jobId: claim.jobId,
-            artifactType: 'OUTPUT',
-            mediaType: proposal.outputContent.mediaType,
-            content: proposal.outputContent.value,
-            metadata: {
-              proposalStatus: proposal.status,
-              connectorKey: proposal.provenance.connectorKey,
-              providerKey: proposal.provenance.providerKey,
-              modelKey: proposal.provenance.modelKey,
-              promptConfigurationKey:
-                proposal.provenance.promptConfigurationKey,
-              promptConfigurationVersion:
-                proposal.provenance.promptConfigurationVersion,
-              sourceReferences: [
-                job.intent.inputReference,
-                ...(job.intent.contextReference === undefined
-                  ? []
-                  : [job.intent.contextReference]),
-              ],
-              processedAt: proposal.provenance.processedAt,
-              region: proposal.provenance.region ?? null,
-              confidence: proposal.confidence ?? null,
-              costMinorUnits:
-                proposal.provenance.costMinorUnits ?? 0,
-              capabilityKey,
-              providerCostOwnership:
-                connectors.find(
-                  (entry) =>
-                    entry.connectorKey ===
-                    proposal.provenance.connectorKey,
-                )?.ownership === 'TENANT'
-                  ? 'BYOK'
-                  : 'EXPADIO_MANAGED',
-            },
-            createdBySubjectId: serviceSubjectId,
-          });
+    if (proposal.outputContent === undefined) {
+      throw new Error('AI_PROVIDER_OUTPUT_CONTENT_MISSING');
+    }
 
-    const outputReference =
-      output === null
-        ? proposal.outputReference
-        : aiArtifactReference(output.artifactId);
+    const providerCostOwnership =
+      connectors.find(
+        (entry) =>
+          entry.connectorKey === proposal.provenance.connectorKey,
+      )?.ownership === 'TENANT'
+        ? 'BYOK'
+        : 'EXPADIO_MANAGED';
+
+    const storedOutput = await artifactSink.write({
+      tenantId: claim.tenantId,
+      artifactKind: 'AI_TEXT',
+      sourceKind: 'AI_INVOCATION',
+      sourceId: `ai-job:${claim.jobId}`,
+      content: proposal.outputContent.value,
+      contentType: proposal.outputContent.mediaType,
+      providerKey: proposal.provenance.providerKey,
+      connectorKey: proposal.provenance.connectorKey,
+      modelKey: proposal.provenance.modelKey,
+      capabilityKey,
+      costMinorUnits: proposal.provenance.costMinorUnits ?? 0,
+      providerCostOwnership,
+      correlationId: job.correlationId,
+      requiredResidencyTags:
+        job.intent.governance.requiredResidencyTags,
+      requiredComplianceTags:
+        job.intent.governance.requiredComplianceTags,
+    });
+
+    const outputReference = storedOutput.contentReference;
 
     const completedAt = input.options.now?.() ?? new Date();
     await append(repository, {
