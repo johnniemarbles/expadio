@@ -1,0 +1,917 @@
+BEGIN;
+
+-- Enterprise Control Plane foundation.
+-- Tenant remains the security/commercial boundary. Enterprise/legal/organization
+-- model business governance beneath it.
+
+CREATE TABLE platform.enterprise_profiles (
+  enterprise_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  name text NOT NULL CHECK (btrim(name) <> ''),
+  mode text NOT NULL DEFAULT 'SIMPLE' CHECK (mode IN ('SIMPLE','GLOBAL')),
+  status text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','SUSPENDED','INACTIVE')),
+  created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
+  updated_by_subject_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (enterprise_id, tenant_id)
+);
+
+CREATE UNIQUE INDEX enterprise_profiles_active_name_uq
+  ON platform.enterprise_profiles (tenant_id, lower(name))
+  WHERE status = 'ACTIVE';
+
+-- Every operational organization belongs to an enterprise profile. Existing
+-- tenants receive one bootstrap profile so migration preserves all current
+-- organizations without inventing a second tenant boundary.
+ALTER TABLE platform.organizations
+  ADD COLUMN enterprise_id uuid;
+
+INSERT INTO platform.enterprise_profiles (
+  enterprise_id, tenant_id, name, mode, status, created_by_subject_id
+)
+SELECT
+  gen_random_uuid(),
+  tenant.tenant_id,
+  tenant.name,
+  'SIMPLE',
+  'ACTIVE',
+  'enterprise-migration-bootstrap'
+FROM platform.tenants tenant;
+
+UPDATE platform.organizations organization
+   SET enterprise_id = enterprise.enterprise_id
+  FROM platform.enterprise_profiles enterprise
+ WHERE enterprise.tenant_id = organization.tenant_id;
+
+ALTER TABLE platform.organizations
+  ALTER COLUMN enterprise_id SET NOT NULL;
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_enterprise_same_tenant_fk
+  FOREIGN KEY (enterprise_id, tenant_id)
+  REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_id_tenant_enterprise_uq
+  UNIQUE (organization_id, tenant_id, enterprise_id);
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_parent_same_enterprise_fk
+  FOREIGN KEY (parent_organization_id, tenant_id, enterprise_id)
+  REFERENCES platform.organizations(organization_id, tenant_id, enterprise_id)
+  DEFERRABLE INITIALLY DEFERRED;
+
+
+CREATE OR REPLACE FUNCTION platform.bootstrap_default_enterprise_for_tenant()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  INSERT INTO platform.enterprise_profiles (
+    enterprise_id, tenant_id, name, mode, status, created_by_subject_id
+  ) VALUES (
+    gen_random_uuid(), NEW.tenant_id, NEW.name, 'SIMPLE', 'ACTIVE', 'tenant-bootstrap'
+  )
+  ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER tenants_bootstrap_default_enterprise
+AFTER INSERT ON platform.tenants
+FOR EACH ROW EXECUTE FUNCTION platform.bootstrap_default_enterprise_for_tenant();
+
+CREATE OR REPLACE FUNCTION platform.bind_default_enterprise_to_organization()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+DECLARE
+  default_enterprise_id uuid;
+BEGIN
+  IF NEW.enterprise_id IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT enterprise.enterprise_id
+    INTO default_enterprise_id
+    FROM platform.enterprise_profiles enterprise
+   WHERE enterprise.tenant_id = NEW.tenant_id
+     AND enterprise.status = 'ACTIVE'
+   ORDER BY enterprise.created_at ASC, enterprise.enterprise_id ASC
+   LIMIT 1;
+
+  IF default_enterprise_id IS NULL THEN
+    INSERT INTO platform.enterprise_profiles (
+      enterprise_id, tenant_id, name, mode, status, created_by_subject_id
+    )
+    SELECT
+      gen_random_uuid(), tenant.tenant_id, tenant.name, 'SIMPLE', 'ACTIVE', 'organization-bootstrap'
+    FROM platform.tenants tenant
+    WHERE tenant.tenant_id = NEW.tenant_id
+    RETURNING enterprise_id INTO default_enterprise_id;
+  END IF;
+
+  IF default_enterprise_id IS NULL THEN
+    RAISE EXCEPTION 'enterprise profile required for organization tenant %', NEW.tenant_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  NEW.enterprise_id := default_enterprise_id;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER organizations_bind_default_enterprise
+BEFORE INSERT ON platform.organizations
+FOR EACH ROW EXECUTE FUNCTION platform.bind_default_enterprise_to_organization();
+
+CREATE TABLE platform.legal_entities (
+  legal_entity_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  enterprise_id uuid NOT NULL,
+  parent_legal_entity_id uuid,
+  legal_name text NOT NULL CHECK (btrim(legal_name) <> ''),
+  entity_type text NOT NULL CHECK (entity_type IN (
+    'CORPORATION','LLC','PARTNERSHIP','SOLE_PROPRIETORSHIP','TRUST',
+    'NONPROFIT','JOINT_VENTURE','GOVERNMENT','OTHER'
+  )),
+  jurisdiction_country_code text NOT NULL CHECK (jurisdiction_country_code ~ '^[A-Z]{2}$'),
+  jurisdiction_subdivision_code text,
+  status text NOT NULL DEFAULT 'DRAFT'
+    CHECK (status IN ('DRAFT','VERIFICATION_PENDING','VERIFIED','REJECTED','INACTIVE')),
+  verification_source text,
+  verified_at timestamptz,
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
+  updated_by_subject_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (legal_entity_id, tenant_id),
+  UNIQUE (legal_entity_id, tenant_id, enterprise_id),
+  FOREIGN KEY (enterprise_id, tenant_id)
+    REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (parent_legal_entity_id, tenant_id, enterprise_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id, enterprise_id)
+    DEFERRABLE INITIALLY DEFERRED,
+  CHECK (parent_legal_entity_id IS NULL OR parent_legal_entity_id <> legal_entity_id),
+  CHECK (valid_until IS NULL OR valid_until > valid_from),
+  CHECK (
+    (status = 'VERIFIED' AND verified_at IS NOT NULL)
+    OR status <> 'VERIFIED'
+  )
+);
+
+CREATE INDEX legal_entities_tenant_enterprise_idx
+  ON platform.legal_entities (tenant_id, enterprise_id, status, legal_name);
+
+
+CREATE OR REPLACE FUNCTION platform.legal_entity_parent_would_cycle(
+  p_tenant_id uuid,
+  p_legal_entity_id uuid,
+  p_parent_legal_entity_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $
+  WITH RECURSIVE ancestors AS (
+    SELECT
+      entity.legal_entity_id,
+      entity.parent_legal_entity_id,
+      ARRAY[entity.legal_entity_id]::uuid[] AS path
+    FROM platform.legal_entities entity
+    WHERE entity.tenant_id = p_tenant_id
+      AND entity.legal_entity_id = p_parent_legal_entity_id
+
+    UNION ALL
+
+    SELECT
+      parent.legal_entity_id,
+      parent.parent_legal_entity_id,
+      ancestors.path || parent.legal_entity_id
+    FROM ancestors
+    JOIN platform.legal_entities parent
+      ON parent.tenant_id = p_tenant_id
+     AND parent.legal_entity_id = ancestors.parent_legal_entity_id
+    WHERE NOT parent.legal_entity_id = ANY(ancestors.path)
+  )
+  SELECT
+    p_parent_legal_entity_id = p_legal_entity_id
+    OR EXISTS (
+      SELECT 1 FROM ancestors WHERE legal_entity_id = p_legal_entity_id
+    );
+$;
+
+CREATE OR REPLACE FUNCTION platform.reject_legal_entity_cycle()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.parent_legal_entity_id IS NOT NULL
+     AND platform.legal_entity_parent_would_cycle(
+       NEW.tenant_id,
+       NEW.legal_entity_id,
+       NEW.parent_legal_entity_id
+     ) THEN
+    RAISE EXCEPTION 'legal entity hierarchy cycle rejected'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER legal_entities_reject_cycles
+BEFORE INSERT OR UPDATE OF parent_legal_entity_id, tenant_id, enterprise_id
+ON platform.legal_entities
+FOR EACH ROW EXECUTE FUNCTION platform.reject_legal_entity_cycle();
+
+CREATE TABLE platform.legal_entity_registration_identifiers (
+  registration_identifier_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  legal_entity_id uuid NOT NULL,
+  jurisdiction_code text NOT NULL CHECK (btrim(jurisdiction_code) <> ''),
+  identifier_type text NOT NULL CHECK (btrim(identifier_type) <> ''),
+  identifier_value text NOT NULL CHECK (btrim(identifier_value) <> ''),
+  normalized_identifier text NOT NULL CHECK (btrim(normalized_identifier) <> ''),
+  verification_status text NOT NULL DEFAULT 'PENDING'
+    CHECK (verification_status IN ('PENDING','VERIFIED','REJECTED','REVOKED')),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE CASCADE,
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE UNIQUE INDEX legal_entity_registration_identity_uq
+  ON platform.legal_entity_registration_identifiers (
+    tenant_id,
+    upper(jurisdiction_code),
+    upper(identifier_type),
+    normalized_identifier
+  )
+  WHERE verification_status <> 'REVOKED' AND valid_until IS NULL;
+
+CREATE INDEX legal_entity_registration_lookup_idx
+  ON platform.legal_entity_registration_identifiers (
+    tenant_id, normalized_identifier, verification_status
+  );
+
+CREATE TABLE platform.legal_entity_addresses (
+  legal_entity_address_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  legal_entity_id uuid NOT NULL,
+  address_type text NOT NULL CHECK (address_type IN ('REGISTERED','MAILING','OPERATING','TAX')),
+  line1 text NOT NULL CHECK (btrim(line1) <> ''),
+  line2 text,
+  locality text,
+  administrative_area text,
+  postal_code text,
+  country_code text NOT NULL CHECK (country_code ~ '^[A-Z]{2}$'),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE CASCADE,
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE TABLE platform.legal_entity_classifications (
+  legal_entity_classification_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  legal_entity_id uuid NOT NULL,
+  classification_key text NOT NULL CHECK (classification_key IN (
+    'HOLDCO','IP_OWNER','BRAND_OWNER','OPCO','COUNTRY_OPCO',
+    'MASTER_FRANCHISEE','FRANCHISEE','LICENSEE','DISTRIBUTOR','JV_COMPANY','OTHER'
+  )),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE CASCADE,
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE UNIQUE INDEX legal_entity_classifications_active_uq
+  ON platform.legal_entity_classifications (tenant_id, legal_entity_id, classification_key)
+  WHERE valid_until IS NULL;
+
+CREATE TABLE platform.legal_entity_business_functions (
+  legal_entity_business_function_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  legal_entity_id uuid NOT NULL,
+  function_key text NOT NULL CHECK (function_key IN (
+    'EMPLOYER','CONTRACTING_ENTITY','BILLING_ENTITY','TAX_ENTITY',
+    'LICENSOR','MANAGEMENT_PROVIDER','SHARED_SERVICES_PROVIDER'
+  )),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE CASCADE,
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE UNIQUE INDEX legal_entity_business_functions_active_uq
+  ON platform.legal_entity_business_functions (tenant_id, legal_entity_id, function_key)
+  WHERE valid_until IS NULL;
+
+CREATE TABLE platform.ownership_interests (
+  ownership_interest_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  owned_legal_entity_id uuid NOT NULL,
+  owner_legal_entity_id uuid,
+  owner_party_subject_id text,
+  ownership_percent numeric(7,4) NOT NULL CHECK (ownership_percent > 0 AND ownership_percent <= 100),
+  voting_percent numeric(7,4) CHECK (voting_percent >= 0 AND voting_percent <= 100),
+  control_type text NOT NULL DEFAULT 'EQUITY'
+    CHECK (control_type IN ('EQUITY','VOTING','CONTRACTUAL','BENEFICIAL','OTHER')),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (owned_legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (owner_legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE RESTRICT,
+  CHECK ((owner_legal_entity_id IS NOT NULL) <> (owner_party_subject_id IS NOT NULL)),
+  CHECK (owner_legal_entity_id IS NULL OR owner_legal_entity_id <> owned_legal_entity_id),
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE TABLE platform.beneficial_owners (
+  beneficial_owner_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  legal_entity_id uuid NOT NULL,
+  party_subject_id text NOT NULL CHECK (btrim(party_subject_id) <> ''),
+  ownership_percent numeric(7,4) CHECK (ownership_percent >= 0 AND ownership_percent <= 100),
+  control_basis text,
+  verification_status text NOT NULL DEFAULT 'PENDING'
+    CHECK (verification_status IN ('PENDING','VERIFIED','REJECTED','REVOKED')),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE CASCADE,
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE TABLE platform.organization_legal_entity_bindings (
+  organization_legal_entity_binding_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  organization_id uuid NOT NULL,
+  legal_entity_id uuid NOT NULL,
+  binding_role text NOT NULL CHECK (binding_role IN (
+    'OPERATED_BY','EMPLOYER','CONTRACTING_ENTITY','BILLING_ENTITY',
+    'TAX_ENTITY','LICENSOR','MANAGEMENT_PROVIDER','SHARED_SERVICES_PROVIDER'
+  )),
+  status text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','INACTIVE')),
+  valid_from timestamptz NOT NULL DEFAULT now(),
+  valid_until timestamptz,
+  created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE RESTRICT,
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+
+CREATE UNIQUE INDEX organization_legal_entity_binding_active_uq
+  ON platform.organization_legal_entity_bindings (
+    tenant_id, organization_id, legal_entity_id, binding_role
+  )
+  WHERE status = 'ACTIVE' AND valid_until IS NULL;
+
+-- Operational hierarchy traversal read model.
+CREATE TABLE platform.organization_closure (
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  ancestor_organization_id uuid NOT NULL,
+  descendant_organization_id uuid NOT NULL,
+  depth integer NOT NULL CHECK (depth >= 0),
+  PRIMARY KEY (tenant_id, ancestor_organization_id, descendant_organization_id),
+  FOREIGN KEY (ancestor_organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (descendant_organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE CASCADE,
+  CHECK (
+    (depth = 0 AND ancestor_organization_id = descendant_organization_id)
+    OR
+    (depth > 0 AND ancestor_organization_id <> descendant_organization_id)
+  )
+);
+
+CREATE INDEX organization_closure_descendant_idx
+  ON platform.organization_closure (tenant_id, descendant_organization_id, depth);
+
+CREATE OR REPLACE FUNCTION platform.organization_parent_would_cycle(
+  p_tenant_id uuid,
+  p_organization_id uuid,
+  p_parent_organization_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  WITH RECURSIVE ancestors AS (
+    SELECT
+      o.organization_id,
+      o.parent_organization_id,
+      ARRAY[o.organization_id]::uuid[] AS path
+    FROM platform.organizations o
+    WHERE o.tenant_id = p_tenant_id
+      AND o.organization_id = p_parent_organization_id
+
+    UNION ALL
+
+    SELECT
+      parent.organization_id,
+      parent.parent_organization_id,
+      ancestors.path || parent.organization_id
+    FROM ancestors
+    JOIN platform.organizations parent
+      ON parent.tenant_id = p_tenant_id
+     AND parent.organization_id = ancestors.parent_organization_id
+    WHERE NOT parent.organization_id = ANY(ancestors.path)
+  )
+  SELECT
+    p_parent_organization_id = p_organization_id
+    OR EXISTS (
+      SELECT 1
+      FROM ancestors
+      WHERE organization_id = p_organization_id
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION platform.reject_organization_cycle()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.parent_organization_id IS NOT NULL
+     AND platform.organization_parent_would_cycle(
+       NEW.tenant_id,
+       NEW.organization_id,
+       NEW.parent_organization_id
+     ) THEN
+    RAISE EXCEPTION 'organization hierarchy cycle rejected'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+DECLARE
+  row_record record;
+BEGIN
+  FOR row_record IN
+    SELECT tenant_id, organization_id, parent_organization_id
+      FROM platform.organizations
+     WHERE parent_organization_id IS NOT NULL
+  LOOP
+    IF platform.organization_parent_would_cycle(
+      row_record.tenant_id,
+      row_record.organization_id,
+      row_record.parent_organization_id
+    ) THEN
+      RAISE EXCEPTION 'existing organization hierarchy contains a cycle for organization %',
+        row_record.organization_id;
+    END IF;
+  END LOOP;
+END;
+$$;
+
+CREATE TRIGGER organizations_reject_cycles
+BEFORE INSERT OR UPDATE OF parent_organization_id, tenant_id
+ON platform.organizations
+FOR EACH ROW EXECUTE FUNCTION platform.reject_organization_cycle();
+
+CREATE OR REPLACE FUNCTION platform.refresh_organization_closure(p_tenant_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  DELETE FROM platform.organization_closure
+   WHERE tenant_id = p_tenant_id;
+
+  INSERT INTO platform.organization_closure (
+    tenant_id, ancestor_organization_id, descendant_organization_id, depth
+  )
+  SELECT
+    o.tenant_id, o.organization_id, o.organization_id, 0
+  FROM platform.organizations o
+  WHERE o.tenant_id = p_tenant_id;
+
+  WITH RECURSIVE paths AS (
+    SELECT
+      child.tenant_id,
+      child.parent_organization_id AS ancestor_organization_id,
+      child.organization_id AS descendant_organization_id,
+      1 AS depth,
+      ARRAY[child.parent_organization_id, child.organization_id]::uuid[] AS path
+    FROM platform.organizations child
+    WHERE child.tenant_id = p_tenant_id
+      AND child.parent_organization_id IS NOT NULL
+
+    UNION ALL
+
+    SELECT
+      paths.tenant_id,
+      paths.ancestor_organization_id,
+      child.organization_id,
+      paths.depth + 1,
+      paths.path || child.organization_id
+    FROM paths
+    JOIN platform.organizations child
+      ON child.tenant_id = paths.tenant_id
+     AND child.parent_organization_id = paths.descendant_organization_id
+    WHERE NOT child.organization_id = ANY(paths.path)
+  )
+  INSERT INTO platform.organization_closure (
+    tenant_id, ancestor_organization_id, descendant_organization_id, depth
+  )
+  SELECT tenant_id, ancestor_organization_id, descendant_organization_id, min(depth)
+  FROM paths
+  GROUP BY tenant_id, ancestor_organization_id, descendant_organization_id
+  ON CONFLICT (tenant_id, ancestor_organization_id, descendant_organization_id)
+  DO UPDATE SET depth = EXCLUDED.depth;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION platform.refresh_organization_closure_after_change()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM platform.refresh_organization_closure(OLD.tenant_id);
+    RETURN OLD;
+  END IF;
+
+  PERFORM platform.refresh_organization_closure(NEW.tenant_id);
+  IF TG_OP = 'UPDATE' AND OLD.tenant_id IS DISTINCT FROM NEW.tenant_id THEN
+    PERFORM platform.refresh_organization_closure(OLD.tenant_id);
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER organizations_refresh_closure
+AFTER INSERT OR UPDATE OF parent_organization_id, tenant_id OR DELETE
+ON platform.organizations
+FOR EACH ROW EXECUTE FUNCTION platform.refresh_organization_closure_after_change();
+
+DO $$
+DECLARE
+  tenant_record record;
+BEGIN
+  FOR tenant_record IN SELECT tenant_id FROM platform.tenants
+  LOOP
+    PERFORM platform.refresh_organization_closure(tenant_record.tenant_id);
+  END LOOP;
+END;
+$$;
+
+-- Preserve exact-membership behavior while enabling enterprise descendant scope.
+ALTER TABLE platform.memberships
+  ADD COLUMN organization_scope_mode text NOT NULL DEFAULT 'SELF'
+  CHECK (organization_scope_mode IN ('SELF','DESCENDANTS','SELF_AND_DESCENDANTS','SELECTED'));
+
+CREATE TABLE platform.membership_organizations (
+  membership_id uuid NOT NULL,
+  tenant_id uuid NOT NULL,
+  organization_id uuid NOT NULL,
+  PRIMARY KEY (membership_id, organization_id),
+  FOREIGN KEY (membership_id, tenant_id)
+    REFERENCES platform.memberships(membership_id, tenant_id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE CASCADE
+);
+
+-- Approval is a business object lifecycle, deliberately separate from activation.
+CREATE TABLE platform.enterprise_change_requests (
+  enterprise_change_request_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
+  enterprise_id uuid,
+  operation text NOT NULL CHECK (operation IN (
+    'CREATE_ORGANIZATION','REPARENT_ORGANIZATION','CREATE_LEGAL_ENTITY',
+    'CHANGE_OWNERSHIP','CHANGE_OPERATING_ENTITY','APPOINT_PARTNER',
+    'EXPAND_TERRITORY','ACTIVATE_JURISDICTION','SUSPEND_ORGANIZATION'
+  )),
+  requesting_organization_id uuid NOT NULL,
+  approving_organization_id uuid NOT NULL,
+  target_organization_id uuid,
+  target_legal_entity_id uuid,
+  status text NOT NULL DEFAULT 'DRAFT' CHECK (status IN (
+    'DRAFT','SUBMITTED','UNDER_REVIEW','CHANGES_REQUESTED',
+    'APPROVED','REJECTED','CANCELLED'
+  )),
+  proposed_payload jsonb NOT NULL DEFAULT '{}'::jsonb
+    CHECK (jsonb_typeof(proposed_payload) = 'object'),
+  requested_by_subject_id text NOT NULL CHECK (btrim(requested_by_subject_id) <> ''),
+  requested_at timestamptz NOT NULL DEFAULT now(),
+  decided_by_subject_id text,
+  decided_at timestamptz,
+  decision_reason text,
+  workflow_instance_id uuid,
+  correlation_id text NOT NULL CHECK (btrim(correlation_id) <> ''),
+  idempotency_key text NOT NULL CHECK (btrim(idempotency_key) <> ''),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, idempotency_key),
+  FOREIGN KEY (enterprise_id, tenant_id)
+    REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
+    ON DELETE RESTRICT,
+  FOREIGN KEY (requesting_organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE RESTRICT,
+  FOREIGN KEY (approving_organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE RESTRICT,
+  FOREIGN KEY (target_organization_id, tenant_id)
+    REFERENCES platform.organizations(organization_id, tenant_id)
+    ON DELETE RESTRICT,
+  FOREIGN KEY (target_legal_entity_id, tenant_id)
+    REFERENCES platform.legal_entities(legal_entity_id, tenant_id)
+    ON DELETE RESTRICT
+);
+
+CREATE INDEX enterprise_change_requests_review_idx
+  ON platform.enterprise_change_requests (
+    tenant_id, approving_organization_id, status, requested_at
+  );
+
+-- Organization lifecycle: approval/provisioning and activation remain separate.
+ALTER TABLE platform.organizations
+  DROP CONSTRAINT IF EXISTS organizations_status_check;
+
+ALTER TABLE platform.organizations
+  ADD CONSTRAINT organizations_status_check
+  CHECK (status IN (
+    'PROVISIONING','CONFIGURING','READY_FOR_ACTIVATION',
+    'ACTIVE','SUSPENDED','INACTIVE','CLOSED'
+  ));
+
+-- Every tenant-scoped enterprise table is FORCE-RLS protected.
+ALTER TABLE platform.enterprise_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.enterprise_profiles FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entities FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_registration_identifiers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_registration_identifiers FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_addresses FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_classifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_classifications FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_business_functions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.legal_entity_business_functions FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.ownership_interests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.ownership_interests FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.beneficial_owners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.beneficial_owners FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.organization_legal_entity_bindings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.organization_legal_entity_bindings FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.organization_closure ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.organization_closure FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.membership_organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.membership_organizations FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.enterprise_change_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.enterprise_change_requests FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY enterprise_profiles_tenant_all ON platform.enterprise_profiles
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY legal_entities_tenant_all ON platform.legal_entities
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY legal_entity_registration_identifiers_tenant_all ON platform.legal_entity_registration_identifiers
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY legal_entity_addresses_tenant_all ON platform.legal_entity_addresses
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY legal_entity_classifications_tenant_all ON platform.legal_entity_classifications
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY legal_entity_business_functions_tenant_all ON platform.legal_entity_business_functions
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY ownership_interests_tenant_all ON platform.ownership_interests
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY beneficial_owners_tenant_all ON platform.beneficial_owners
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY organization_legal_entity_bindings_tenant_all ON platform.organization_legal_entity_bindings
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY organization_closure_tenant_all ON platform.organization_closure
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY membership_organizations_tenant_all ON platform.membership_organizations
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+CREATE POLICY enterprise_change_requests_tenant_all ON platform.enterprise_change_requests
+  FOR ALL USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+
+
+-- Hierarchical membership bootstrap. Existing IAM resolution remains exact-org
+-- based; this function expands a persisted membership into the organizations
+-- that its scope mode authorizes, so downstream context resolution needs no
+-- tenant-wide bypass and no new IAM model.
+
+CREATE POLICY membership_organizations_subject_bootstrap_select
+  ON platform.membership_organizations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.membership_id = membership_organizations.membership_id
+        AND membership.tenant_id = membership_organizations.tenant_id
+        AND membership.subject_id = platform.current_subject_id()
+        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+    )
+  );
+
+CREATE POLICY organization_closure_subject_bootstrap_select
+  ON platform.organization_closure
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.tenant_id = organization_closure.tenant_id
+        AND membership.organization_id = organization_closure.ancestor_organization_id
+        AND membership.subject_id = platform.current_subject_id()
+        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+    )
+  );
+
+CREATE POLICY organizations_subject_hierarchy_bootstrap_select
+  ON platform.organizations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.tenant_id = organizations.tenant_id
+        AND membership.subject_id = platform.current_subject_id()
+        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+        AND (
+          (
+            membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
+            AND membership.organization_id = organizations.organization_id
+          )
+          OR (
+            membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
+            AND EXISTS (
+              SELECT 1
+              FROM platform.organization_closure closure
+              WHERE closure.tenant_id = membership.tenant_id
+                AND closure.ancestor_organization_id = membership.organization_id
+                AND closure.descendant_organization_id = organizations.organization_id
+                AND closure.depth > 0
+            )
+          )
+          OR (
+            membership.organization_scope_mode = 'SELECTED'
+            AND EXISTS (
+              SELECT 1
+              FROM platform.membership_organizations selected
+              WHERE selected.membership_id = membership.membership_id
+                AND selected.tenant_id = membership.tenant_id
+                AND selected.organization_id = organizations.organization_id
+            )
+          )
+        )
+    )
+  );
+
+CREATE OR REPLACE FUNCTION platform.active_memberships_for_subject(
+  p_subject_id text,
+  p_issuer text DEFAULT NULL
+)
+RETURNS TABLE (
+  tenant_id uuid,
+  organization_id uuid,
+  workspace_scope_mode text,
+  workspace_ids uuid[],
+  operating_unit_scope_mode text,
+  operating_unit_ids uuid[]
+)
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = pg_catalog, platform
+AS $$
+BEGIN
+  PERFORM set_config('app.subject_id', p_subject_id, true);
+  PERFORM set_config('app.issuer', COALESCE(p_issuer, ''), true);
+
+  RETURN QUERY
+  WITH active_membership AS (
+    SELECT membership.*
+    FROM platform.memberships membership
+    JOIN platform.tenants tenant
+      ON tenant.tenant_id = membership.tenant_id
+     AND tenant.status = 'ACTIVE'
+    WHERE membership.subject_id = p_subject_id
+      AND membership.status = 'ACTIVE'
+      AND membership.valid_from <= now()
+      AND (membership.valid_until IS NULL OR membership.valid_until > now())
+      AND membership.issuer IS NOT DISTINCT FROM p_issuer
+  ),
+  expanded AS (
+    SELECT membership.membership_id, membership.tenant_id, membership.organization_id,
+           membership.workspace_scope_mode, membership.operating_unit_scope_mode
+    FROM active_membership membership
+    WHERE membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
+
+    UNION
+
+    SELECT membership.membership_id, membership.tenant_id, closure.descendant_organization_id,
+           membership.workspace_scope_mode, membership.operating_unit_scope_mode
+    FROM active_membership membership
+    JOIN platform.organization_closure closure
+      ON closure.tenant_id = membership.tenant_id
+     AND closure.ancestor_organization_id = membership.organization_id
+     AND closure.depth > 0
+    WHERE membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
+
+    UNION
+
+    SELECT membership.membership_id, membership.tenant_id, selected.organization_id,
+           membership.workspace_scope_mode, membership.operating_unit_scope_mode
+    FROM active_membership membership
+    JOIN platform.membership_organizations selected
+      ON selected.membership_id = membership.membership_id
+     AND selected.tenant_id = membership.tenant_id
+    WHERE membership.organization_scope_mode = 'SELECTED'
+  )
+  SELECT
+    expanded.tenant_id,
+    expanded.organization_id,
+    expanded.workspace_scope_mode,
+    CASE
+      WHEN expanded.workspace_scope_mode = 'ALL' THEN NULL::uuid[]
+      ELSE ARRAY(
+        SELECT membership_workspace.workspace_id
+        FROM platform.membership_workspaces membership_workspace
+        WHERE membership_workspace.membership_id = expanded.membership_id
+          AND membership_workspace.tenant_id = expanded.tenant_id
+        ORDER BY membership_workspace.workspace_id
+      )
+    END AS workspace_ids,
+    expanded.operating_unit_scope_mode,
+    CASE
+      WHEN expanded.operating_unit_scope_mode = 'ALL' THEN NULL::uuid[]
+      ELSE ARRAY(
+        SELECT membership_unit.operating_unit_id
+        FROM platform.membership_operating_units membership_unit
+        WHERE membership_unit.membership_id = expanded.membership_id
+          AND membership_unit.tenant_id = expanded.tenant_id
+        ORDER BY membership_unit.operating_unit_id
+      )
+    END AS operating_unit_ids
+  FROM expanded
+  JOIN platform.organizations organization
+    ON organization.organization_id = expanded.organization_id
+   AND organization.tenant_id = expanded.tenant_id
+   AND organization.status = 'ACTIVE'
+  ORDER BY expanded.tenant_id, expanded.organization_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION platform.active_memberships_for_subject(text, text) FROM PUBLIC;
+
+COMMIT;
