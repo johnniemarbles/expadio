@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "node scripts/start-standalone.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "check": "pnpm typecheck && pnpm test && pnpm build"
