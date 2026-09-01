@@ -34,12 +34,13 @@ export async function POST(request:Request){
     if(!body||!isPersonalAppearanceMode(body.mode)){
       return NextResponse.json({denied:true,reasonKey:'APPEARANCE_MODE_INVALID',message:'Mode must be light, dark, or system.'},{status:400});
     }
+    const mode=body.mode;
     const result=await withTenantTransaction(context,(client)=>
       persistPersonalAppearanceMode(client,{
         valueId:randomUUID(),
         tenantId:context.tenantId,
         subjectId:context.subjectId,
-        mode:body.mode,
+        mode,
         correlationId:randomUUID(),
       })
     );
