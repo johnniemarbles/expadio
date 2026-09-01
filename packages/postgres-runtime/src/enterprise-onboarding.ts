@@ -1083,6 +1083,228 @@ async function loadPlanById(
   return mapPlan(row);
 }
 
+export interface OrganizationSetupLegalEntityOption {
+  readonly legalEntityId: string;
+  readonly legalName: string;
+  readonly entityType: string;
+  readonly jurisdictionCountryCode: string;
+}
+
+export interface OrganizationOperatingEntityBinding {
+  readonly bindingId: string;
+  readonly legalEntityId: string;
+  readonly legalName: string;
+  readonly jurisdictionCountryCode: string;
+}
+
+export async function listVerifiedEnterpriseLegalEntities(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly enterpriseId: string;
+  },
+): Promise<readonly OrganizationSetupLegalEntityOption[]> {
+  const result = await client.query<{
+    readonly legal_entity_id: string;
+    readonly legal_name: string;
+    readonly entity_type: string;
+    readonly jurisdiction_country_code: string;
+  }>(
+    `SELECT legal_entity_id, legal_name, entity_type, jurisdiction_country_code
+       FROM platform.legal_entities
+      WHERE tenant_id = $1::uuid
+        AND enterprise_id = $2::uuid
+        AND status = 'VERIFIED'
+        AND valid_from <= now()
+        AND (valid_until IS NULL OR valid_until > now())
+      ORDER BY legal_name ASC, legal_entity_id ASC`,
+    [input.tenantId, input.enterpriseId],
+  );
+  return result.rows.map((row) => ({
+    legalEntityId: row.legal_entity_id,
+    legalName: row.legal_name,
+    entityType: row.entity_type,
+    jurisdictionCountryCode: row.jurisdiction_country_code,
+  }));
+}
+
+export async function listOrganizationOperatingEntities(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly organizationId: string;
+  },
+): Promise<readonly OrganizationOperatingEntityBinding[]> {
+  const result = await client.query<{
+    readonly organization_legal_entity_binding_id: string;
+    readonly legal_entity_id: string;
+    readonly legal_name: string;
+    readonly jurisdiction_country_code: string;
+  }>(
+    `SELECT
+       binding.organization_legal_entity_binding_id,
+       binding.legal_entity_id,
+       legal_entity.legal_name,
+       legal_entity.jurisdiction_country_code
+     FROM platform.organization_legal_entity_bindings binding
+     JOIN platform.legal_entities legal_entity
+       ON legal_entity.tenant_id = binding.tenant_id
+      AND legal_entity.legal_entity_id = binding.legal_entity_id
+     WHERE binding.tenant_id = $1::uuid
+       AND binding.organization_id = $2::uuid
+       AND binding.binding_role = 'OPERATED_BY'
+       AND binding.status = 'ACTIVE'
+       AND binding.valid_from <= now()
+       AND (binding.valid_until IS NULL OR binding.valid_until > now())
+     ORDER BY binding.valid_from ASC, binding.organization_legal_entity_binding_id ASC`,
+    [input.tenantId, input.organizationId],
+  );
+  return result.rows.map((row) => ({
+    bindingId: row.organization_legal_entity_binding_id,
+    legalEntityId: row.legal_entity_id,
+    legalName: row.legal_name,
+    jurisdictionCountryCode: row.jurisdiction_country_code,
+  }));
+}
+
+export async function assignOrganizationOperatingEntity(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly legalEntityId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+  },
+): Promise<{
+  readonly binding: OrganizationOperatingEntityBinding;
+  readonly plan: OrganizationSetupPlan;
+  readonly idempotent: boolean;
+}> {
+  const plan = await loadPlanById(client, input.tenantId, input.setupPlanId, true);
+  if (plan.state === 'ACTIVATED' || plan.state === 'CANCELLED') {
+    throw new Error('ORGANIZATION_SETUP_PLAN_CLOSED');
+  }
+
+  const legalEntity = await client.query<{
+    readonly legal_entity_id: string;
+    readonly legal_name: string;
+    readonly jurisdiction_country_code: string;
+  }>(
+    `SELECT legal_entity_id, legal_name, jurisdiction_country_code
+       FROM platform.legal_entities
+      WHERE tenant_id = $1::uuid
+        AND enterprise_id = $2::uuid
+        AND legal_entity_id = $3::uuid
+        AND status = 'VERIFIED'
+        AND valid_from <= now()
+        AND (valid_until IS NULL OR valid_until > now())
+      LIMIT 1`,
+    [input.tenantId, plan.enterpriseId, input.legalEntityId],
+  );
+  const entity = legalEntity.rows[0];
+  if (!entity) throw new Error('ORGANIZATION_SETUP_VERIFIED_LEGAL_ENTITY_REQUIRED');
+
+  const existing = await client.query<{
+    readonly organization_legal_entity_binding_id: string;
+  }>(
+    `SELECT organization_legal_entity_binding_id
+       FROM platform.organization_legal_entity_bindings
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND legal_entity_id = $3::uuid
+        AND binding_role = 'OPERATED_BY'
+        AND status = 'ACTIVE'
+        AND valid_from <= now()
+        AND (valid_until IS NULL OR valid_until > now())
+      LIMIT 1
+      FOR UPDATE`,
+    [input.tenantId, plan.organizationId, input.legalEntityId],
+  );
+  const prior = existing.rows[0];
+  if (prior) {
+    return {
+      binding: {
+        bindingId: prior.organization_legal_entity_binding_id,
+        legalEntityId: entity.legal_entity_id,
+        legalName: entity.legal_name,
+        jurisdictionCountryCode: entity.jurisdiction_country_code,
+      },
+      plan,
+      idempotent: true,
+    };
+  }
+
+  const bindingId = randomUUID();
+  await client.query(
+    `INSERT INTO platform.organization_legal_entity_bindings (
+       organization_legal_entity_binding_id,
+       tenant_id,
+       organization_id,
+       legal_entity_id,
+       binding_role,
+       status,
+       created_by_subject_id
+     ) VALUES (
+       $1::uuid, $2::uuid, $3::uuid, $4::uuid,
+       'OPERATED_BY', 'ACTIVE', $5
+     )`,
+    [
+      bindingId,
+      input.tenantId,
+      plan.organizationId,
+      input.legalEntityId,
+      input.actorSubjectId,
+    ],
+  );
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    eventType: 'OPERATING_ENTITY_ASSIGNED',
+    actorSubjectId: input.actorSubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: {
+      organizationId: plan.organizationId,
+      legalEntityId: input.legalEntityId,
+      bindingId,
+    },
+  });
+  if (!setupEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: input.setupPlanId,
+      eventType: 'organization.setup.operating_entity_assigned',
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        organizationId: plan.organizationId,
+        legalEntityId: input.legalEntityId,
+        bindingId,
+      },
+    });
+  }
+
+  const evaluated = await evaluateOrganizationSetupAutomatedRequirements(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    correlationId: input.correlationId,
+  });
+
+  return {
+    binding: {
+      bindingId,
+      legalEntityId: entity.legal_entity_id,
+      legalName: entity.legal_name,
+      jurisdictionCountryCode: entity.jurisdiction_country_code,
+    },
+    plan: evaluated.plan,
+    idempotent: false,
+  };
+}
+
 export interface OrganizationSetupAutomatedEvaluation {
   readonly requirementKey: string;
   readonly satisfied: boolean;
