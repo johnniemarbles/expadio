@@ -6,7 +6,7 @@ import {
   resolveRequestContext,
   withTenantTransaction,
 } from '../../../../lib/request-context';
-import { hasGovernanceWriteRole } from '../../../../lib/governance-authz';
+import { hasGovernanceWriteRoleForOrganization } from '../../../../lib/governance-authz';
 import { membershipRepository } from '../../../../lib/iam-adapter';
 
 export async function GET(request: Request) {
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       request.headers.get('x-correlation-id')?.trim() || randomUUID();
 
     const outcome = await withTenantTransaction(context, async (client) => {
-      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
+      if (!(await hasGovernanceWriteRoleForOrganization(client, context.subjectId, context.organizationId!))) {
         return { forbidden: true } as const;
       }
 
