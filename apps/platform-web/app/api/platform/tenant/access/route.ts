@@ -166,6 +166,44 @@ export async function GET(request: Request) {
       });
     }
 
+    if (clerkAvailable && scopedPending.length > 0) {
+      try {
+        await withTenantTransaction(context, async (client) => {
+          for (const invitation of scopedPending) {
+            const scope = invitationScope(invitation.publicMetadata);
+            const scopedRole = role(scope?.roleKey);
+            if (!scopedRole) continue;
+            const validUntilRaw = typeof scope?.validUntil === 'string' ? scope.validUntil : null;
+            const parsedValidUntil = validUntilRaw ? new Date(validUntilRaw) : null;
+            await upsertTenantAccessInvitation(client, {
+              tenantId: context.tenantId,
+              organizationId,
+              invitationId: invitation.id,
+              email: invitation.emailAddress,
+              roleKey: scopedRole,
+              invitedBySubjectId: typeof scope?.invitedBySubjectId === 'string'
+                ? scope.invitedBySubjectId
+                : 'clerk-reconciliation',
+              correlationId: `clerk-reconcile:${invitation.id}`,
+              validUntil: parsedValidUntil && Number.isFinite(parsedValidUntil.getTime())
+                ? parsedValidUntil
+                : null,
+              clerkCreatedAt: new Date(invitation.createdAt),
+            });
+          }
+        });
+      } catch (error) {
+        // Clerk remains readable and the response can still be rendered. Keep
+        // serving the provider state and retry durable reconciliation on the
+        // next read instead of hiding every pending invitation.
+        console.error('Clerk pending invitations could not be backfilled into EXPADIO', {
+          tenantId: context.tenantId,
+          organizationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     const localById = new Map(db.localInvitations.map((item) => [item.invitationId, item]));
     const clerkById = new Map(scopedPending.map((item) => [item.id, item]));
     const ids = new Set<string>([
@@ -294,6 +332,49 @@ export async function POST(request: Request) {
     );
 
     if (existingInvitation) {
+      const existingScope = invitationScope(existingInvitation.publicMetadata);
+      const existingRole = role(existingScope?.roleKey);
+      if (!existingRole) {
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_ROLE_INVALID',
+            message: 'The existing Clerk invitation has invalid EXPADIO role metadata. Revoke it and create a fresh invitation.',
+          },
+          { status: 409 },
+        );
+      }
+      const validUntilRaw = typeof existingScope?.validUntil === 'string'
+        ? existingScope.validUntil
+        : null;
+      const parsedValidUntil = validUntilRaw ? new Date(validUntilRaw) : null;
+      await withTenantTransaction(context, (client) =>
+        upsertTenantAccessInvitation(client, {
+          tenantId: context.tenantId,
+          organizationId,
+          invitationId: existingInvitation.id,
+          email: existingInvitation.emailAddress,
+          roleKey: existingRole,
+          invitedBySubjectId: typeof existingScope?.invitedBySubjectId === 'string'
+            ? existingScope.invitedBySubjectId
+            : context.subjectId,
+          correlationId: `clerk-reconcile:${existingInvitation.id}`,
+          validUntil: parsedValidUntil && Number.isFinite(parsedValidUntil.getTime())
+            ? parsedValidUntil
+            : null,
+          clerkCreatedAt: new Date(existingInvitation.createdAt),
+        })
+      );
+      if (existingRole !== roleKey) {
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_ROLE_MISMATCH',
+            message: `This user already has a pending invitation with role ${existingRole}. Revoke it before changing the invitation role.`,
+          },
+          { status: 409 },
+        );
+      }
       return NextResponse.json({
         outcome: 'INVITATION_ALREADY_PENDING',
         invitation: {
@@ -302,7 +383,7 @@ export async function POST(request: Request) {
           status: existingInvitation.status,
           createdAt: new Date(existingInvitation.createdAt).toISOString(),
           acceptUrl: typeof existingInvitation.url === 'string' ? existingInvitation.url : null,
-          roleKey,
+          roleKey: existingRole,
           deliveryState: 'CLERK_PENDING',
         },
         message: 'This user already has a pending invitation for the selected Brand workspace.',
