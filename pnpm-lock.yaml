@@ -65,6 +65,9 @@ importers:
       '@expadio/postgres-runtime':
         specifier: workspace:*
         version: link:../../packages/postgres-runtime
+      '@expadio/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@expadio/tenancy':
         specifier: workspace:*
         version: link:../../packages/tenancy
