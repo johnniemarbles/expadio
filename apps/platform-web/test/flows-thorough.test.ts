@@ -7,6 +7,7 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const providerModal = read("../app/(shell)/communications/ProviderModal.tsx");
 const custodyWrap = read("../lib/custody-wrap.ts");
 const iamAdapter = read("../lib/iam-adapter.ts");
+const seed = read("../scripts/seed.cjs");
 const cloudflareRoute = read("../app/api/communications/domains/cloudflare/route.ts");
 const verifyRoute = read("../app/api/communications/domains/[senderId]/verify/route.ts");
 const domainDeleteRoute = read("../app/api/communications/domains/[senderId]/route.ts");
@@ -35,11 +36,12 @@ test("client-side wrapping matches the server unwrap contract", () => {
   assert.match(custodyWrap, /published\.algorithm/);
 });
 
-test("bootstrap seeds the platform admin role and communication capabilities", () => {
-  assert.match(iamAdapter, /PLATFORM_SUPER_ADMIN/);
-  assert.match(iamAdapter, /communication\.email\.send/);
-  assert.match(iamAdapter, /INSERT INTO platform\.capabilities/);
-  assert.match(iamAdapter, /INSERT INTO platform\.authorization_assignments/);
+test("bootstrap privilege is explicit startup seeding, never request-time IAM mutation", () => {
+  assert.match(seed, /CLERK_ADMIN_USER_ID/);
+  assert.match(seed, /PLATFORM_SUPER_ADMIN/);
+  assert.match(seed, /INSERT INTO platform\.authorization_assignments/);
+  assert.doesNotMatch(iamAdapter, /INSERT INTO platform\.memberships/);
+  assert.doesNotMatch(iamAdapter, /INSERT INTO platform\.authorization_assignments/);
 });
 
 test("domain auto-configure is honest — PENDING, real records, no fabricated success", () => {
