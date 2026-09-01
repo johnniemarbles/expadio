@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { publishLearningCourseVersion } from '@expadio/postgres-runtime/learning';
-import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
+import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
