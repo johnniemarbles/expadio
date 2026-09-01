@@ -10,6 +10,7 @@ import { hasGovernanceWriteRoleForOrganization } from '../lib/governance-authz';
 import {
   activateOrganizationSetup,
   addOrganizationSetupDependency,
+  assignOrganizationOperatingEntity,
   changeOrganizationSetupRequirement,
   listOrganizationSetupRequirements,
   registerOrganizationSetupRequirement,
@@ -173,9 +174,9 @@ test('approved child is configured through governed readiness before activation'
     ).rows[0];
     assert.equal(plan?.state, 'CONFIGURING');
     assert.equal(Number(plan?.total_requirements), 3);
-    assert.equal(Number(plan?.completed_requirements), 0);
-    assert.equal(Number(plan?.blocking_open_requirements), 3);
-    assert.equal(Number(plan?.completion_percent), 0);
+    assert.equal(Number(plan?.completed_requirements), 2);
+    assert.equal(Number(plan?.blocking_open_requirements), 1);
+    assert.equal(Number(plan?.completion_percent), 66.67);
 
     const participant = await c.query(
       `SELECT subject_id, role, status
@@ -219,6 +220,27 @@ test('approved child is configured through governed readiness before activation'
       setupPlanId: approved.setupPlanId!,
     });
     const byKey = new Map(core.map((requirement) => [requirement.requirementKey, requirement]));
+    assert.equal(byKey.get('core.organization-profile')?.satisfactionMode, 'AUTOMATED');
+    assert.equal(byKey.get('core.organization-profile')?.status, 'SATISFIED');
+    assert.equal(byKey.get('core.operating-entity')?.satisfactionMode, 'AUTOMATED');
+    assert.equal(byKey.get('core.operating-entity')?.status, 'PENDING');
+    assert.equal(byKey.get('core.primary-administrator')?.status, 'SATISFIED');
+
+    await c.query('BEGIN');
+    await assert.rejects(
+      () => changeOrganizationSetupRequirement(c, {
+        tenantId,
+        setupPlanId: approved.setupPlanId!,
+        requirementId: byKey.get('core.operating-entity')!.setupRequirementId,
+        action: 'SATISFY',
+        actorSubjectId: 'setup-owner',
+        evidenceRefs: ['manual:claim'],
+        correlationId: 'setup-progress',
+        idempotencyKey: 'manual-operating-entity-bypass',
+      }),
+      /ORGANIZATION_SETUP_AUTOMATED_REQUIREMENT/,
+    );
+    await c.query('ROLLBACK');
 
     await c.query('BEGIN');
     const policyA = await registerOrganizationSetupRequirement(c, {
@@ -309,10 +331,33 @@ test('approved child is configured through governed readiness before activation'
     );
     await c.query('ROLLBACK');
 
+    const legalEntityId = randomUUID();
+    await c.query(
+      `INSERT INTO platform.legal_entities (
+         legal_entity_id, tenant_id, enterprise_id, legal_name, entity_type,
+         jurisdiction_country_code, status, verified_at, created_by_subject_id
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, 'Canada Operating Company Inc.',
+         'CORPORATION', 'CA', 'VERIFIED', now(), 'enterprise-test'
+       )`,
+      [legalEntityId, tenantId, enterpriseId],
+    );
+
+    await c.query('BEGIN');
+    const operatingEntity = await assignOrganizationOperatingEntity(c, {
+      tenantId,
+      setupPlanId: approved.setupPlanId!,
+      legalEntityId,
+      actorSubjectId: 'setup-owner',
+      correlationId: 'setup-operating-entity',
+      idempotencyKey: 'setup-operating-entity-canada',
+    });
+    await c.query('COMMIT');
+    assert.equal(operatingEntity.binding.legalEntityId, legalEntityId);
+    assert.equal(operatingEntity.plan.completedRequirements, 3);
+    assert.equal(operatingEntity.plan.blockingOpenRequirements, 2);
+
     const blockingRequirements = [
-      byKey.get('core.organization-profile')!,
-      byKey.get('core.operating-entity')!,
-      byKey.get('core.primary-administrator')!,
       policyA.requirement,
       policyB.requirement,
     ];
@@ -396,7 +441,7 @@ test('approved child is configured through governed readiness before activation'
     );
     assert.deepEqual(
       expanded.rows.map((row) => row.organization_id).sort(),
-      [rootOrganizationId, approved.organizationId].sort(),
+      [rootOrganizationId, siblingOrganizationId, approved.organizationId].sort(),
     );
 
     const setupAccessAfterActivation = await c.query(
@@ -422,6 +467,8 @@ test('approved child is configured through governed readiness before activation'
     assert.ok(setupEventTypes.includes('SETUP_STARTED'));
     assert.ok(setupEventTypes.includes('REQUIREMENT_ADDED'));
     assert.ok(setupEventTypes.includes('REQUIREMENT_STATUS_CHANGED'));
+    assert.ok(setupEventTypes.includes('REQUIREMENT_DEPENDENCY_ADDED'));
+    assert.ok(setupEventTypes.includes('OPERATING_ENTITY_ASSIGNED'));
     assert.ok(setupEventTypes.includes('SETUP_ACTIVATED'));
 
     await assert.rejects(
@@ -447,6 +494,8 @@ test('approved child is configured through governed readiness before activation'
     assert.ok(domainEventTypes.includes('organization.setup.started'));
     assert.ok(domainEventTypes.includes('organization.setup.requirement_added'));
     assert.ok(domainEventTypes.includes('organization.setup.requirement_changed'));
+    assert.ok(domainEventTypes.includes('organization.setup.requirement_dependency_added'));
+    assert.ok(domainEventTypes.includes('organization.setup.operating_entity_assigned'));
     assert.ok(domainEventTypes.includes('organization.setup.activated'));
     assert.ok(domainEventTypes.includes('organization.activated'));
   } finally {
