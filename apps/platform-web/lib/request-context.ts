@@ -7,11 +7,8 @@ import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
 /**
  * Design spec §0.2 G5 — un-scaffolding.
  *
- * Communications API routes used to hardcode
- *   tenantId: '00000000-0000-0000-0000-000000000001'
- *   organizationId: '00000000-0000-0000-0000-000000000002'
- *
- * That was scaffolding presenting as wiring. Tenant selection now arrives on
+ * Several early API routes used fixed demo tenant/organization identifiers.
+ * That scaffolding has been removed from runtime context resolution. Tenant selection now arrives on
  * the `x-expadio-tenant-id` / `x-expadio-organization-id` request headers,
  * which `proxy.ts` injects from the shell's active workspace
  * (`?account=<tenantId>&org=<organizationId>`, with a cookie fallback).
@@ -79,15 +76,34 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     );
   }
 
-  const selectedMembership =
-    memberships.find((membership) =>
-      (!requestedTenant || membership.tenantId === requestedTenant)
-      && (!requestedOrganization || membership.organizationId === requestedOrganization)
-    )
-    ?? memberships.find((membership) =>
-      !requestedTenant || membership.tenantId === requestedTenant
-    )
-    ?? memberships[0];
+  let selectedMembership;
+  if (requestedOrganization) {
+    selectedMembership = memberships.find(
+      (membership) =>
+        membership.organizationId === requestedOrganization
+        && (!requestedTenant || membership.tenantId === requestedTenant),
+    );
+    if (!selectedMembership) {
+      throw new ContextDenied(
+        'TENANT_ACCESS_DENIED',
+        'You do not have access to this workspace.',
+        403,
+      );
+    }
+  } else if (requestedTenant) {
+    selectedMembership = memberships.find(
+      (membership) => membership.tenantId === requestedTenant,
+    );
+    if (!selectedMembership) {
+      throw new ContextDenied(
+        'TENANT_ACCESS_DENIED',
+        'You do not have access to this workspace.',
+        403,
+      );
+    }
+  } else {
+    selectedMembership = memberships[0];
+  }
 
   requestedTenant = selectedMembership.tenantId;
   requestedOrganization = selectedMembership.organizationId;
@@ -119,12 +135,15 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     subjectId: userId,
     issuer: effective.issuer ?? null,
     tenantId,
-    organizationId: organizationId ?? '',
+    organizationId,
     platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
     applyTo: async (client) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
       // Setting this is what makes platform.current_tenant_id() resolve.
       await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', tenantId]);
+      await client.query('SELECT set_config($1, $2, true)', ['app.subject_id', userId]);
+      await client.query('SELECT set_config($1, $2, true)', ['app.issuer', effective.issuer ?? '']);
+      await client.query('SELECT set_config($1, $2, true)', ['app.organization_id', organizationId ?? '']);
     },
   };
 }
@@ -204,4 +223,18 @@ export function deniedResponse(error: unknown): { body: DeniedResult; status: nu
     status: 500,
   };
 }
-export type RouteSearchParams = { [key: string]: string | string[] | undefined }; export function requestedOrganizationId(_request?: any) { return '00000000-0000-0000-0000-000000000002'; }
+export type RouteSearchParams = { [key: string]: string | string[] | undefined };
+
+export async function requestedOrganizationId(
+  _searchParams?: RouteSearchParams | Promise<RouteSearchParams>,
+): Promise<string> {
+  const context = await resolveRequestContext();
+  if (!context.organizationId) {
+    throw new ContextDenied(
+      'ORGANIZATION_CONTEXT_REQUIRED',
+      'Select an organization workspace to continue.',
+      403,
+    );
+  }
+  return context.organizationId;
+}

@@ -2,7 +2,7 @@ import type { DeniedResult, DataSource, WiringStatus, AdapterResult } from "@exp
 export type { DeniedResult, DataSource, WiringStatus, AdapterResult };
 export type HealthTone = "positive" | "attention" | "neutral";
 export type CapabilityState = "Published" | "Review" | "Draft";
-export type OrganizationLevel = "platform" | "country" | "region" | "city";
+export type OrganizationLevel = "platform" | "country" | "region" | "city" | "organization";
 export interface PlatformMetric { label: string; value: string; detail: string; tone: HealthTone; }
 export interface CapabilitySummary { id: string; name: string; kind: "Skill" | "Worker"; version: string; state: CapabilityState; scope: string; updated: string; }
 export interface ReviewItem { id: string; title: string; category: string; requestedBy: string; age: string; risk: "Low" | "Medium" | "High"; }
