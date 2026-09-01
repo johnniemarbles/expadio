@@ -6,6 +6,7 @@ import {
   approveCreateOrganizationRequest,
   requestChildOrganization,
 } from '@expadio/postgres-runtime/enterprise';
+import { hasGovernanceWriteRoleForOrganization } from '../lib/governance-authz';
 import {
   activateOrganizationSetup,
   addOrganizationSetupDependency,
@@ -65,6 +66,53 @@ test('approved child is configured through governed readiness before activation'
          'SELF_AND_DESCENDANTS'
        )`,
       [tenantId, rootOrganizationId],
+    );
+
+    const siblingOrganizationId = randomUUID();
+    await c.query(
+      `INSERT INTO platform.organizations (
+         organization_id, tenant_id, enterprise_id, parent_organization_id,
+         organization_kind, name, status
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, $4::uuid,
+         'REGION', 'Sibling Region', 'ACTIVE'
+       )`,
+      [siblingOrganizationId, tenantId, enterpriseId, rootOrganizationId],
+    );
+    const tenantAdminRoleId = (
+      await c.query<{ role_id: string }>(
+        `INSERT INTO platform.authorization_roles (
+           role_key, display_name, ownership_scope, tenant_id, status
+         ) VALUES (
+           'TENANT_ADMIN', 'Enterprise scoped admin', 'TENANT', $1::uuid, 'ACTIVE'
+         )
+         RETURNING role_id`,
+        [tenantId],
+      )
+    ).rows[0]!.role_id;
+    await c.query(
+      `INSERT INTO platform.authorization_assignments (
+         tenant_id, organization_id, subject_id, role_id, status
+       ) VALUES (
+         $1::uuid, $2::uuid, 'sibling-admin', $3::uuid, 'ACTIVE'
+       )`,
+      [tenantId, siblingOrganizationId, tenantAdminRoleId],
+    );
+    assert.equal(
+      await hasGovernanceWriteRoleForOrganization(
+        c,
+        'sibling-admin',
+        siblingOrganizationId,
+      ),
+      true,
+    );
+    assert.equal(
+      await hasGovernanceWriteRoleForOrganization(
+        c,
+        'sibling-admin',
+        rootOrganizationId,
+      ),
+      false,
     );
 
     await c.query('BEGIN');
