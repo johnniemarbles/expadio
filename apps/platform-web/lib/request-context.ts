@@ -119,12 +119,15 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     subjectId: userId,
     issuer: effective.issuer ?? null,
     tenantId,
-    organizationId: organizationId ?? '',
+    organizationId,
     platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
     applyTo: async (client) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
       // Setting this is what makes platform.current_tenant_id() resolve.
       await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', tenantId]);
+      await client.query('SELECT set_config($1, $2, true)', ['app.subject_id', userId]);
+      await client.query('SELECT set_config($1, $2, true)', ['app.issuer', effective.issuer ?? '']);
+      await client.query('SELECT set_config($1, $2, true)', ['app.organization_id', organizationId ?? '']);
     },
   };
 }
@@ -204,4 +207,18 @@ export function deniedResponse(error: unknown): { body: DeniedResult; status: nu
     status: 500,
   };
 }
-export type RouteSearchParams = { [key: string]: string | string[] | undefined }; export function requestedOrganizationId(_request?: any) { return '00000000-0000-0000-0000-000000000002'; }
+export type RouteSearchParams = { [key: string]: string | string[] | undefined };
+
+export async function requestedOrganizationId(
+  _searchParams?: RouteSearchParams | Promise<RouteSearchParams>,
+): Promise<string> {
+  const context = await resolveRequestContext();
+  if (!context.organizationId) {
+    throw new ContextDenied(
+      'ORGANIZATION_CONTEXT_REQUIRED',
+      'Select an organization workspace to continue.',
+      403,
+    );
+  }
+  return context.organizationId;
+}
