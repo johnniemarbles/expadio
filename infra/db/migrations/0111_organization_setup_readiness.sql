@@ -14,6 +14,8 @@ CREATE TABLE platform.organization_setup_plans (
   enterprise_id uuid NOT NULL,
   organization_id uuid NOT NULL,
   provisioning_change_request_id uuid,
+  primary_administrator_subject_id text,
+  primary_administrator_issuer text,
   version integer NOT NULL DEFAULT 1 CHECK (version > 0),
   state text NOT NULL DEFAULT 'PROVISIONING' CHECK (state IN (
     'PROVISIONING','CONFIGURING','READY_FOR_ACTIVATION','ACTIVATED','CANCELLED'
@@ -39,6 +41,15 @@ CREATE TABLE platform.organization_setup_plans (
     REFERENCES platform.enterprise_change_requests(enterprise_change_request_id, tenant_id)
     ON DELETE RESTRICT,
   CHECK (completed_requirements <= total_requirements),
+  CHECK (
+    (primary_administrator_subject_id IS NULL AND primary_administrator_issuer IS NULL)
+    OR (
+      primary_administrator_subject_id IS NOT NULL
+      AND btrim(primary_administrator_subject_id) <> ''
+      AND primary_administrator_issuer IS NOT NULL
+      AND btrim(primary_administrator_issuer) <> ''
+    )
+  ),
   CHECK (
     (state = 'READY_FOR_ACTIVATION' AND ready_at IS NOT NULL)
     OR state <> 'READY_FOR_ACTIVATION'
