@@ -495,7 +495,12 @@ test('Learning tutor request executes through governed durable AI worker', async
 
     const evidence = await client.query<{
       input_reference: string;
-      output_artifacts: number;
+      job_output_artifacts: number;
+      execution_artifacts: number;
+      storage_reference: string;
+      capability_key: string;
+      artifact_cost_minor_units: number;
+      provider_cost_ownership: string;
       started_events: number;
       succeeded_events: number;
       usage_events: number;
@@ -508,7 +513,27 @@ test('Learning tutor request executes through governed durable AI worker', async
            AS input_reference,
          (SELECT count(*)::int FROM platform.ai_job_artifacts
            WHERE tenant_id = $1::uuid AND job_id = $2::uuid
-             AND artifact_type = 'OUTPUT') AS output_artifacts,
+             AND artifact_type = 'OUTPUT') AS job_output_artifacts,
+         (SELECT count(*)::int FROM platform.execution_artifacts
+           WHERE tenant_id = $1::uuid
+             AND source_kind = 'AI_INVOCATION'
+             AND source_id = $3) AS execution_artifacts,
+         (SELECT storage_reference FROM platform.execution_artifacts
+           WHERE tenant_id = $1::uuid
+             AND source_kind = 'AI_INVOCATION'
+             AND source_id = $3) AS storage_reference,
+         (SELECT capability_key FROM platform.execution_artifacts
+           WHERE tenant_id = $1::uuid
+             AND source_kind = 'AI_INVOCATION'
+             AND source_id = $3) AS capability_key,
+         (SELECT cost_minor_units::int FROM platform.execution_artifacts
+           WHERE tenant_id = $1::uuid
+             AND source_kind = 'AI_INVOCATION'
+             AND source_id = $3) AS artifact_cost_minor_units,
+         (SELECT provider_cost_ownership FROM platform.execution_artifacts
+           WHERE tenant_id = $1::uuid
+             AND source_kind = 'AI_INVOCATION'
+             AND source_id = $3) AS provider_cost_ownership,
          (SELECT count(*)::int FROM platform.ai_job_events
            WHERE tenant_id = $1::uuid AND job_id = $2::uuid
              AND event_type = 'STARTED') AS started_events,
@@ -535,12 +560,20 @@ test('Learning tutor request executes through governed durable AI worker', async
 
     assert.match(evidence.rows[0]!.input_reference, /^ai-artifact:\/\//);
     assert.doesNotMatch(evidence.rows[0]!.input_reference, /recall|precision/i);
-    assert.equal(evidence.rows[0]!.output_artifacts, 1);
+    assert.equal(evidence.rows[0]!.job_output_artifacts, 0);
+    assert.equal(evidence.rows[0]!.execution_artifacts, 1);
+    assert.equal(
+      evidence.rows[0]!.storage_reference,
+      worker.outputReference,
+    );
+    assert.equal(evidence.rows[0]!.capability_key, 'ai.generate');
+    assert.equal(evidence.rows[0]!.artifact_cost_minor_units, 1);
+    assert.equal(evidence.rows[0]!.provider_cost_ownership, 'BYOK');
     assert.equal(evidence.rows[0]!.started_events, 1);
     assert.equal(evidence.rows[0]!.succeeded_events, 1);
     assert.equal(evidence.rows[0]!.usage_events, 1);
     assert.equal(evidence.rows[0]!.completed_queue_rows, 1);
-    assert.equal(evidence.rows[0]!.credential_lease_events, 1);
+    assert.equal(evidence.rows[0]!.credential_lease_events, 3);
 
     const secondPass = await runAiJobWorkerOnce(client, {
       tenantId,
@@ -587,10 +620,14 @@ test('Learning tutor request executes through governed durable AI worker', async
         learningAiRequestId: request.request.learningAiRequestId,
         actorSubjectId: learnerSubjectId,
         actorIssuer: learnerIssuer,
+        outputResolver,
       }),
     );
     assert.equal(historical.jobStatus, 'SUCCEEDED');
     assert.equal(historical.output?.content, status.output?.content);
+    assert.equal(storageSecretReads, 3);
+    assert.equal(storageReads, 2);
+    assert.equal(bucketChecks, 3);
   } finally {
     client.release();
     await db.end();
