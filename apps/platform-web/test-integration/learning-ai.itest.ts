@@ -10,6 +10,12 @@ import {
   updateLearningAiSettings,
 } from '@expadio/postgres-runtime/learning-ai';
 import { runAiJobWorkerOnce } from '../lib/ai-job-worker';
+import {
+  createGovernedSupabaseArtifactStore,
+} from '../lib/governed-artifact-storage';
+import {
+  findExecutionArtifactBySource,
+} from '@expadio/postgres-runtime/execution-artifact';
 
 function pool(): pg.Pool {
   return new pg.Pool({
@@ -47,9 +53,16 @@ test('Learning tutor request executes through governed durable AI worker', async
   const learnerIssuer = 'https://clerk.expadio.com';
   const serviceSubjectId = `ai-worker-${randomUUID()}`;
   const connectorKey = `openai-learning-${randomUUID()}`;
+  const storageConnectorKey =
+    `supabase-artifacts-${randomUUID()}`;
   const roleKey = `ai-worker-role-${randomUUID()}`;
   const credentialRef =
     `vault://tenant/${tenantId}/connector/${connectorKey}/v1`;
+  const storageCredentialRef =
+    `vault://tenant/${tenantId}/connector/${storageConnectorKey}/v1`;
+  const storageProjectUrl = 'https://learning-ai-storage.example.test';
+  const storageBucket = 'learning-ai-artifacts';
+  const storedObjects = new Map<string, Uint8Array>();
 
   try {
     await client.query(
@@ -124,6 +137,20 @@ test('Learning tutor request executes through governed durable AI worker', async
        DO UPDATE SET display_name = EXCLUDED.display_name
        RETURNING capability_id`,
     );
+    const storageCapabilities = await client.query<{
+      capability_id: string;
+      capability_key: string;
+    }>(
+      `INSERT INTO platform.capabilities (
+         capability_key, display_name, permitted_modes, enabled
+       ) VALUES
+         ('storage.store', 'Storage Store', ARRAY['A']::text[], true),
+         ('storage.read', 'Storage Read', ARRAY['A']::text[], true)
+       ON CONFLICT (capability_key)
+       DO UPDATE SET display_name = EXCLUDED.display_name
+       RETURNING capability_id, capability_key`,
+    );
+
     const connector = await client.query<{ connector_id: string }>(
       `INSERT INTO platform.connectors (
          connector_key, provider_type, provider_key, ownership_scope,
@@ -146,6 +173,39 @@ test('Learning tutor request executes through governed durable AI worker', async
          connector_id, credential_ref, key_version, custody_mode, state
        ) VALUES ($1::uuid, $2, 'v1', 'PLATFORM_MANAGED', 'ACTIVE')`,
       [connector.rows[0]!.connector_id, credentialRef],
+    );
+
+    const storageConnector = await client.query<{
+      connector_id: string;
+    }>(
+      `INSERT INTO platform.connectors (
+         connector_key, provider_type, provider_key, ownership_scope,
+         tenant_id, region, residency_tags, compliance_tags,
+         health, priority, enabled, fallback_enabled
+       ) VALUES (
+         $1, 'supabase-storage', 'supabase-storage', 'TENANT',
+         $2::uuid, 'test-region', ARRAY[]::text[], ARRAY[]::text[],
+         'HEALTHY', 1, true, false
+       )
+       RETURNING connector_id`,
+      [storageConnectorKey, tenantId],
+    );
+    for (const capabilityRow of storageCapabilities.rows) {
+      await client.query(
+        `INSERT INTO platform.connector_capabilities (
+           connector_id, capability_id
+         ) VALUES ($1::uuid, $2::uuid)`,
+        [
+          storageConnector.rows[0]!.connector_id,
+          capabilityRow.capability_id,
+        ],
+      );
+    }
+    await client.query(
+      `INSERT INTO platform.connector_credentials (
+         connector_id, credential_ref, key_version, custody_mode, state
+       ) VALUES ($1::uuid, $2, 'v1', 'PLATFORM_MANAGED', 'ACTIVE')`,
+      [storageConnector.rows[0]!.connector_id, storageCredentialRef],
     );
 
     const role = await client.query<{ role_id: string }>(
