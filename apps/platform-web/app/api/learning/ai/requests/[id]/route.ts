@@ -12,6 +12,9 @@ import {
   learningApiError,
   requireLearningUuid,
 } from '@/lib/learning-errors';
+import {
+  resolveLearningAiOutput,
+} from '@/lib/learning-ai-output';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,6 +38,13 @@ export async function GET(
         actorIssuer: context.issuer ?? null,
         allowAdminRead:
           await hasLearningAuthoringRole(client, context.subjectId),
+        outputResolver: ({ jobId, reference }) =>
+          resolveLearningAiOutput(client, {
+            tenantId: context.tenantId,
+            organizationId: context.organizationId,
+            jobId,
+            reference,
+          }),
       }),
     );
 
