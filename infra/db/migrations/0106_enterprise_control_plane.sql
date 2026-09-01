@@ -67,7 +67,7 @@ ALTER TABLE platform.organizations
 CREATE OR REPLACE FUNCTION platform.bootstrap_default_enterprise_for_tenant()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   INSERT INTO platform.enterprise_profiles (
     enterprise_id, tenant_id, name, mode, status, created_by_subject_id
@@ -77,7 +77,7 @@ BEGIN
   ON CONFLICT DO NOTHING;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER tenants_bootstrap_default_enterprise
 AFTER INSERT ON platform.tenants
@@ -86,7 +86,7 @@ FOR EACH ROW EXECUTE FUNCTION platform.bootstrap_default_enterprise_for_tenant()
 CREATE OR REPLACE FUNCTION platform.bind_default_enterprise_to_organization()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 DECLARE
   default_enterprise_id uuid;
 BEGIN
@@ -121,7 +121,7 @@ BEGIN
   NEW.enterprise_id := default_enterprise_id;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER organizations_bind_default_enterprise
 BEFORE INSERT ON platform.organizations
@@ -177,7 +177,7 @@ CREATE OR REPLACE FUNCTION platform.legal_entity_parent_would_cycle(
 RETURNS boolean
 LANGUAGE sql
 STABLE
-AS $
+AS $$
   WITH RECURSIVE ancestors AS (
     SELECT
       entity.legal_entity_id,
@@ -204,12 +204,12 @@ AS $
     OR EXISTS (
       SELECT 1 FROM ancestors WHERE legal_entity_id = p_legal_entity_id
     );
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION platform.reject_legal_entity_cycle()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF NEW.parent_legal_entity_id IS NOT NULL
      AND platform.legal_entity_parent_would_cycle(
@@ -222,7 +222,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER legal_entities_reject_cycles
 BEFORE INSERT OR UPDATE OF parent_legal_entity_id, tenant_id, enterprise_id
@@ -558,7 +558,7 @@ $$;
 CREATE OR REPLACE FUNCTION platform.refresh_organization_closure_after_change()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     PERFORM platform.refresh_organization_closure(OLD.tenant_id);
@@ -571,7 +571,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER organizations_refresh_closure
 AFTER INSERT OR UPDATE OF parent_organization_id, tenant_id OR DELETE
