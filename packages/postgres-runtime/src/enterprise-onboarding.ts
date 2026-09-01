@@ -1369,8 +1369,9 @@ export async function evaluateOrganizationSetupAutomatedRequirements(
     client.query<{
       readonly setup_participant_id: string;
       readonly subject_id: string;
+      readonly issuer: string | null;
     }>(
-      `SELECT setup_participant_id, subject_id
+      `SELECT setup_participant_id, subject_id, issuer
          FROM platform.organization_setup_participants
         WHERE tenant_id = $1::uuid
           AND setup_plan_id = $2::uuid
@@ -1411,13 +1412,18 @@ export async function evaluateOrganizationSetupAutomatedRequirements(
     },
     {
       requirementKey: 'core.primary-administrator',
-      satisfied: owner !== undefined,
-      evidenceRefs: owner === undefined
-        ? []
-        : [
-            `setup-participant:${owner.setup_participant_id}`,
-            `subject:${owner.subject_id}`,
-          ],
+      satisfied:
+        owner !== undefined
+        && owner.issuer !== null
+        && owner.issuer.trim() !== '',
+      evidenceRefs:
+        owner === undefined || owner.issuer === null || owner.issuer.trim() === ''
+          ? []
+          : [
+              `setup-participant:${owner.setup_participant_id}`,
+              `subject:${owner.subject_id}`,
+              `issuer:${owner.issuer}`,
+            ],
     },
   ];
 
@@ -1501,7 +1507,9 @@ async function handoffSetupOwnerMembership(
     [input.tenantId, input.setupPlanId],
   );
   const row = owner.rows[0];
-  if (!row) throw new Error('ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED');
+  if (!row || row.issuer === null || row.issuer.trim() === '') {
+    throw new Error('ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED');
+  }
 
   const existing = await client.query<{
     readonly membership_id: string;
@@ -1644,11 +1652,7 @@ export async function activateOrganizationSetup(
     reason: input.reason?.trim() || null,
     correlationId: input.correlationId,
     idempotencyKey: input.idempotencyKey,
-    payload: {
-      organizationId: plan.organizationId,
-      membershipId: accessHandoff.membershipId,
-      setupOwnerSubjectId: accessHandoff.subjectId,
-    },
+    payload: { organizationId: plan.organizationId },
   });
   if (setupEvent.replay) {
     const current = await loadPlanById(client, input.tenantId, input.setupPlanId);
@@ -1688,7 +1692,12 @@ export async function activateOrganizationSetup(
     eventType: 'organization.setup.activated',
     actorSubjectId: input.activatedBySubjectId,
     correlationId: input.correlationId,
-    payload: { organizationId: plan.organizationId },
+    payload: {
+      organizationId: plan.organizationId,
+      membershipId: accessHandoff.membershipId,
+      setupOwnerSubjectId: accessHandoff.subjectId,
+      authorizationRolesGranted: [],
+    },
   });
   await appendDomainEventWithOutbox(client, {
     event: {
