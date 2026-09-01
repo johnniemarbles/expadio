@@ -8,6 +8,7 @@ on:
       - 'packages/tenancy/**'
       - 'packages/ui/**'
       - 'infra/db/migrations/009*.sql'
+      - 'infra/db/migrations/01*.sql'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

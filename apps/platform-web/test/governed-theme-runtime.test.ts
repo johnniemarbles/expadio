@@ -1,7 +1,24 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import {
+  EXPADIO_COMMAND_OBSIDIAN,
+  governedThemeProfileValidator,
+  isThemeOverride,
+} from '@expadio/ui';
+
 const read=(path:string)=>readFileSync(new URL(path,import.meta.url),'utf8');
+
+function candidate(level:string,value:unknown){
+  return {
+    level:level as any,
+    recordId:level+'-1',
+    version:1,
+    effectiveFrom:'2026-09-01T00:00:00Z',
+    value,
+    evidenceRefs:['test'],
+  };
+}
 
 test('Platform shell resolves only the governed Platform master theme',()=>{
   const runtime=read('../lib/effective-theme.ts');
@@ -20,4 +37,27 @@ test('theme persistence separates complete profiles from bounded Brand patches',
   assert.match(migration,/appearance\.theme\.override/);
   assert.match(migration,/ARRAY\['PLAN','VERTICAL'\]/);
   assert.match(migration,/ARRAY\['TENANT','BRAND','WORKSPACE'\]/);
+});
+
+test('Brand theme patches cannot smuggle protected theme fields',()=>{
+  assert.equal(isThemeOverride({accent:'#ff3366',brandName:'ACME'}),true);
+  assert.equal(isThemeOverride({canvas:'#000000'}),false);
+  assert.equal(isThemeOverride({accent:'red'}),false);
+});
+
+test('Vertical profile cannot relax Platform override governance',()=>{
+  const vertical={
+    ...EXPADIO_COMMAND_OBSIDIAN,
+    key:'clinical-obsidian',
+    light:{...EXPADIO_COMMAND_OBSIDIAN.light,primary:'#0f766e'},
+  };
+  assert.equal(governedThemeProfileValidator({
+    current:candidate('PLATFORM',EXPADIO_COMMAND_OBSIDIAN),
+    candidate:candidate('VERTICAL',vertical),
+  }).allowed,true);
+  const relaxed={...vertical,overridePolicy:{...vertical.overridePolicy,allowTypography:true}};
+  assert.equal(governedThemeProfileValidator({
+    current:candidate('PLATFORM',EXPADIO_COMMAND_OBSIDIAN),
+    candidate:candidate('VERTICAL',relaxed),
+  }).allowed,false);
 });
