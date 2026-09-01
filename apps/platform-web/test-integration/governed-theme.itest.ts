@@ -61,7 +61,7 @@ test('governed theme inherits Platform profile and layers bounded tenant/workspa
          record_version,value,effective_from,authored_by_subject_id,authored_at,
          reason,correlation_id,evidence_refs
        ) VALUES (
-         $1::uuid,'appearance.theme.override',1,'TENANT',$2,$2::uuid,
+         $1::uuid,'appearance.theme.override',1,'TENANT',$2::text,$2::uuid,
          1,$3::jsonb,'2026-09-01T17:00:00Z','theme-itest',now(),
          'tenant accent proof',$4::uuid,ARRAY['itest:tenant-theme']
        )`,
@@ -90,7 +90,7 @@ test('governed theme inherits Platform profile and layers bounded tenant/workspa
          record_version,value,effective_from,authored_by_subject_id,authored_at,
          reason,correlation_id,evidence_refs
        ) VALUES (
-         $1::uuid,'appearance.theme.override',1,'TENANT',$2,$2::uuid,
+         $1::uuid,'appearance.theme.override',1,'TENANT',$2::text,$2::uuid,
          1,$3::jsonb,'2026-09-01T17:02:00Z','theme-itest',now(),
          'cross tenant isolation proof',$4::uuid,ARRAY['itest:other-theme']
        )`,

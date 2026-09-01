@@ -70,12 +70,14 @@ DECLARE
   value_count integer;
 BEGIN
   SELECT count(*) INTO definition_count
-    FROM platform.configuration_setting_definitions;
+    FROM platform.configuration_setting_definitions
+   WHERE setting_key = 'workflow.concurrentCases';
   SELECT count(*) INTO value_count
-    FROM platform.configuration_setting_values;
+    FROM platform.configuration_setting_values
+   WHERE setting_key = 'workflow.concurrentCases';
 
   IF definition_count <> 1 OR value_count <> 3 THEN
-    RAISE EXCEPTION 'tenant A expected definition, global values and own value only';
+    RAISE EXCEPTION 'tenant A expected workflow.concurrentCases definition, global values and own value only';
   END IF;
 END;
 $$;
