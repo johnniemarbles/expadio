@@ -42,6 +42,7 @@ test('Learning tutor request executes through governed durable AI worker', async
   const client = await db.connect();
 
   const tenantId = randomUUID();
+  const organizationId = randomUUID();
   const learnerSubjectId = `learner-${randomUUID()}`;
   const learnerIssuer = 'https://clerk.expadio.com';
   const serviceSubjectId = `ai-worker-${randomUUID()}`;
@@ -55,6 +56,22 @@ test('Learning tutor request executes through governed durable AI worker', async
       `INSERT INTO platform.tenants (tenant_id, name)
        VALUES ($1::uuid, 'Learning AI Integration Tenant')`,
       [tenantId],
+    );
+    await client.query(
+      `INSERT INTO platform.organizations (
+         organization_id, tenant_id, name
+       ) VALUES (
+         $1::uuid, $2::uuid, 'Learning AI Integration Organization'
+       )`,
+      [organizationId, tenantId],
+    );
+    await client.query(
+      `INSERT INTO platform.memberships (
+         tenant_id, organization_id, subject_id, actor_kind, issuer, status
+       ) VALUES (
+         $1::uuid, $2::uuid, $3, 'user', $4, 'ACTIVE'
+       )`,
+      [tenantId, organizationId, learnerSubjectId, learnerIssuer],
     );
     await client.query(
       `INSERT INTO platform.tenant_module_entitlements (
