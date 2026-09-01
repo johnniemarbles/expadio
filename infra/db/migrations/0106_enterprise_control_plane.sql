@@ -774,46 +774,65 @@ CREATE POLICY organization_closure_subject_bootstrap_select
     )
   );
 
+CREATE OR REPLACE FUNCTION platform.current_subject_can_access_organization(
+  p_tenant_id uuid,
+  p_organization_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, platform
+AS $ent_scope$
+  SELECT EXISTS (
+    SELECT 1
+    FROM platform.memberships membership
+    WHERE membership.tenant_id = p_tenant_id
+      AND membership.subject_id = platform.current_subject_id()
+      AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+      AND membership.status = 'ACTIVE'
+      AND membership.valid_from <= now()
+      AND (membership.valid_until IS NULL OR membership.valid_until > now())
+      AND (
+        (
+          membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
+          AND membership.organization_id = p_organization_id
+        )
+        OR (
+          membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
+          AND EXISTS (
+            SELECT 1
+            FROM platform.organization_closure closure
+            WHERE closure.tenant_id = membership.tenant_id
+              AND closure.ancestor_organization_id = membership.organization_id
+              AND closure.descendant_organization_id = p_organization_id
+              AND closure.depth > 0
+          )
+        )
+        OR (
+          membership.organization_scope_mode = 'SELECTED'
+          AND EXISTS (
+            SELECT 1
+            FROM platform.membership_organizations selected
+            WHERE selected.membership_id = membership.membership_id
+              AND selected.tenant_id = membership.tenant_id
+              AND selected.organization_id = p_organization_id
+          )
+        )
+      )
+  );
+$ent_scope$;
+
+COMMENT ON FUNCTION platform.current_subject_can_access_organization(uuid, uuid) IS
+  'RLS-safe subject/issuer organization scope predicate; encapsulates hierarchy tables without granting callers direct closure-table access.';
+
 CREATE POLICY organizations_subject_hierarchy_bootstrap_select
   ON platform.organizations
   FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1
-      FROM platform.memberships membership
-      WHERE membership.tenant_id = organizations.tenant_id
-        AND membership.subject_id = platform.current_subject_id()
-        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
-        AND membership.status = 'ACTIVE'
-        AND membership.valid_from <= now()
-        AND (membership.valid_until IS NULL OR membership.valid_until > now())
-        AND (
-          (
-            membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
-            AND membership.organization_id = organizations.organization_id
-          )
-          OR (
-            membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
-            AND EXISTS (
-              SELECT 1
-              FROM platform.organization_closure closure
-              WHERE closure.tenant_id = membership.tenant_id
-                AND closure.ancestor_organization_id = membership.organization_id
-                AND closure.descendant_organization_id = organizations.organization_id
-                AND closure.depth > 0
-            )
-          )
-          OR (
-            membership.organization_scope_mode = 'SELECTED'
-            AND EXISTS (
-              SELECT 1
-              FROM platform.membership_organizations selected
-              WHERE selected.membership_id = membership.membership_id
-                AND selected.tenant_id = membership.tenant_id
-                AND selected.organization_id = organizations.organization_id
-            )
-          )
-        )
+    platform.current_subject_can_access_organization(
+      organizations.tenant_id,
+      organizations.organization_id
     )
   );
 
