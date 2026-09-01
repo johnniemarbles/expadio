@@ -20,6 +20,9 @@ importers:
       '@clerk/nextjs':
         specifier: ^7.8.2
         version: 7.8.2(next@16.3.3(@types/node@22.15.3)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@expadio/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
       '@expadio/agreement':
         specifier: workspace:*
         version: link:../../packages/agreement
@@ -56,6 +59,9 @@ importers:
       '@expadio/party':
         specifier: workspace:*
         version: link:../../packages/party
+      '@expadio/provider-registry':
+        specifier: workspace:*
+        version: link:../../packages/provider-registry
       '@expadio/postgres-runtime':
         specifier: workspace:*
         version: link:../../packages/postgres-runtime
