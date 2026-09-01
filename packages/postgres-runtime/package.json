@@ -53,7 +53,9 @@
     "./learning-program-certification": "./src/learning-program-certification.ts",
     "./learning-competency": "./src/learning-competency.ts",
     "./learning-assignment-automation": "./src/learning-assignment-automation.ts",
-    "./learning-automation": "./src/learning-automation.ts"
+    "./learning-automation": "./src/learning-automation.ts",
+    "./ai-artifact": "./src/ai-artifact.ts",
+    "./ai-execution-queue": "./src/ai-execution-queue.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
