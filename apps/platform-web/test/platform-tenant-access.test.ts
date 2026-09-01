@@ -117,3 +117,28 @@ test('current Platform operator cannot suspend or revoke their own membership',(
   assert.match(route,/SELF_PLATFORM_MEMBERSHIP_DISABLE_FORBIDDEN/);
   assert.match(manager,/Current Platform user/);
 });
+
+
+test('Clerk pending invitations self-heal into the durable EXPADIO registry',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/Clerk pending invitations could not be backfilled into EXPADIO/);
+  assert.match(route,/correlationId: `clerk-reconcile:\$\{invitation\.id\}`/);
+  assert.match(route,/upsertTenantAccessInvitation/);
+});
+
+test('same-workspace legacy pending invite is backfilled before idempotent response',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/existingScope/);
+  assert.match(route,/INVITATION_ROLE_MISMATCH/);
+  assert.match(route,/clerk-reconcile:\$\{existingInvitation\.id\}/);
+  assert.match(route,/roleKey: existingRole/);
+});
+
+test('resend never creates a replacement while the previous Clerk invitation is still pending',()=>{
+  const route=read('../app/api/platform/tenant/access/invitations/[invitationId]/resend/route.ts');
+  assert.match(route,/INVITATION_RESEND_PRECONDITION_UNVERIFIED/);
+  assert.match(route,/INVITATION_RESEND_REVOKE_FAILED/);
+  assert.match(route,/INVITATION_ALREADY_ACCEPTED/);
+  assert.match(route,/oldInvitationInactive/);
+  assert.match(route,/current\?\.status === 'pending'/);
+});

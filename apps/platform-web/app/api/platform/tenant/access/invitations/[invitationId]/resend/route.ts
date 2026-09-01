@@ -56,10 +56,106 @@ export async function POST(
     }
 
     const clerk = await clerkClient();
+    let oldInvitationInactive = false;
     try {
-      await clerk.invitations.revokeInvitation(invitationId);
-    } catch {
-      // Resend is allowed when the previous Clerk invitation is already no longer active.
+      const revoked = await clerk.invitations.revokeInvitation(invitationId);
+      oldInvitationInactive = revoked.status === 'revoked' || revoked.revoked === true;
+    } catch (revokeError) {
+      const lookup = await clerk.invitations.getInvitationList({
+        query: invitationId,
+        limit: 10,
+      }).catch(() => null);
+      if (lookup === null) {
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_RESEND_PRECONDITION_UNVERIFIED',
+            message: 'EXPADIO could not confirm the previous Clerk invitation state, so no replacement was created. Retry after Clerk is reachable.',
+            correlationId,
+          },
+          { status: 502 },
+        );
+      }
+      const current = lookup.data.find((item) => item.id === invitationId);
+      if (current?.status === 'pending') {
+        console.error('Invitation resend aborted because old Clerk invitation is still pending', {
+          invitationId,
+          correlationId,
+          error: revokeError instanceof Error ? revokeError.message : String(revokeError),
+        });
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_RESEND_REVOKE_FAILED',
+            message: 'The previous Clerk invitation is still pending, so EXPADIO did not create a duplicate. Retry revoke or resend later.',
+            correlationId,
+          },
+          { status: 502 },
+        );
+      }
+      if (current?.status === 'accepted') {
+        await withTenantTransaction(context, (client) =>
+          setTenantAccessInvitationStatus(client, {
+            tenantId: context.tenantId,
+            organizationId,
+            invitationId,
+            status: 'ACCEPTED',
+          })
+        ).catch(() => undefined);
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_ALREADY_ACCEPTED',
+            message: 'This invitation has already been accepted and cannot be resent.',
+          },
+          { status: 409 },
+        );
+      }
+      if (current?.status === 'expired') {
+        await withTenantTransaction(context, (client) =>
+          setTenantAccessInvitationStatus(client, {
+            tenantId: context.tenantId,
+            organizationId,
+            invitationId,
+            status: 'EXPIRED',
+          })
+        ).catch(() => undefined);
+        oldInvitationInactive = true;
+      } else if (!current) {
+        // getInvitationList() without a status returns non-revoked invitations.
+        // A known invitation that is absent is therefore safe to treat as revoked.
+        oldInvitationInactive = true;
+      }
+    }
+
+    if (!oldInvitationInactive) {
+      const lookup = await clerk.invitations.getInvitationList({
+        query: invitationId,
+        limit: 10,
+      }).catch(() => null);
+      const current = lookup?.data.find((item) => item.id === invitationId);
+      if (current?.status === 'pending' || lookup === null) {
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_RESEND_PRECONDITION_UNVERIFIED',
+            message: 'EXPADIO could not prove the previous invitation is inactive, so no replacement was created.',
+            correlationId,
+          },
+          { status: 502 },
+        );
+      }
+      if (current?.status === 'accepted') {
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_ALREADY_ACCEPTED',
+            message: 'This invitation has already been accepted and cannot be resent.',
+          },
+          { status: 409 },
+        );
+      }
+      oldInvitationInactive = true;
     }
 
     const replacement = await clerk.invitations.createInvitation({
