@@ -6,8 +6,7 @@ const read=(p:string)=>readFileSync(new URL(p,import.meta.url),'utf8');
 
 test('Platform starts Next standalone output after migrations and bootstrap seed',()=>{
   const pkg=JSON.parse(read('../package.json'));
-  assert.match(pkg.scripts.start,/scriptsassert.match(launcher,/HOSTNAME: '0\\.0\\.0\\.0'/);
-  assert.doesNotMatch(launcher,/HOSTNAME: process\\.env\\.HOSTNAME/);/migrate\.mjs/);
+  assert.match(pkg.scripts.start,/scripts\/migrate\.mjs/);
   assert.match(pkg.scripts.start,/scripts\/seed\.cjs/);
   assert.match(pkg.scripts.start,/scripts\/start-standalone\.mjs/);
   assert.doesNotMatch(pkg.scripts.start,/next start/);
@@ -18,9 +17,9 @@ test('standalone launcher copies static assets and binds Railway-compatible host
   assert.match(launcher,/\.next', 'standalone'/);
   assert.match(launcher,/sourceStatic/);
   assert.match(launcher,/cp\(sourceStatic, targetStatic/);
-  assert.match(launcher,/HOSTNAME: process\.env\.HOSTNAME \|\| '0\.0\.0\.0'/);
+  assert.match(launcher,/HOSTNAME: '0\.0\.0\.0'/);
+  assert.doesNotMatch(launcher,/HOSTNAME: process\.env\.HOSTNAME/);
 });
-
 
 test('Platform launcher supports Next monorepo standalone layout',()=>{
   const launcher=read('../scripts/start-standalone.mjs');
@@ -28,7 +27,6 @@ test('Platform launcher supports Next monorepo standalone layout',()=>{
   assert.match(launcher,/const runtimeRoot = dirname\(serverPath\)/);
   assert.match(launcher,/const targetStatic = join\(runtimeRoot, '\.next', 'static'\)/);
 });
-
 
 test('Platform never inherits the container hostname for the listening socket',()=>{
   const launcher=read('../scripts/start-standalone.mjs');
