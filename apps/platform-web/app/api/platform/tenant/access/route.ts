@@ -227,9 +227,11 @@ export async function POST(request: Request) {
       query: email,
       limit: 100,
     });
-    const existingInvitation = pendingForEmail.data.find((item) =>
+    const pendingEmailInvitations = pendingForEmail.data.filter((item) =>
       item.emailAddress.toLowerCase() === email
-      && invitationScope(item.publicMetadata)?.tenantId === context.tenantId
+    );
+    const existingInvitation = pendingEmailInvitations.find((item) =>
+      invitationScope(item.publicMetadata)?.tenantId === context.tenantId
       && invitationScope(item.publicMetadata)?.organizationId === organizationId
     );
 
@@ -243,6 +245,21 @@ export async function POST(request: Request) {
         },
         message: 'This user already has a pending invitation for the selected Brand workspace.',
       });
+    }
+
+    const conflictingInvitation = pendingEmailInvitations[0];
+    if (conflictingInvitation) {
+      const scope = invitationScope(conflictingInvitation.publicMetadata);
+      const reasonKey = scope
+        ? 'INVITATION_PENDING_OTHER_WORKSPACE'
+        : 'INVITATION_PENDING_UNSCOPED';
+      const message = scope
+        ? 'This email already has a pending Clerk invitation for another EXPADIO workspace. Manage that invitation from its workspace, or revoke it in Clerk before inviting the user here.'
+        : 'This email already has a pending Clerk invitation that is not linked to an EXPADIO workspace. Revoke the legacy invitation in Clerk, then invite the user again from EXPADIO.';
+      return NextResponse.json(
+        { denied: true, reasonKey, message },
+        { status: 409 },
+      );
     }
 
     let invitation;

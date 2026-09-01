@@ -96,7 +96,7 @@ export function TenantAccessManager({
 
     <section className={styles.panel}>
       <div className={styles.panelHead}><div><h2>Pending invitations</h2><p>Invitation acceptance provisions membership through the verified Clerk webhook.</p></div></div>
-      <div className={styles.invites}>{invitations.length===0?<div className={styles.empty}>No pending invitations.</div>:invitations.map(inv=><div className={styles.invite} key={inv.invitationId}><div><strong>{inv.email}</strong><span>{inv.roleKey?label(inv.roleKey):'Tenant role'} · sent {new Date(inv.createdAt).toLocaleString()}</span></div><button className={styles.danger} disabled={busy!==null} onClick={()=>void revokeInvite(inv.invitationId)}>{busy===inv.invitationId?'Revoking…':'Revoke invite'}</button></div>)}</div>
+      <div className={styles.invites}>{invitations.length===0?<div className={styles.empty}>No pending invitations for this workspace.</div>:invitations.map(inv=><div className={styles.invite} key={inv.invitationId}><div><strong>{inv.email}</strong><span>{inv.roleKey?label(inv.roleKey):'Tenant role'} · sent {new Date(inv.createdAt).toLocaleString()}</span></div><button className={styles.danger} disabled={busy!==null} onClick={()=>void revokeInvite(inv.invitationId)}>{busy===inv.invitationId?'Revoking…':'Revoke invite'}</button></div>)}</div>
     </section>
   </div>
 }
