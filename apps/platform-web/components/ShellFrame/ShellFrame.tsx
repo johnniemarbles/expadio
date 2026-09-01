@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
 
-export function ShellFrame({ children, sections, overview, workspaceContext }: { children: React.ReactNode; sections: WorkspaceSection[]; overview: PlatformOverview; workspaceContext: PlatformWorkspaceContext; }) {
+export function ShellFrame({ children, sections, overview, workspaceContext, brandAppOrigin }: { children: React.ReactNode; sections: WorkspaceSection[]; overview: PlatformOverview; workspaceContext: PlatformWorkspaceContext; brandAppOrigin: string | null; }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +26,14 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
   const currentOrganization = allowedOrganizations.find((item) => item.id === searchParams.get("org")) ?? allowedOrganizations[0] ?? overview.organization;
   const selectableOrganizations = allowedOrganizations.length > 0 ? allowedOrganizations : [currentOrganization];
   const currentSection = sections.find((item) => item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/")) ?? sections[0];
+  const brandHref = useMemo(() => {
+    if (!brandAppOrigin || !currentAccount || !currentOrganization) return null;
+    const url = new URL('/handoff', brandAppOrigin);
+    url.searchParams.set('tenant', currentAccount.id);
+    url.searchParams.set('org', currentOrganization.id);
+    url.searchParams.set('returnTo', '/');
+    return url.toString();
+  }, [brandAppOrigin, currentAccount, currentOrganization]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -132,9 +140,15 @@ export function ShellFrame({ children, sections, overview, workspaceContext }: {
         
         {/* Audience Selector Pills */}
         <div className={styles.audiencePills} role="tablist" aria-label="Audience Scope">
-          <button type="button" className={styles.audiencePill}>
-            <span style={{ opacity: 0.7 }}>⊞</span> Brand
-          </button>
+          {brandHref ? (
+            <a className={styles.audiencePill} href={brandHref}>
+              <span style={{ opacity: 0.7 }}>⊞</span> Brand
+            </a>
+          ) : (
+            <button type="button" className={styles.audiencePill} disabled title="Configure EXPADIO_BRAND_APP_URL to enable Brand handoff">
+              <span style={{ opacity: 0.7 }}>⊞</span> Brand
+            </button>
+          )}
           <button type="button" className={[styles.audiencePill, styles.audiencePillActive].join(" ")}>
             <span>🛡️</span> Platform
           </button>

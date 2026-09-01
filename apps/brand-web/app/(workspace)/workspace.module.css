@@ -19,3 +19,11 @@
 :global(.learningForm){display:grid;grid-template-columns:1fr 1fr;gap:14px}:global(.learningForm label){display:grid;gap:6px;font-size:12px;font-weight:700}:global(.learningForm input),:global(.learningForm textarea),:global(.learningForm select){padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--text)}:global(.learningForm textarea){min-height:110px;resize:vertical}:global(.learningForm .wide){grid-column:1/-1}:global(.learningForm h3){margin:0 0 4px}
 :global(.adminSplit){display:grid;grid-template-columns:1fr 1fr;gap:24px}:global(.aiResult){margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--surface-muted);padding:18px}:global(.aiMeta){display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px}:global(.aiAnswer){margin-top:14px;white-space:pre-wrap;line-height:1.6}:global(.aiError){margin-top:12px;color:var(--danger)}
 @media(max-width:1000px){.shell{grid-template-columns:1fr}.sidebar{position:static;height:auto}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}:global(.adminSplit){grid-template-columns:1fr}}@media(max-width:640px){.main{padding:20px}.topbar{padding:0 20px}.grid,:global(.learningForm){grid-template-columns:1fr}:global(.learningForm .wide){grid-column:auto}}
+
+.appStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.appGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.appCard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:grid;gap:16px}
+.appCardHead{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.appCard h2{margin:0;font-size:18px}.appCard p{margin:6px 0 0;color:var(--muted);line-height:1.5}
+.appMeta{display:flex;gap:8px;flex-wrap:wrap}.metaChip{padding:4px 8px;border:1px solid var(--line);border-radius:999px;font-size:11px;color:var(--muted)}
+.appActions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.disabledAction{color:var(--muted);font-size:12px;font-weight:700}
+@media(max-width:800px){.appStats,.appGrid{grid-template-columns:1fr}}
