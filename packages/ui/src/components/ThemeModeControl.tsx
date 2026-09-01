@@ -11,21 +11,52 @@ const MODES: readonly { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'Auto' },
 ];
 
-function validMode(value: string | undefined): ThemeMode {
-  return value === 'light' || value === 'system' ? value : 'dark';
+function validMode(value: unknown): value is ThemeMode {
+  return value === 'light' || value === 'dark' || value === 'system';
 }
 
-export function ThemeModeControl() {
+function apply(next:ThemeMode){
+  document.documentElement.dataset.theme=next;
+  document.cookie=`${COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
+
+export function ThemeModeControl({ persistenceUrl='/api/appearance/mode' }:{ persistenceUrl?:string }) {
   const [mode, setMode] = useState<ThemeMode>('dark');
 
   useEffect(() => {
-    setMode(validMode(document.documentElement.dataset.theme));
-  }, []);
+    const local=document.documentElement.dataset.theme;
+    if(validMode(local))setMode(local);
+    const controller=new AbortController();
+    void fetch(persistenceUrl,{method:'GET',cache:'no-store',credentials:'same-origin',signal:controller.signal})
+      .then(async(response)=>{
+        if(!response.ok)return null;
+        const payload=await response.json() as {mode?:unknown};
+        return validMode(payload.mode)?payload.mode:null;
+      })
+      .then((persisted)=>{
+        if(persisted===null)return;
+        apply(persisted);
+        setMode(persisted);
+      })
+      .catch((error)=>{
+        if(!(error instanceof DOMException&&error.name==='AbortError')){
+          console.error('Appearance mode sync failed',error);
+        }
+      });
+    return ()=>controller.abort();
+  }, [persistenceUrl]);
 
   function choose(next: ThemeMode) {
-    document.documentElement.dataset.theme = next;
-    document.cookie = `${COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    apply(next);
     setMode(next);
+    void fetch(persistenceUrl,{
+      method:'POST',
+      credentials:'same-origin',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({mode:next}),
+    }).then((response)=>{
+      if(!response.ok)throw new Error('PERSONAL_APPEARANCE_PERSIST_FAILED');
+    }).catch((error)=>console.error('Appearance mode persistence failed',error));
   }
 
   return (
