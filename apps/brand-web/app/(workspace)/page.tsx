@@ -1,16 +1,11 @@
 import { listTenantProductModules } from '@expadio/postgres-runtime/product-module';
+import { parseProductModuleShellDescriptor } from '@expadio/ui';
 import { ModuleLauncher } from '../../components/ModuleLauncher';
 import { resolveBrandContext, withBrandTransaction } from '../../lib/brand-context';
 import styles from './workspace.module.css';
 
 export const dynamic = 'force-dynamic';
 
-function routeFromManifest(manifest: Readonly<Record<string, unknown>>): string | null {
-  const route = manifest.route;
-  return typeof route === 'string' && route.startsWith('/') && !route.startsWith('//')
-    ? route
-    : null;
-}
 
 function label(value: string): string {
   return value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -31,7 +26,7 @@ export default async function BrandHome() {
       <section className={styles.pageHead}>
         <div>
           <p className={styles.eyebrow}>Brand workspace</p>
-          <h1>Apps</h1>
+          <h1>All Apps</h1>
           <p>Open the capabilities available to {context.tenantName}. App state comes from Platform entitlement and installation records; this dashboard cannot grant itself a plan entitlement.</p>
         </div>
       </section>
@@ -43,8 +38,14 @@ export default async function BrandHome() {
       </section>
 
       <section className={styles.appGrid}>
-        {modules.map((module) => (
-          <article className={styles.appCard} key={module.moduleKey}>
+        {modules.map((module) => {
+          const descriptor = parseProductModuleShellDescriptor({
+            moduleKey: module.moduleKey,
+            displayName: module.displayName,
+            description: module.description,
+            manifest: module.manifest,
+          });
+          return <article className={styles.appCard} key={module.moduleKey}>
             <div className={styles.appCardHead}>
               <div><h2>{module.displayName}</h2><p>{module.description}</p></div>
               <span className={styles.pill}>{label(module.availability)}</span>
@@ -58,11 +59,11 @@ export default async function BrandHome() {
               <ModuleLauncher
                 moduleKey={module.moduleKey}
                 availability={module.availability}
-                route={routeFromManifest(module.manifest)}
+                route={descriptor?.baseRoute ?? null}
               />
             </div>
-          </article>
-        ))}
+          </article>;
+        })}
       </section>
     </>
   );

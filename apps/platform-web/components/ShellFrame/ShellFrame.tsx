@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SourceBadge } from "@expadio/ui";
+import { SourceBadge, ThemeModeControl } from "@expadio/ui";
 import { UserButton } from "@clerk/nextjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
@@ -175,12 +175,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
         <div className={styles.topbarActions}>
           <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{selectableOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
           
-          {/* Theme Mode Toggle */}
-          <div className={styles.themeToggle}>
-            <button type="button" className={[styles.themeBtn, styles.themeBtnActive].join(" ")}>☀️ Light</button>
-            <button type="button" className={styles.themeBtn}>🌙 Dark</button>
-            <button type="button" className={styles.themeBtn}>🖥️ Auto</button>
-          </div>
+          <ThemeModeControl />
 
           <span className={styles.sourceContext}><SourceBadge source={overview.source}/></span>
           <div ref={notificationAreaRef} className={styles.notificationArea}><button type="button" ref={notificationButtonRef} className={styles.iconButton} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notification-panel" onClick={() => { setNotificationsOpen((value) => !value); setAccountOpen(false); }}><span aria-hidden="true">◎</span></button>{notificationsOpen && <div id="notification-panel" className={styles.notificationPanel} role="region" aria-label="Notifications status"><strong>Notifications not connected</strong><span>Live alerts will appear after the notification adapter is available.</span></div>}</div>
