@@ -1,9 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Protect shell routes and api routes, but allow public access to sign-in
-const isProtectedRoute = createRouteMatcher([
-  '/((?!sign-in|sign-up).*)'
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/webhooks(.*)',
 ])
 
 const TENANT_COOKIE = 'expadio-tenant'
@@ -18,24 +19,10 @@ function pickUuid(...candidates: (string | null | undefined)[]): string | null {
 }
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
+  if (!isPublicRoute(req)) {
     await auth.protect()
   }
 
-  // Workspace selection propagation.
-  //
-  // The shell threads the active workspace onto every navigation and fetch as
-  // `?account=<tenantId>&org=<organizationId>`. Translate that here into the
-  // `x-expadio-*` request headers that `resolveRequestContext` reads, so a
-  // route handler resolves the tenant the operator actually selected instead
-  // of a hardcoded demo default. A cookie persists the last selection so deep
-  // links and client fetches that drop the query string keep the same
-  // workspace.
-  //
-  // This is propagation, not authorization: the injected values are only a
-  // *request* for a tenant. `resolveRequestContext` still verifies membership
-  // against the IAM spine, so a forged header resolves to a denial rather than
-  // to another tenant's data (§4.4, tenant isolation).
   const params = req.nextUrl.searchParams
   const accountParam = params.get('account')
   const orgParam = params.get('org')
@@ -48,16 +35,9 @@ export default clerkMiddleware(async (auth, req) => {
   if (organizationId) requestHeaders.set('x-expadio-organization-id', organizationId)
 
   const response = NextResponse.next({ request: { headers: requestHeaders } })
-
-  // Persist a fresh, well-formed selection for subsequent requests.
   const cookieOptions = { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: process.env.NODE_ENV === 'production' }
-  if (accountParam && UUID.test(accountParam)) {
-    response.cookies.set(TENANT_COOKIE, accountParam, cookieOptions)
-  }
-  if (orgParam && UUID.test(orgParam)) {
-    response.cookies.set(ORG_COOKIE, orgParam, cookieOptions)
-  }
-
+  if (accountParam && UUID.test(accountParam)) response.cookies.set(TENANT_COOKIE, accountParam, cookieOptions)
+  if (orgParam && UUID.test(orgParam)) response.cookies.set(ORG_COOKIE, orgParam, cookieOptions)
   return response
 })
 
