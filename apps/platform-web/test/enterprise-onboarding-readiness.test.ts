@@ -97,8 +97,10 @@ test('human setup roles are bounded and cannot impersonate module or vertical in
     '../app/api/enterprise/setup/plans/[planId]/requirements/route.ts',
   );
   assert.match(addRoute, /ALLOWED_SOURCES/);
-  assert.match(addRoute, /'TENANT', 'PARENT_POLICY', 'CUSTOM'/);
-  assert.match(addRoute, /Module and vertical requirements must be injected by their platform runtime/);
+  assert.match(addRoute, /ALLOWED_SOURCES = new Set\(\['CUSTOM'\]\)/);
+  assert.doesNotMatch(addRoute, /ALLOWED_SOURCES[^\n]*PARENT_POLICY/);
+  assert.doesNotMatch(addRoute, /ALLOWED_SOURCES[^\n]*TENANT/);
+  assert.match(addRoute, /must be injected by their governing runtime/);
 });
 
 test('parent-governed enterprise mutations require organization-scoped authority', () => {
