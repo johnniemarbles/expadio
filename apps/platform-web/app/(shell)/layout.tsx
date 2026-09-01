@@ -4,6 +4,7 @@ import { ShellFrame } from "../../components/ShellFrame/ShellFrame";
 import { liveWorkspaceAdapter } from "../../lib/live-adapter";
 import { isDenied } from "@expadio/ui/contracts";
 import Loading from "./loading";
+import { loadBrandAppOrigin } from "../../lib/brand-app";
 
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   // Using the live adapter which fetches from our Next.js API route handlers
@@ -13,5 +14,5 @@ export default async function ShellLayout({ children }: { children: React.ReactN
     liveWorkspaceAdapter.loadOverview("00000000-0000-0000-0000-000000000002")
   ]);
   if (isDenied(overview)) throw new Error("The fixture workspace could not be initialized.");
-  return <Suspense fallback={<Loading/>}><ShellFrame sections={sections} workspaceContext={workspaceContext} overview={overview}>{children}</ShellFrame></Suspense>;
+  return <Suspense fallback={<Loading/>}><ShellFrame sections={sections} workspaceContext={workspaceContext} overview={overview} brandAppOrigin={loadBrandAppOrigin()}>{children}</ShellFrame></Suspense>;
 }

@@ -24,7 +24,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
         <div className={styles.brand}>EXPADIO<small>Brand workspace</small></div>
         <form className={styles.workspaceSelect} action="/api/workspace/select" method="post">
           <label htmlFor="workspace">Workspace</label>
-          <input type="hidden" name="returnTo" value="/learning" />
+          <input type="hidden" name="returnTo" value="/" />
           <select id="workspace" name="workspace" defaultValue={selected}>
             {context.workspaces.map((workspace) => (
               <option key={`${workspace.tenantId}:${workspace.organizationId}`} value={`${workspace.tenantId}:${workspace.organizationId}`}>
@@ -35,6 +35,8 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
           <button className={styles.button} type="submit">Switch</button>
         </form>
         <nav className={styles.nav} aria-label="Brand navigation">
+          <div className={styles.navGroup}>Apps</div>
+          <Link href="/">Home</Link>
           <div className={styles.navGroup}>Learning</div>
           {NAV.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
           <div className={styles.navGroup}>Learner</div>
