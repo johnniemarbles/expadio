@@ -40,6 +40,7 @@ test('platform navigation avoids duplicate ambiguous initials and CRM double nam
 
 test('shell applies consistent primitive chrome only inside the content viewport', () => {
   for (const selector of ['table', 'th', 'td', 'tr:last-child td', 'input', 'select', 'textarea', 'button:disabled', 'input:disabled', 'select:disabled']) {
-    assert.match(styles, new RegExp(`\\.content :global\\(${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`));
+    assert.match(styles, new RegExp(`\\.content ${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
   }
+  assert.doesNotMatch(styles, /:global\(/);
 });
