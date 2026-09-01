@@ -265,6 +265,33 @@ function prompt(value: string): string {
   return normalized;
 }
 
+async function requireEquivalentReplay(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly existing: LearningAiRequest;
+    readonly requestType: LearningAiRequestType;
+    readonly promptText: string;
+    readonly courseId: string | null;
+  },
+): Promise<void> {
+  if (
+    input.existing.requestType !== input.requestType
+    || input.existing.courseId !== input.courseId
+  ) {
+    throw new Error('LEARNING_AI_IDEMPOTENCY_CONFLICT');
+  }
+  const artifact = await loadAiJobArtifact(client, {
+    tenantId: input.tenantId,
+    jobId: input.existing.jobId,
+    reference: input.existing.inputArtifactReference,
+    expectedType: 'INPUT',
+  });
+  if (artifact.content !== input.promptText) {
+    throw new Error('LEARNING_AI_IDEMPOTENCY_CONFLICT');
+  }
+}
+
 async function findExistingByJob(
   client: PostgresClient,
   tenantId: string,
@@ -414,6 +441,13 @@ export async function createLearningAiRequest(
       created.existing.jobId,
     );
     if (existing === null) throw new Error('LEARNING_AI_IDEMPOTENCY_CONFLICT');
+    await requireEquivalentReplay(client, {
+      tenantId: input.tenantId,
+      existing,
+      requestType: input.requestType,
+      promptText,
+      courseId: course.courseId,
+    });
     return { created: false, request: existing };
   }
 
@@ -425,6 +459,13 @@ export async function createLearningAiRequest(
       effectiveJob.jobId,
     );
     if (existing === null) throw new Error('LEARNING_AI_REQUEST_LINK_MISSING');
+    await requireEquivalentReplay(client, {
+      tenantId: input.tenantId,
+      existing,
+      requestType: input.requestType,
+      promptText,
+      courseId: course.courseId,
+    });
     return { created: false, request: existing };
   }
 
