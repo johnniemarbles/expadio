@@ -17,6 +17,16 @@ const participantRoute = read(
 const activationRoute = read(
   '../app/api/enterprise/setup/plans/[planId]/activate/route.ts',
 );
+const governanceAuthz = read('../lib/governance-authz.ts');
+const decisionRoute = read(
+  '../app/api/enterprise/change-requests/[id]/decision/route.ts',
+);
+const organizationsRoute = read('../app/api/organizations/list/route.ts');
+const setupLanding = read('../app/enterprise-setup/EnterpriseSetupLanding.tsx');
+const setupWorkspace = read(
+  '../app/enterprise-setup/[planId]/OrganizationSetupWorkspace.tsx',
+);
+const organizationsPage = read('../app/(shell)/organizations/page.tsx');
 
 test('onboarding migration uses valid dollar-quoted function bodies', () => {
   assert.doesNotMatch(migration, /LANGUAGE (?:sql|plpgsql)[\\s\\S]{0,120}AS \\$(?:\\r?\\n)/);
@@ -84,8 +94,18 @@ test('human setup roles are bounded and cannot impersonate module or vertical in
   assert.match(addRoute, /Module and vertical requirements must be injected by their platform runtime/);
 });
 
+test('parent-governed enterprise mutations require organization-scoped authority', () => {
+  assert.match(governanceAuthz, /hasGovernanceWriteRoleForOrganization/);
+  assert.match(governanceAuthz, /a\.organization_id IS NULL OR a\.organization_id = \$3::uuid/);
+  assert.match(governanceAuthz, /action_organization_ids IS NULL/);
+  assert.match(governanceAuthz, /\$3::uuid = ANY\(a\.action_organization_ids\)/);
+  assert.match(decisionRoute, /hasGovernanceWriteRoleForOrganization/);
+  assert.match(organizationsRoute, /hasGovernanceWriteRoleForOrganization/);
+  assert.match(activationRoute, /hasGovernanceWriteRoleForOrganization/);
+});
+
 test('final activation requires active ancestor governance scope', () => {
-  assert.match(activationRoute, /hasGovernanceWriteRole/);
+  assert.match(activationRoute, /hasGovernanceWriteRoleForOrganization/);
   assert.match(activationRoute, /organization_closure/);
   assert.match(activationRoute, /closure\.depth > 0/);
   assert.match(activationRoute, /activateOrganizationSetup/);
@@ -101,4 +121,13 @@ test('pre-activation setup discovery is subject scoped under FORCE RLS', () => {
   assert.match(migration, /issuer IS NOT DISTINCT FROM platform\.current_issuer\(\)/);
   assert.match(migration, /active_organization_setup_access_for_subject/);
   assert.match(migration, /REVOKE ALL ON FUNCTION platform\.active_organization_setup_access_for_subject/);
+});
+
+test('pre-activation users receive a dedicated setup workspace instead of normal business access', () => {
+  assert.match(setupLanding, /Organization Setup/);
+  assert.match(setupLanding, /Business-runtime access remains locked/);
+  assert.match(setupWorkspace, /Final activation remains controlled by an authorized active ancestor/);
+  assert.doesNotMatch(setupWorkspace, /activateOrganizationSetup/);
+  assert.match(organizationsPage, /Descendant onboarding portfolio/);
+  assert.match(organizationsPage, /ReadinessPortfolio/);
 });
