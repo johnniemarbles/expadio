@@ -7,4 +7,4 @@ export {
   brandPublicPath,
   isBrandProductHost,
   isPlatformProductHost,
-} from '../../packages/tenancy/src/hosts.ts';
+} from '@expadio/tenancy';
