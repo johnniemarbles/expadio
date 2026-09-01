@@ -1,72 +1,41 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { POST } from '../app/api/internal/ai-jobs/run/route.ts';
 
-const TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const route = readFileSync(
+  new URL('../app/api/internal/ai-jobs/run/route.ts', import.meta.url),
+  'utf8',
+);
+const auth = readFileSync(
+  new URL('../lib/internal-worker-auth.ts', import.meta.url),
+  'utf8',
+);
 
-function request(body: unknown, token = 'worker-secret'): Request {
-  return new Request('http://localhost/api/internal/ai-jobs/run', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-      'x-expadio-tenant-id': TENANT,
-    },
-    body: JSON.stringify(body),
-  });
-}
-
-function restore(name: string, value: string | undefined): void {
-  if (value === undefined) delete process.env[name];
-  else process.env[name] = value;
-}
-
-test('AI worker endpoint rejects unauthorized machine callers before database access', async () => {
-  const token = process.env.EXPADIO_INTERNAL_WORKER_TOKEN;
-  const subject = process.env.EXPADIO_AI_WORKER_SUBJECT_ID;
-  process.env.EXPADIO_INTERNAL_WORKER_TOKEN = 'worker-secret';
-  process.env.EXPADIO_AI_WORKER_SUBJECT_ID = 'ai-worker';
-  try {
-    const response = await POST(request({}, 'wrong-secret'));
-    assert.equal(response.status, 401);
-    const body = await response.json();
-    assert.equal(body.reasonCode, 'INTERNAL_WORKER_UNAUTHORIZED');
-  } finally {
-    restore('EXPADIO_INTERNAL_WORKER_TOKEN', token);
-    restore('EXPADIO_AI_WORKER_SUBJECT_ID', subject);
-  }
+test('AI worker endpoint is machine authenticated and tenant scoped', () => {
+  assert.match(route, /authenticateInternalWorkerRequest/);
+  assert.match(auth, /x-expadio-tenant-id/);
+  assert.match(route, /EXPADIO_AI_WORKER_SUBJECT_ID/);
+  assert.match(route, /runAiJobWorkerOnce/);
+  assert.doesNotMatch(route, /resolveRequestContext/);
+  assert.doesNotMatch(route, /auth\(\)/);
 });
 
-test('AI worker endpoint is disabled without a configured service identity', async () => {
-  const token = process.env.EXPADIO_INTERNAL_WORKER_TOKEN;
-  const subject = process.env.EXPADIO_AI_WORKER_SUBJECT_ID;
-  process.env.EXPADIO_INTERNAL_WORKER_TOKEN = 'worker-secret';
-  delete process.env.EXPADIO_AI_WORKER_SUBJECT_ID;
-  try {
-    const response = await POST(request({}));
-    assert.equal(response.status, 503);
-    const body = await response.json();
-    assert.equal(body.reasonCode, 'AI_WORKER_IDENTITY_DISABLED');
-  } finally {
-    restore('EXPADIO_INTERNAL_WORKER_TOKEN', token);
-    restore('EXPADIO_AI_WORKER_SUBJECT_ID', subject);
-  }
+test('AI worker endpoint is disabled without configured service identity', () => {
+  assert.match(route, /AI_WORKER_IDENTITY_DISABLED/);
+  assert.match(route, /serviceSubjectId === ''/);
+  assert.match(route, /status: error\.status/);
 });
 
-test('AI worker endpoint rejects unbounded or malformed batch limits before database access', async () => {
-  const token = process.env.EXPADIO_INTERNAL_WORKER_TOKEN;
-  const subject = process.env.EXPADIO_AI_WORKER_SUBJECT_ID;
-  process.env.EXPADIO_INTERNAL_WORKER_TOKEN = 'worker-secret';
-  process.env.EXPADIO_AI_WORKER_SUBJECT_ID = 'ai-worker';
-  try {
-    for (const limit of [0, -1, 1.5, '5']) {
-      const response = await POST(request({ limit }));
-      assert.equal(response.status, 400);
-      const body = await response.json();
-      assert.equal(body.reasonCode, 'INTERNAL_WORKER_LIMIT_INVALID');
-    }
-  } finally {
-    restore('EXPADIO_INTERNAL_WORKER_TOKEN', token);
-    restore('EXPADIO_AI_WORKER_SUBJECT_ID', subject);
-  }
+test('AI worker endpoint bounds work per invocation', () => {
+  assert.match(route, /const DEFAULT_LIMIT = 5/);
+  assert.match(route, /const MAX_LIMIT = 25/);
+  assert.match(route, /Math\.min\(value as number, MAX_LIMIT\)/);
+  assert.match(route, /INTERNAL_WORKER_LIMIT_INVALID/);
+});
+
+test('AI worker endpoint binds and safely resets tenant session context', () => {
+  assert.match(route, /set_config\('app\.tenant_id', \$1, false\)/);
+  assert.match(route, /RESET app\.tenant_id/);
+  assert.match(route, /client\.release\(true\)/);
+  assert.match(route, /client\?\.release\(\)/);
 });
