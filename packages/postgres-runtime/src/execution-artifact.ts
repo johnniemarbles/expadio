@@ -33,6 +33,9 @@ export interface PersistedExecutionArtifact {
   readonly providerKey: string;
   readonly connectorKey: string;
   readonly modelKey: string | null;
+  readonly capabilityKey: string;
+  readonly costMinorUnits: number;
+  readonly providerCostOwnership: 'BYOK' | 'EXPADIO_MANAGED';
   readonly correlationId: string | null;
   readonly createdAt: Date;
 }
@@ -50,6 +53,9 @@ interface ExecutionArtifactRow {
   readonly provider_key: string;
   readonly connector_key: string;
   readonly model_key: string | null;
+  readonly capability_key: string;
+  readonly cost_minor_units: string | number;
+  readonly provider_cost_ownership: 'BYOK' | 'EXPADIO_MANAGED';
   readonly correlation_id: string | null;
   readonly created_at: Date | string;
 }
@@ -57,7 +63,8 @@ interface ExecutionArtifactRow {
 const COLUMNS = `
   artifact_id, tenant_id, artifact_kind, source_kind, source_id,
   storage_reference, content_sha256, media_type, byte_length,
-  provider_key, connector_key, model_key, correlation_id, created_at
+  provider_key, connector_key, model_key, capability_key,
+  cost_minor_units, provider_cost_ownership, correlation_id, created_at
 `;
 
 function asDate(value: Date | string): Date {
@@ -78,6 +85,9 @@ function mapRow(row: ExecutionArtifactRow): PersistedExecutionArtifact {
     providerKey: row.provider_key,
     connectorKey: row.connector_key,
     modelKey: row.model_key,
+    capabilityKey: row.capability_key,
+    costMinorUnits: Number(row.cost_minor_units),
+    providerCostOwnership: row.provider_cost_ownership,
     correlationId: row.correlation_id,
     createdAt: asDate(row.created_at),
   };
@@ -95,6 +105,9 @@ function validate(input: {
   readonly providerKey: string;
   readonly connectorKey: string;
   readonly modelKey?: string | null;
+  readonly capabilityKey: string;
+  readonly costMinorUnits: number;
+  readonly providerCostOwnership: 'BYOK' | 'EXPADIO_MANAGED';
   readonly correlationId?: string | null;
 }): void {
   for (const [name, value] of [
@@ -123,6 +136,12 @@ function validate(input: {
     && input.modelKey.trim() === ''
   ) {
     throw new Error('EXECUTION_ARTIFACT_MODEL_KEY_INVALID');
+  }
+  if (input.capabilityKey.trim() === '') {
+    throw new Error('EXECUTION_ARTIFACT_CAPABILITY_KEY_REQUIRED');
+  }
+  if (!Number.isSafeInteger(input.costMinorUnits) || input.costMinorUnits < 0) {
+    throw new Error('EXECUTION_ARTIFACT_COST_INVALID');
   }
   if (
     input.correlationId !== undefined
@@ -159,9 +178,11 @@ export async function persistExecutionArtifact(
     `INSERT INTO platform.execution_artifacts (
        tenant_id, artifact_kind, source_kind, source_id, storage_reference,
        content_sha256, media_type, byte_length, provider_key, connector_key,
-       model_key, correlation_id
+       model_key, capability_key, cost_minor_units,
+       provider_cost_ownership, correlation_id
      ) VALUES (
-       $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+       $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+       $12, $13, $14, $15
      )
      ON CONFLICT (tenant_id, artifact_kind, source_kind, source_id)
      DO NOTHING
@@ -178,6 +199,9 @@ export async function persistExecutionArtifact(
       input.providerKey,
       input.connectorKey,
       input.modelKey ?? null,
+      input.capabilityKey,
+      input.costMinorUnits,
+      input.providerCostOwnership,
       input.correlationId ?? null,
     ],
   );
@@ -210,6 +234,9 @@ export async function persistExecutionArtifact(
     || row.provider_key !== input.providerKey
     || row.connector_key !== input.connectorKey
     || row.model_key !== (input.modelKey ?? null)
+    || row.capability_key !== input.capabilityKey
+    || Number(row.cost_minor_units) !== input.costMinorUnits
+    || row.provider_cost_ownership !== input.providerCostOwnership
     || row.correlation_id !== (input.correlationId ?? null)
   ) {
     throw new Error('EXECUTION_ARTIFACT_REPLAY_CONFLICT');
