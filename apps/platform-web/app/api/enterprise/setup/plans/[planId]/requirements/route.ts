@@ -11,6 +11,7 @@ import {
 } from '../../../../../../../lib/enterprise-setup-context';
 
 const ALLOWED_SOURCES = new Set(['CUSTOM']);
+const ALLOWED_SATISFACTION_MODES = new Set(['MANUAL', 'EVIDENCE']);
 const ALLOWED_CATEGORIES = new Set([
   'ORGANIZATION','LEGAL','GOVERNANCE','ACCESS','FINANCE','COMPLIANCE',
   'OPERATIONS','DATA','COMMUNICATION','CUSTOM',
@@ -43,6 +44,10 @@ export async function POST(
 
         const sourceKind =
           typeof body.sourceKind === 'string' ? body.sourceKind : 'CUSTOM';
+        const satisfactionMode =
+          typeof body.satisfactionMode === 'string'
+            ? body.satisfactionMode
+            : 'MANUAL';
         const category =
           typeof body.category === 'string' ? body.category : 'CUSTOM';
         if (!ALLOWED_SOURCES.has(sourceKind)) {
@@ -54,6 +59,9 @@ export async function POST(
         }
         if (!ALLOWED_CATEGORIES.has(category)) {
           return { badRequest: 'Unsupported requirement category.' } as const;
+        }
+        if (!ALLOWED_SATISFACTION_MODES.has(satisfactionMode)) {
+          return { badRequest: 'Unsupported human completion mode.' } as const;
         }
 
         const correlationId =
@@ -72,6 +80,7 @@ export async function POST(
           description:
             typeof body.description === 'string' ? body.description : '',
           blocking: body.blocking !== false,
+          satisfactionMode: satisfactionMode as 'MANUAL' | 'EVIDENCE',
           ownerSubjectId:
             typeof body.ownerSubjectId === 'string' ? body.ownerSubjectId : null,
           dueAt: typeof body.dueAt === 'string' ? body.dueAt : null,
