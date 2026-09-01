@@ -1,38 +1,32 @@
-import { 
-  PlatformWorkspaceAdapter, 
-  PlatformOverview, 
-  PlatformWorkspaceContext, 
-  WorkspaceSection, 
-  CapabilitySummary, 
-  ReviewItem, 
-  ActivityItem, 
-  PlatformOrganization 
+import {
+  PlatformWorkspaceAdapter,
+  PlatformOverview,
+  PlatformWorkspaceContext,
+  WorkspaceSection,
+  CapabilitySummary,
+  ReviewItem,
+  ActivityItem,
+  PlatformOrganization,
 } from './contracts';
-import { 
-  BrainWorkspaceAdapter, 
-  BrainOverview, 
-  BrainSource, 
-  ContextSlice, 
-  CorrectionProposal, 
-  PublicationEvent, 
-  ProvenanceEntry 
+import {
+  BrainWorkspaceAdapter,
+  BrainOverview,
+  BrainSource,
+  ContextSlice,
+  CorrectionProposal,
+  PublicationEvent,
+  ProvenanceEntry,
 } from './brain-contracts';
 import { headers } from 'next/headers';
 import type { AdapterResult } from '@expadio/ui/contracts';
 
-// Helper to construct absolute URLs for Server Components
 async function getBaseUrl() {
-  if (typeof window !== 'undefined') return ''; // Browser uses relative URLs
-  
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  
-  // Railway specific environment variable
+  if (typeof window !== 'undefined') return '';
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, '');
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
     return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
   }
-  
   try {
     const headersList = await headers();
     const host = headersList.get('x-forwarded-host') || headersList.get('host');
@@ -40,79 +34,74 @@ async function getBaseUrl() {
       const protocol = host.includes('localhost') ? 'http' : 'https';
       return `${protocol}://${host}`;
     }
-  } catch (e) {
-    // Fallback if headers() fails (e.g., outside request context)
+  } catch {
+    /* outside request */
   }
   return process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
+}
+
+function denied(status: number): AdapterResult<never> {
+  return {
+    denied: true,
+    reasonKey: status === 401 ? 'UNAUTHENTICATED' : 'INTERNAL_ERROR',
+    message: 'This information could not be loaded. Please try again.',
+  };
 }
 
 export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
   try {
     const baseUrl = await getBaseUrl();
-    if (!baseUrl && typeof window === 'undefined') {
-      throw new Error(`Cannot perform SSR fetch to relative path ${path}. Base URL is empty.`);
-    }
+    if (!baseUrl && typeof window === 'undefined') return denied(500);
     const url = `${baseUrl}${path}`;
-    
-    // Forward headers (specifically cookies) if running on the server
-    const fetchOptions: RequestInit = {};
+    const fetchOptions: RequestInit = { cache: 'no-store' };
     if (typeof window === 'undefined') {
       try {
         const headersList = await headers();
         const cookieHeader = headersList.get('cookie');
-        if (cookieHeader) {
-          fetchOptions.headers = { 'Cookie': cookieHeader };
-        }
-      } catch (e) {
-        // Fallback
+        if (cookieHeader) fetchOptions.headers = { Cookie: cookieHeader };
+      } catch {
+        /* no request cookies */
       }
     }
-
     const res = await fetch(url, fetchOptions);
-    const data = await res.json();
-    if (!res.ok) {
-      if (res.status === 401) {
-        return { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
-      }
-      if (res.status === 403 && data && data.denied) {
-        return data as AdapterResult<T>; // Return the DeniedResult gracefully to the UI
-      }
-      throw new Error(`API error: ${res.status}`);
-    }
-    if (data && data.denied) {
-      return data;
-    }
+    const data = (await res.json().catch(() => null)) as AdapterResult<T> | null;
+    if (data && typeof data === 'object' && 'denied' in data && data.denied) return data;
+    if (!res.ok) return denied(res.status);
     return data as T;
   } catch (err) {
-    console.error(`Error fetching ${path}:`, err);
-    throw err;
+    console.error(`Error fetching ${path}:`, err instanceof Error ? err.message : 'failed');
+    return denied(500);
   }
 }
 
-export const liveWorkspaceSource = { kind: 'live' as const, label: 'Live Database', capturedAt: new Date().toISOString() };
-export const liveBrainSource = { kind: 'live' as const, label: 'Live Knowledge Base', capturedAt: new Date().toISOString() };
+export const liveWorkspaceSource = {
+  kind: 'live' as const,
+  label: 'Live Database',
+  capturedAt: new Date().toISOString(),
+};
+export const liveBrainSource = {
+  kind: 'live' as const,
+  label: 'Live Knowledge Base',
+  capturedAt: new Date().toISOString(),
+};
 
 export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
   async loadOverview(organizationId: string) {
     const result = await fetchApi<PlatformOverview>(`/api/overview?organizationId=${organizationId}`);
-    if (result && 'denied' in (result as any)) return result as any;
-    const overview = result as PlatformOverview;
-    return {
-      ...overview,
-      source: liveWorkspaceSource as any
-    };
+    if (result && 'denied' in (result as object)) return result as AdapterResult<PlatformOverview>;
+    return { ...(result as PlatformOverview), source: liveWorkspaceSource };
   },
   async loadWorkspaceContext() {
     const result = await fetchApi<PlatformWorkspaceContext>('/api/context');
-    if ('denied' in (result as any)) return { accounts: [], organizations: [] };
+    if (!result || 'denied' in (result as object)) return { accounts: [], organizations: [] };
     return result as PlatformWorkspaceContext;
   },
   async loadAllowedWorkspaces() {
     const result = await fetchApi<WorkspaceSection[]>('/api/workspaces');
-    if ('denied' in (result as any)) return [];
-    return result as WorkspaceSection[];
+    if (!result || 'denied' in (result as object) || !Array.isArray(result)) return [];
+    return result;
   },
-  async loadCapabilities(orgId: string) {
+  async loadCapabilities() {
     return fetchApi<CapabilitySummary[]>('/api/capabilities');
   },
   async loadReviews(orgId: string) {
@@ -127,20 +116,20 @@ export const liveWorkspaceAdapter: PlatformWorkspaceAdapter = {
 };
 
 export const liveBrainAdapter: BrainWorkspaceAdapter = {
-  async loadOverview(orgId: string) {
+  async loadOverview() {
     return fetchApi<BrainOverview>('/api/brain');
   },
-  async loadSources(orgId: string) {
+  async loadSources() {
     return fetchApi<BrainSource[]>('/api/brain/sources');
   },
-  async loadSlices(orgId: string) {
+  async loadSlices() {
     return fetchApi<ContextSlice[]>('/api/brain/slices');
   },
-  async loadCorrections(orgId: string) {
+  async loadCorrections() {
     return fetchApi<CorrectionProposal[]>('/api/brain/corrections');
   },
-  async loadReviewQueue(orgId: string) {
-    return fetchApi<CorrectionProposal[]>('/api/brain/corrections'); 
+  async loadReviewQueue() {
+    return fetchApi<CorrectionProposal[]>('/api/brain/corrections');
   },
   async loadPublicationHistory(orgId: string) {
     return fetchApi<PublicationEvent[]>(`/api/brain/history?organizationId=${orgId}`);
@@ -149,5 +138,5 @@ export const liveBrainAdapter: BrainWorkspaceAdapter = {
     const params = new URLSearchParams({ organizationId: orgId });
     if (sourceId) params.set('sourceId', sourceId);
     return fetchApi<ProvenanceEntry[]>(`/api/brain/provenance?${params}`);
-  }
+  },
 };
