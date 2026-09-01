@@ -48,7 +48,15 @@ test('organization setup is persisted separately from normal active membership',
     );
   }
 
-  assert.doesNotMatch(runtime, /INSERT INTO platform\.memberships/);
+  assert.match(runtime, /handoffSetupOwnerMembership/);
+  assert.match(runtime, /INSERT INTO platform\.memberships/);
+  assert.match(runtime, /organization_scope_mode, valid_until/);
+  assert.match(runtime, /'ACTIVE', 'ALL', 'ALL', 'SELF'/);
+  assert.match(runtime, /authorizationRolesGranted: \[\]/);
+  assert.match(
+    runtime,
+    /UPDATE platform\.organizations[\s\S]*status = 'ACTIVE'[\s\S]*handoffSetupOwnerMembership/,
+  );
   assert.match(setupContext, /organization_setup_participants/);
   assert.match(setupContext, /app\.subject_id/);
   assert.match(setupContext, /app\.tenant_id/);
@@ -79,6 +87,8 @@ test('readiness cannot be bypassed by direct organization or plan state mutation
   assert.match(runtime, /evaluateOrganizationSetupAutomatedRequirements/);
   assert.match(runtime, /ORGANIZATION_SETUP_AUTOMATED_REQUIREMENT/);
   assert.match(runtime, /ORGANIZATION_SETUP_EVIDENCE_REQUIRED/);
+  assert.match(runtime, /ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED/);
+  assert.match(runtime, /ORGANIZATION_SETUP_ACCESS_HANDOFF_CONFLICT/);
 });
 
 test('requirements are dependency-aware, idempotent, and event-backed', () => {
