@@ -62,16 +62,6 @@
 .notificationPanel span { margin-top:5px; color:var(--ink-600); font-size:13px; line-height:1.5; }
 .overlay { display:none; }
 .content { max-width:1450px; margin:0 auto; padding:34px 36px 60px; }
-.content table { width:100%; border-collapse:collapse; font-size:14px; }
-.content th { padding:12px 16px; border-bottom:1px solid var(--theme-border); text-align:left; vertical-align:middle; color:var(--theme-text-muted); font-size:12px; font-weight:800; letter-spacing:.04em; }
-.content td { padding:12px 16px; border-bottom:1px solid var(--theme-border); text-align:left; vertical-align:middle; }
-.content tr:last-child td { border-bottom:0; }
-.content input { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); min-height:36px; padding:0 10px; }
-.content select { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); min-height:36px; padding:0 10px; }
-.content textarea { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); padding:10px; }
-.content button:disabled { cursor:not-allowed; opacity:.56; }
-.content input:disabled { cursor:not-allowed; opacity:.56; }
-.content select:disabled { cursor:not-allowed; opacity:.56; }
 @media(max-width:1050px) {
   .appShell { grid-template-columns:78px minmax(0,1fr); }
   .sidebar { padding-inline:11px; }
