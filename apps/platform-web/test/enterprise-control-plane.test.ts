@@ -32,6 +32,11 @@ test('enterprise persistence keeps tenant, enterprise, legal entity, and organiz
   assert.doesNotMatch(migration, /ALTER TABLE platform\.crm_accounts.*legal_entity/is);
 });
 
+test('enterprise migration uses valid dollar-quoted function bodies', () => {
+  assert.doesNotMatch(migration, /LANGUAGE (?:sql|plpgsql)\s+AS \$(?:\r?\n)/);
+  assert.match(migration, /bootstrap_default_enterprise_for_tenant\(\)[\s\S]*AS \$\$/);
+});
+
 test('organization and legal parent hierarchies fail closed on cycles', () => {
   assert.match(migration, /organization_parent_would_cycle/);
   assert.match(migration, /organizations_reject_cycles/);
