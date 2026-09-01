@@ -51,6 +51,8 @@ test('hierarchical membership expands through existing IAM bootstrap', () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION platform\.active_memberships_for_subject/);
   assert.match(migration, /organization_scope_mode IN \('DESCENDANTS','SELF_AND_DESCENDANTS'\)/);
   assert.match(migration, /organization_closure_subject_bootstrap_select/);
+  assert.match(migration, /current_subject_can_access_organization/);
+  assert.match(migration, /SECURITY DEFINER[\s\S]*RLS-safe subject\/issuer organization scope predicate/);
 });
 
 test('every new tenant-scoped enterprise table is FORCE RLS protected', () => {
