@@ -80,6 +80,8 @@ test('readiness cannot be bypassed by direct organization or plan state mutation
 test('requirements are dependency-aware, idempotent, and event-backed', () => {
   assert.match(migration, /organization_setup_dependencies_reject_cycles/);
   assert.match(runtime, /ORGANIZATION_SETUP_DEPENDENCIES_INCOMPLETE/);
+  assert.match(runtime, /REQUIREMENT_DEPENDENCY_ADDED/);
+  assert.match(runtime, /organization\.setup\.requirement_dependency_added/);
   assert.match(runtime, /ORGANIZATION_SETUP_IDEMPOTENCY_CONFLICT/);
   assert.match(runtime, /REQUIREMENT_ADDED/);
   assert.match(runtime, /REQUIREMENT_STATUS_CHANGED/);
