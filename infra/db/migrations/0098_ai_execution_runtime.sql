@@ -2,8 +2,9 @@ BEGIN;
 
 -- LMS-08 / horizontal AI execution durability.
 --
--- Immutable AI jobs continue to carry references only. Prompt/context/output
--- content lives in tenant-scoped artifacts, while mutable lease/retry state
+-- Immutable AI jobs continue to carry references only. Prompt/context
+-- content lives in tenant-scoped job artifacts; provider outputs are stored
+-- through the durable execution-artifact path. Mutable lease/retry state
 -- lives in a separate execution queue.
 
 CREATE TABLE platform.ai_job_artifacts (
@@ -11,7 +12,7 @@ CREATE TABLE platform.ai_job_artifacts (
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
   job_id uuid NOT NULL,
   artifact_type text NOT NULL CHECK (
-    artifact_type IN ('INPUT','CONTEXT','OUTPUT')
+    artifact_type IN ('INPUT','CONTEXT')
   ),
   media_type text NOT NULL DEFAULT 'text/plain'
     CHECK (btrim(media_type) <> ''),
