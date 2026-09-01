@@ -248,8 +248,11 @@ test('Learning event uses shared governed action worker and suspends side effect
       }),
     );
 
-    const completionEvent = await c.query<{ event_id: string }>(
-      `SELECT event_id
+    const completionEvent = await c.query<{
+      event_id: string;
+      occurred_at: Date | string;
+    }>(
+      `SELECT event_id, occurred_at
          FROM platform.domain_events
         WHERE tenant_id = $1::uuid
           AND aggregate_type = 'learning.enrollment'
@@ -260,12 +263,16 @@ test('Learning event uses shared governed action worker and suspends side effect
       [tenantId, pinned.enrollmentId],
     );
     const completionEventId = completionEvent.rows[0]?.event_id;
+    const completionOccurredAt = completionEvent.rows[0]?.occurred_at;
     assert.ok(completionEventId);
+    assert.ok(completionOccurredAt);
+    const completionDueAt = new Date(completionOccurredAt);
+    assert.equal(Number.isNaN(completionDueAt.getTime()), false);
 
     const processed = await runUntilEvent(c, {
       tenantId,
       eventId: completionEventId,
-      start: new Date('2026-09-01T02:00:00.000Z'),
+      start: new Date(completionDueAt.getTime() + 1_000),
     });
 
     assert.equal(processed.actions.length, 1);
