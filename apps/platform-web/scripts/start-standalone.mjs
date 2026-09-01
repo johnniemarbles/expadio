@@ -42,13 +42,14 @@ await mkdir(dirname(targetStatic), { recursive: true });
 await cp(sourceStatic, targetStatic, { recursive: true });
 
 console.log(`Starting Next.js standalone server: ${serverPath}`);
+console.log(`Binding Next.js to 0.0.0.0:${process.env.PORT || '3000'}`);
 
 const child = spawn(process.execPath, [serverPath], {
   cwd: runtimeRoot,
   stdio: 'inherit',
   env: {
     ...process.env,
-    HOSTNAME: process.env.HOSTNAME || '0.0.0.0',
+    HOSTNAME: '0.0.0.0',
   },
 });
 
