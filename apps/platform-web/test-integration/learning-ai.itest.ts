@@ -188,6 +188,40 @@ test('Learning tutor request executes through governed durable AI worker', async
     assert.equal(request.request.learnerId, learner.learnerId);
     assert.match(request.request.inputArtifactReference, /^ai-artifact:\/\//);
 
+    const replay = await tx(client, () =>
+      createLearningAiRequest(client, {
+        tenantId,
+        actorSubjectId: learnerSubjectId,
+        actorIssuer: learnerIssuer,
+        correlationId: randomUUID(),
+        requestType: 'TUTOR',
+        prompt: 'Explain the difference between recall and precision.',
+        idempotencyKey: 'tutor-precision-recall-1',
+      }),
+    );
+    assert.equal(replay.created, false);
+    assert.equal(replay.request.jobId, request.request.jobId);
+    assert.equal(
+      replay.request.learningAiRequestId,
+      request.request.learningAiRequestId,
+    );
+
+    await assert.rejects(
+      () =>
+        tx(client, () =>
+          createLearningAiRequest(client, {
+            tenantId,
+            actorSubjectId: learnerSubjectId,
+            actorIssuer: learnerIssuer,
+            correlationId: randomUUID(),
+            requestType: 'TUTOR',
+            prompt: 'A different prompt must not reuse the same key.',
+            idempotencyKey: 'tutor-precision-recall-1',
+          }),
+        ),
+      /LEARNING_AI_IDEMPOTENCY_CONFLICT/,
+    );
+
     let providerCalls = 0;
     let secretReads = 0;
     const worker = await runAiJobWorkerOnce(client, {
