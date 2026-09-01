@@ -80,7 +80,6 @@ export async function listSetupAccessForCurrentUser(): Promise<
        ORDER BY plan.tenant_id, plan.organization_id, participant.role`,
       [userId, ISSUER],
     );
-    await client.query('COMMIT');
 
     const contexts: EnterpriseSetupAccessContext[] = [];
     for (const row of result.rows) {
@@ -115,6 +114,7 @@ export async function listSetupAccessForCurrentUser(): Promise<
         blockingOpenRequirements: Number(row.blocking_open_requirements),
       });
     }
+    await client.query('COMMIT');
     return contexts;
   } catch (error) {
     try {
