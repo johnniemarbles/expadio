@@ -18,6 +18,11 @@ CREATE TABLE platform.execution_artifacts (
   provider_key text NOT NULL CHECK (btrim(provider_key) <> ''),
   connector_key text NOT NULL CHECK (btrim(connector_key) <> ''),
   model_key text NULL CHECK (model_key IS NULL OR btrim(model_key) <> ''),
+  capability_key text NOT NULL CHECK (btrim(capability_key) <> ''),
+  cost_minor_units bigint NOT NULL DEFAULT 0 CHECK (cost_minor_units >= 0),
+  provider_cost_ownership text NOT NULL CHECK (
+    provider_cost_ownership IN ('BYOK','EXPADIO_MANAGED')
+  ),
   correlation_id text NULL CHECK (correlation_id IS NULL OR btrim(correlation_id) <> ''),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   UNIQUE (tenant_id, artifact_kind, source_kind, source_id)
