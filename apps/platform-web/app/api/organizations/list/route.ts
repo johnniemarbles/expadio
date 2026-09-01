@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
+    const parentOrganizationId = context.organizationId;
 
     const body = await request.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -100,12 +101,12 @@ export async function POST(request: Request) {
     const requestedParent =
       typeof body.parentOrganizationId === 'string'
         ? body.parentOrganizationId
-        : context.organizationId;
+        : parentOrganizationId;
 
     if (name === '') {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
-    if (requestedParent !== context.organizationId) {
+    if (requestedParent !== parentOrganizationId) {
       return NextResponse.json(
         {
           denied: true,
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
            FROM platform.organizations
           WHERE tenant_id = $1::uuid
             AND organization_id = $2::uuid`,
-        [context.tenantId, context.organizationId],
+        [context.tenantId, parentOrganizationId],
       );
       const enterpriseId = organization.rows[0]?.enterprise_id;
       if (!enterpriseId) throw new Error('ENTERPRISE_PROFILE_NOT_FOUND');
@@ -145,8 +146,8 @@ export async function POST(request: Request) {
       return requestChildOrganization(client, {
         tenantId: context.tenantId,
         enterpriseId,
-        parentOrganizationId: context.organizationId,
-        approvingOrganizationId: context.organizationId,
+        parentOrganizationId: parentOrganizationId,
+        approvingOrganizationId: parentOrganizationId,
         name,
         organizationKind,
         requestedBySubjectId: context.subjectId,
