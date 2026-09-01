@@ -59,7 +59,8 @@
     "./learning-ai": "./src/learning-ai.ts",
     "./execution-artifact": "./src/execution-artifact.ts",
     "./indexed-artifact-sink": "./src/indexed-artifact-sink.ts",
-    "./theme-configuration": "./src/theme-configuration.ts"
+    "./theme-configuration": "./src/theme-configuration.ts",
+    "./personal-appearance": "./src/personal-appearance.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
