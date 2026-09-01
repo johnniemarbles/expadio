@@ -75,6 +75,10 @@ test('readiness cannot be bypassed by direct organization or plan state mutation
   assert.match(migration, /setup plan activation requires ready state/);
   assert.match(migration, /blocking_open_requirements <> 0/);
   assert.match(runtime, /ORGANIZATION_SETUP_READINESS_INVARIANT_FAILED/);
+  assert.match(runtime, /satisfactionMode: 'AUTOMATED'/);
+  assert.match(runtime, /evaluateOrganizationSetupAutomatedRequirements/);
+  assert.match(runtime, /ORGANIZATION_SETUP_AUTOMATED_REQUIREMENT/);
+  assert.match(runtime, /ORGANIZATION_SETUP_EVIDENCE_REQUIRED/);
 });
 
 test('requirements are dependency-aware, idempotent, and event-backed', () => {
@@ -82,6 +86,9 @@ test('requirements are dependency-aware, idempotent, and event-backed', () => {
   assert.match(runtime, /ORGANIZATION_SETUP_DEPENDENCIES_INCOMPLETE/);
   assert.match(runtime, /REQUIREMENT_DEPENDENCY_ADDED/);
   assert.match(runtime, /organization\.setup\.requirement_dependency_added/);
+  assert.match(runtime, /organization\.setup\.operating_entity_assigned/);
+  assert.match(runtime, /organization_legal_entity_bindings/);
+  assert.match(runtime, /legal_entity\.status = 'VERIFIED'/);
   assert.match(runtime, /ORGANIZATION_SETUP_IDEMPOTENCY_CONFLICT/);
   assert.match(runtime, /REQUIREMENT_ADDED/);
   assert.match(runtime, /REQUIREMENT_STATUS_CHANGED/);
@@ -100,6 +107,7 @@ test('human setup roles are bounded and cannot impersonate module or vertical in
   assert.match(addRoute, /ALLOWED_SOURCES = new Set\(\['CUSTOM'\]\)/);
   assert.doesNotMatch(addRoute, /ALLOWED_SOURCES[^\n]*PARENT_POLICY/);
   assert.doesNotMatch(addRoute, /ALLOWED_SOURCES[^\n]*TENANT/);
+  assert.match(addRoute, /ALLOWED_SATISFACTION_MODES = new Set\(\['MANUAL', 'EVIDENCE'\]\)/);
   assert.match(addRoute, /must be injected by their governing runtime/);
 });
 
@@ -136,6 +144,8 @@ test('pre-activation users receive a dedicated setup workspace instead of normal
   assert.match(setupLanding, /Organization Setup/);
   assert.match(setupLanding, /Business-runtime access remains locked/);
   assert.match(setupWorkspace, /Final activation remains controlled by an authorized active ancestor/);
+  assert.match(setupWorkspace, /Assign operating entity/);
+  assert.match(setupWorkspace, /This gate is derived from authoritative enterprise state/);
   assert.doesNotMatch(setupWorkspace, /activateOrganizationSetup/);
   assert.match(organizationsPage, /Descendant onboarding portfolio/);
   assert.match(organizationsPage, /ReadinessPortfolio/);
