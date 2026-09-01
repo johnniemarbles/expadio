@@ -105,6 +105,20 @@ test('AI worker writes durable output before terminal success and replay-complet
   assert.match(worker, /ALREADY_TERMINAL/);
 });
 
+test('AI terminal replay reconciles deterministic usage from immutable output provenance', () => {
+  assert.match(worker, /reconcileUsageFromOutputArtifact/);
+  assert.match(worker, /eventId: input\.jobId/);
+  assert.match(worker, /providerCostOwnership/);
+  assert.match(worker, /snapshot\.outputReference\?\.startsWith\('ai-artifact:\/\/'\)/);
+});
+
+test('durable worker fails closed for AI operation classes without durable text output', () => {
+  assert.match(worker, /DURABLE_TEXT_OPERATIONS/);
+  assert.match(worker, /AI_OPERATION_NOT_DURABLE_IN_WORKER/);
+  assert.match(worker, /GENERATE/);
+  assert.match(worker, /TRANSLATE/);
+});
+
 test('Learning runtime never imports provider adapters or credential repositories', () => {
   assert.doesNotMatch(runtime, /OpenAiAiAdapter|GeminiAiAdapter/);
   assert.doesNotMatch(
