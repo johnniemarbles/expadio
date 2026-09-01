@@ -50,7 +50,7 @@ export default async function SettingsPage() {
               <p><strong>Learning AI:</strong> {data.tenantContext.settings.aiFeaturesEnabled ? 'Enabled' : 'Disabled'}</p>
             </>
           ) : null}
-          {data.admin && data.module?.availability === 'AVAILABLE' ? <ActivateLearningButton /> : null}
+          {data.admin && data.module?.availability === 'READY_TO_ACTIVATE' ? <ActivateLearningButton /> : null}
           {data.module?.availability === 'LOCKED_BY_PLAN' ? (
             <div className={styles.notice}>
               Learning is not included in this tenant&apos;s active entitlement. Tenant users cannot self-grant plan access.
