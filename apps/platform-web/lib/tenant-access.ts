@@ -67,7 +67,11 @@ export async function listTenantMemberships(
                WHERE a.tenant_id = m.tenant_id
                  AND a.organization_id = m.organization_id
                  AND a.subject_id = m.subject_id
-                 AND a.status = 'ACTIVE'
+                 AND a.status = CASE m.status
+                   WHEN 'ACTIVE' THEN 'ACTIVE'
+                   WHEN 'SUSPENDED' THEN 'SUSPENDED'
+                   ELSE 'REVOKED'
+                 END
                  AND r.status = 'ACTIVE'
                  AND r.ownership_scope = 'TENANT'
                ORDER BY r.role_key
@@ -336,6 +340,16 @@ export async function setTenantMembershipStatus(
     throw new Error('TENANT_MEMBERSHIP_REVOKED_REQUIRES_NEW_GRANT');
   }
 
+  if (row.status === input.status) {
+    const records = await listTenantMemberships(client, {
+      tenantId: input.tenantId,
+      organizationId: input.organizationId,
+    });
+    const unchanged = records.find((item) => item.membershipId === input.membershipId);
+    if (!unchanged) throw new Error('TENANT_ACCESS_WRITE_FAILED');
+    return unchanged;
+  }
+
   await client.query(
     `UPDATE platform.memberships
         SET status = $4, updated_at = now()
@@ -345,29 +359,46 @@ export async function setTenantMembershipStatus(
     [input.tenantId, input.organizationId, input.membershipId, input.status],
   );
 
-  if (input.status !== 'ACTIVE') {
+  if (input.status === 'SUSPENDED') {
     await client.query(
-      `UPDATE platform.authorization_assignments
-          SET status = $4, updated_at = now()
-        WHERE tenant_id = $1::uuid
-          AND organization_id = $2::uuid
-          AND subject_id = $3
-          AND status = 'ACTIVE'`,
-      [
-        input.tenantId,
-        input.organizationId,
-        row.subject_id,
-        input.status === 'REVOKED' ? 'REVOKED' : 'SUSPENDED',
-      ],
+      `UPDATE platform.authorization_assignments a
+          SET status = 'SUSPENDED', updated_at = now()
+         FROM platform.authorization_roles r
+        WHERE a.role_id = r.role_id
+          AND a.tenant_id = $1::uuid
+          AND a.organization_id = $2::uuid
+          AND a.subject_id = $3
+          AND a.status = 'ACTIVE'
+          AND r.ownership_scope = 'TENANT'
+          AND r.tenant_id = $1::uuid`,
+      [input.tenantId, input.organizationId, row.subject_id],
+    );
+  } else if (input.status === 'REVOKED') {
+    await client.query(
+      `UPDATE platform.authorization_assignments a
+          SET status = 'REVOKED', updated_at = now()
+         FROM platform.authorization_roles r
+        WHERE a.role_id = r.role_id
+          AND a.tenant_id = $1::uuid
+          AND a.organization_id = $2::uuid
+          AND a.subject_id = $3
+          AND a.status IN ('ACTIVE','SUSPENDED')
+          AND r.ownership_scope = 'TENANT'
+          AND r.tenant_id = $1::uuid`,
+      [input.tenantId, input.organizationId, row.subject_id],
     );
   } else {
     await client.query(
-      `UPDATE platform.authorization_assignments
+      `UPDATE platform.authorization_assignments a
           SET status = 'ACTIVE', updated_at = now()
-        WHERE tenant_id = $1::uuid
-          AND organization_id = $2::uuid
-          AND subject_id = $3
-          AND status = 'SUSPENDED'`,
+         FROM platform.authorization_roles r
+        WHERE a.role_id = r.role_id
+          AND a.tenant_id = $1::uuid
+          AND a.organization_id = $2::uuid
+          AND a.subject_id = $3
+          AND a.status = 'SUSPENDED'
+          AND r.ownership_scope = 'TENANT'
+          AND r.tenant_id = $1::uuid`,
       [input.tenantId, input.organizationId, row.subject_id],
     );
   }

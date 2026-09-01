@@ -26,14 +26,14 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
           <section className={styles.accessCard}>
             <div className={styles.accessMark}>EXPADIO</div>
             <p className={styles.eyebrow}>Brand workspace access</p>
-            <h1>No Brand workspace assigned</h1>
+            <h1>Brand access unavailable</h1>
             <p>
-              Your identity is authenticated, but it is not assigned to an active tenant
-              and organization in EXPADIO. A Platform administrator must grant Brand
-              membership before this workspace can be opened.
+              Your account does not currently have an active Brand workspace. If access
+              was recently granted or restored, refresh this page after the Platform
+              change completes. Otherwise, contact your Platform administrator.
             </p>
             <div className={styles.accessHint}>
-              Access is intentionally not auto-provisioned from Brand.
+              Brand access is controlled by the Platform tenant membership lifecycle.
             </div>
           </section>
         </main>

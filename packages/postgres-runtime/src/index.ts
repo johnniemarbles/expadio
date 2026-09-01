@@ -240,3 +240,5 @@ export * from './domain-event-outbox-worker.ts';
 export * from './governed-action-intent.ts';
 
 export * from './governed-action-execution.ts';
+
+export * from './membership-workspace-discovery.ts';

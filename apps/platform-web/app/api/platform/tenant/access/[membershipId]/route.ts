@@ -7,6 +7,7 @@ import {
   withTenantTransaction,
 } from '@/lib/request-context';
 import {
+  listTenantMemberships,
   replaceTenantMembershipRoles,
   setTenantMembershipStatus,
   TENANT_ACCESS_ROLE_KEYS,
@@ -37,20 +38,26 @@ export async function PATCH(
         return { forbidden: true } as const;
       }
 
+      const target = await client.query<{ subject_id: string; status: string }>(
+        `SELECT subject_id, status FROM platform.memberships
+          WHERE tenant_id = $1::uuid AND organization_id = $2::uuid
+            AND membership_id = $3::uuid LIMIT 1
+          FOR UPDATE`,
+        [context.tenantId, organizationId, membershipId],
+      );
+      if (!target.rows[0]) throw new Error('TENANT_MEMBERSHIP_NOT_FOUND');
+
+      let changed = false;
       if (Array.isArray(body.roleKeys)) {
+        if (target.rows[0].status !== 'ACTIVE') {
+          throw new Error('TENANT_MEMBERSHIP_NOT_ACTIVE');
+        }
         const roleKeys = body.roleKeys
           .filter((value): value is string => typeof value === 'string')
           .map((value) => value.trim().toUpperCase())
           .filter((value): value is TenantAccessRoleKey =>
             TENANT_ACCESS_ROLE_KEYS.includes(value as TenantAccessRoleKey)
           );
-        const target = await client.query<{ subject_id: string }>(
-          `SELECT subject_id FROM platform.memberships
-            WHERE tenant_id = $1::uuid AND organization_id = $2::uuid
-              AND membership_id = $3::uuid LIMIT 1`,
-          [context.tenantId, organizationId, membershipId],
-        );
-        if (!target.rows[0]) throw new Error('TENANT_MEMBERSHIP_NOT_FOUND');
         await replaceTenantMembershipRoles(client, {
           tenantId: context.tenantId,
           organizationId,
@@ -59,6 +66,7 @@ export async function PATCH(
           actorSubjectId: context.subjectId,
           correlationId,
         });
+        changed = true;
       }
 
       if (typeof body.status === 'string') {
@@ -66,19 +74,26 @@ export async function PATCH(
         if (!['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(status)) {
           throw new Error('TENANT_MEMBERSHIP_STATUS_INVALID');
         }
-        return {
-          membership: await setTenantMembershipStatus(client, {
-            tenantId: context.tenantId,
-            organizationId,
-            membershipId,
-            status: status as 'ACTIVE' | 'SUSPENDED' | 'REVOKED',
-            actorSubjectId: context.subjectId,
-            correlationId,
-          }),
-        } as const;
+        const membership = await setTenantMembershipStatus(client, {
+          tenantId: context.tenantId,
+          organizationId,
+          membershipId,
+          status: status as 'ACTIVE' | 'SUSPENDED' | 'REVOKED',
+          actorSubjectId: context.subjectId,
+          correlationId,
+        });
+        return { membership } as const;
       }
 
-      return { membership: null } as const;
+      if (!changed) throw new Error('TENANT_ACCESS_UPDATE_REQUIRED');
+
+      const records = await listTenantMemberships(client, {
+        tenantId: context.tenantId,
+        organizationId,
+      });
+      const membership = records.find((item) => item.membershipId === membershipId);
+      if (!membership) throw new Error('TENANT_ACCESS_WRITE_FAILED');
+      return { membership } as const;
     });
 
     if ('forbidden' in result) {
@@ -92,7 +107,9 @@ export async function PATCH(
     const known = new Set([
       'TENANT_MEMBERSHIP_NOT_FOUND',
       'TENANT_MEMBERSHIP_STATUS_INVALID',
+      'TENANT_MEMBERSHIP_NOT_ACTIVE',
       'TENANT_MEMBERSHIP_REVOKED_REQUIRES_NEW_GRANT',
+      'TENANT_ACCESS_UPDATE_REQUIRED',
       'TENANT_ACCESS_ROLE_REQUIRED',
       'TENANT_ACCESS_ROLE_NOT_CONFIGURED',
     ]);

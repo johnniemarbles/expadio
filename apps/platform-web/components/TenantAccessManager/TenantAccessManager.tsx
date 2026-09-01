@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './TenantAccessManager.module.css';
 
@@ -24,6 +24,8 @@ export function TenantAccessManager({
   const [validUntil,setValidUntil]=useState('');
   const [busy,setBusy]=useState<string|null>(null);
   const [error,setError]=useState<string|null>(null);
+  const [memberRows,setMemberRows]=useState<Member[]>(members);
+  useEffect(()=>setMemberRows(members),[members]);
   const query=useMemo(()=>new URLSearchParams({account:accountId,org:organizationId}).toString(),[accountId,organizationId]);
 
   async function invite(event:React.FormEvent){
@@ -48,6 +50,11 @@ export function TenantAccessManager({
       });
       const payload=await res.json();
       if(!res.ok)throw new Error(payload.message??payload.reasonKey??'Access update failed.');
+      if(payload.membership){
+        setMemberRows(rows=>rows.map(row=>row.membershipId===member.membershipId
+          ?{...row,...payload.membership,identity:row.identity}
+          :row));
+      }
       router.refresh();
     }catch(cause){setError(cause instanceof Error?cause.message:'Access update failed.')}finally{setBusy(null)}
   }
@@ -79,9 +86,9 @@ export function TenantAccessManager({
     <section className={styles.panel}>
       <div className={styles.panelHead}><div><h2>Active directory</h2><p>{members.length} membership record{members.length===1?'':'s'} in this organization.</p></div></div>
       <div className={styles.tableWrap}><table><thead><tr><th>User</th><th>Roles</th><th>Status</th><th>Expiry</th><th>Actions</th></tr></thead><tbody>
-        {members.map(member=><tr key={member.membershipId}>
+        {memberRows.map(member=><tr key={member.membershipId}>
           <td><strong>{member.identity.name??member.identity.email??member.subjectId}</strong><span>{member.identity.email??member.subjectId}</span></td>
-          <td><select defaultValue={member.roleKeys[0]??''} disabled={member.status==='REVOKED'||busy!==null} onChange={e=>void patch(member,{roleKeys:[e.target.value]},`role:${member.membershipId}`)}><option value="" disabled>Select role</option>{roleKeys.map(r=><option key={r} value={r}>{label(r)}</option>)}</select></td>
+          <td><select value={member.roleKeys[0]??''} disabled={member.status!=='ACTIVE'||busy!==null} onChange={e=>void patch(member,{roleKeys:[e.target.value]},`role:${member.membershipId}`)}><option value="" disabled>Select role</option>{roleKeys.map(r=><option key={r} value={r}>{label(r)}</option>)}</select></td>
           <td><span className={styles.status}>{label(member.status)}</span></td>
           <td>{member.validUntil?new Date(member.validUntil).toLocaleString():'No expiry'}</td>
           <td className={styles.actions}>
@@ -90,7 +97,7 @@ export function TenantAccessManager({
             {member.status!=='REVOKED'?<button className={styles.danger} onClick={()=>confirm('Permanently revoke this membership?')&&void patch(member,{status:'REVOKED'},member.membershipId)} disabled={busy!==null}>Revoke</button>:null}
           </td>
         </tr>)}
-        {members.length===0?<tr><td colSpan={5} className={styles.empty}>No memberships yet.</td></tr>:null}
+        {memberRows.length===0?<tr><td colSpan={5} className={styles.empty}>No memberships yet.</td></tr>:null}
       </tbody></table></div>
     </section>
 

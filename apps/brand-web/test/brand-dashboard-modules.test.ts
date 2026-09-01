@@ -21,12 +21,20 @@ test('Platform-to-Brand handoff revalidates membership before changing workspace
 });
 
 
-test('missing Brand membership renders a controlled access state instead of a server error', () => {
+test('Brand resolves membership and workspace labels through one RLS-safe bootstrap transaction', () => {
+  const context = read('../lib/brand-context.ts');
+  assert.match(context, /listActiveMembershipWorkspaces/);
+  assert.doesNotMatch(context, /membershipRepository\.listActiveMemberships/);
+  assert.doesNotMatch(context, /dbPool\.query<\{tenant_id:string;tenant_name:string/);
+});
+
+test('genuinely unavailable Brand access renders a product state, not bootstrap diagnostics', () => {
   const layout = read('../app/(workspace)/layout.tsx');
   assert.match(layout, /BrandContextError/);
   assert.match(layout, /NO_BRAND_MEMBERSHIP/);
-  assert.match(layout, /No Brand workspace assigned/);
-  assert.match(layout, /not auto-provisioned from Brand/);
+  assert.match(layout, /Brand access unavailable/);
+  assert.doesNotMatch(layout, /No Brand workspace assigned/);
+  assert.doesNotMatch(layout, /intentionally not auto-provisioned/);
 });
 
 test('handoff returns an explicit 403 when the caller has no Brand membership', () => {

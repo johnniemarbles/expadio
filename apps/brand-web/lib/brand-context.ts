@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import pg from 'pg';
-import { PostgresMembershipRepository } from '@expadio/postgres-runtime';
+import { listActiveMembershipWorkspaces } from '@expadio/postgres-runtime';
 
 const ISSUER = 'https://clerk.expadio.com';
 const TENANT_COOKIE = 'expadio-brand-tenant';
@@ -20,7 +20,6 @@ export const dbPool = global._brandDbPool ?? new pg.Pool(
 );
 if (process.env.NODE_ENV === 'development') global._brandDbPool = dbPool;
 
-const membershipRepository = new PostgresMembershipRepository(dbPool);
 
 export interface BrandWorkspaceOption {
   readonly tenantId:string;readonly tenantName:string;readonly organizationId:string;readonly organizationName:string;
@@ -34,18 +33,9 @@ export class BrandContextError extends Error {
 }
 
 async function activeWorkspaces(subjectId:string):Promise<BrandWorkspaceOption[]>{
-  const memberships=await membershipRepository.listActiveMemberships({subjectId,actorKind:'user',issuer:ISSUER});
-  if(memberships.length===0)return [];
-  const tenantIds=[...new Set(memberships.map((entry)=>entry.tenantId))];
-  const allowed=new Set(memberships.map((entry)=>`${entry.tenantId}:${entry.organizationId}`));
-  const result=await dbPool.query<{tenant_id:string;tenant_name:string;organization_id:string;organization_name:string}>(
-    `SELECT t.tenant_id,t.name AS tenant_name,o.organization_id,o.name AS organization_name
-       FROM platform.tenants t JOIN platform.organizations o ON o.tenant_id=t.tenant_id
-      WHERE t.tenant_id=ANY($1::uuid[]) AND t.status='ACTIVE' AND o.status='ACTIVE'
-      ORDER BY t.name,o.name`,[tenantIds]);
-  return result.rows.filter((row)=>allowed.has(`${row.tenant_id}:${row.organization_id}`)).map((row)=>({
-    tenantId:row.tenant_id,tenantName:row.tenant_name,organizationId:row.organization_id,organizationName:row.organization_name,
-  }));
+  return [...await listActiveMembershipWorkspaces(dbPool,{
+    subjectId,actorKind:'user',issuer:ISSUER,
+  })];
 }
 
 export async function resolveBrandContext():Promise<BrandContext>{
