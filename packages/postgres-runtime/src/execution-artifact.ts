@@ -183,6 +183,10 @@ export async function persistExecutionArtifact(
     readonly providerKey: string;
     readonly connectorKey: string;
     readonly modelKey?: string | null;
+    readonly capabilityKey: string;
+    readonly costMinorUnits: number;
+    readonly providerCostOwnership: 'BYOK' | 'EXPADIO_MANAGED';
+    readonly confidence?: number | null;
     readonly correlationId?: string | null;
   },
 ): Promise<{
