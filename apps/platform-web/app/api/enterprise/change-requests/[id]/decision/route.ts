@@ -15,7 +15,11 @@ export async function POST(
     const context = await resolveRequestContext(request);
     if (!context.organizationId) {
       return NextResponse.json(
-        { denied: true, reasonKey: 'ORGANIZATION_CONTEXT_REQUIRED' },
+        {
+          denied: true,
+          reasonKey: 'ORGANIZATION_CONTEXT_REQUIRED',
+          message: 'Select the approving organization workspace to continue.',
+        },
         { status: 403 },
       );
     }
@@ -48,7 +52,11 @@ export async function POST(
 
     if ('forbidden' in outcome) {
       return NextResponse.json(
-        { denied: true, reasonKey: 'ENTERPRISE_DECISION_FORBIDDEN' },
+        {
+          denied: true,
+          reasonKey: 'ENTERPRISE_DECISION_FORBIDDEN',
+          message: 'You are not authorized to decide enterprise structure requests.',
+        },
         { status: 403 },
       );
     }
@@ -71,7 +79,13 @@ export async function POST(
             ? 409
             : 403;
       return NextResponse.json(
-        { denied: true, reasonKey: error.message },
+        {
+          denied: true,
+          reasonKey: error.message,
+          message: error.message === 'ENTERPRISE_SEPARATION_OF_DUTIES_REQUIRED'
+            ? 'The requester cannot perform the final approval for this enterprise change.'
+            : 'This enterprise change request cannot be approved in the selected scope.',
+        },
         { status },
       );
     }
