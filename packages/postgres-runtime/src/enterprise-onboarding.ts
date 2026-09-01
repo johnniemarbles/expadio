@@ -1544,23 +1544,36 @@ export async function evaluateOrganizationSetupAutomatedRequirements(
        LIMIT 1`,
       [input.tenantId, plan.organizationId],
     ),
-    client.query<{
-      readonly setup_participant_id: string;
-      readonly subject_id: string;
-      readonly issuer: string | null;
-    }>(
-      `SELECT setup_participant_id, subject_id, issuer
-         FROM platform.organization_setup_participants
-        WHERE tenant_id = $1::uuid
-          AND setup_plan_id = $2::uuid
-          AND role = 'OWNER'
-          AND status = 'ACTIVE'
-          AND valid_from <= now()
-          AND (valid_until IS NULL OR valid_until > now())
-        ORDER BY created_at ASC, setup_participant_id ASC
-        LIMIT 1`,
-      [input.tenantId, input.setupPlanId],
-    ),
+    plan.primaryAdministratorSubjectId === null
+      || plan.primaryAdministratorIssuer === null
+      ? Promise.resolve({ rows: [], rowCount: 0 } as OrganizationSetupSqlResult<{
+          readonly setup_participant_id: string;
+          readonly subject_id: string;
+          readonly issuer: string | null;
+        }>)
+      : client.query<{
+          readonly setup_participant_id: string;
+          readonly subject_id: string;
+          readonly issuer: string | null;
+        }>(
+          `SELECT setup_participant_id, subject_id, issuer
+             FROM platform.organization_setup_participants
+            WHERE tenant_id = $1::uuid
+              AND setup_plan_id = $2::uuid
+              AND subject_id = $3
+              AND issuer IS NOT DISTINCT FROM $4
+              AND role = 'OWNER'
+              AND status = 'ACTIVE'
+              AND valid_from <= now()
+              AND (valid_until IS NULL OR valid_until > now())
+            LIMIT 1`,
+          [
+            input.tenantId,
+            input.setupPlanId,
+            plan.primaryAdministratorSubjectId,
+            plan.primaryAdministratorIssuer,
+          ],
+        ),
   ]);
 
   const org = organization.rows[0];
@@ -1666,6 +1679,14 @@ async function handoffSetupOwnerMembership(
   readonly subjectId: string;
   readonly issuer: string | null;
 }> {
+  const plan = await loadPlanById(client, input.tenantId, input.setupPlanId, true);
+  if (
+    plan.primaryAdministratorSubjectId === null
+    || plan.primaryAdministratorIssuer === null
+  ) {
+    throw new Error('ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED');
+  }
+
   const owner = await client.query<{
     readonly subject_id: string;
     readonly issuer: string | null;
@@ -1675,14 +1696,20 @@ async function handoffSetupOwnerMembership(
        FROM platform.organization_setup_participants
       WHERE tenant_id = $1::uuid
         AND setup_plan_id = $2::uuid
+        AND subject_id = $3
+        AND issuer IS NOT DISTINCT FROM $4
         AND role = 'OWNER'
         AND status = 'ACTIVE'
         AND valid_from <= now()
         AND (valid_until IS NULL OR valid_until > now())
-      ORDER BY created_at ASC, setup_participant_id ASC
       LIMIT 1
       FOR UPDATE`,
-    [input.tenantId, input.setupPlanId],
+    [
+      input.tenantId,
+      input.setupPlanId,
+      plan.primaryAdministratorSubjectId,
+      plan.primaryAdministratorIssuer,
+    ],
   );
   const row = owner.rows[0];
   if (!row || row.issuer === null || row.issuer.trim() === '') {
