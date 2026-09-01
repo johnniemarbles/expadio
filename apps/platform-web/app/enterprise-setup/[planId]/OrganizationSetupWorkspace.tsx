@@ -31,6 +31,8 @@ interface SetupPlan {
   tenantId: string;
   enterpriseId: string;
   organizationId: string;
+  primaryAdministratorSubjectId: string | null;
+  primaryAdministratorIssuer: string | null;
   state: 'PROVISIONING' | 'CONFIGURING' | 'READY_FOR_ACTIVATION' | 'ACTIVATED' | 'CANCELLED';
   totalRequirements: number;
   completedRequirements: number;
@@ -78,6 +80,16 @@ interface OperatingEntityBinding {
   jurisdictionCountryCode: string;
 }
 
+interface SetupParticipant {
+  participantId: string;
+  subjectId: string;
+  issuer: string | null;
+  role: SetupRole;
+  status: 'ACTIVE' | 'REVOKED';
+  validFrom: string;
+  validUntil: string | null;
+}
+
 interface PlanResponse {
   context?: SetupContext;
   plan?: SetupPlan;
@@ -85,6 +97,7 @@ interface PlanResponse {
   dependencies?: Dependency[];
   verifiedLegalEntities?: LegalEntityOption[];
   operatingEntities?: OperatingEntityBinding[];
+  participants?: SetupParticipant[];
   denied?: true;
   reasonKey?: string;
   message?: string;
@@ -174,6 +187,10 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
   const [savingRequirement, setSavingRequirement] = useState(false);
   const [selectedLegalEntityId, setSelectedLegalEntityId] = useState('');
   const [assigningOperatingEntity, setAssigningOperatingEntity] = useState(false);
+  const [newParticipantSubjectId, setNewParticipantSubjectId] = useState('');
+  const [newParticipantRole, setNewParticipantRole] = useState<SetupRole>('CONTRIBUTOR');
+  const [savingParticipant, setSavingParticipant] = useState(false);
+  const [designatingPrimary, setDesignatingPrimary] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -338,11 +355,83 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
     }
   }
 
+  async function addParticipant() {
+    const subjectId = newParticipantSubjectId.trim();
+    if (!subjectId) {
+      setMutationError('Enter a Clerk subject ID for the setup participant.');
+      return;
+    }
+    setSavingParticipant(true);
+    setMutationError('');
+    try {
+      const response = await fetch(
+        '/api/enterprise/setup/plans/' + planId + '/participants',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'idempotency-key': crypto.randomUUID(),
+            'x-correlation-id': crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            subjectId,
+            role: newParticipantRole,
+          }),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) {
+        setMutationError(body.message ?? body.error ?? 'The participant could not be added.');
+        return;
+      }
+      setNewParticipantSubjectId('');
+      setNewParticipantRole('CONTRIBUTOR');
+      await load();
+    } catch {
+      setMutationError('The participant could not be added.');
+    } finally {
+      setSavingParticipant(false);
+    }
+  }
+
+  async function designatePrimaryAdministrator(subjectId: string) {
+    setDesignatingPrimary(subjectId);
+    setMutationError('');
+    try {
+      const response = await fetch(
+        '/api/enterprise/setup/plans/' + planId + '/primary-administrator',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'idempotency-key': crypto.randomUUID(),
+            'x-correlation-id': crypto.randomUUID(),
+          },
+          body: JSON.stringify({ subjectId }),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) {
+        setMutationError(body.message ?? body.error ?? 'The primary administrator could not be designated.');
+        return;
+      }
+      await load();
+    } catch {
+      setMutationError('The primary administrator could not be designated.');
+    } finally {
+      setDesignatingPrimary(null);
+    }
+  }
+
   const context = data?.context;
   const plan = data?.plan;
   const requirements = data?.requirements ?? [];
   const verifiedLegalEntities = data?.verifiedLegalEntities ?? [];
   const operatingEntities = data?.operatingEntities ?? [];
+  const participants = data?.participants ?? [];
+  const activeOwners = participants.filter(
+    (participant) => participant.status === 'ACTIVE' && participant.role === 'OWNER',
+  );
 
   return (
     <div className={styles.workspaceShell} data-expadio-theme="platform">
@@ -663,7 +752,100 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
               </section>
 
               <aside>
-                <section className={styles.panel} aria-labelledby="operating-entity-title">
+                <section className={styles.panel} aria-labelledby="participants-title">
+                  <div className={styles.panelHeading}>
+                    <h2 id="participants-title">Setup team</h2>
+                  </div>
+                  <div className={styles.panelBody}>
+                    <div className={styles.summaryStack}>
+                      {participants.map((participant) => {
+                        const isPrimary =
+                          plan.primaryAdministratorSubjectId === participant.subjectId
+                          && plan.primaryAdministratorIssuer === participant.issuer;
+                        return (
+                          <div className={styles.summaryRow} key={participant.participantId}>
+                            <span>
+                              {participant.role}
+                              {participant.status !== 'ACTIVE' ? ' · ' + participant.status : ''}
+                            </span>
+                            <strong className={styles.code}>
+                              {participant.subjectId}
+                              {isPrimary ? ' · PRIMARY' : ''}
+                            </strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {context.role === 'OWNER' && (
+                      <>
+                        <div className={[styles.form, styles.sectionGap].join(' ')}>
+                          <div className={styles.field}>
+                            <label htmlFor="participant-subject">Clerk subject ID</label>
+                            <input
+                              id="participant-subject"
+                              value={newParticipantSubjectId}
+                              onChange={(event) => setNewParticipantSubjectId(event.target.value)}
+                              placeholder="user_..."
+                            />
+                          </div>
+                          <div className={styles.field}>
+                            <label htmlFor="participant-role">Setup role</label>
+                            <select
+                              id="participant-role"
+                              value={newParticipantRole}
+                              onChange={(event) =>
+                                setNewParticipantRole(event.target.value as SetupRole)
+                              }
+                            >
+                              <option value="OWNER">Owner</option>
+                              <option value="CONTRIBUTOR">Contributor</option>
+                              <option value="REVIEWER">Reviewer</option>
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.secondaryButton}
+                            disabled={!newParticipantSubjectId.trim() || savingParticipant}
+                            onClick={() => void addParticipant()}
+                          >
+                            {savingParticipant ? 'Adding…' : 'Add setup participant'}
+                          </button>
+                        </div>
+
+                        <div className={[styles.form, styles.sectionGap].join(' ')}>
+                          <div className={styles.field}>
+                            <label htmlFor="primary-administrator">
+                              Primary administrator
+                            </label>
+                            <select
+                              id="primary-administrator"
+                              value={plan.primaryAdministratorSubjectId ?? ''}
+                              onChange={(event) => {
+                                const subjectId = event.target.value;
+                                if (subjectId) void designatePrimaryAdministrator(subjectId);
+                              }}
+                              disabled={designatingPrimary !== null || activeOwners.length === 0}
+                            >
+                              <option value="">Select active owner</option>
+                              {activeOwners.map((participant) => (
+                                <option key={participant.participantId} value={participant.subjectId}>
+                                  {participant.subjectId}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <p className={styles.inlineMessage}>
+                            Activation hands this identity a SELF-scoped organization membership.
+                            No tenant administration role is automatically granted.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                <section className={[styles.panel, styles.sectionGap].join(' ')} aria-labelledby="operating-entity-title">
                   <div className={styles.panelHeading}>
                     <h2 id="operating-entity-title">Operating legal entity</h2>
                   </div>
