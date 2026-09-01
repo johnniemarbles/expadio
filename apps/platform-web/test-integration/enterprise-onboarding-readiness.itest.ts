@@ -12,6 +12,7 @@ import {
   addOrganizationSetupDependency,
   assignOrganizationOperatingEntity,
   changeOrganizationSetupRequirement,
+  designateOrganizationSetupPrimaryAdministrator,
   listOrganizationSetupRequirements,
   registerOrganizationSetupRequirement,
 } from '@expadio/postgres-runtime/enterprise-onboarding';
@@ -174,9 +175,9 @@ test('approved child is configured through governed readiness before activation'
     ).rows[0];
     assert.equal(plan?.state, 'CONFIGURING');
     assert.equal(Number(plan?.total_requirements), 3);
-    assert.equal(Number(plan?.completed_requirements), 2);
-    assert.equal(Number(plan?.blocking_open_requirements), 1);
-    assert.equal(Number(plan?.completion_percent), 66.67);
+    assert.equal(Number(plan?.completed_requirements), 1);
+    assert.equal(Number(plan?.blocking_open_requirements), 2);
+    assert.equal(Number(plan?.completion_percent), 33.33);
 
     const participant = await c.query(
       `SELECT subject_id, role, status
@@ -190,6 +191,21 @@ test('approved child is configured through governed readiness before activation'
       role: 'OWNER',
       status: 'ACTIVE',
     });
+
+    await c.query('BEGIN');
+    const designated = await designateOrganizationSetupPrimaryAdministrator(c, {
+      tenantId,
+      setupPlanId: approved.setupPlanId!,
+      subjectId: 'setup-owner',
+      issuer: 'https://clerk.expadio.com',
+      actorSubjectId: 'setup-owner',
+      correlationId: 'setup-primary-admin',
+      idempotencyKey: 'setup-primary-admin-owner',
+    });
+    await c.query('COMMIT');
+    assert.equal(designated.plan.primaryAdministratorSubjectId, 'setup-owner');
+    assert.equal(designated.plan.completedRequirements, 2);
+    assert.equal(designated.plan.blockingOpenRequirements, 1);
 
     // Non-owner role: pre-activation discovery works only for the assigned subject.
     await c.query(`CREATE ROLE ${roleName} NOLOGIN`);
@@ -225,6 +241,11 @@ test('approved child is configured through governed readiness before activation'
     assert.equal(byKey.get('core.operating-entity')?.satisfactionMode, 'AUTOMATED');
     assert.equal(byKey.get('core.operating-entity')?.status, 'PENDING');
     assert.equal(byKey.get('core.primary-administrator')?.status, 'SATISFIED');
+    assert.ok(
+      byKey.get('core.primary-administrator')?.evidenceRefs.includes(
+        'subject:setup-owner',
+      ),
+    );
 
     await c.query('BEGIN');
     await assert.rejects(
@@ -509,6 +530,7 @@ test('approved child is configured through governed readiness before activation'
     assert.ok(setupEventTypes.includes('REQUIREMENT_STATUS_CHANGED'));
     assert.ok(setupEventTypes.includes('REQUIREMENT_DEPENDENCY_ADDED'));
     assert.ok(setupEventTypes.includes('OPERATING_ENTITY_ASSIGNED'));
+    assert.ok(setupEventTypes.includes('PRIMARY_ADMINISTRATOR_DESIGNATED'));
     assert.ok(setupEventTypes.includes('SETUP_ACTIVATED'));
 
     await assert.rejects(
@@ -541,6 +563,7 @@ test('approved child is configured through governed readiness before activation'
     assert.ok(domainEventTypes.includes('organization.setup.requirement_changed'));
     assert.ok(domainEventTypes.includes('organization.setup.requirement_dependency_added'));
     assert.ok(domainEventTypes.includes('organization.setup.operating_entity_assigned'));
+    assert.ok(domainEventTypes.includes('organization.setup.primary_administrator_designated'));
     assert.ok(domainEventTypes.includes('organization.setup.activated'));
     assert.ok(domainEventTypes.includes('organization.activated'));
     assert.ok(domainEventTypes.includes('tenant.membership.handed_off_from_setup'));
