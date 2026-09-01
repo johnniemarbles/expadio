@@ -320,6 +320,65 @@ export async function runAiJobWorkerOnce(
   }
 
   const sequence = nextSequence(priorEvents);
+  const recoveredArtifact = await findExecutionArtifactBySource(client, {
+    tenantId: claim.tenantId,
+    artifactKind: 'AI_TEXT',
+    sourceKind: 'AI_INVOCATION',
+    sourceId: `ai-job:${claim.jobId}`,
+  });
+  if (recoveredArtifact !== null) {
+    const recoveredAt = input.options.now?.() ?? new Date();
+    await append(repository, {
+      eventId: randomUUID(),
+      jobId: claim.jobId,
+      tenantId: claim.tenantId,
+      sequence,
+      type: 'SUCCEEDED',
+      occurredAt: recoveredAt.toISOString(),
+      actorSubjectId: serviceSubjectId,
+      reason:
+        'Recovered terminal AI success from durable execution artifact.',
+      correlationId: job.correlationId,
+      evidenceRefs: [
+        `ai-queue:${claim.queueId}`,
+        `ai-job:${claim.jobId}`,
+        `execution-artifact:${recoveredArtifact.artifactId}`,
+      ],
+      outputReference: recoveredArtifact.storageReference,
+      ...(recoveredArtifact.confidence === null
+        ? {}
+        : { confidence: recoveredArtifact.confidence }),
+      costMinorUnits: recoveredArtifact.costMinorUnits,
+    });
+    await reconcileUsageFromOutputArtifact(client, {
+      tenantId: claim.tenantId,
+      jobId: claim.jobId,
+      correlationId: job.correlationId,
+      outputReference: recoveredArtifact.storageReference,
+      occurredAt: recoveredAt.toISOString(),
+    });
+    const completed = await completeAiJobExecution(client, {
+      claim,
+      completedAt: recoveredAt,
+    });
+    if (!completed) {
+      return {
+        status: 'STALE_CLAIM',
+        jobId: claim.jobId,
+        reasonCode: 'AI_EXECUTION_CLAIM_LOST',
+      };
+    }
+    return {
+      status: 'SUCCEEDED',
+      jobId: claim.jobId,
+      outputReference: recoveredArtifact.storageReference,
+      connectorKey: recoveredArtifact.connectorKey,
+      providerKey: recoveredArtifact.providerKey,
+      modelKey: recoveredArtifact.modelKey ?? 'unknown',
+      costMinorUnits: recoveredArtifact.costMinorUnits,
+    };
+  }
+
   await append(repository, {
     eventId: randomUUID(),
     jobId: claim.jobId,
@@ -507,13 +566,6 @@ export async function runAiJobWorkerOnce(
       requestedAt: now.toISOString(),
     });
 
-    if (
-      job.intent.operation !== 'EMBED'
-      && proposal.outputContent === undefined
-    ) {
-      throw new Error('AI_PROVIDER_OUTPUT_CONTENT_MISSING');
-    }
-
     if (proposal.outputContent === undefined) {
       throw new Error('AI_PROVIDER_OUTPUT_CONTENT_MISSING');
     }
@@ -539,6 +591,7 @@ export async function runAiJobWorkerOnce(
       capabilityKey,
       costMinorUnits: proposal.provenance.costMinorUnits ?? 0,
       providerCostOwnership,
+      confidence: proposal.confidence,
       correlationId: job.correlationId,
       requiredResidencyTags:
         job.intent.governance.requiredResidencyTags,
