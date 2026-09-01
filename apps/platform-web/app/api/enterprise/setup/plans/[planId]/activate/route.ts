@@ -6,7 +6,7 @@ import {
   resolveRequestContext,
   withTenantTransaction,
 } from '../../../../../../../lib/request-context';
-import { hasGovernanceWriteRole } from '../../../../../../../lib/governance-authz';
+import { hasGovernanceWriteRoleForOrganization } from '../../../../../../../lib/governance-authz';
 
 export async function POST(
   request: Request,
@@ -37,7 +37,7 @@ export async function POST(
     const { planId } = await params;
     const body = await request.json().catch(() => ({}));
     const outcome = await withTenantTransaction(context, async (client) => {
-      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
+      if (!(await hasGovernanceWriteRoleForOrganization(client, context.subjectId, context.organizationId!))) {
         return { forbidden: 'ENTERPRISE_SETUP_ACTIVATION_FORBIDDEN' } as const;
       }
 
