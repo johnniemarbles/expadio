@@ -52,7 +52,12 @@ test('organization setup is persisted separately from normal active membership',
   assert.match(setupContext, /organization_setup_participants/);
   assert.match(setupContext, /app\.subject_id/);
   assert.match(setupContext, /app\.tenant_id/);
+  assert.match(
+    setupContext,
+    /const contexts:[\s\S]*app\.tenant_id[\s\S]*await client\.query\('COMMIT'\);[\s\S]*return contexts/,
+  );
 });
+
 
 test('approved child automatically enters persisted configuration journey', () => {
   assert.match(enterpriseRuntime, /startOrganizationSetup/);
