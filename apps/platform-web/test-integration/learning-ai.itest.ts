@@ -222,13 +222,27 @@ test('Learning tutor request executes through governed durable AI worker', async
       /LEARNING_AI_IDEMPOTENCY_CONFLICT/,
     );
 
+    const queuedAt = await client.query<{
+      available_at: Date | string;
+    }>(
+      `SELECT available_at
+         FROM platform.ai_job_execution_queue
+        WHERE tenant_id = $1::uuid
+          AND job_id = $2::uuid
+        LIMIT 1`,
+      [tenantId, request.request.jobId],
+    );
+    const availableAt = queuedAt.rows[0]?.available_at;
+    assert.ok(availableAt);
+    const workerNow = new Date(new Date(availableAt).getTime() + 1_000);
+
     let providerCalls = 0;
     let secretReads = 0;
     const worker = await runAiJobWorkerOnce(client, {
       tenantId,
       options: {
         serviceSubjectId,
-        now: () => new Date('2026-09-01T03:30:00.000Z'),
+        now: () => workerNow,
         secretResolver: {
           async resolve(reference) {
             secretReads += 1;
