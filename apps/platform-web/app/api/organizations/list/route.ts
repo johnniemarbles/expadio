@@ -61,7 +61,17 @@ export async function GET(request: Request) {
     return NextResponse.json(rows, {
       headers: { 'Cache-Control': 'private, no-store' },
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === 'ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT') {
+      return NextResponse.json(
+        {
+          denied: true,
+          reasonKey: 'ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT',
+          message: 'The Idempotency-Key was already used for a different enterprise request.',
+        },
+        { status: 409 },
+      );
+    }
     const denied = deniedResponse(error);
     return NextResponse.json(denied.body, { status: denied.status });
   }
@@ -72,7 +82,11 @@ export async function POST(request: Request) {
     const context = await resolveRequestContext(request);
     if (!context.organizationId) {
       return NextResponse.json(
-        { denied: true, reasonKey: 'ORGANIZATION_CONTEXT_REQUIRED' },
+        {
+          denied: true,
+          reasonKey: 'ORGANIZATION_CONTEXT_REQUIRED',
+          message: 'Select an organization workspace to continue.',
+        },
         { status: 403 },
       );
     }
@@ -143,7 +157,11 @@ export async function POST(request: Request) {
 
     if ('forbidden' in outcome) {
       return NextResponse.json(
-        { denied: true, reasonKey: 'ENTERPRISE_WRITE_FORBIDDEN' },
+        {
+          denied: true,
+          reasonKey: 'ENTERPRISE_WRITE_FORBIDDEN',
+          message: 'You are not authorized to request enterprise structure changes.',
+        },
         { status: 403 },
       );
     }
