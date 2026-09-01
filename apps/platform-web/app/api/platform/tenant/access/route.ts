@@ -149,8 +149,6 @@ export async function GET(request: Request) {
       roleKeys: TENANT_ACCESS_ROLE_KEYS,
     }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
-    const clerkResponse = clerkInvitationErrorResponse(error);
-    if (clerkResponse) return clerkResponse;
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
   }
@@ -297,6 +295,8 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+    const clerkResponse = clerkInvitationErrorResponse(error);
+    if (clerkResponse) return clerkResponse;
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
   }
