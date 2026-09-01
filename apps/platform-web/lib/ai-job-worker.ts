@@ -205,18 +205,17 @@ export async function runAiJobWorkerOnce(
     jobId: claim.jobId,
   });
   if (job === null) {
-    return retryOrDead(client, {
+    const queue = await failAiJobExecution(client, {
       claim,
-      repository,
-      sequence: 1,
-      actorSubjectId: serviceSubjectId,
-      correlationId: randomUUID(),
-      evidenceRefs: [`ai-queue:${claim.queueId}`],
-      failureCode: 'AI_JOB_NOT_FOUND',
-      reason: 'Claimed AI execution references a missing job.',
-      maximumAttempts: 1,
-      now,
+      error: 'Claimed AI execution references a missing job.',
+      failedAt: now,
+      maxAttempts: 1,
     });
+    return {
+      status: queue === 'FAILED' ? 'DEAD' : queue,
+      jobId: claim.jobId,
+      reasonCode: 'AI_JOB_NOT_FOUND',
+    };
   }
 
   const priorEvents = await repository.listEvents({
@@ -355,8 +354,9 @@ export async function runAiJobWorkerOnce(
       ...job.intent,
       inputReference: inputArtifact.content,
       ...(contextArtifact === null
-        ? { contextReference: undefined }
+        ? {}
         : { contextReference: contextArtifact.content }),
+      requestedAt: now.toISOString(),
     });
 
     if (
