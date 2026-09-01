@@ -1,0 +1,33 @@
+name: Theme Token Ratchet
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'packages/ui/**'
+      - 'scripts/check-theme-token-ratchet.mjs'
+      - '.github/workflows/theme-token-ratchet.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: theme-token-ratchet-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.16.0'
+      - name: Reject new raw application colors
+        env:
+          THEME_RATCHET_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/check-theme-token-ratchet.mjs
