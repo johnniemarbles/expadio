@@ -351,3 +351,340 @@ export async function loadLearningTenantContext(
     },
   };
 }
+
+
+export const TENANT_MODULE_ENTITLEMENT_SOURCE_TYPES = [
+  'PLAN',
+  'ADD_ON',
+  'TRIAL',
+  'CONTRACT',
+  'PLATFORM_GRANT',
+] as const;
+
+export type TenantModuleEntitlementSourceType =
+  (typeof TENANT_MODULE_ENTITLEMENT_SOURCE_TYPES)[number];
+
+export type TenantModuleEntitlementEffectiveState =
+  | 'ACTIVE'
+  | 'SCHEDULED'
+  | 'EXPIRED'
+  | 'REVOKED';
+
+interface TenantModuleEntitlementRow {
+  readonly entitlement_id: string;
+  readonly tenant_id: string;
+  readonly module_key: string;
+  readonly source_type: TenantModuleEntitlementSourceType;
+  readonly source_key: string;
+  readonly status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+  readonly valid_from: Date | string;
+  readonly valid_until: Date | string | null;
+  readonly metadata: Record<string, unknown>;
+  readonly created_at: Date | string;
+  readonly updated_at: Date | string;
+}
+
+export interface TenantModuleEntitlementRecord {
+  readonly entitlementId: string;
+  readonly tenantId: string;
+  readonly moduleKey: string;
+  readonly sourceType: TenantModuleEntitlementSourceType;
+  readonly sourceKey: string;
+  readonly status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+  readonly effectiveState: TenantModuleEntitlementEffectiveState;
+  readonly validFrom: string;
+  readonly validUntil: string | null;
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+function entitlementDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function entitlementIso(value: Date | string): string {
+  return entitlementDate(value).toISOString();
+}
+
+function entitlementEffectiveState(
+  row: TenantModuleEntitlementRow,
+  now = new Date(),
+): TenantModuleEntitlementEffectiveState {
+  if (row.status === 'REVOKED') return 'REVOKED';
+  if (row.status === 'EXPIRED') return 'EXPIRED';
+  if (entitlementDate(row.valid_from).getTime() > now.getTime()) return 'SCHEDULED';
+  if (
+    row.valid_until !== null
+    && entitlementDate(row.valid_until).getTime() <= now.getTime()
+  ) {
+    return 'EXPIRED';
+  }
+  return 'ACTIVE';
+}
+
+function toTenantModuleEntitlementRecord(
+  row: TenantModuleEntitlementRow,
+): TenantModuleEntitlementRecord {
+  return {
+    entitlementId: row.entitlement_id,
+    tenantId: row.tenant_id,
+    moduleKey: row.module_key,
+    sourceType: row.source_type,
+    sourceKey: row.source_key,
+    status: row.status,
+    effectiveState: entitlementEffectiveState(row),
+    validFrom: entitlementIso(row.valid_from),
+    validUntil: row.valid_until === null ? null : entitlementIso(row.valid_until),
+    metadata: { ...row.metadata },
+    createdAt: entitlementIso(row.created_at),
+    updatedAt: entitlementIso(row.updated_at),
+  };
+}
+
+const ENTITLEMENT_COLUMNS =
+  'entitlement_id, tenant_id, module_key, source_type, source_key, status, '
+  + 'valid_from, valid_until, metadata, created_at, updated_at';
+
+export async function listTenantModuleEntitlements(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly moduleKey: string;
+  },
+): Promise<readonly TenantModuleEntitlementRecord[]> {
+  const result = await client.query<TenantModuleEntitlementRow>(
+    `SELECT ${ENTITLEMENT_COLUMNS}
+       FROM platform.tenant_module_entitlements
+      WHERE tenant_id = $1::uuid
+        AND module_key = $2
+      ORDER BY created_at DESC, entitlement_id DESC`,
+    [input.tenantId, input.moduleKey],
+  );
+  return result.rows.map(toTenantModuleEntitlementRecord);
+}
+
+export interface GrantTenantModuleEntitlementInput {
+  readonly tenantId: string;
+  readonly moduleKey: string;
+  readonly sourceType: TenantModuleEntitlementSourceType;
+  readonly sourceKey: string;
+  readonly validFrom?: Date;
+  readonly validUntil?: Date | null;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly actorSubjectId: string;
+  readonly correlationId: string;
+}
+
+export interface TenantModuleEntitlementMutationResult {
+  readonly entitlement: TenantModuleEntitlementRecord;
+  readonly idempotent: boolean;
+}
+
+export async function grantTenantModuleEntitlement(
+  client: PostgresClient,
+  input: GrantTenantModuleEntitlementInput,
+): Promise<TenantModuleEntitlementMutationResult> {
+  const sourceKey = input.sourceKey.trim();
+  if (sourceKey === '') throw new Error('MODULE_ENTITLEMENT_SOURCE_KEY_REQUIRED');
+  if (!TENANT_MODULE_ENTITLEMENT_SOURCE_TYPES.includes(input.sourceType)) {
+    throw new Error('MODULE_ENTITLEMENT_SOURCE_TYPE_INVALID');
+  }
+
+  const validFrom = input.validFrom ?? new Date();
+  const validUntil = input.validUntil ?? null;
+  if (
+    !Number.isFinite(validFrom.getTime())
+    || (validUntil !== null && !Number.isFinite(validUntil.getTime()))
+    || (validUntil !== null && validUntil.getTime() <= validFrom.getTime())
+  ) {
+    throw new Error('MODULE_ENTITLEMENT_WINDOW_INVALID');
+  }
+  const metadata = input.metadata ?? {};
+
+  const moduleResult = await client.query<{ readonly module_key: string }>(
+    `SELECT module_key
+       FROM platform.product_modules
+      WHERE module_key = $1 AND enabled = true`,
+    [input.moduleKey],
+  );
+  if (moduleResult.rows[0] === undefined) throw new Error('MODULE_UNAVAILABLE');
+
+  const existing = await client.query<TenantModuleEntitlementRow & {
+    readonly same_definition: boolean;
+  }>(
+    `SELECT ${ENTITLEMENT_COLUMNS},
+            (
+              status = 'ACTIVE'
+              AND valid_from = $5::timestamptz
+              AND valid_until IS NOT DISTINCT FROM $6::timestamptz
+              AND metadata = $7::jsonb
+            ) AS same_definition
+       FROM platform.tenant_module_entitlements
+      WHERE tenant_id = $1::uuid
+        AND module_key = $2
+        AND source_type = $3
+        AND source_key = $4
+      FOR UPDATE`,
+    [
+      input.tenantId,
+      input.moduleKey,
+      input.sourceType,
+      sourceKey,
+      validFrom,
+      validUntil,
+      JSON.stringify(metadata),
+    ],
+  );
+  const current = existing.rows[0];
+  if (current?.same_definition === true) {
+    return {
+      entitlement: toTenantModuleEntitlementRecord(current),
+      idempotent: true,
+    };
+  }
+
+  const mutation = await client.query<TenantModuleEntitlementRow>(
+    `INSERT INTO platform.tenant_module_entitlements (
+       tenant_id, module_key, source_type, source_key, status,
+       valid_from, valid_until, metadata
+     ) VALUES (
+       $1::uuid, $2, $3, $4, 'ACTIVE',
+       $5::timestamptz, $6::timestamptz, $7::jsonb
+     )
+     ON CONFLICT (tenant_id, module_key, source_type, source_key)
+     DO UPDATE SET
+       status = 'ACTIVE',
+       valid_from = EXCLUDED.valid_from,
+       valid_until = EXCLUDED.valid_until,
+       metadata = EXCLUDED.metadata,
+       updated_at = now()
+     RETURNING ${ENTITLEMENT_COLUMNS}`,
+    [
+      input.tenantId,
+      input.moduleKey,
+      input.sourceType,
+      sourceKey,
+      validFrom,
+      validUntil,
+      JSON.stringify(metadata),
+    ],
+  );
+  const row = mutation.rows[0];
+  if (row === undefined) throw new Error('MODULE_ENTITLEMENT_WRITE_FAILED');
+
+  await appendDomainEventWithOutbox(client, {
+    event: {
+      eventId: randomUUID(),
+      tenantId: input.tenantId,
+      aggregateType: 'tenant.module.entitlement',
+      aggregateId: row.entitlement_id,
+      eventType: 'tenant.module.entitlement.granted',
+      eventVersion: 1,
+      occurredAt: new Date(),
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        moduleKey: input.moduleKey,
+        sourceType: input.sourceType,
+        sourceKey,
+        validFrom: entitlementIso(row.valid_from),
+        validUntil: row.valid_until === null ? null : entitlementIso(row.valid_until),
+        previousStatus: current?.status ?? null,
+      },
+      metadata: {
+        source: 'platform.module.entitlement',
+        controlPlane: 'platform-web',
+      },
+    },
+  });
+
+  return {
+    entitlement: toTenantModuleEntitlementRecord(row),
+    idempotent: false,
+  };
+}
+
+export async function revokeTenantModuleEntitlement(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly moduleKey: string;
+    readonly entitlementId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+    readonly reason?: string | null;
+  },
+): Promise<TenantModuleEntitlementMutationResult> {
+  const current = await client.query<TenantModuleEntitlementRow>(
+    `SELECT ${ENTITLEMENT_COLUMNS}
+       FROM platform.tenant_module_entitlements
+      WHERE tenant_id = $1::uuid
+        AND module_key = $2
+        AND entitlement_id = $3::uuid
+      FOR UPDATE`,
+    [input.tenantId, input.moduleKey, input.entitlementId],
+  );
+  const row = current.rows[0];
+  if (row === undefined) throw new Error('MODULE_ENTITLEMENT_NOT_FOUND');
+  if (row.status === 'REVOKED') {
+    return {
+      entitlement: toTenantModuleEntitlementRecord(row),
+      idempotent: true,
+    };
+  }
+
+  const metadata = {
+    ...row.metadata,
+    ...(input.reason?.trim()
+      ? { revocationReason: input.reason.trim() }
+      : {}),
+  };
+  const updated = await client.query<TenantModuleEntitlementRow>(
+    `UPDATE platform.tenant_module_entitlements
+        SET status = 'REVOKED',
+            metadata = $4::jsonb,
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND module_key = $2
+        AND entitlement_id = $3::uuid
+      RETURNING ${ENTITLEMENT_COLUMNS}`,
+    [
+      input.tenantId,
+      input.moduleKey,
+      input.entitlementId,
+      JSON.stringify(metadata),
+    ],
+  );
+  const revoked = updated.rows[0];
+  if (revoked === undefined) throw new Error('MODULE_ENTITLEMENT_WRITE_FAILED');
+
+  await appendDomainEventWithOutbox(client, {
+    event: {
+      eventId: randomUUID(),
+      tenantId: input.tenantId,
+      aggregateType: 'tenant.module.entitlement',
+      aggregateId: revoked.entitlement_id,
+      eventType: 'tenant.module.entitlement.revoked',
+      eventVersion: 1,
+      occurredAt: new Date(),
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        moduleKey: revoked.module_key,
+        sourceType: revoked.source_type,
+        sourceKey: revoked.source_key,
+        reason: input.reason?.trim() || null,
+      },
+      metadata: {
+        source: 'platform.module.entitlement',
+        controlPlane: 'platform-web',
+      },
+    },
+  });
+
+  return {
+    entitlement: toTenantModuleEntitlementRecord(revoked),
+    idempotent: false,
+  };
+}

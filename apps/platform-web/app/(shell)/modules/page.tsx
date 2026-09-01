@@ -1,7 +1,11 @@
-import type { TenantProductModuleSummary } from '@expadio/postgres-runtime/product-module';
+import type {
+  TenantModuleEntitlementRecord,
+  TenantProductModuleSummary,
+} from '@expadio/postgres-runtime/product-module';
 import { DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { ModuleAction } from '../../../components/ModuleAction/ModuleAction';
+import { EntitlementManager } from '../../../components/EntitlementManager/EntitlementManager';
 import { brandHandoffUrl, loadBrandAppOrigin } from '../../../lib/brand-app';
 import { fetchApi, liveWorkspaceAdapter } from '../../../lib/live-adapter';
 import styles from './page.module.css';
@@ -37,6 +41,18 @@ export default async function TenantModulesPage({ searchParams }: { searchParams
   );
   if (isDenied(result)) return <DeniedState result={result} />;
 
+  const entitlementResults = await Promise.all(
+    result.modules.map(async (module) => {
+      const response = await fetchApi<{ entitlements: readonly TenantModuleEntitlementRecord[] }>(
+        `/api/platform/tenant/modules/${encodeURIComponent(module.moduleKey)}/entitlements?${query}`,
+      );
+      return [
+        module.moduleKey,
+        isDenied(response) ? null : response.entitlements,
+      ] as const;
+    }),
+  );
+  const entitlementHistory = new Map(entitlementResults);
   const brandOrigin = loadBrandAppOrigin();
 
   return (
@@ -45,7 +61,7 @@ export default async function TenantModulesPage({ searchParams }: { searchParams
         <div>
           <p className={styles.eyebrow}>Platform · Tenant products</p>
           <h1>Apps & modules</h1>
-          <p>See commercial entitlement, installation state and tenant activation for {account.name}. Platform can activate an already-entitled module; it does not create entitlement here.</p>
+          <p>Manage commercial entitlement, installation state and tenant activation for {account.name}. Only Platform-owned administration roles can grant or revoke module entitlement.</p>
         </div>
       </section>
 
@@ -84,6 +100,16 @@ export default async function TenantModulesPage({ searchParams }: { searchParams
                 organizationId={organization.id}
                 brandHref={brandHref}
               />
+              {entitlementHistory.get(module.moduleKey) !== null ? (
+                <EntitlementManager
+                  moduleKey={module.moduleKey}
+                  accountId={account.id}
+                  organizationId={organization.id}
+                  entitlements={entitlementHistory.get(module.moduleKey) ?? []}
+                />
+              ) : (
+                <div className={styles.platformOnly}>Commercial entitlement is managed by Platform administration.</div>
+              )}
             </article>
           );
         })}
