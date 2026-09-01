@@ -1,6 +1,6 @@
 import type { PostgresClient } from './index.ts';
 
-export type AiJobArtifactType = 'INPUT' | 'CONTEXT' | 'OUTPUT';
+export type AiJobArtifactType = 'INPUT' | 'CONTEXT';
 
 export interface AiJobArtifact {
   readonly artifactId: string;
