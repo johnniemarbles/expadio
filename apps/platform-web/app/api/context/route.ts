@@ -6,8 +6,8 @@ import type { PlatformWorkspaceContext } from '../../../lib/contracts';
 
 /**
  * Workspace context is derived only from active persisted memberships. The
- * membership repository expands governed hierarchy scopes, so this endpoint
- * never upgrades "member of tenant" into "member of every organization".
+ * membership repository expands governed hierarchy scopes, and each tenant's
+ * descriptive rows are then read inside an explicit tenant-bound transaction.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +17,50 @@ const ISSUER = 'https://clerk.expadio.com';
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || 'W';
+}
+
+async function loadTenantWorkspaceRows(
+  tenantId: string,
+  organizationIds: readonly string[],
+  subjectId: string,
+) {
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', tenantId]);
+    await client.query('SELECT set_config($1, $2, true)', ['app.subject_id', subjectId]);
+    await client.query('SELECT set_config($1, $2, true)', ['app.issuer', ISSUER]);
+
+    const [tenant, organizations] = await Promise.all([
+      client.query(
+        'SELECT tenant_id, name FROM platform.tenants WHERE tenant_id = $1::uuid',
+        [tenantId],
+      ),
+      organizationIds.length === 0
+        ? Promise.resolve({ rows: [] } as { rows: any[] })
+        : client.query(
+            `SELECT organization_id, tenant_id, enterprise_id, name, organization_kind,
+                    parent_organization_id, status
+               FROM platform.organizations
+              WHERE tenant_id = $1::uuid
+                AND organization_id = ANY($2::uuid[])
+              ORDER BY name ASC`,
+            [tenantId, organizationIds],
+          ),
+    ]);
+
+    await client.query('COMMIT');
+    return { tenant: tenant.rows[0] as any, organizations: organizations.rows as any[] };
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Preserve the original database failure.
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function GET() {
@@ -42,58 +86,40 @@ export async function GET() {
     }
 
     const tenantIds = [...new Set(memberships.map((membership) => membership.tenantId))];
-    const allowedOrganizationIds = [
-      ...new Set(memberships.map((membership) => membership.organizationId)),
-    ];
-
-    const [tenantRows, orgRows] = await Promise.all([
-      dbPool.query(
-        'SELECT tenant_id, name FROM platform.tenants WHERE tenant_id = ANY($1::uuid[])',
-        [tenantIds],
-      ),
-      dbPool.query(
-        `SELECT organization_id, tenant_id, enterprise_id, name, organization_kind,
-                parent_organization_id, status
-           FROM platform.organizations
-          WHERE organization_id = ANY($1::uuid[])
-          ORDER BY name ASC`,
-        [allowedOrganizationIds],
-      ),
-    ]);
-
-    const tenantName = new Map<string, string>(
-      tenantRows.rows.map((row: any) => [row.tenant_id, row.name]),
-    );
-    const organizationName = new Map<string, string>(
-      orgRows.rows.map((row: any) => [row.organization_id, row.name]),
+    const tenantResults = await Promise.all(
+      tenantIds.map((tenantId) => {
+        const organizationIds = [
+          ...new Set(
+            memberships
+              .filter((membership) => membership.tenantId === tenantId)
+              .map((membership) => membership.organizationId),
+          ),
+        ];
+        return loadTenantWorkspaceRows(tenantId, organizationIds, userId);
+      }),
     );
 
-    const accounts = tenantIds.map((tenantId) => {
-      const name = tenantName.get(tenantId) ?? 'Workspace';
-      const organizationIds = [
-        ...new Set(
-          memberships
-            .filter((membership) => membership.tenantId === tenantId)
-            .map((membership) => membership.organizationId)
-            .filter((organizationId) => organizationName.has(organizationId)),
-        ),
-      ];
+    const accounts = tenantResults.map(({ tenant, organizations }, index) => {
+      const tenantId = tenantIds[index]!;
+      const name = tenant?.name ?? 'Workspace';
       return {
         id: tenantId,
         name,
         role: 'Platform operator',
         initials: initials(name),
-        allowedOrganizationIds: organizationIds,
+        allowedOrganizationIds: organizations.map((organization) => organization.organization_id),
       };
     });
 
-    const organizations = (orgRows.rows as any[]).map((row) => ({
-      id: row.organization_id,
-      name: row.name,
-      environment: row.organization_kind,
-      level: 'organization' as const,
-      parentId: row.parent_organization_id ?? null,
-    }));
+    const organizations = tenantResults.flatMap((result) =>
+      result.organizations.map((row) => ({
+        id: row.organization_id,
+        name: row.name,
+        environment: row.organization_kind,
+        level: 'organization' as const,
+        parentId: row.parent_organization_id ?? null,
+      })),
+    );
 
     return NextResponse.json(
       { accounts, organizations } satisfies PlatformWorkspaceContext,
