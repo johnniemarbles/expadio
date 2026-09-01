@@ -234,6 +234,7 @@ export async function requestChildOrganization(
        $1::uuid, $2::uuid, $3::uuid, 'CREATE_ORGANIZATION',
        $4::uuid, $5::uuid, 'SUBMITTED', $6::jsonb, $7, $8, $9
      )
+     ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
      RETURNING
        enterprise_change_request_id,
        operation,
@@ -259,7 +260,29 @@ export async function requestChildOrganization(
     ],
   );
   const row = created.rows[0];
-  if (row === undefined) throw new Error('ENTERPRISE_CHANGE_REQUEST_CREATE_FAILED');
+  if (row === undefined) {
+    const replay = await client.query<EnterpriseChangeRequestRow>(
+      `SELECT
+         enterprise_change_request_id,
+         operation,
+         requesting_organization_id,
+         approving_organization_id,
+         target_organization_id,
+         status,
+         proposed_payload,
+         requested_by_subject_id,
+         decided_by_subject_id,
+         correlation_id,
+         idempotency_key
+       FROM platform.enterprise_change_requests
+       WHERE tenant_id = $1::uuid
+         AND idempotency_key = $2`,
+      [input.tenantId, input.idempotencyKey],
+    );
+    const replayRow = replay.rows[0];
+    if (replayRow === undefined) throw new Error('ENTERPRISE_CHANGE_REQUEST_CREATE_FAILED');
+    return { request: mapChangeRequest(replayRow), idempotent: true };
+  }
 
   await appendDomainEventWithOutbox(client, {
     event: {
