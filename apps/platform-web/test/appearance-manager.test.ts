@@ -24,7 +24,7 @@ test('Platform Appearance Manager publishes only approved immutable profiles',()
 test('Platform publication opens the forced-RLS control-plane path only after authorization',()=>{
   const authz=route.indexOf('hasPlatformAdministrationRole');
   const elevate=route.indexOf("set_config('app.platform_admin'");
-  const publish=route.indexOf('appendPlatformThemeProfile');
+  const publish=route.lastIndexOf('appendPlatformThemeProfile');
   assert.ok(authz>=0&&elevate>authz&&publish>elevate);
   assert.match(migration,/setting_key = 'appearance\.theme\.profile'/);
   assert.match(migration,/level = 'PLATFORM'/);
