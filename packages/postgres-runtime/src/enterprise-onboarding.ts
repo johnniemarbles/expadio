@@ -485,21 +485,55 @@ export async function addOrganizationSetupDependency(
     readonly setupPlanId: string;
     readonly requirementId: string;
     readonly dependsOnRequirementId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
   },
 ): Promise<{ readonly idempotent: boolean }> {
   const result = await client.query(
     `INSERT INTO platform.organization_setup_requirement_dependencies (
-       tenant_id, setup_plan_id, setup_requirement_id, depends_on_requirement_id
-     ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid)
+       tenant_id, setup_plan_id, setup_requirement_id, depends_on_requirement_id,
+       created_by_subject_id
+     ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5)
      ON CONFLICT DO NOTHING`,
     [
       input.tenantId,
       input.setupPlanId,
       input.requirementId,
       input.dependsOnRequirementId,
+      input.actorSubjectId,
     ],
   );
-  return { idempotent: result.rowCount === 0 };
+  if (result.rowCount === 0) return { idempotent: true };
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    setupRequirementId: input.requirementId,
+    eventType: 'REQUIREMENT_DEPENDENCY_ADDED',
+    actorSubjectId: input.actorSubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: {
+      requirementId: input.requirementId,
+      dependsOnRequirementId: input.dependsOnRequirementId,
+    },
+  });
+  if (!setupEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: input.setupPlanId,
+      eventType: 'organization.setup.requirement_dependency_added',
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        requirementId: input.requirementId,
+        dependsOnRequirementId: input.dependsOnRequirementId,
+      },
+    });
+  }
+
+  return { idempotent: false };
 }
 
 export async function addOrganizationSetupParticipant(
@@ -618,15 +652,35 @@ export async function addOrganizationSetupParticipant(
     ],
   );
 
-  await appendSetupEvent(client, {
+  const participantEvent = await appendSetupEvent(client, {
     tenantId: input.tenantId,
     setupPlanId: input.setupPlanId,
     eventType: 'PARTICIPANT_ADDED',
     actorSubjectId: input.createdBySubjectId,
     correlationId: input.correlationId,
     idempotencyKey: input.idempotencyKey,
-    payload: { participantId, subjectId, role: input.role },
+    payload: {
+      participantId,
+      subjectId,
+      role: input.role,
+      validUntil: input.validUntil ?? null,
+    },
   });
+  if (!participantEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: input.setupPlanId,
+      eventType: 'organization.setup.participant_added',
+      actorSubjectId: input.createdBySubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        participantId,
+        subjectId,
+        role: input.role,
+        validUntil: input.validUntil ?? null,
+      },
+    });
+  }
 
   return { participantId, idempotent: false };
 }
