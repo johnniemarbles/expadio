@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 test('Brand home is a module dashboard rather than a Learning redirect', () => {
   const page = read('../app/(workspace)/page.tsx');
   assert.match(page, /listTenantProductModules/);
-  assert.match(page, /<h1>Apps<\/h1>/);
+  assert.match(page, /<h1>All Apps<\/h1>/);
   assert.doesNotMatch(page, /redirect\('\/learning'\)/);
   assert.doesNotMatch(page, /tenant_module_entitlements.*INSERT|INSERT.*tenant_module_entitlements/s);
 });
@@ -58,4 +58,33 @@ test('Brand unavailable state is self-diagnosing and supports Clerk session reco
   assert.match(recovery, /Sign out & use another account/);
   assert.match(recovery, /Retry access/);
   assert.match(recovery, /Compare the Clerk user ID/);
+});
+
+
+test('Brand Shell v2 derives pinned app navigation from active product-module manifests', () => {
+  const layout = read('../app/(workspace)/layout.tsx');
+  const shell = read('../components/BrandShellFrame.tsx');
+  assert.match(layout, /listTenantProductModules/);
+  assert.match(layout, /parseProductModuleShellDescriptor/);
+  assert.match(layout, /availability === 'ACTIVE'/);
+  assert.match(shell, /defaultPinned/);
+  assert.match(shell, /All Apps/);
+  assert.doesNotMatch(layout, /const NAV/);
+});
+
+test('Learning owns module-local sections instead of expanding the global sidebar', () => {
+  const layout = read('../app/(workspace)/learning/layout.tsx');
+  const frame = read('../components/ModuleWorkspaceFrame.tsx');
+  assert.match(layout, /loadTenantProductModule/);
+  assert.match(layout, /parseProductModuleShellDescriptor/);
+  assert.match(frame, /placement==='primary'/);
+  assert.match(frame, /placement==='more'/);
+});
+
+test('Learning manifest contributes navigation metadata without granting entitlement', () => {
+  const migration = read('../../../infra/db/migrations/0103_product_module_shell_descriptor.sql');
+  assert.match(migration, /UPDATE platform\.product_modules/);
+  assert.match(migration, /'shell'/);
+  assert.match(migration, /'defaultPinned', true/);
+  assert.doesNotMatch(migration, /tenant_module_entitlements.*INSERT|INSERT INTO platform\.tenant_module_entitlements/s);
 });

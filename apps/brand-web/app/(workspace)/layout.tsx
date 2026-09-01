@@ -1,20 +1,9 @@
-import Link from 'next/link';
-import { BrandContextError, diagnoseBrandAccess, resolveBrandContext } from '../../lib/brand-context';
+import { listTenantProductModules } from '@expadio/postgres-runtime/product-module';
+import { parseProductModuleShellDescriptor } from '@expadio/ui';
+import { BrandContextError, diagnoseBrandAccess, resolveBrandContext, withBrandTransaction } from '../../lib/brand-context';
 import { BrandAccessRecovery } from '../../components/BrandAccessRecovery';
+import { BrandShellFrame } from '../../components/BrandShellFrame';
 import styles from './workspace.module.css';
-
-const NAV = [
-  ['Overview', '/learning'],
-  ['Courses', '/learning/courses'],
-  ['AI tutor & author', '/learning/ai'],
-  ['Learners', '/learning/learners'],
-  ['Assessments', '/learning/assessments'],
-  ['Programs & credentials', '/learning/programs'],
-  ['Skills', '/learning/skills'],
-  ['Assignments', '/learning/assignments'],
-  ['Reports', '/learning/reports'],
-  ['Settings', '/learning/settings'],
-] as const;
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   let context;
@@ -29,55 +18,37 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
             <div className={styles.accessMark}>EXPADIO</div>
             <p className={styles.eyebrow}>Brand workspace access</p>
             <h1>Brand access unavailable</h1>
-            <p>
-              EXPADIO could not resolve an active Brand workspace for the Clerk identity
-              currently signed into this browser.
-            </p>
-            {diagnostic ? (
-              <BrandAccessRecovery
-                subjectId={diagnostic.subjectId}
-                reason={diagnostic.reason}
-                membershipStatus={diagnostic.status}
-                validUntil={diagnostic.validUntil}
-              />
-            ) : null}
+            <p>EXPADIO could not resolve an active Brand workspace for the Clerk identity currently signed into this browser.</p>
+            {diagnostic ? <BrandAccessRecovery subjectId={diagnostic.subjectId} reason={diagnostic.reason} membershipStatus={diagnostic.status} validUntil={diagnostic.validUntil} /> : null}
           </section>
         </main>
       );
     }
     throw error;
   }
-  const selected = `${context.tenantId}:${context.organizationId}`;
+
+  const modules = await withBrandTransaction(context, (client) =>
+    listTenantProductModules(client, context.tenantId)
+  );
+  const descriptors = modules
+    .filter((module) => module.availability === 'ACTIVE')
+    .map((module) => parseProductModuleShellDescriptor({
+      moduleKey: module.moduleKey,
+      displayName: module.displayName,
+      description: module.description,
+      manifest: module.manifest,
+    }))
+    .filter((module): module is NonNullable<typeof module> => module !== null);
+
   return (
-    <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>EXPADIO<small>Brand workspace</small></div>
-        <form className={styles.workspaceSelect} action="/api/workspace/select" method="post">
-          <label htmlFor="workspace">Workspace</label>
-          <input type="hidden" name="returnTo" value="/" />
-          <select id="workspace" name="workspace" defaultValue={selected}>
-            {context.workspaces.map((workspace) => (
-              <option key={`${workspace.tenantId}:${workspace.organizationId}`} value={`${workspace.tenantId}:${workspace.organizationId}`}>
-                {workspace.tenantName} · {workspace.organizationName}
-              </option>
-            ))}
-          </select>
-          <button className={styles.button} type="submit">Switch</button>
-        </form>
-        <nav className={styles.nav} aria-label="Brand navigation">
-          <div className={styles.navGroup}>Apps</div>
-          <Link href="/">Home</Link>
-          <div className={styles.navGroup}>Learning</div>
-          {NAV.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
-          <div className={styles.navGroup}>Learner</div>
-          <Link href="/learn">My learning</Link>
-        </nav>
-        <div className={styles.sidebarFoot}>Tenant product shell · separate from Platform administration</div>
-      </aside>
-      <section className={styles.content}>
-        <header className={styles.topbar}><div><div className={styles.scopeTitle}>{context.organizationName}</div><div className={styles.scopeSub}>{context.tenantName}</div></div></header>
-        <main className={styles.main}>{children}</main>
-      </section>
-    </div>
+    <BrandShellFrame
+      tenantName={context.tenantName}
+      organizationName={context.organizationName}
+      workspaces={context.workspaces}
+      selectedWorkspace={context.tenantId+':'+context.organizationId}
+      modules={descriptors}
+    >
+      {children}
+    </BrandShellFrame>
   );
 }
