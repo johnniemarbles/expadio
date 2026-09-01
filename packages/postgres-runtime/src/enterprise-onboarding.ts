@@ -846,12 +846,12 @@ export async function startOrganizationSetup(
     });
   }
 
-  const plan = await findOrganizationSetupPlan(client, {
+  const evaluated = await evaluateOrganizationSetupAutomatedRequirements(client, {
     tenantId: input.tenantId,
-    organizationId: input.organizationId,
+    setupPlanId,
+    correlationId: input.correlationId,
   });
-  if (!plan) throw new Error('ORGANIZATION_SETUP_PLAN_NOT_FOUND_AFTER_CREATE');
-  return { plan, idempotent: false };
+  return { plan: evaluated.plan, idempotent: false };
 }
 
 export async function changeOrganizationSetupRequirement(
@@ -1083,6 +1083,169 @@ async function loadPlanById(
   return mapPlan(row);
 }
 
+export interface OrganizationSetupAutomatedEvaluation {
+  readonly requirementKey: string;
+  readonly satisfied: boolean;
+  readonly evidenceRefs: readonly string[];
+}
+
+export async function evaluateOrganizationSetupAutomatedRequirements(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly correlationId: string;
+  },
+): Promise<{
+  readonly plan: OrganizationSetupPlan;
+  readonly evaluations: readonly OrganizationSetupAutomatedEvaluation[];
+}> {
+  const plan = await loadPlanById(client, input.tenantId, input.setupPlanId);
+  if (plan.state === 'ACTIVATED' || plan.state === 'CANCELLED') {
+    return { plan, evaluations: [] };
+  }
+
+  const [requirements, organization, operatingEntity, setupOwner] = await Promise.all([
+    listOrganizationSetupRequirements(client, {
+      tenantId: input.tenantId,
+      setupPlanId: input.setupPlanId,
+    }),
+    client.query<{
+      readonly name: string;
+      readonly organization_kind: string;
+      readonly parent_organization_id: string | null;
+    }>(
+      `SELECT name, organization_kind, parent_organization_id
+         FROM platform.organizations
+        WHERE tenant_id = $1::uuid
+          AND organization_id = $2::uuid
+        LIMIT 1`,
+      [input.tenantId, plan.organizationId],
+    ),
+    client.query<{
+      readonly organization_legal_entity_binding_id: string;
+      readonly legal_entity_id: string;
+    }>(
+      `SELECT
+         binding.organization_legal_entity_binding_id,
+         binding.legal_entity_id
+       FROM platform.organization_legal_entity_bindings binding
+       JOIN platform.legal_entities legal_entity
+         ON legal_entity.tenant_id = binding.tenant_id
+        AND legal_entity.legal_entity_id = binding.legal_entity_id
+       WHERE binding.tenant_id = $1::uuid
+         AND binding.organization_id = $2::uuid
+         AND binding.binding_role = 'OPERATED_BY'
+         AND binding.status = 'ACTIVE'
+         AND binding.valid_from <= now()
+         AND (binding.valid_until IS NULL OR binding.valid_until > now())
+         AND legal_entity.status = 'VERIFIED'
+       ORDER BY binding.valid_from DESC, binding.organization_legal_entity_binding_id
+       LIMIT 1`,
+      [input.tenantId, plan.organizationId],
+    ),
+    client.query<{
+      readonly setup_participant_id: string;
+      readonly subject_id: string;
+    }>(
+      `SELECT setup_participant_id, subject_id
+         FROM platform.organization_setup_participants
+        WHERE tenant_id = $1::uuid
+          AND setup_plan_id = $2::uuid
+          AND role = 'OWNER'
+          AND status = 'ACTIVE'
+          AND valid_from <= now()
+          AND (valid_until IS NULL OR valid_until > now())
+        ORDER BY created_at ASC, setup_participant_id ASC
+        LIMIT 1`,
+      [input.tenantId, input.setupPlanId],
+    ),
+  ]);
+
+  const org = organization.rows[0];
+  const binding = operatingEntity.rows[0];
+  const owner = setupOwner.rows[0];
+  const evaluations: OrganizationSetupAutomatedEvaluation[] = [
+    {
+      requirementKey: 'core.organization-profile',
+      satisfied:
+        org !== undefined
+        && org.name.trim() !== ''
+        && org.organization_kind.trim() !== ''
+        && org.parent_organization_id !== null,
+      evidenceRefs: org === undefined
+        ? []
+        : [`organization:${plan.organizationId}:profile`],
+    },
+    {
+      requirementKey: 'core.operating-entity',
+      satisfied: binding !== undefined,
+      evidenceRefs: binding === undefined
+        ? []
+        : [
+            `legal-entity:${binding.legal_entity_id}`,
+            `organization-legal-entity-binding:${binding.organization_legal_entity_binding_id}`,
+          ],
+    },
+    {
+      requirementKey: 'core.primary-administrator',
+      satisfied: owner !== undefined,
+      evidenceRefs: owner === undefined
+        ? []
+        : [
+            `setup-participant:${owner.setup_participant_id}`,
+            `subject:${owner.subject_id}`,
+          ],
+    },
+  ];
+
+  const requirementsByKey = new Map(
+    requirements.map((requirement) => [requirement.requirementKey, requirement]),
+  );
+  for (const evaluation of evaluations) {
+    const requirement = requirementsByKey.get(evaluation.requirementKey);
+    if (!requirement || requirement.satisfactionMode !== 'AUTOMATED') continue;
+
+    if (evaluation.satisfied && requirement.status !== 'SATISFIED') {
+      await changeOrganizationSetupRequirement(client, {
+        tenantId: input.tenantId,
+        setupPlanId: input.setupPlanId,
+        requirementId: requirement.setupRequirementId,
+        action: 'SATISFY',
+        actorSubjectId: 'enterprise-readiness-system',
+        reason: 'Authoritative enterprise state satisfies this automated prerequisite.',
+        evidenceRefs: evaluation.evidenceRefs,
+        correlationId: input.correlationId,
+        idempotencyKey:
+          `auto-eval:${requirement.setupRequirementId}:satisfy:${randomUUID()}`,
+        systemEvaluation: true,
+      });
+      continue;
+    }
+
+    if (!evaluation.satisfied && requirement.status === 'SATISFIED') {
+      await changeOrganizationSetupRequirement(client, {
+        tenantId: input.tenantId,
+        setupPlanId: input.setupPlanId,
+        requirementId: requirement.setupRequirementId,
+        action: 'REOPEN',
+        actorSubjectId: 'enterprise-readiness-system',
+        reason: 'Authoritative enterprise state no longer satisfies this automated prerequisite.',
+        evidenceRefs: [],
+        correlationId: input.correlationId,
+        idempotencyKey:
+          `auto-eval:${requirement.setupRequirementId}:reopen:${randomUUID()}`,
+        systemEvaluation: true,
+      });
+    }
+  }
+
+  return {
+    plan: await loadPlanById(client, input.tenantId, input.setupPlanId),
+    evaluations,
+  };
+}
+
 export async function activateOrganizationSetup(
   client: OrganizationSetupSqlClient,
   input: {
@@ -1094,6 +1257,11 @@ export async function activateOrganizationSetup(
     readonly reason?: string | null;
   },
 ): Promise<{ readonly plan: OrganizationSetupPlan; readonly idempotent: boolean }> {
+  await evaluateOrganizationSetupAutomatedRequirements(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    correlationId: input.correlationId,
+  });
   const plan = await loadPlanById(client, input.tenantId, input.setupPlanId, true);
   if (plan.state === 'ACTIVATED') return { plan, idempotent: true };
   if (plan.state !== 'READY_FOR_ACTIVATION') {
