@@ -74,6 +74,11 @@ export function learningApiError(error: unknown): LearningApiError | null {
     'LEARNING_ASSIGNMENT_RULE_ID_INVALID',
     'LEARNING_TRIGGER_EVENT_ID_INVALID',
     'LEARNING_AUTOMATION_RULE_REVISION_INVALID',
+    'LEARNING_AI_REQUEST_TYPE_INVALID',
+    'LEARNING_AI_PROMPT_REQUIRED',
+    'LEARNING_AI_PROMPT_TOO_LONG',
+    'LEARNING_AI_IDEMPOTENCY_KEY_INVALID',
+    'LEARNING_AI_SETTINGS_INVALID',
   ]);
   if (validationErrors.has(error.message)) {
     return {
@@ -93,6 +98,35 @@ export function learningApiError(error: unknown): LearningApiError | null {
           denied: true,
           reasonKey: 'MODULE_LOCKED_BY_PLAN',
           message: 'Learning is not available under the current tenant entitlement.',
+        },
+      };
+    case 'LEARNING_AI_FEATURES_DISABLED':
+      return {
+        status: 403,
+        body: {
+          denied: true,
+          reasonKey: error.message,
+          message: 'Learning AI features are disabled for this tenant.',
+        },
+      };
+    case 'LEARNING_AI_ARTIFACT_STORAGE_UNAVAILABLE':
+    case 'LEARNING_AI_ARTIFACT_READER_IDENTITY_DISABLED':
+      return {
+        status: 503,
+        body: {
+          denied: true,
+          reasonKey: error.message,
+          message: 'Learning AI result storage is temporarily unavailable.',
+        },
+      };
+    case 'LEARNING_AI_LEARNER_ACCESS_DENIED':
+    case 'LEARNING_AI_REQUEST_ACCESS_DENIED':
+      return {
+        status: 403,
+        body: {
+          denied: true,
+          reasonKey: error.message,
+          message: 'You do not have access to this Learning AI request.',
         },
       };
     case 'MODULE_NOT_ACTIVE':
@@ -177,6 +211,11 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSIGNMENT_RULE_COURSE_NOT_FOUND':
     case 'LEARNING_ASSIGNMENT_RULE_PROGRAM_NOT_FOUND':
     case 'LEARNING_AUTOMATION_RULE_NOT_FOUND':
+    case 'LEARNING_AI_COURSE_NOT_FOUND':
+    case 'LEARNING_AI_REQUEST_NOT_FOUND':
+    case 'LEARNING_AI_JOB_NOT_FOUND':
+    case 'LEARNING_AI_OUTPUT_PROVENANCE_NOT_FOUND':
+    case 'LEARNING_SETTINGS_NOT_FOUND':
       return {
         status: 404,
         body: {
@@ -232,6 +271,8 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_ASSIGNMENT_RULE_TARGET_NOT_PUBLISHED':
     case 'LEARNING_AUTOMATION_RULE_KEY_EXISTS':
     case 'LEARNING_AUTOMATION_RULE_REVISION_CONFLICT':
+    case 'LEARNING_AI_IDEMPOTENCY_CONFLICT':
+    case 'LEARNING_AI_REQUEST_LINK_MISSING':
       return {
         status: 409,
         body: {
