@@ -6,6 +6,7 @@ import {
   bindEffectiveContextToPostgres,
   PostgresCapabilityStateRepository,
   PostgresMembershipRepository,
+  listActiveMembershipWorkspaces,
   withEffectiveContextTransaction,
   type PostgresClient,
   type PostgresPool,
@@ -202,4 +203,47 @@ test('capability state commit appends event only after successful snapshot mutat
   assert.equal(client.calls.length, 2);
   assert.match(client.calls[0]?.text ?? '', /INSERT INTO platform\.capability_state/);
   assert.match(client.calls[1]?.text ?? '', /INSERT INTO platform\.capability_state_events/);
+});
+
+
+test('workspace discovery keeps verified bootstrap identity on one transaction', async () => {
+  const client = new ScriptedClient();
+  client.responses.push(
+    { rows: [], rowCount: null },
+    { rows: [], rowCount: 1 },
+    {
+      rows: [{
+        tenant_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        organization_id: '11111111-1111-1111-1111-111111111111',
+      }],
+      rowCount: 1,
+    },
+    {
+      rows: [{
+        tenant_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        tenant_name: 'Tenant A',
+        organization_id: '11111111-1111-1111-1111-111111111111',
+        organization_name: 'Org A',
+      }],
+      rowCount: 1,
+    },
+    { rows: [], rowCount: null },
+  );
+  const pool = { async connect() { return client; } };
+
+  const workspaces = await listActiveMembershipWorkspaces(pool, identity);
+
+  assert.deepEqual(workspaces, [{
+    tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    tenantName: 'Tenant A',
+    organizationId: '11111111-1111-1111-1111-111111111111',
+    organizationName: 'Org A',
+  }]);
+  assert.equal(client.calls[0]?.text, 'BEGIN');
+  assert.match(client.calls[1]?.text ?? '', /app\.subject_id/);
+  assert.deepEqual(client.calls[1]?.values, ['subject-1', 'oidc:test']);
+  assert.match(client.calls[2]?.text ?? '', /active_memberships_for_subject/);
+  assert.match(client.calls[3]?.text ?? '', /FROM platform\.tenants/);
+  assert.equal(client.calls.at(-1)?.text, 'COMMIT');
+  assert.equal(client.released, true);
 });
