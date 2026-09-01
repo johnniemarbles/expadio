@@ -47,6 +47,7 @@ export async function POST(
             ? body.reason.trim()
             : null,
         allowSelfApproval: false,
+        decidedByIssuer: context.issuer ?? null,
       });
     });
 

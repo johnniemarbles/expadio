@@ -244,3 +244,5 @@ export * from './governed-action-execution.ts';
 export * from './membership-workspace-discovery.ts';
 
 export * from './enterprise.ts';
+
+export * from './enterprise-onboarding.ts';

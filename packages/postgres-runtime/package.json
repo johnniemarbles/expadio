@@ -61,7 +61,8 @@
     "./indexed-artifact-sink": "./src/indexed-artifact-sink.ts",
     "./theme-configuration": "./src/theme-configuration.ts",
     "./personal-appearance": "./src/personal-appearance.ts",
-    "./enterprise": "./src/enterprise.ts"
+    "./enterprise": "./src/enterprise.ts",
+    "./enterprise-onboarding": "./src/enterprise-onboarding.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",

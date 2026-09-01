@@ -1,0 +1,1089 @@
+import { randomUUID } from 'node:crypto';
+import { appendDomainEventWithOutbox } from './domain-events.ts';
+
+export interface OrganizationSetupSqlResult<Row = Record<string, unknown>> {
+  readonly rows: readonly Row[];
+  readonly rowCount: number | null;
+}
+
+export interface OrganizationSetupSqlClient {
+  query<Row = Record<string, unknown>>(
+    text: string,
+    values?: readonly unknown[],
+  ): Promise<OrganizationSetupSqlResult<Row>>;
+}
+
+export type OrganizationSetupPlanState =
+  | 'PROVISIONING'
+  | 'CONFIGURING'
+  | 'READY_FOR_ACTIVATION'
+  | 'ACTIVATED'
+  | 'CANCELLED';
+
+export type OrganizationSetupRequirementStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'SATISFIED'
+  | 'WAIVED'
+  | 'BLOCKED';
+
+export type OrganizationSetupRequirementCategory =
+  | 'ORGANIZATION'
+  | 'LEGAL'
+  | 'GOVERNANCE'
+  | 'ACCESS'
+  | 'FINANCE'
+  | 'COMPLIANCE'
+  | 'MODULE'
+  | 'VERTICAL'
+  | 'OPERATIONS'
+  | 'DATA'
+  | 'COMMUNICATION'
+  | 'CUSTOM';
+
+export type OrganizationSetupRequirementSource =
+  | 'CORE'
+  | 'MODULE'
+  | 'VERTICAL'
+  | 'TENANT'
+  | 'PARENT_POLICY'
+  | 'CUSTOM';
+
+export type OrganizationSetupParticipantRole =
+  | 'OWNER'
+  | 'CONTRIBUTOR'
+  | 'REVIEWER';
+
+export interface OrganizationSetupPlan {
+  readonly setupPlanId: string;
+  readonly tenantId: string;
+  readonly enterpriseId: string;
+  readonly organizationId: string;
+  readonly provisioningChangeRequestId: string | null;
+  readonly version: number;
+  readonly state: OrganizationSetupPlanState;
+  readonly totalRequirements: number;
+  readonly completedRequirements: number;
+  readonly blockingOpenRequirements: number;
+  readonly completionPercent: number;
+  readonly startedBySubjectId: string;
+  readonly startedAt: string;
+  readonly readyAt: string | null;
+  readonly activatedAt: string | null;
+  readonly updatedAt: string;
+}
+
+export interface OrganizationSetupRequirement {
+  readonly setupRequirementId: string;
+  readonly tenantId: string;
+  readonly setupPlanId: string;
+  readonly requirementKey: string;
+  readonly category: OrganizationSetupRequirementCategory;
+  readonly sourceKind: OrganizationSetupRequirementSource;
+  readonly sourceKey: string | null;
+  readonly title: string;
+  readonly description: string;
+  readonly blocking: boolean;
+  readonly status: OrganizationSetupRequirementStatus;
+  readonly ownerSubjectId: string | null;
+  readonly dueAt: string | null;
+  readonly satisfiedBySubjectId: string | null;
+  readonly satisfiedAt: string | null;
+  readonly waivedBySubjectId: string | null;
+  readonly waivedAt: string | null;
+  readonly waiverReason: string | null;
+  readonly evidenceRefs: readonly string[];
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly sortOrder: number;
+}
+
+interface SetupPlanRow {
+  readonly setup_plan_id: string;
+  readonly tenant_id: string;
+  readonly enterprise_id: string;
+  readonly organization_id: string;
+  readonly provisioning_change_request_id: string | null;
+  readonly version: number;
+  readonly state: OrganizationSetupPlanState;
+  readonly total_requirements: number;
+  readonly completed_requirements: number;
+  readonly blocking_open_requirements: number;
+  readonly completion_percent: string | number;
+  readonly started_by_subject_id: string;
+  readonly started_at: Date | string;
+  readonly ready_at: Date | string | null;
+  readonly activated_at: Date | string | null;
+  readonly updated_at: Date | string;
+}
+
+interface SetupRequirementRow {
+  readonly setup_requirement_id: string;
+  readonly tenant_id: string;
+  readonly setup_plan_id: string;
+  readonly requirement_key: string;
+  readonly category: OrganizationSetupRequirementCategory;
+  readonly source_kind: OrganizationSetupRequirementSource;
+  readonly source_key: string | null;
+  readonly title: string;
+  readonly description: string;
+  readonly blocking: boolean;
+  readonly status: OrganizationSetupRequirementStatus;
+  readonly owner_subject_id: string | null;
+  readonly due_at: Date | string | null;
+  readonly satisfied_by_subject_id: string | null;
+  readonly satisfied_at: Date | string | null;
+  readonly waived_by_subject_id: string | null;
+  readonly waived_at: Date | string | null;
+  readonly waiver_reason: string | null;
+  readonly evidence_refs: readonly string[];
+  readonly metadata: Record<string, unknown>;
+  readonly sort_order: number;
+}
+
+interface SetupEventRow {
+  readonly event_id: string;
+  readonly event_type: string;
+  readonly setup_plan_id: string;
+  readonly setup_requirement_id: string | null;
+  readonly from_state: string | null;
+  readonly to_state: string | null;
+  readonly actor_subject_id: string;
+  readonly reason: string | null;
+  readonly evidence_refs: readonly string[];
+  readonly correlation_id: string;
+  readonly idempotency_key: string;
+  readonly payload: Record<string, unknown>;
+}
+
+const PLAN_SELECT = `setup_plan_id, tenant_id, enterprise_id, organization_id,
+  provisioning_change_request_id, version, state, total_requirements,
+  completed_requirements, blocking_open_requirements, completion_percent,
+  started_by_subject_id, started_at, ready_at, activated_at, updated_at`;
+
+const REQUIREMENT_SELECT = `setup_requirement_id, tenant_id, setup_plan_id,
+  requirement_key, category, source_kind, source_key, title, description,
+  blocking, status, owner_subject_id, due_at, satisfied_by_subject_id,
+  satisfied_at, waived_by_subject_id, waived_at, waiver_reason, evidence_refs,
+  metadata, sort_order`;
+
+function iso(value: Date | string): string {
+  return (value instanceof Date ? value : new Date(value)).toISOString();
+}
+
+function nullableIso(value: Date | string | null): string | null {
+  return value === null ? null : iso(value);
+}
+
+function mapPlan(row: SetupPlanRow): OrganizationSetupPlan {
+  return {
+    setupPlanId: row.setup_plan_id,
+    tenantId: row.tenant_id,
+    enterpriseId: row.enterprise_id,
+    organizationId: row.organization_id,
+    provisioningChangeRequestId: row.provisioning_change_request_id,
+    version: Number(row.version),
+    state: row.state,
+    totalRequirements: Number(row.total_requirements),
+    completedRequirements: Number(row.completed_requirements),
+    blockingOpenRequirements: Number(row.blocking_open_requirements),
+    completionPercent: Number(row.completion_percent),
+    startedBySubjectId: row.started_by_subject_id,
+    startedAt: iso(row.started_at),
+    readyAt: nullableIso(row.ready_at),
+    activatedAt: nullableIso(row.activated_at),
+    updatedAt: iso(row.updated_at),
+  };
+}
+
+function mapRequirement(row: SetupRequirementRow): OrganizationSetupRequirement {
+  return {
+    setupRequirementId: row.setup_requirement_id,
+    tenantId: row.tenant_id,
+    setupPlanId: row.setup_plan_id,
+    requirementKey: row.requirement_key,
+    category: row.category,
+    sourceKind: row.source_kind,
+    sourceKey: row.source_key,
+    title: row.title,
+    description: row.description,
+    blocking: row.blocking,
+    status: row.status,
+    ownerSubjectId: row.owner_subject_id,
+    dueAt: nullableIso(row.due_at),
+    satisfiedBySubjectId: row.satisfied_by_subject_id,
+    satisfiedAt: nullableIso(row.satisfied_at),
+    waivedBySubjectId: row.waived_by_subject_id,
+    waivedAt: nullableIso(row.waived_at),
+    waiverReason: row.waiver_reason,
+    evidenceRefs: [...row.evidence_refs],
+    metadata: row.metadata,
+    sortOrder: Number(row.sort_order),
+  };
+}
+
+async function appendSetupEvent(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly setupRequirementId?: string | null;
+    readonly eventType: string;
+    readonly fromState?: string | null;
+    readonly toState?: string | null;
+    readonly actorSubjectId: string;
+    readonly reason?: string | null;
+    readonly evidenceRefs?: readonly string[];
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+    readonly payload?: Readonly<Record<string, unknown>>;
+  },
+): Promise<{ readonly replay: boolean; readonly eventId: string }> {
+  const eventId = randomUUID();
+  const inserted = await client.query<{ readonly event_id: string }>(
+    `INSERT INTO platform.organization_setup_events (
+       event_id, tenant_id, setup_plan_id, setup_requirement_id, event_type,
+       from_state, to_state, actor_subject_id, reason, evidence_refs,
+       correlation_id, idempotency_key, payload
+     ) VALUES (
+       $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5,
+       $6, $7, $8, $9, $10::text[], $11, $12, $13::jsonb
+     )
+     ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+     RETURNING event_id`,
+    [
+      eventId,
+      input.tenantId,
+      input.setupPlanId,
+      input.setupRequirementId ?? null,
+      input.eventType,
+      input.fromState ?? null,
+      input.toState ?? null,
+      input.actorSubjectId,
+      input.reason ?? null,
+      [...(input.evidenceRefs ?? [])],
+      input.correlationId,
+      input.idempotencyKey,
+      JSON.stringify(input.payload ?? {}),
+    ],
+  );
+  if (inserted.rows[0]) return { replay: false, eventId };
+
+  const existing = await client.query<SetupEventRow>(
+    `SELECT event_id, event_type, setup_plan_id, setup_requirement_id,
+            from_state, to_state, actor_subject_id, reason, evidence_refs,
+            correlation_id, idempotency_key, payload
+       FROM platform.organization_setup_events
+      WHERE tenant_id = $1::uuid
+        AND idempotency_key = $2
+      LIMIT 1`,
+    [input.tenantId, input.idempotencyKey],
+  );
+  const row = existing.rows[0];
+  if (!row) throw new Error('ORGANIZATION_SETUP_EVENT_CREATE_FAILED');
+
+  const same =
+    row.event_type === input.eventType
+    && row.setup_plan_id === input.setupPlanId
+    && row.setup_requirement_id === (input.setupRequirementId ?? null)
+    && row.from_state === (input.fromState ?? null)
+    && row.to_state === (input.toState ?? null)
+    && row.actor_subject_id === input.actorSubjectId
+    && row.reason === (input.reason ?? null)
+    && JSON.stringify([...row.evidence_refs]) === JSON.stringify([...(input.evidenceRefs ?? [])])
+    && JSON.stringify(row.payload) === JSON.stringify(input.payload ?? {});
+
+  if (!same) throw new Error('ORGANIZATION_SETUP_IDEMPOTENCY_CONFLICT');
+  return { replay: true, eventId: row.event_id };
+}
+
+async function appendSetupDomainEvent(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly aggregateId: string;
+    readonly eventType: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+    readonly payload: Readonly<Record<string, unknown>>;
+  },
+): Promise<void> {
+  await appendDomainEventWithOutbox(client, {
+    event: {
+      eventId: randomUUID(),
+      tenantId: input.tenantId,
+      aggregateType: 'organization.setup',
+      aggregateId: input.aggregateId,
+      eventType: input.eventType,
+      eventVersion: 1,
+      occurredAt: new Date(),
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: { ...input.payload },
+      metadata: { source: 'enterprise.organization-setup' },
+    },
+  });
+}
+
+export async function findOrganizationSetupPlan(
+  client: OrganizationSetupSqlClient,
+  input: { readonly tenantId: string; readonly organizationId: string },
+): Promise<OrganizationSetupPlan | null> {
+  const result = await client.query<SetupPlanRow>(
+    `SELECT ${PLAN_SELECT}
+       FROM platform.organization_setup_plans
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+      LIMIT 1`,
+    [input.tenantId, input.organizationId],
+  );
+  const row = result.rows[0];
+  return row ? mapPlan(row) : null;
+}
+
+export async function listOrganizationSetupRequirements(
+  client: OrganizationSetupSqlClient,
+  input: { readonly tenantId: string; readonly setupPlanId: string },
+): Promise<readonly OrganizationSetupRequirement[]> {
+  const result = await client.query<SetupRequirementRow>(
+    `SELECT ${REQUIREMENT_SELECT}
+       FROM platform.organization_setup_requirements
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+      ORDER BY sort_order ASC, requirement_key ASC`,
+    [input.tenantId, input.setupPlanId],
+  );
+  return result.rows.map(mapRequirement);
+}
+
+export async function registerOrganizationSetupRequirement(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly requirementKey: string;
+    readonly category: OrganizationSetupRequirementCategory;
+    readonly sourceKind: OrganizationSetupRequirementSource;
+    readonly sourceKey?: string | null;
+    readonly title: string;
+    readonly description?: string;
+    readonly blocking?: boolean;
+    readonly ownerSubjectId?: string | null;
+    readonly dueAt?: string | null;
+    readonly metadata?: Readonly<Record<string, unknown>>;
+    readonly sortOrder?: number;
+    readonly createdBySubjectId: string;
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+  },
+): Promise<{ readonly requirement: OrganizationSetupRequirement; readonly idempotent: boolean }> {
+  const requirementKey = input.requirementKey.trim();
+  const title = input.title.trim();
+  if (!requirementKey) throw new Error('ORGANIZATION_SETUP_REQUIREMENT_KEY_REQUIRED');
+  if (!title) throw new Error('ORGANIZATION_SETUP_REQUIREMENT_TITLE_REQUIRED');
+
+  const existing = await client.query<SetupRequirementRow>(
+    `SELECT ${REQUIREMENT_SELECT}
+       FROM platform.organization_setup_requirements
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+        AND requirement_key = $3
+      LIMIT 1`,
+    [input.tenantId, input.setupPlanId, requirementKey],
+  );
+  const prior = existing.rows[0];
+  if (prior) {
+    const exact =
+      prior.category === input.category
+      && prior.source_kind === input.sourceKind
+      && prior.source_key === (input.sourceKey ?? null)
+      && prior.title === title
+      && prior.description === (input.description ?? '')
+      && prior.blocking === (input.blocking ?? true)
+      && prior.owner_subject_id === (input.ownerSubjectId ?? null)
+      && nullableIso(prior.due_at) === (
+        input.dueAt == null ? null : iso(input.dueAt)
+      )
+      && JSON.stringify(prior.metadata) === JSON.stringify(input.metadata ?? {})
+      && Number(prior.sort_order) === (input.sortOrder ?? 0);
+    if (!exact) throw new Error('ORGANIZATION_SETUP_REQUIREMENT_CONFLICT');
+    return { requirement: mapRequirement(prior), idempotent: true };
+  }
+
+  const requirementId = randomUUID();
+  const inserted = await client.query<SetupRequirementRow>(
+    `INSERT INTO platform.organization_setup_requirements (
+       setup_requirement_id, tenant_id, setup_plan_id, requirement_key,
+       category, source_kind, source_key, title, description, blocking,
+       owner_subject_id, due_at, metadata, sort_order, created_by_subject_id
+     ) VALUES (
+       $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10,
+       $11, $12::timestamptz, $13::jsonb, $14, $15
+     )
+     RETURNING ${REQUIREMENT_SELECT}`,
+    [
+      requirementId,
+      input.tenantId,
+      input.setupPlanId,
+      requirementKey,
+      input.category,
+      input.sourceKind,
+      input.sourceKey ?? null,
+      title,
+      input.description ?? '',
+      input.blocking ?? true,
+      input.ownerSubjectId ?? null,
+      input.dueAt ?? null,
+      JSON.stringify(input.metadata ?? {}),
+      input.sortOrder ?? 0,
+      input.createdBySubjectId,
+    ],
+  );
+  const row = inserted.rows[0];
+  if (!row) throw new Error('ORGANIZATION_SETUP_REQUIREMENT_CREATE_FAILED');
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    setupRequirementId: requirementId,
+    eventType: 'REQUIREMENT_ADDED',
+    actorSubjectId: input.createdBySubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: {
+      requirementKey,
+      category: input.category,
+      sourceKind: input.sourceKind,
+      sourceKey: input.sourceKey ?? null,
+      blocking: input.blocking ?? true,
+    },
+  });
+  if (!setupEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: input.setupPlanId,
+      eventType: 'organization.setup.requirement_added',
+      actorSubjectId: input.createdBySubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        requirementId,
+        requirementKey,
+        category: input.category,
+        sourceKind: input.sourceKind,
+        sourceKey: input.sourceKey ?? null,
+        blocking: input.blocking ?? true,
+      },
+    });
+  }
+
+  return { requirement: mapRequirement(row), idempotent: false };
+}
+
+export async function addOrganizationSetupDependency(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly requirementId: string;
+    readonly dependsOnRequirementId: string;
+  },
+): Promise<{ readonly idempotent: boolean }> {
+  const result = await client.query(
+    `INSERT INTO platform.organization_setup_requirement_dependencies (
+       tenant_id, setup_plan_id, setup_requirement_id, depends_on_requirement_id
+     ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid)
+     ON CONFLICT DO NOTHING`,
+    [
+      input.tenantId,
+      input.setupPlanId,
+      input.requirementId,
+      input.dependsOnRequirementId,
+    ],
+  );
+  return { idempotent: result.rowCount === 0 };
+}
+
+export async function addOrganizationSetupParticipant(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly subjectId: string;
+    readonly issuer?: string | null;
+    readonly role: OrganizationSetupParticipantRole;
+    readonly validUntil?: string | null;
+    readonly createdBySubjectId: string;
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+  },
+): Promise<{ readonly participantId: string; readonly idempotent: boolean }> {
+  const subjectId = input.subjectId.trim();
+  if (!subjectId) throw new Error('ORGANIZATION_SETUP_PARTICIPANT_SUBJECT_REQUIRED');
+
+  const existing = await client.query<{
+    readonly setup_participant_id: string;
+    readonly role: OrganizationSetupParticipantRole;
+  }>(
+    `SELECT setup_participant_id, role
+       FROM platform.organization_setup_participants
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+        AND subject_id = $3
+        AND issuer IS NOT DISTINCT FROM $4
+        AND status = 'ACTIVE'
+      LIMIT 1
+      FOR UPDATE`,
+    [input.tenantId, input.setupPlanId, subjectId, input.issuer ?? null],
+  );
+  const prior = existing.rows[0];
+  if (prior) {
+    if (prior.role === input.role) {
+      return { participantId: prior.setup_participant_id, idempotent: true };
+    }
+
+    await client.query(
+      `UPDATE platform.organization_setup_participants
+          SET role = $4, valid_until = $5::timestamptz, updated_at = now()
+        WHERE tenant_id = $1::uuid
+          AND setup_plan_id = $2::uuid
+          AND setup_participant_id = $3::uuid`,
+      [
+        input.tenantId,
+        input.setupPlanId,
+        prior.setup_participant_id,
+        input.role,
+        input.validUntil ?? null,
+      ],
+    );
+
+    const roleEvent = await appendSetupEvent(client, {
+      tenantId: input.tenantId,
+      setupPlanId: input.setupPlanId,
+      eventType: 'PARTICIPANT_ROLE_CHANGED',
+      fromState: prior.role,
+      toState: input.role,
+      actorSubjectId: input.createdBySubjectId,
+      correlationId: input.correlationId,
+      idempotencyKey: input.idempotencyKey,
+      payload: {
+        participantId: prior.setup_participant_id,
+        subjectId,
+        fromRole: prior.role,
+        toRole: input.role,
+      },
+    });
+    if (!roleEvent.replay) {
+      await appendSetupDomainEvent(client, {
+        tenantId: input.tenantId,
+        aggregateId: input.setupPlanId,
+        eventType: 'organization.setup.participant_role_changed',
+        actorSubjectId: input.createdBySubjectId,
+        correlationId: input.correlationId,
+        payload: {
+          participantId: prior.setup_participant_id,
+          subjectId,
+          fromRole: prior.role,
+          toRole: input.role,
+        },
+      });
+    }
+    return { participantId: prior.setup_participant_id, idempotent: false };
+  }
+
+  const participantId = randomUUID();
+  await client.query(
+    `INSERT INTO platform.organization_setup_participants (
+       setup_participant_id, tenant_id, setup_plan_id, subject_id, issuer,
+       role, status, valid_until, created_by_subject_id
+     ) VALUES (
+       $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, 'ACTIVE', $7::timestamptz, $8
+     )`,
+    [
+      participantId,
+      input.tenantId,
+      input.setupPlanId,
+      subjectId,
+      input.issuer ?? null,
+      input.role,
+      input.validUntil ?? null,
+      input.createdBySubjectId,
+    ],
+  );
+
+  await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    eventType: 'PARTICIPANT_ADDED',
+    actorSubjectId: input.createdBySubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: { participantId, subjectId, role: input.role },
+  });
+
+  return { participantId, idempotent: false };
+}
+
+export async function startOrganizationSetup(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly enterpriseId: string;
+    readonly organizationId: string;
+    readonly provisioningChangeRequestId?: string | null;
+    readonly startedBySubjectId: string;
+    readonly issuer?: string | null;
+    readonly correlationId: string;
+  },
+): Promise<{ readonly plan: OrganizationSetupPlan; readonly idempotent: boolean }> {
+  const existing = await findOrganizationSetupPlan(client, {
+    tenantId: input.tenantId,
+    organizationId: input.organizationId,
+  });
+  if (existing) return { plan: existing, idempotent: true };
+
+  const organization = await client.query<{
+    readonly enterprise_id: string;
+    readonly status: string;
+  }>(
+    `SELECT enterprise_id, status
+       FROM platform.organizations
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+      FOR UPDATE`,
+    [input.tenantId, input.organizationId],
+  );
+  const org = organization.rows[0];
+  if (!org) throw new Error('ORGANIZATION_SETUP_ORGANIZATION_NOT_FOUND');
+  if (org.enterprise_id !== input.enterpriseId) {
+    throw new Error('ORGANIZATION_SETUP_ENTERPRISE_MISMATCH');
+  }
+  if (!['PROVISIONING', 'CONFIGURING', 'READY_FOR_ACTIVATION'].includes(org.status)) {
+    throw new Error('ORGANIZATION_SETUP_ORGANIZATION_STATE_INVALID');
+  }
+
+  const setupPlanId = randomUUID();
+  const created = await client.query<SetupPlanRow>(
+    `INSERT INTO platform.organization_setup_plans (
+       setup_plan_id, tenant_id, enterprise_id, organization_id,
+       provisioning_change_request_id, state, started_by_subject_id
+     ) VALUES (
+       $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid,
+       'PROVISIONING', $6
+     )
+     RETURNING ${PLAN_SELECT}`,
+    [
+      setupPlanId,
+      input.tenantId,
+      input.enterpriseId,
+      input.organizationId,
+      input.provisioningChangeRequestId ?? null,
+      input.startedBySubjectId,
+    ],
+  );
+  if (!created.rows[0]) throw new Error('ORGANIZATION_SETUP_PLAN_CREATE_FAILED');
+
+  await addOrganizationSetupParticipant(client, {
+    tenantId: input.tenantId,
+    setupPlanId,
+    subjectId: input.startedBySubjectId,
+    issuer: input.issuer ?? null,
+    role: 'OWNER',
+    createdBySubjectId: input.startedBySubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: `setup:${setupPlanId}:owner:${input.startedBySubjectId}`,
+  });
+
+  const coreRequirements = [
+    {
+      requirementKey: 'core.organization-profile',
+      category: 'ORGANIZATION' as const,
+      title: 'Complete organization profile',
+      description: 'Confirm operating name, organization kind, hierarchy position, and responsible parent.',
+      sortOrder: 10,
+    },
+    {
+      requirementKey: 'core.operating-entity',
+      category: 'LEGAL' as const,
+      title: 'Assign operating legal entity',
+      description: 'Bind the legal entity that operates or contracts for this organization.',
+      sortOrder: 20,
+    },
+    {
+      requirementKey: 'core.primary-administrator',
+      category: 'ACCESS' as const,
+      title: 'Assign primary organization administrator',
+      description: 'Establish the accountable administrator before business-runtime activation.',
+      sortOrder: 30,
+    },
+  ];
+
+  for (const requirement of coreRequirements) {
+    await registerOrganizationSetupRequirement(client, {
+      tenantId: input.tenantId,
+      setupPlanId,
+      requirementKey: requirement.requirementKey,
+      category: requirement.category,
+      sourceKind: 'CORE',
+      sourceKey: 'enterprise.organization-setup.v1',
+      title: requirement.title,
+      description: requirement.description,
+      blocking: true,
+      sortOrder: requirement.sortOrder,
+      createdBySubjectId: input.startedBySubjectId,
+      correlationId: input.correlationId,
+      idempotencyKey: `setup:${setupPlanId}:requirement:${requirement.requirementKey}`,
+    });
+  }
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId,
+    eventType: 'SETUP_STARTED',
+    fromState: 'PROVISIONING',
+    toState: 'CONFIGURING',
+    actorSubjectId: input.startedBySubjectId,
+    correlationId: input.correlationId,
+    idempotencyKey: `setup:${setupPlanId}:started`,
+    payload: {
+      organizationId: input.organizationId,
+      enterpriseId: input.enterpriseId,
+      provisioningChangeRequestId: input.provisioningChangeRequestId ?? null,
+    },
+  });
+
+  if (!setupEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: setupPlanId,
+      eventType: 'organization.setup.started',
+      actorSubjectId: input.startedBySubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        organizationId: input.organizationId,
+        enterpriseId: input.enterpriseId,
+      },
+    });
+  }
+
+  const plan = await findOrganizationSetupPlan(client, {
+    tenantId: input.tenantId,
+    organizationId: input.organizationId,
+  });
+  if (!plan) throw new Error('ORGANIZATION_SETUP_PLAN_NOT_FOUND_AFTER_CREATE');
+  return { plan, idempotent: false };
+}
+
+export async function changeOrganizationSetupRequirement(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly requirementId: string;
+    readonly action: 'START' | 'SATISFY' | 'WAIVE' | 'BLOCK' | 'REOPEN';
+    readonly actorSubjectId: string;
+    readonly reason?: string | null;
+    readonly evidenceRefs?: readonly string[];
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+  },
+): Promise<{
+  readonly requirement: OrganizationSetupRequirement;
+  readonly plan: OrganizationSetupPlan;
+  readonly idempotent: boolean;
+}> {
+  const replay = await client.query<SetupEventRow>(
+    `SELECT event_id, event_type, setup_plan_id, setup_requirement_id,
+            from_state, to_state, actor_subject_id, reason, evidence_refs,
+            correlation_id, idempotency_key, payload
+       FROM platform.organization_setup_events
+      WHERE tenant_id = $1::uuid
+        AND idempotency_key = $2
+      LIMIT 1`,
+    [input.tenantId, input.idempotencyKey],
+  );
+  const replayRow = replay.rows[0];
+  if (replayRow) {
+    if (
+      replayRow.event_type !== 'REQUIREMENT_STATUS_CHANGED'
+      || replayRow.setup_plan_id !== input.setupPlanId
+      || replayRow.setup_requirement_id !== input.requirementId
+      || replayRow.actor_subject_id !== input.actorSubjectId
+      || replayRow.reason !== (input.reason?.trim() || null)
+      || JSON.stringify([...replayRow.evidence_refs])
+        !== JSON.stringify([...(input.evidenceRefs ?? [])])
+      || replayRow.payload.action !== input.action
+    ) {
+      throw new Error('ORGANIZATION_SETUP_IDEMPOTENCY_CONFLICT');
+    }
+    const requirement = await loadRequirement(client, input);
+    const plan = await loadPlanById(client, input.tenantId, input.setupPlanId);
+    return { requirement, plan, idempotent: true };
+  }
+
+  const planBefore = await loadPlanById(client, input.tenantId, input.setupPlanId, true);
+  if (['ACTIVATED', 'CANCELLED'].includes(planBefore.state)) {
+    throw new Error('ORGANIZATION_SETUP_PLAN_CLOSED');
+  }
+
+  const requirement = await loadRequirement(client, input, true);
+  const fromStatus = requirement.status;
+  const toStatus = transitionRequirement(fromStatus, input.action);
+
+  if (input.action === 'SATISFY') {
+    const unmet = await client.query<{ readonly count: string | number }>(
+      `SELECT count(*) AS count
+         FROM platform.organization_setup_requirement_dependencies dependency
+         JOIN platform.organization_setup_requirements required
+           ON required.tenant_id = dependency.tenant_id
+          AND required.setup_requirement_id = dependency.depends_on_requirement_id
+        WHERE dependency.tenant_id = $1::uuid
+          AND dependency.setup_plan_id = $2::uuid
+          AND dependency.setup_requirement_id = $3::uuid
+          AND required.status NOT IN ('SATISFIED','WAIVED')`,
+      [input.tenantId, input.setupPlanId, input.requirementId],
+    );
+    if (Number(unmet.rows[0]?.count ?? 0) > 0) {
+      throw new Error('ORGANIZATION_SETUP_DEPENDENCIES_INCOMPLETE');
+    }
+  }
+
+  const reason = input.reason?.trim() || null;
+  if (input.action === 'WAIVE' && !reason) {
+    throw new Error('ORGANIZATION_SETUP_WAIVER_REASON_REQUIRED');
+  }
+  if ((input.action === 'BLOCK' || input.action === 'REOPEN') && !reason) {
+    throw new Error('ORGANIZATION_SETUP_CHANGE_REASON_REQUIRED');
+  }
+
+  const now = new Date().toISOString();
+  const updated = await client.query<SetupRequirementRow>(
+    `UPDATE platform.organization_setup_requirements
+        SET status = $4,
+            satisfied_by_subject_id = CASE WHEN $4 = 'SATISFIED' THEN $5 ELSE NULL END,
+            satisfied_at = CASE WHEN $4 = 'SATISFIED' THEN $6::timestamptz ELSE NULL END,
+            waived_by_subject_id = CASE WHEN $4 = 'WAIVED' THEN $5 ELSE NULL END,
+            waived_at = CASE WHEN $4 = 'WAIVED' THEN $6::timestamptz ELSE NULL END,
+            waiver_reason = CASE WHEN $4 = 'WAIVED' THEN $7 ELSE NULL END,
+            evidence_refs = $8::text[],
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+        AND setup_requirement_id = $3::uuid
+      RETURNING ${REQUIREMENT_SELECT}`,
+    [
+      input.tenantId,
+      input.setupPlanId,
+      input.requirementId,
+      toStatus,
+      input.actorSubjectId,
+      now,
+      reason,
+      [...(input.evidenceRefs ?? [])],
+    ],
+  );
+  const updatedRow = updated.rows[0];
+  if (!updatedRow) throw new Error('ORGANIZATION_SETUP_REQUIREMENT_UPDATE_FAILED');
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    setupRequirementId: input.requirementId,
+    eventType: 'REQUIREMENT_STATUS_CHANGED',
+    fromState: fromStatus,
+    toState: toStatus,
+    actorSubjectId: input.actorSubjectId,
+    reason,
+    evidenceRefs: input.evidenceRefs ?? [],
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: { action: input.action, requirementKey: requirement.requirementKey },
+  });
+
+  if (!setupEvent.replay) {
+    await appendSetupDomainEvent(client, {
+      tenantId: input.tenantId,
+      aggregateId: input.setupPlanId,
+      eventType: 'organization.setup.requirement_changed',
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        requirementId: input.requirementId,
+        requirementKey: requirement.requirementKey,
+        fromStatus,
+        toStatus,
+        action: input.action,
+      },
+    });
+  }
+
+  const plan = await loadPlanById(client, input.tenantId, input.setupPlanId);
+  return { requirement: mapRequirement(updatedRow), plan, idempotent: false };
+}
+
+function transitionRequirement(
+  from: OrganizationSetupRequirementStatus,
+  action: 'START' | 'SATISFY' | 'WAIVE' | 'BLOCK' | 'REOPEN',
+): OrganizationSetupRequirementStatus {
+  switch (action) {
+    case 'START':
+      if (from !== 'PENDING') throw new Error('ORGANIZATION_SETUP_REQUIREMENT_TRANSITION_INVALID');
+      return 'IN_PROGRESS';
+    case 'SATISFY':
+      if (!['PENDING', 'IN_PROGRESS', 'BLOCKED'].includes(from)) {
+        throw new Error('ORGANIZATION_SETUP_REQUIREMENT_TRANSITION_INVALID');
+      }
+      return 'SATISFIED';
+    case 'WAIVE':
+      if (!['PENDING', 'IN_PROGRESS', 'BLOCKED'].includes(from)) {
+        throw new Error('ORGANIZATION_SETUP_REQUIREMENT_TRANSITION_INVALID');
+      }
+      return 'WAIVED';
+    case 'BLOCK':
+      if (!['PENDING', 'IN_PROGRESS'].includes(from)) {
+        throw new Error('ORGANIZATION_SETUP_REQUIREMENT_TRANSITION_INVALID');
+      }
+      return 'BLOCKED';
+    case 'REOPEN':
+      if (!['SATISFIED', 'WAIVED', 'BLOCKED'].includes(from)) {
+        throw new Error('ORGANIZATION_SETUP_REQUIREMENT_TRANSITION_INVALID');
+      }
+      return 'PENDING';
+  }
+}
+
+async function loadRequirement(
+  client: OrganizationSetupSqlClient,
+  input: { readonly tenantId: string; readonly setupPlanId: string; readonly requirementId: string },
+  forUpdate = false,
+): Promise<OrganizationSetupRequirement> {
+  const result = await client.query<SetupRequirementRow>(
+    `SELECT ${REQUIREMENT_SELECT}
+       FROM platform.organization_setup_requirements
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+        AND setup_requirement_id = $3::uuid
+      LIMIT 1
+      ${forUpdate ? 'FOR UPDATE' : ''}`,
+    [input.tenantId, input.setupPlanId, input.requirementId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('ORGANIZATION_SETUP_REQUIREMENT_NOT_FOUND');
+  return mapRequirement(row);
+}
+
+async function loadPlanById(
+  client: OrganizationSetupSqlClient,
+  tenantId: string,
+  setupPlanId: string,
+  forUpdate = false,
+): Promise<OrganizationSetupPlan> {
+  const result = await client.query<SetupPlanRow>(
+    `SELECT ${PLAN_SELECT}
+       FROM platform.organization_setup_plans
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+      LIMIT 1
+      ${forUpdate ? 'FOR UPDATE' : ''}`,
+    [tenantId, setupPlanId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('ORGANIZATION_SETUP_PLAN_NOT_FOUND');
+  return mapPlan(row);
+}
+
+export async function activateOrganizationSetup(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly activatedBySubjectId: string;
+    readonly correlationId: string;
+    readonly idempotencyKey: string;
+    readonly reason?: string | null;
+  },
+): Promise<{ readonly plan: OrganizationSetupPlan; readonly idempotent: boolean }> {
+  const plan = await loadPlanById(client, input.tenantId, input.setupPlanId, true);
+  if (plan.state === 'ACTIVATED') return { plan, idempotent: true };
+  if (plan.state !== 'READY_FOR_ACTIVATION') {
+    throw new Error('ORGANIZATION_SETUP_NOT_READY_FOR_ACTIVATION');
+  }
+  if (plan.totalRequirements <= 0 || plan.blockingOpenRequirements !== 0) {
+    throw new Error('ORGANIZATION_SETUP_READINESS_INVARIANT_FAILED');
+  }
+
+  const organization = await client.query<{ readonly status: string }>(
+    `SELECT status
+       FROM platform.organizations
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+      FOR UPDATE`,
+    [input.tenantId, plan.organizationId],
+  );
+  if (organization.rows[0]?.status !== 'READY_FOR_ACTIVATION') {
+    throw new Error('ORGANIZATION_SETUP_ORGANIZATION_NOT_READY');
+  }
+
+  const setupEvent = await appendSetupEvent(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    eventType: 'SETUP_ACTIVATED',
+    fromState: 'READY_FOR_ACTIVATION',
+    toState: 'ACTIVATED',
+    actorSubjectId: input.activatedBySubjectId,
+    reason: input.reason?.trim() || null,
+    correlationId: input.correlationId,
+    idempotencyKey: input.idempotencyKey,
+    payload: { organizationId: plan.organizationId },
+  });
+  if (setupEvent.replay) {
+    const current = await loadPlanById(client, input.tenantId, input.setupPlanId);
+    return { plan: current, idempotent: true };
+  }
+
+  await client.query(
+    `UPDATE platform.organization_setup_plans
+        SET state = 'ACTIVATED',
+            activated_at = now(),
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid`,
+    [input.tenantId, input.setupPlanId],
+  );
+  await client.query(
+    `UPDATE platform.organizations
+        SET status = 'ACTIVE',
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND status = 'READY_FOR_ACTIVATION'`,
+    [input.tenantId, plan.organizationId],
+  );
+
+  await appendSetupDomainEvent(client, {
+    tenantId: input.tenantId,
+    aggregateId: input.setupPlanId,
+    eventType: 'organization.setup.activated',
+    actorSubjectId: input.activatedBySubjectId,
+    correlationId: input.correlationId,
+    payload: { organizationId: plan.organizationId },
+  });
+  await appendDomainEventWithOutbox(client, {
+    event: {
+      eventId: randomUUID(),
+      tenantId: input.tenantId,
+      aggregateType: 'organization',
+      aggregateId: plan.organizationId,
+      eventType: 'organization.activated',
+      eventVersion: 1,
+      occurredAt: new Date(),
+      actorSubjectId: input.activatedBySubjectId,
+      correlationId: input.correlationId,
+      payload: { setupPlanId: input.setupPlanId },
+      metadata: { source: 'enterprise.organization-setup' },
+    },
+  });
+
+  return {
+    plan: await loadPlanById(client, input.tenantId, input.setupPlanId),
+    idempotent: false,
+  };
+}
