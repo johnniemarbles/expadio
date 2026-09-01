@@ -55,7 +55,8 @@
     "./learning-assignment-automation": "./src/learning-assignment-automation.ts",
     "./learning-automation": "./src/learning-automation.ts",
     "./ai-artifact": "./src/ai-artifact.ts",
-    "./ai-execution-queue": "./src/ai-execution-queue.ts"
+    "./ai-execution-queue": "./src/ai-execution-queue.ts",
+    "./learning-ai": "./src/learning-ai.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
