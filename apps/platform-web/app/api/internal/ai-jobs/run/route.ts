@@ -8,6 +8,9 @@ import {
   runAiJobWorkerOnce,
   type AiJobWorkerResult,
 } from '../../../../../lib/ai-job-worker';
+import {
+  loadArtifactStorageEnvironment,
+} from '../../../../../lib/artifact-storage-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +43,14 @@ export async function POST(request: Request) {
         503,
         'AI_WORKER_IDENTITY_DISABLED',
         'AI worker service identity is not configured.',
+      );
+    }
+    const artifactStorage = loadArtifactStorageEnvironment();
+    if (artifactStorage === null) {
+      throw new InternalWorkerAuthError(
+        503,
+        'AI_ARTIFACT_STORAGE_DISABLED',
+        'Durable AI artifact storage is not configured.',
       );
     }
 
@@ -76,7 +87,10 @@ export async function POST(request: Request) {
     for (let index = 0; index < limit; index += 1) {
       const result = await runAiJobWorkerOnce(client, {
         tenantId,
-        options: { serviceSubjectId },
+        options: {
+          serviceSubjectId,
+          artifactStorage,
+        },
       });
       if (result.status === 'IDLE') break;
       results.push(result);
