@@ -49,6 +49,12 @@ export type OrganizationSetupRequirementSource =
   | 'PARENT_POLICY'
   | 'CUSTOM';
 
+export type OrganizationSetupSatisfactionMode =
+  | 'MANUAL'
+  | 'EVIDENCE'
+  | 'AUTOMATED'
+  | 'APPROVAL';
+
 export type OrganizationSetupParticipantRole =
   | 'OWNER'
   | 'CONTRIBUTOR'
@@ -84,6 +90,7 @@ export interface OrganizationSetupRequirement {
   readonly title: string;
   readonly description: string;
   readonly blocking: boolean;
+  readonly satisfactionMode: OrganizationSetupSatisfactionMode;
   readonly status: OrganizationSetupRequirementStatus;
   readonly ownerSubjectId: string | null;
   readonly dueAt: string | null;
@@ -127,6 +134,7 @@ interface SetupRequirementRow {
   readonly title: string;
   readonly description: string;
   readonly blocking: boolean;
+  readonly satisfaction_mode: OrganizationSetupSatisfactionMode;
   readonly status: OrganizationSetupRequirementStatus;
   readonly owner_subject_id: string | null;
   readonly due_at: Date | string | null;
@@ -162,7 +170,7 @@ const PLAN_SELECT = `setup_plan_id, tenant_id, enterprise_id, organization_id,
 
 const REQUIREMENT_SELECT = `setup_requirement_id, tenant_id, setup_plan_id,
   requirement_key, category, source_kind, source_key, title, description,
-  blocking, status, owner_subject_id, due_at, satisfied_by_subject_id,
+  blocking, satisfaction_mode, status, owner_subject_id, due_at, satisfied_by_subject_id,
   satisfied_at, waived_by_subject_id, waived_at, waiver_reason, evidence_refs,
   metadata, sort_order`;
 
@@ -207,6 +215,7 @@ function mapRequirement(row: SetupRequirementRow): OrganizationSetupRequirement 
     title: row.title,
     description: row.description,
     blocking: row.blocking,
+    satisfactionMode: row.satisfaction_mode,
     status: row.status,
     ownerSubjectId: row.owner_subject_id,
     dueAt: nullableIso(row.due_at),
@@ -367,6 +376,7 @@ export async function registerOrganizationSetupRequirement(
     readonly title: string;
     readonly description?: string;
     readonly blocking?: boolean;
+    readonly satisfactionMode?: OrganizationSetupSatisfactionMode;
     readonly ownerSubjectId?: string | null;
     readonly dueAt?: string | null;
     readonly metadata?: Readonly<Record<string, unknown>>;
@@ -374,6 +384,7 @@ export async function registerOrganizationSetupRequirement(
     readonly createdBySubjectId: string;
     readonly correlationId: string;
     readonly idempotencyKey: string;
+    readonly systemEvaluation?: boolean;
   },
 ): Promise<{ readonly requirement: OrganizationSetupRequirement; readonly idempotent: boolean }> {
   const requirementKey = input.requirementKey.trim();
@@ -399,6 +410,7 @@ export async function registerOrganizationSetupRequirement(
       && prior.title === title
       && prior.description === (input.description ?? '')
       && prior.blocking === (input.blocking ?? true)
+      && prior.satisfaction_mode === (input.satisfactionMode ?? 'MANUAL')
       && prior.owner_subject_id === (input.ownerSubjectId ?? null)
       && nullableIso(prior.due_at) === (
         input.dueAt == null ? null : iso(input.dueAt)
@@ -414,10 +426,11 @@ export async function registerOrganizationSetupRequirement(
     `INSERT INTO platform.organization_setup_requirements (
        setup_requirement_id, tenant_id, setup_plan_id, requirement_key,
        category, source_kind, source_key, title, description, blocking,
-       owner_subject_id, due_at, metadata, sort_order, created_by_subject_id
+       satisfaction_mode, owner_subject_id, due_at, metadata, sort_order,
+       created_by_subject_id
      ) VALUES (
        $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10,
-       $11, $12::timestamptz, $13::jsonb, $14, $15
+       $11, $12, $13::timestamptz, $14::jsonb, $15, $16
      )
      RETURNING ${REQUIREMENT_SELECT}`,
     [
@@ -431,6 +444,7 @@ export async function registerOrganizationSetupRequirement(
       title,
       input.description ?? '',
       input.blocking ?? true,
+      input.satisfactionMode ?? 'MANUAL',
       input.ownerSubjectId ?? null,
       input.dueAt ?? null,
       JSON.stringify(input.metadata ?? {}),
@@ -455,6 +469,7 @@ export async function registerOrganizationSetupRequirement(
       sourceKind: input.sourceKind,
       sourceKey: input.sourceKey ?? null,
       blocking: input.blocking ?? true,
+      satisfactionMode: input.satisfactionMode ?? 'MANUAL',
     },
   });
   if (!setupEvent.replay) {
@@ -471,6 +486,7 @@ export async function registerOrganizationSetupRequirement(
         sourceKind: input.sourceKind,
         sourceKey: input.sourceKey ?? null,
         blocking: input.blocking ?? true,
+        satisfactionMode: input.satisfactionMode ?? 'MANUAL',
       },
     });
   }
@@ -761,20 +777,23 @@ export async function startOrganizationSetup(
       category: 'ORGANIZATION' as const,
       title: 'Complete organization profile',
       description: 'Confirm operating name, organization kind, hierarchy position, and responsible parent.',
+      satisfactionMode: 'AUTOMATED' as const,
       sortOrder: 10,
     },
     {
       requirementKey: 'core.operating-entity',
       category: 'LEGAL' as const,
       title: 'Assign operating legal entity',
-      description: 'Bind the legal entity that operates or contracts for this organization.',
+      description: 'Bind a verified legal entity that operates this organization.',
+      satisfactionMode: 'AUTOMATED' as const,
       sortOrder: 20,
     },
     {
       requirementKey: 'core.primary-administrator',
       category: 'ACCESS' as const,
-      title: 'Assign primary organization administrator',
-      description: 'Establish the accountable administrator before business-runtime activation.',
+      title: 'Assign primary setup administrator',
+      description: 'Establish an accountable setup owner before business-runtime activation.',
+      satisfactionMode: 'AUTOMATED' as const,
       sortOrder: 30,
     },
   ];
@@ -790,6 +809,7 @@ export async function startOrganizationSetup(
       title: requirement.title,
       description: requirement.description,
       blocking: true,
+      satisfactionMode: requirement.satisfactionMode,
       sortOrder: requirement.sortOrder,
       createdBySubjectId: input.startedBySubjectId,
       correlationId: input.correlationId,
@@ -888,6 +908,16 @@ export async function changeOrganizationSetupRequirement(
   }
 
   const requirement = await loadRequirement(client, input, true);
+  if (requirement.satisfactionMode === 'AUTOMATED' && !input.systemEvaluation) {
+    throw new Error('ORGANIZATION_SETUP_AUTOMATED_REQUIREMENT');
+  }
+  if (
+    requirement.satisfactionMode === 'EVIDENCE'
+    && input.action === 'SATISFY'
+    && (input.evidenceRefs?.length ?? 0) === 0
+  ) {
+    throw new Error('ORGANIZATION_SETUP_EVIDENCE_REQUIRED');
+  }
   const fromStatus = requirement.status;
   const toStatus = transitionRequirement(fromStatus, input.action);
 
