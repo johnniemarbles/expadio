@@ -1,18 +1,29 @@
 import { randomUUID } from 'node:crypto';
 import { clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { hasPlatformAdministrationRole } from '../../../../../../../lib/governance-authz';
+import { hasPlatformAdministrationRole } from '@/lib/governance-authz';
 import {
   resolveRequestContext,
   withTenantTransaction,
-} from '../../../../../../../lib/request-context';
-import { recordTenantInvitation } from '../../../../../../../lib/tenant-access';
+} from '@/lib/request-context';
+import {
+  recordTenantInvitation,
+  TENANT_ACCESS_ROLE_KEYS,
+  type TenantAccessRoleKey,
+} from '@/lib/tenant-access';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ invitationId: string }> },
 ) {
   const context = await resolveRequestContext(request);
+  const organizationId = context.organizationId;
+  if (!organizationId) {
+    return NextResponse.json(
+      { denied: true, reasonKey: 'ORGANIZATION_REQUIRED', message: 'Select an organization workspace.' },
+      { status: 400 },
+    );
+  }
   const { invitationId } = await params;
   const allowed = await withTenantTransaction(context, async (client) =>
     hasPlatformAdministrationRole(client, context.subjectId)
@@ -30,22 +41,29 @@ export async function POST(
   const scope = invitation?.publicMetadata && typeof invitation.publicMetadata === 'object'
     ? (invitation.publicMetadata as any).expadioAccess
     : null;
-  if (!invitation || scope?.tenantId !== context.tenantId || scope?.organizationId !== context.organizationId) {
+  const roleKey = typeof scope?.roleKey === 'string' ? scope.roleKey.toUpperCase() : '';
+  if (
+    !invitation
+    || scope?.tenantId !== context.tenantId
+    || scope?.organizationId !== organizationId
+    || !TENANT_ACCESS_ROLE_KEYS.includes(roleKey as TenantAccessRoleKey)
+  ) {
     return NextResponse.json(
       { denied: true, reasonKey: 'INVITATION_NOT_FOUND', message: 'Invitation was not found in this tenant workspace.' },
       { status: 404 },
     );
   }
 
-  await clerk.invitations.revokeInvitation({ invitationId });
+  await clerk.invitations.revokeInvitation(invitationId);
   await withTenantTransaction(context, (client) =>
     recordTenantInvitation(client, {
       tenantId: context.tenantId,
-      organizationId: context.organizationId,
+      organizationId,
       invitationId,
-      roleKey: scope.roleKey,
+      roleKey: roleKey as TenantAccessRoleKey,
       actorSubjectId: context.subjectId,
       correlationId: request.headers.get('x-correlation-id')?.trim() || randomUUID(),
+      eventType: 'tenant.membership.invitation.revoked',
     })
   );
   return NextResponse.json({ success: true });

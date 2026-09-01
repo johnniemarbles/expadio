@@ -55,42 +55,5 @@ export const COMMUNICATION_CAPABILITIES: readonly { key: string; name: string }[
   { key: 'communication.social.send', name: 'Social — Send' },
 ];
 
-let globalBootstrapPromise: Promise<void> | undefined;
-
-function ensureGlobalBootstrap(pool: pg.Pool): Promise<void> {
-  if (globalBootstrapPromise === undefined) {
-    globalBootstrapPromise = (async () => {
-      const client = await pool.connect();
-      try {
-        await client.query(
-          `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
-           VALUES ('PLATFORM_SUPER_ADMIN', 'Platform Super Admin', 'PLATFORM', NULL, 'ACTIVE')
-           ON CONFLICT (role_key) WHERE tenant_id IS NULL DO NOTHING`,
-        );
-        await client.query(
-          `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
-           VALUES ('TENANT_OWNER', 'Tenant Owner', 'TENANT', $1::uuid, 'ACTIVE')
-           ON CONFLICT (tenant_id, role_key) WHERE tenant_id IS NOT NULL DO NOTHING`,
-          [DEMO_TENANT_ID],
-        );
-        for (const capability of COMMUNICATION_CAPABILITIES) {
-          await client.query(
-            `INSERT INTO platform.capabilities (capability_key, display_name, permitted_modes, enabled)
-             VALUES ($1, $2, ARRAY['A']::text[], true)
-             ON CONFLICT (capability_key) DO NOTHING`,
-            [capability.key, capability.name],
-          );
-        }
-      } finally {
-        client.release();
-      }
-    })().catch((err) => {
-      globalBootstrapPromise = undefined;
-      throw err;
-    });
-  }
-  return globalBootstrapPromise;
-}
-
 export const membershipRepository = new PostgresMembershipRepository(dbPool);
 export const identityVerifier = new ClerkIdentityVerifier();

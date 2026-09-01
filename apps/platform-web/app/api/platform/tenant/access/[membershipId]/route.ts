@@ -1,17 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { hasPlatformAdministrationRole } from '../../../../../../lib/governance-authz';
+import { hasPlatformAdministrationRole } from '@/lib/governance-authz';
 import {
   deniedResponse,
   resolveRequestContext,
   withTenantTransaction,
-} from '../../../../../../lib/request-context';
+} from '@/lib/request-context';
 import {
   replaceTenantMembershipRoles,
   setTenantMembershipStatus,
   TENANT_ACCESS_ROLE_KEYS,
   type TenantAccessRoleKey,
-} from '../../../../../../lib/tenant-access';
+} from '@/lib/tenant-access';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +21,13 @@ export async function PATCH(
 ) {
   try {
     const context = await resolveRequestContext(request);
+    const organizationId = context.organizationId;
+    if (!organizationId) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'ORGANIZATION_REQUIRED', message: 'Select an organization workspace.' },
+        { status: 400 },
+      );
+    }
     const { membershipId } = await params;
     const body = await request.json() as Record<string, unknown>;
     const correlationId = request.headers.get('x-correlation-id')?.trim() || randomUUID();
@@ -41,12 +48,12 @@ export async function PATCH(
           `SELECT subject_id FROM platform.memberships
             WHERE tenant_id = $1::uuid AND organization_id = $2::uuid
               AND membership_id = $3::uuid LIMIT 1`,
-          [context.tenantId, context.organizationId, membershipId],
+          [context.tenantId, organizationId, membershipId],
         );
         if (!target.rows[0]) throw new Error('TENANT_MEMBERSHIP_NOT_FOUND');
         await replaceTenantMembershipRoles(client, {
           tenantId: context.tenantId,
-          organizationId: context.organizationId,
+          organizationId,
           subjectId: target.rows[0].subject_id,
           roleKeys,
           actorSubjectId: context.subjectId,
@@ -62,7 +69,7 @@ export async function PATCH(
         return {
           membership: await setTenantMembershipStatus(client, {
             tenantId: context.tenantId,
-            organizationId: context.organizationId,
+            organizationId,
             membershipId,
             status: status as 'ACTIVE' | 'SUSPENDED' | 'REVOKED',
             actorSubjectId: context.subjectId,

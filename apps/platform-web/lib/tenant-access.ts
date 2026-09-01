@@ -399,12 +399,13 @@ export async function recordTenantInvitation(
     roleKey: TenantAccessRoleKey;
     actorSubjectId: string;
     correlationId: string;
+    eventType?: 'tenant.membership.invited' | 'tenant.membership.invitation.revoked';
   },
 ): Promise<void> {
   await appendAccessEvent(client, {
     tenantId: input.tenantId,
     aggregateId: input.invitationId,
-    eventType: 'tenant.membership.invited',
+    eventType: input.eventType ?? 'tenant.membership.invited',
     actorSubjectId: input.actorSubjectId,
     correlationId: input.correlationId,
     payload: { organizationId: input.organizationId, roleKeys: [input.roleKey] },

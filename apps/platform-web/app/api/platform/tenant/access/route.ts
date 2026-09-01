@@ -1,20 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { hasPlatformAdministrationRole } from '../../../../../lib/governance-authz';
-import { loadBrandAppOrigin } from '../../../../../lib/brand-app';
+import { hasPlatformAdministrationRole } from '@/lib/governance-authz';
+import { loadBrandAppOrigin } from '@/lib/brand-app';
 import {
   deniedResponse,
   resolveRequestContext,
   withTenantTransaction,
-} from '../../../../../lib/request-context';
+} from '@/lib/request-context';
 import {
   grantTenantMembership,
   listTenantMemberships,
   recordTenantInvitation,
   TENANT_ACCESS_ROLE_KEYS,
   type TenantAccessRoleKey,
-} from '../../../../../lib/tenant-access';
+} from '@/lib/tenant-access';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,6 +37,13 @@ function invitationScope(metadata: unknown) {
 export async function GET(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    const organizationId = context.organizationId;
+    if (!organizationId) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'ORGANIZATION_REQUIRED', message: 'Select an organization workspace.' },
+        { status: 400 },
+      );
+    }
     const db = await withTenantTransaction(context, async (client) => {
       if (!(await hasPlatformAdministrationRole(client, context.subjectId))) {
         return { forbidden: true } as const;
@@ -44,7 +51,7 @@ export async function GET(request: Request) {
       return {
         members: await listTenantMemberships(client, {
           tenantId: context.tenantId,
-          organizationId: context.organizationId,
+          organizationId,
         }),
       } as const;
     });
@@ -76,7 +83,7 @@ export async function GET(request: Request) {
       const scope = invitationScope(invitation.publicMetadata);
       if (
         scope?.tenantId !== context.tenantId
-        || scope?.organizationId !== context.organizationId
+        || scope?.organizationId !== organizationId
       ) return [];
       return [{
         invitationId: invitation.id,
@@ -104,6 +111,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    const organizationId = context.organizationId;
+    if (!organizationId) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'ORGANIZATION_REQUIRED', message: 'Select an organization workspace.' },
+        { status: 400 },
+      );
+    }
     const body = await request.json() as Record<string, unknown>;
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const roleKey = role(body.roleKey);
@@ -142,7 +156,7 @@ export async function POST(request: Request) {
       const membership = await withTenantTransaction(context, async (client) =>
         grantTenantMembership(client, {
           tenantId: context.tenantId,
-          organizationId: context.organizationId,
+          organizationId,
           subjectId: existing.data[0]!.id,
           issuer: ISSUER,
           roleKey,
@@ -170,7 +184,7 @@ export async function POST(request: Request) {
         expadioAccess: {
           version: 1,
           tenantId: context.tenantId,
-          organizationId: context.organizationId,
+          organizationId,
           roleKey,
           invitedBySubjectId: context.subjectId,
           issuer: ISSUER,
@@ -182,7 +196,7 @@ export async function POST(request: Request) {
     await withTenantTransaction(context, (client) =>
       recordTenantInvitation(client, {
         tenantId: context.tenantId,
-        organizationId: context.organizationId,
+        organizationId,
         invitationId: invitation.id,
         roleKey,
         actorSubjectId: context.subjectId,

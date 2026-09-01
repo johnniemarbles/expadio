@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { dbPool } from '../../../../lib/iam-adapter';
 import {
@@ -10,7 +11,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const runtime = 'nodejs';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const event = await verifyWebhook(request);
     if (event.type !== 'user.created') return new Response('ignored', { status: 200 });
@@ -34,20 +35,32 @@ export async function POST(request: Request) {
       return new Response('No valid EXPADIO access grant on this user.', { status: 200 });
     }
 
+    const correlationId = request.headers.get('svix-id') || event.data.id;
     const client = await dbPool.connect();
     try {
       await client.query('BEGIN');
       await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
-      await grantTenantMembership(client, {
-        tenantId,
-        organizationId,
-        subjectId: event.data.id,
-        issuer,
-        roleKey: roleKey as TenantAccessRoleKey,
-        validUntil,
-        actorSubjectId: invitedBy,
-        correlationId: request.headers.get('svix-id') || event.data.id,
-      });
+
+      const replay = await client.query(
+        `SELECT 1 FROM platform.domain_events
+          WHERE tenant_id = $1::uuid
+            AND event_type = 'tenant.membership.granted'
+            AND correlation_id = $2
+          LIMIT 1`,
+        [tenantId, correlationId],
+      );
+      if (!replay.rows[0]) {
+        await grantTenantMembership(client, {
+          tenantId,
+          organizationId,
+          subjectId: event.data.id,
+          issuer,
+          roleKey: roleKey as TenantAccessRoleKey,
+          validUntil,
+          actorSubjectId: invitedBy,
+          correlationId,
+        });
+      }
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
