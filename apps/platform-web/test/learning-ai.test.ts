@@ -7,6 +7,8 @@ const read = (path: string) =>
 
 const aiMigration = read('../../../infra/db/migrations/0098_ai_execution_runtime.sql');
 const learningMigration = read('../../../infra/db/migrations/0099_learning_ai_requests.sql');
+const executionArtifactMigration =
+  read('../../../infra/db/migrations/0100_execution_artifacts.sql');
 const runtime = read('../../../packages/postgres-runtime/src/learning-ai.ts');
 const worker = read('../lib/ai-job-worker.ts');
 const settings = read('../app/api/learning/ai/settings/route.ts');
@@ -14,10 +16,18 @@ const requests = read('../app/api/learning/ai/requests/route.ts');
 const status = read('../app/api/learning/ai/requests/[id]/route.ts');
 const workerRoute = read('../app/api/internal/ai-jobs/run/route.ts');
 
-test('AI jobs remain reference-only while prompt/output content is tenant-scoped', () => {
+test('AI jobs remain reference-only while prompt/context and output use separate durable stores', () => {
   assert.match(aiMigration, /CREATE TABLE platform\.ai_job_artifacts/);
   assert.match(aiMigration, /CREATE TABLE platform\.ai_job_execution_queue/);
   assert.match(aiMigration, /AI job artifacts are immutable/);
+  assert.match(aiMigration, /artifact_type IN \('INPUT','CONTEXT'\)/);
+  assert.doesNotMatch(aiMigration, /artifact_type IN \('INPUT','CONTEXT','OUTPUT'\)/);
+  assert.match(executionArtifactMigration, /CREATE TABLE platform\.execution_artifacts/);
+  assert.match(executionArtifactMigration, /Execution artifacts are append-only/);
+  assert.match(
+    executionArtifactMigration,
+    /ALTER TABLE platform\.execution_artifacts FORCE ROW LEVEL SECURITY/,
+  );
   assert.match(
     aiMigration,
     /ALTER TABLE platform\.ai_job_artifacts FORCE ROW LEVEL SECURITY/,
@@ -81,6 +91,7 @@ test('authoring and settings are admin-only while tutor request is authenticated
 
   assert.match(status, /loadLearningAiRequestStatus/);
   assert.match(status, /allowAdminRead/);
+  assert.match(status, /resolveLearningAiOutput/);
 });
 
 test('AI execution stays horizontal and machine authenticated', () => {
@@ -96,20 +107,24 @@ test('AI execution stays horizontal and machine authenticated', () => {
   assert.match(worker, /PostgresIntelligenceUsageRepository/);
 });
 
-test('AI worker writes durable output before terminal success and replay-completes terminal jobs', () => {
-  assert.match(worker, /createAiJobArtifact/);
-  assert.match(worker, /artifactType: 'OUTPUT'/);
+test('AI worker writes provider output through governed durable storage before terminal success', () => {
+  assert.match(worker, /createGovernedSupabaseArtifactStore/);
+  assert.match(worker, /PostgresIndexedDurableArtifactSink/);
+  assert.match(worker, /artifactKind: 'AI_TEXT'/);
+  assert.match(worker, /sourceKind: 'AI_INVOCATION'/);
   assert.match(worker, /type: 'SUCCEEDED'/);
   assert.match(worker, /completeAiJobExecution/);
   assert.match(worker, /snapshot\.status === 'SUCCEEDED'/);
   assert.match(worker, /ALREADY_TERMINAL/);
+  assert.doesNotMatch(worker, /artifactType: 'OUTPUT'/);
 });
 
 test('AI terminal replay reconciles deterministic usage from immutable output provenance', () => {
   assert.match(worker, /reconcileUsageFromOutputArtifact/);
   assert.match(worker, /eventId: input\.jobId/);
   assert.match(worker, /providerCostOwnership/);
-  assert.match(worker, /snapshot\.outputReference\?\.startsWith\('ai-artifact:\/\/'\)/);
+  assert.match(worker, /snapshot\.outputReference\?\.startsWith\('supabase-storage:\/\/'\)/);
+  assert.match(worker, /findExecutionArtifactBySource/);
 });
 
 test('durable worker fails closed for AI operation classes without durable text output', () => {
