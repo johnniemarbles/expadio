@@ -442,3 +442,188 @@ export async function recordTenantInvitation(
     payload: { organizationId: input.organizationId, roleKeys: [input.roleKey] },
   });
 }
+
+
+export interface TenantAccessInvitationRecord {
+  readonly invitationId: string;
+  readonly tenantId: string;
+  readonly organizationId: string;
+  readonly email: string;
+  readonly roleKey: string;
+  readonly status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+  readonly invitedBySubjectId: string;
+  readonly acceptedSubjectId: string | null;
+  readonly validUntil: string | null;
+  readonly clerkCreatedAt: string | null;
+  readonly clerkExpiresAt: string | null;
+  readonly correlationId: string;
+  readonly createdAt: string;
+}
+
+interface InvitationRow {
+  invitation_id: string;
+  tenant_id: string;
+  organization_id: string;
+  email_address: string;
+  role_key: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+  invited_by_subject_id: string;
+  accepted_subject_id: string | null;
+  valid_until: Date | string | null;
+  clerk_created_at: Date | string | null;
+  clerk_expires_at: Date | string | null;
+  correlation_id: string;
+  created_at: Date | string;
+}
+
+function invitationRecord(row: InvitationRow): TenantAccessInvitationRecord {
+  return {
+    invitationId: row.invitation_id,
+    tenantId: row.tenant_id,
+    organizationId: row.organization_id,
+    email: row.email_address,
+    roleKey: row.role_key,
+    status: row.status,
+    invitedBySubjectId: row.invited_by_subject_id,
+    acceptedSubjectId: row.accepted_subject_id,
+    validUntil: row.valid_until === null ? null : iso(row.valid_until),
+    clerkCreatedAt: row.clerk_created_at === null ? null : iso(row.clerk_created_at),
+    clerkExpiresAt: row.clerk_expires_at === null ? null : iso(row.clerk_expires_at),
+    correlationId: row.correlation_id,
+    createdAt: iso(row.created_at),
+  };
+}
+
+export async function upsertTenantAccessInvitation(
+  client: PoolClient,
+  input: {
+    tenantId: string;
+    organizationId: string;
+    invitationId: string;
+    email: string;
+    roleKey: TenantAccessRoleKey;
+    invitedBySubjectId: string;
+    correlationId: string;
+    validUntil?: Date | null;
+    clerkCreatedAt?: Date | null;
+    clerkExpiresAt?: Date | null;
+  },
+): Promise<TenantAccessInvitationRecord> {
+  const result = await client.query<InvitationRow>(
+    `INSERT INTO platform.tenant_access_invitations (
+       invitation_id, tenant_id, organization_id, email_address, role_key,
+       status, invited_by_subject_id, valid_until, clerk_created_at,
+       clerk_expires_at, correlation_id
+     ) VALUES (
+       $1, $2::uuid, $3::uuid, lower($4), $5, 'PENDING', $6,
+       $7::timestamptz, $8::timestamptz, $9::timestamptz, $10
+     )
+     ON CONFLICT (invitation_id) DO UPDATE
+       SET email_address = EXCLUDED.email_address,
+           role_key = EXCLUDED.role_key,
+           invited_by_subject_id = EXCLUDED.invited_by_subject_id,
+           valid_until = EXCLUDED.valid_until,
+           clerk_created_at = COALESCE(EXCLUDED.clerk_created_at, platform.tenant_access_invitations.clerk_created_at),
+           clerk_expires_at = COALESCE(EXCLUDED.clerk_expires_at, platform.tenant_access_invitations.clerk_expires_at),
+           correlation_id = EXCLUDED.correlation_id,
+           updated_at = clock_timestamp()
+     RETURNING *`,
+    [
+      input.invitationId,
+      input.tenantId,
+      input.organizationId,
+      input.email.trim().toLowerCase(),
+      input.roleKey,
+      input.invitedBySubjectId,
+      input.validUntil ?? null,
+      input.clerkCreatedAt ?? null,
+      input.clerkExpiresAt ?? null,
+      input.correlationId,
+    ],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('TENANT_INVITATION_WRITE_FAILED');
+  return invitationRecord(row);
+}
+
+export async function listPendingTenantAccessInvitations(
+  client: PoolClient,
+  input: { tenantId: string; organizationId: string },
+): Promise<readonly TenantAccessInvitationRecord[]> {
+  const result = await client.query<InvitationRow>(
+    `SELECT *
+       FROM platform.tenant_access_invitations
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND status = 'PENDING'
+      ORDER BY created_at DESC`,
+    [input.tenantId, input.organizationId],
+  );
+  return result.rows.map(invitationRecord);
+}
+
+export async function findTenantAccessInvitation(
+  client: PoolClient,
+  input: { tenantId: string; organizationId: string; invitationId: string },
+): Promise<TenantAccessInvitationRecord | null> {
+  const result = await client.query<InvitationRow>(
+    `SELECT *
+       FROM platform.tenant_access_invitations
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND invitation_id = $3
+      LIMIT 1`,
+    [input.tenantId, input.organizationId, input.invitationId],
+  );
+  return result.rows[0] ? invitationRecord(result.rows[0]) : null;
+}
+
+export async function setTenantAccessInvitationStatus(
+  client: PoolClient,
+  input: {
+    tenantId: string;
+    organizationId: string;
+    invitationId: string;
+    status: 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+    acceptedSubjectId?: string | null;
+  },
+): Promise<void> {
+  await client.query(
+    `UPDATE platform.tenant_access_invitations
+        SET status = $4,
+            accepted_subject_id = COALESCE($5, accepted_subject_id),
+            updated_at = clock_timestamp()
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND invitation_id = $3`,
+    [
+      input.tenantId,
+      input.organizationId,
+      input.invitationId,
+      input.status,
+      input.acceptedSubjectId ?? null,
+    ],
+  );
+}
+
+export async function acceptPendingTenantInvitationByEmail(
+  client: PoolClient,
+  input: {
+    tenantId: string;
+    organizationId: string;
+    email: string;
+    acceptedSubjectId: string;
+  },
+): Promise<void> {
+  await client.query(
+    `UPDATE platform.tenant_access_invitations
+        SET status = 'ACCEPTED',
+            accepted_subject_id = $4,
+            updated_at = clock_timestamp()
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND lower(email_address) = lower($3)
+        AND status = 'PENDING'`,
+    [input.tenantId, input.organizationId, input.email, input.acceptedSubjectId],
+  );
+}

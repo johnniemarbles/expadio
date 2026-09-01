@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { dbPool } from '../../../../lib/iam-adapter';
 import {
+  acceptPendingTenantInvitationByEmail,
   grantTenantMembership,
   TENANT_ACCESS_ROLE_KEYS,
   type TenantAccessRoleKey,
@@ -59,6 +60,19 @@ export async function POST(request: NextRequest) {
           validUntil,
           actorSubjectId: invitedBy,
           correlationId,
+        });
+      }
+      const primaryEmail = Array.isArray((event.data as any).email_addresses)
+        ? ((event.data as any).email_addresses.find((item:any)=>item.id===(event.data as any).primary_email_address_id)?.email_address
+          ?? (event.data as any).email_addresses[0]?.email_address
+          ?? null)
+        : null;
+      if (typeof primaryEmail === 'string' && primaryEmail.trim()) {
+        await acceptPendingTenantInvitationByEmail(client, {
+          tenantId,
+          organizationId,
+          email: primaryEmail,
+          acceptedSubjectId: event.data.id,
         });
       }
       await client.query('COMMIT');

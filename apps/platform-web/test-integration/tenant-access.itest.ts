@@ -7,7 +7,11 @@ import {
   grantTenantMembership,
   listTenantMemberships,
   setTenantMembershipStatus,
+  findTenantAccessInvitation,
+  listPendingTenantAccessInvitations,
   recordTenantInvitation,
+  setTenantAccessInvitationStatus,
+  upsertTenantAccessInvitation,
 } from '../lib/tenant-access';
 
 function pool(){return new pg.Pool({
@@ -196,5 +200,51 @@ test('tenant invitation audit accepts PostgreSQL UUID tenant ids without RFC ver
        WHERE tenant_id=$1::uuid AND aggregate_id=$2`,[tenantId,invitationId]);
     assert.equal(persisted.rowCount,1);
     assert.equal(persisted.rows[0].event_type,'tenant.membership.invited');
+  }finally{try{await c.query('ROLLBACK')}catch{}c.release();await p.end()}
+});
+
+
+test('pending invitation registry survives unrelated membership suspension and revoke is durable',async()=>{
+  const p=pool();const c=await p.connect();
+  const tenantId=randomUUID(),orgId=randomUUID(),subjectId='member-'+randomUUID();
+  const invitationId=`inv_${randomUUID().replaceAll('-','')}`;
+  try{
+    await c.query(`INSERT INTO platform.tenants(tenant_id,name)VALUES($1,'Invite registry tenant')`,[tenantId]);
+    await c.query(`INSERT INTO platform.organizations(organization_id,tenant_id,name)VALUES($1,$2,'Invite registry org')`,[orgId,tenantId]);
+    await c.query(`SELECT set_config('app.tenant_id',$1,false)`,[tenantId]);
+    await c.query(`INSERT INTO platform.authorization_roles(role_key,display_name,ownership_scope,tenant_id)
+      VALUES('TENANT_ADMIN','Tenant Admin','TENANT',$1)`,[tenantId]);
+
+    await c.query('BEGIN');
+    const member=await grantTenantMembership(c,{
+      tenantId,organizationId:orgId,subjectId,issuer:'https://clerk.expadio.com',
+      roleKey:'TENANT_ADMIN',actorSubjectId:'platform-admin',correlationId:randomUUID(),
+    });
+    await upsertTenantAccessInvitation(c,{
+      tenantId,organizationId:orgId,invitationId,email:'pending@example.test',
+      roleKey:'TENANT_ADMIN',invitedBySubjectId:'platform-admin',correlationId:randomUUID(),
+      clerkCreatedAt:new Date(),
+    });
+    await c.query('COMMIT');
+
+    assert.equal((await listPendingTenantAccessInvitations(c,{tenantId,organizationId:orgId})).length,1);
+
+    await c.query('BEGIN');
+    await setTenantMembershipStatus(c,{
+      tenantId,organizationId:orgId,membershipId:member.membershipId,status:'SUSPENDED',
+      actorSubjectId:'platform-admin',correlationId:randomUUID(),
+    });
+    await c.query('COMMIT');
+
+    assert.equal((await listPendingTenantAccessInvitations(c,{tenantId,organizationId:orgId})).length,1);
+
+    await c.query('BEGIN');
+    await setTenantAccessInvitationStatus(c,{
+      tenantId,organizationId:orgId,invitationId,status:'REVOKED',
+    });
+    await c.query('COMMIT');
+
+    assert.equal((await listPendingTenantAccessInvitations(c,{tenantId,organizationId:orgId})).length,0);
+    assert.equal((await findTenantAccessInvitation(c,{tenantId,organizationId:orgId,invitationId}))?.status,'REVOKED');
   }finally{try{await c.query('ROLLBACK')}catch{}c.release();await p.end()}
 });

@@ -71,6 +71,9 @@ export async function PATCH(
 
       if (typeof body.status === 'string') {
         const status = body.status.trim().toUpperCase();
+        if (target.rows[0].subject_id === context.subjectId && status !== 'ACTIVE') {
+          throw new Error('SELF_PLATFORM_MEMBERSHIP_DISABLE_FORBIDDEN');
+        }
         if (!['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(status)) {
           throw new Error('TENANT_MEMBERSHIP_STATUS_INVALID');
         }
@@ -108,14 +111,18 @@ export async function PATCH(
       'TENANT_MEMBERSHIP_NOT_FOUND',
       'TENANT_MEMBERSHIP_STATUS_INVALID',
       'TENANT_MEMBERSHIP_NOT_ACTIVE',
+      'SELF_PLATFORM_MEMBERSHIP_DISABLE_FORBIDDEN',
       'TENANT_MEMBERSHIP_REVOKED_REQUIRES_NEW_GRANT',
       'TENANT_ACCESS_UPDATE_REQUIRED',
       'TENANT_ACCESS_ROLE_REQUIRED',
       'TENANT_ACCESS_ROLE_NOT_CONFIGURED',
     ]);
     if (error instanceof Error && known.has(error.message)) {
+      const message = error.message === 'SELF_PLATFORM_MEMBERSHIP_DISABLE_FORBIDDEN'
+        ? 'You cannot suspend or revoke the Platform membership you are currently using. Use another Platform administrator for that change.'
+        : error.message.replaceAll('_', ' ').toLowerCase();
       return NextResponse.json(
-        { denied: true, reasonKey: error.message, message: error.message.replaceAll('_', ' ').toLowerCase() },
+        { denied: true, reasonKey: error.message, message },
         { status: error.message === 'TENANT_MEMBERSHIP_NOT_FOUND' ? 404 : 409 },
       );
     }
