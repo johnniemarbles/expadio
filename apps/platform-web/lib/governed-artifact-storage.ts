@@ -52,9 +52,7 @@ function supportedStorageConnector(connector: ConnectorDefinition): boolean {
     && (
       provider.includes('supabase')
       || provider.includes('supabase-storage')
-    )
-    && connector.capabilityKeys.includes('storage.store')
-    && connector.capabilityKeys.includes('storage.read');
+    );
 }
 
 export async function createGovernedSupabaseArtifactStore(
@@ -159,6 +157,12 @@ export async function createGovernedSupabaseArtifactStore(
 
   const connectorWithCredential: ConnectorDefinition = {
     ...connector,
+    capabilityKeys: [
+      ...new Set([
+        ...connector.capabilityKeys,
+        ...readRoute.connector.capabilityKeys,
+      ]),
+    ],
     credentialRef: credentialReference,
   };
 
@@ -167,7 +171,7 @@ export async function createGovernedSupabaseArtifactStore(
   ): Promise<string> => {
     const requiredCapability =
       request.operation === 'STORE' ? 'storage.store' : 'storage.read';
-    if (!connector.capabilityKeys.includes(requiredCapability)) {
+    if (!connectorWithCredential.capabilityKeys.includes(requiredCapability)) {
       throw new Error(
         'GOVERNED_ARTIFACT_STORAGE_OPERATION_CAPABILITY_UNAVAILABLE',
       );
