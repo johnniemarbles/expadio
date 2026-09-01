@@ -41,7 +41,16 @@ async function seed() {
     }
 
     // 3. Insert subject membership
-    const resMember = await client.query('SELECT membership_id FROM platform.memberships WHERE subject_id = $1 AND tenant_id = $2', [SUBJECT_ID, DEFAULT_TENANT]);
+    const resMember = await client.query(
+      `SELECT membership_id,status
+         FROM platform.memberships
+        WHERE subject_id = $1
+          AND tenant_id = $2
+          AND organization_id = $3
+        ORDER BY (status = 'ACTIVE') DESC, updated_at DESC
+        LIMIT 1`,
+      [SUBJECT_ID, DEFAULT_TENANT, DEFAULT_ORG]
+    );
     if (resMember.rowCount === 0) {
       await client.query(
         `INSERT INTO platform.memberships (tenant_id, organization_id, subject_id, actor_kind, status, issuer, workspace_scope_mode, operating_unit_scope_mode)
@@ -50,8 +59,16 @@ async function seed() {
       );
       console.log(`Granted membership to subject: ${SUBJECT_ID}`);
     } else {
-      await client.query("UPDATE platform.memberships SET issuer = 'https://clerk.expadio.com' WHERE subject_id = $1", [SUBJECT_ID]);
-      console.log(`Subject ${SUBJECT_ID} already has membership. Updated issuer.`);
+      await client.query(
+        `UPDATE platform.memberships
+            SET issuer = 'https://clerk.expadio.com',
+                status = 'ACTIVE',
+                valid_until = NULL,
+                updated_at = now()
+          WHERE membership_id = $1::uuid`,
+        [resMember.rows[0].membership_id]
+      );
+      console.log(`Subject ${SUBJECT_ID} bootstrap membership reasserted ACTIVE.`);
     }
 
     // 4. Explicit bootstrap administrator role + tenant roles.

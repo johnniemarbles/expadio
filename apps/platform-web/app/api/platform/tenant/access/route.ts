@@ -10,8 +10,10 @@ import {
 } from '@/lib/request-context';
 import {
   grantTenantMembership,
+  listPendingTenantAccessInvitations,
   listTenantMemberships,
   recordTenantInvitation,
+  upsertTenantAccessInvitation,
   TENANT_ACCESS_ROLE_KEYS,
   type TenantAccessRoleKey,
 } from '@/lib/tenant-access';
@@ -117,6 +119,10 @@ export async function GET(request: Request) {
           tenantId: context.tenantId,
           organizationId,
         }),
+        localInvitations: await listPendingTenantAccessInvitations(client, {
+          tenantId: context.tenantId,
+          organizationId,
+        }),
       } as const;
     });
     if ('forbidden' in db) {
@@ -142,26 +148,56 @@ export async function GET(request: Request) {
       },
     ]));
 
-    const pending = await client.invitations.getInvitationList({ status: 'pending', limit: 100 });
-    const invitations = pending.data.flatMap((invitation) => {
-      const scope = invitationScope(invitation.publicMetadata);
-      if (
-        scope?.tenantId !== context.tenantId
-        || scope?.organizationId !== organizationId
-      ) return [];
-      return [{
-        invitationId: invitation.id,
-        email: invitation.emailAddress,
-        roleKey: typeof scope.roleKey === 'string' ? scope.roleKey : null,
-        status: invitation.status,
-        createdAt: new Date(invitation.createdAt).toISOString(),
-      }];
+    let clerkAvailable = true;
+    let scopedPending: any[] = [];
+    try {
+      const pending = await client.invitations.getInvitationList({ status: 'pending', limit: 500 });
+      scopedPending = pending.data.filter((invitation) => {
+        const scope = invitationScope(invitation.publicMetadata);
+        return scope?.tenantId === context.tenantId
+          && scope?.organizationId === organizationId;
+      });
+    } catch (error) {
+      clerkAvailable = false;
+      console.error('Clerk pending invitation reconciliation failed', {
+        tenantId: context.tenantId,
+        organizationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    const localById = new Map(db.localInvitations.map((item) => [item.invitationId, item]));
+    const clerkById = new Map(scopedPending.map((item) => [item.id, item]));
+    const ids = new Set<string>([
+      ...db.localInvitations.map((item) => item.invitationId),
+      ...scopedPending.map((item) => item.id),
+    ]);
+    const invitations = [...ids].map((invitationId) => {
+      const clerkInvitation = clerkById.get(invitationId);
+      const local = localById.get(invitationId);
+      const scope = clerkInvitation ? invitationScope(clerkInvitation.publicMetadata) : null;
+      return {
+        invitationId,
+        email: clerkInvitation?.emailAddress ?? local?.email ?? '',
+        roleKey: typeof scope?.roleKey === 'string' ? scope.roleKey : local?.roleKey ?? null,
+        status: clerkInvitation?.status ?? local?.status?.toLowerCase() ?? 'pending',
+        createdAt: clerkInvitation
+          ? new Date(clerkInvitation.createdAt).toISOString()
+          : local?.createdAt ?? new Date().toISOString(),
+        acceptUrl: typeof clerkInvitation?.url === 'string' ? clerkInvitation.url : null,
+        deliveryState: clerkInvitation
+          ? 'CLERK_PENDING'
+          : clerkAvailable
+            ? 'CLERK_NOT_PENDING'
+            : 'CLERK_UNAVAILABLE',
+      };
     });
 
     return NextResponse.json({
       members: db.members.map((member) => ({
         ...member,
         identity: userMap.get(member.subjectId) ?? { name: null, email: null, imageUrl: null },
+        isCurrentUser: member.subjectId === context.subjectId,
       })),
       invitations,
       roleKeys: TENANT_ACCESS_ROLE_KEYS,
@@ -229,7 +265,11 @@ export async function POST(request: Request) {
           correlationId,
         })
       );
-      return NextResponse.json({ outcome: 'MEMBERSHIP_GRANTED', membership }, { status: 201 });
+      return NextResponse.json({
+        outcome: 'MEMBERSHIP_GRANTED_EXISTING_USER',
+        membership,
+        message: 'This email already belongs to a Clerk user. EXPADIO granted Brand access immediately; no invitation email is required. The user can sign in to Brand now.',
+      }, { status: 201 });
     }
 
     const brandOrigin = loadBrandAppOrigin();
@@ -260,6 +300,10 @@ export async function POST(request: Request) {
           invitationId: existingInvitation.id,
           email: existingInvitation.emailAddress,
           status: existingInvitation.status,
+          createdAt: new Date(existingInvitation.createdAt).toISOString(),
+          acceptUrl: typeof existingInvitation.url === 'string' ? existingInvitation.url : null,
+          roleKey,
+          deliveryState: 'CLERK_PENDING',
         },
         message: 'This user already has a pending invitation for the selected Brand workspace.',
       });
@@ -286,6 +330,8 @@ export async function POST(request: Request) {
         emailAddress: email,
         redirectUrl: new URL('/sign-up', brandOrigin).toString(),
         expiresInDays: 14,
+        notify: true,
+        templateSlug: 'invitation',
         publicMetadata: {
           expadioAccess: {
             version: 1,
@@ -305,16 +351,29 @@ export async function POST(request: Request) {
     }
 
     try {
-      await withTenantTransaction(context, (client) =>
-        recordTenantInvitation(client, {
+      await withTenantTransaction(context, async (client) => {
+        const createdAt = new Date(invitation.createdAt);
+        await upsertTenantAccessInvitation(client, {
+          tenantId: context.tenantId,
+          organizationId,
+          invitationId: invitation.id,
+          email: invitation.emailAddress,
+          roleKey,
+          invitedBySubjectId: context.subjectId,
+          correlationId,
+          validUntil,
+          clerkCreatedAt: createdAt,
+          clerkExpiresAt: new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000),
+        });
+        await recordTenantInvitation(client, {
           tenantId: context.tenantId,
           organizationId,
           invitationId: invitation.id,
           roleKey,
           actorSubjectId: context.subjectId,
           correlationId,
-        })
-      );
+        });
+      });
     } catch (auditError) {
       console.error('Invitation audit persistence failed', {
         invitationId: invitation.id,
@@ -356,7 +415,12 @@ export async function POST(request: Request) {
         invitationId: invitation.id,
         email: invitation.emailAddress,
         status: invitation.status,
+        createdAt: new Date(invitation.createdAt).toISOString(),
+        acceptUrl: typeof invitation.url === 'string' ? invitation.url : null,
+        roleKey,
+        deliveryState: 'EMAIL_REQUESTED',
       },
+      message: 'Clerk accepted the invitation and an email send was explicitly requested. If the recipient does not receive it, use Copy invite link or Resend.',
     }, { status: 202 });
   } catch (error: any) {
     const correlationId =

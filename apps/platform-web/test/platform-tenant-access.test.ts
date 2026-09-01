@@ -83,3 +83,37 @@ test('tenant access errors return safe actionable reasons with correlation ids',
   assert.match(route,/Unhandled tenant invitation failure/);
   assert.match(route,/correlationId/);
 });
+
+
+test('invitation creation explicitly requests Clerk email delivery and exposes a fallback acceptance link',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  const manager=read('../components/TenantAccessManager/TenantAccessManager.tsx');
+  assert.match(route,/notify:\s*true/);
+  assert.match(route,/templateSlug:\s*'invitation'/);
+  assert.match(route,/acceptUrl/);
+  assert.match(manager,/Copy invite link/);
+  assert.match(manager,/Resend/);
+});
+
+test('pending invitations have durable EXPADIO state independent of Clerk list availability',()=>{
+  const access=read('../lib/tenant-access.ts');
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(access,/tenant_access_invitations/);
+  assert.match(access,/listPendingTenantAccessInvitations/);
+  assert.match(route,/localInvitations/);
+  assert.match(route,/CLERK_UNAVAILABLE/);
+});
+
+test('revoke reports external success even if audit reconciliation needs repair',()=>{
+  const route=read('../app/api/platform/tenant/access/invitations/[invitationId]/revoke/route.ts');
+  assert.match(route,/revokeInvitation\(invitationId\)/);
+  assert.match(route,/auditPending/);
+  assert.match(route,/Invitation was revoked in Clerk/);
+});
+
+test('current Platform operator cannot suspend or revoke their own membership',()=>{
+  const route=read('../app/api/platform/tenant/access/[membershipId]/route.ts');
+  const manager=read('../components/TenantAccessManager/TenantAccessManager.tsx');
+  assert.match(route,/SELF_PLATFORM_MEMBERSHIP_DISABLE_FORBIDDEN/);
+  assert.match(manager,/Current Platform user/);
+});
