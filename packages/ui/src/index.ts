@@ -14,5 +14,6 @@ export * from './components/ActivityTimeline';
 
 export * from './theme';
 export * from './components/ThemeModeControl';
+export * from './components/CommandPalette';
 export * from './module-shell';
 export * from './governed-theme';
