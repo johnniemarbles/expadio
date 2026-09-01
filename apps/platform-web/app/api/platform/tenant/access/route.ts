@@ -34,6 +34,52 @@ function invitationScope(metadata: unknown) {
   return access && typeof access === 'object' ? access as Record<string, unknown> : null;
 }
 
+type ClerkApiErrorItem = {
+  code?: string;
+  message?: string;
+  longMessage?: string;
+};
+
+function clerkInvitationErrorResponse(error: unknown): NextResponse | null {
+  if (!error || typeof error !== 'object') return null;
+  const candidate = error as { status?: unknown; errors?: unknown };
+  if (!Array.isArray(candidate.errors) || candidate.errors.length === 0) return null;
+
+  const first = candidate.errors[0] as ClerkApiErrorItem;
+  const code = typeof first?.code === 'string' ? first.code : 'clerk_api_error';
+  const rawMessage =
+    (typeof first?.longMessage === 'string' && first.longMessage)
+    || (typeof first?.message === 'string' && first.message)
+    || 'Clerk could not create the invitation.';
+
+  let status = typeof candidate.status === 'number' ? candidate.status : 502;
+  let reasonKey = 'CLERK_INVITATION_FAILED';
+  let message = rawMessage;
+
+  if (code === 'duplicate_record') {
+    status = 409;
+    reasonKey = 'INVITATION_ALREADY_PENDING';
+    message = 'This email already has a pending Clerk invitation. Revoke the existing invitation or let the user accept it.';
+  } else if (code === 'invitations_not_supported') {
+    status = 409;
+    reasonKey = 'CLERK_INVITATIONS_NOT_SUPPORTED';
+    message = 'Clerk invitations are not enabled for this application configuration.';
+  } else if (status === 429) {
+    reasonKey = 'CLERK_INVITATION_RATE_LIMITED';
+    message = 'Clerk invitation rate limit reached. Try again later.';
+  } else if (status === 401 || status === 403) {
+    status = 502;
+    reasonKey = 'CLERK_BACKEND_AUTH_FAILED';
+    message = 'Platform could not authenticate to the Clerk Backend API. Check the Platform Clerk secret key.';
+  } else if (status < 400 || status > 599) {
+    status = 502;
+  }
+
+  console.error('Clerk invitation API error', { code, status, reasonKey });
+  return NextResponse.json({ denied: true, reasonKey, message }, { status });
+}
+
+
 export async function GET(request: Request) {
   try {
     const context = await resolveRequestContext(request);
@@ -176,22 +222,52 @@ export async function POST(request: Request) {
       );
     }
 
-    const invitation = await clerk.invitations.createInvitation({
-      emailAddress: email,
-      redirectUrl: new URL('/sign-up', brandOrigin).toString(),
-      expiresInDays: 14,
-      publicMetadata: {
-        expadioAccess: {
-          version: 1,
-          tenantId: context.tenantId,
-          organizationId,
-          roleKey,
-          invitedBySubjectId: context.subjectId,
-          issuer: ISSUER,
-          validUntil: validUntil?.toISOString() ?? null,
-        },
-      },
+    const pendingForEmail = await clerk.invitations.getInvitationList({
+      status: 'pending',
+      query: email,
+      limit: 100,
     });
+    const existingInvitation = pendingForEmail.data.find((item) =>
+      item.emailAddress.toLowerCase() === email
+      && invitationScope(item.publicMetadata)?.tenantId === context.tenantId
+      && invitationScope(item.publicMetadata)?.organizationId === organizationId
+    );
+
+    if (existingInvitation) {
+      return NextResponse.json({
+        outcome: 'INVITATION_ALREADY_PENDING',
+        invitation: {
+          invitationId: existingInvitation.id,
+          email: existingInvitation.emailAddress,
+          status: existingInvitation.status,
+        },
+        message: 'This user already has a pending invitation for the selected Brand workspace.',
+      });
+    }
+
+    let invitation;
+    try {
+      invitation = await clerk.invitations.createInvitation({
+        emailAddress: email,
+        redirectUrl: new URL('/sign-up', brandOrigin).toString(),
+        expiresInDays: 14,
+        publicMetadata: {
+          expadioAccess: {
+            version: 1,
+            tenantId: context.tenantId,
+            organizationId,
+            roleKey,
+            invitedBySubjectId: context.subjectId,
+            issuer: ISSUER,
+            validUntil: validUntil?.toISOString() ?? null,
+          },
+        },
+      });
+    } catch (error) {
+      const response = clerkInvitationErrorResponse(error);
+      if (response) return response;
+      throw error;
+    }
 
     await withTenantTransaction(context, (client) =>
       recordTenantInvitation(client, {
@@ -219,6 +295,8 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+    const clerkResponse = clerkInvitationErrorResponse(error);
+    if (clerkResponse) return clerkResponse;
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
   }
