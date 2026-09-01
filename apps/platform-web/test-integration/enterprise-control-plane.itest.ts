@@ -190,7 +190,7 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
     );
 
     const setup = await c.query(
-      `SELECT state, total_requirements, blocking_open_requirements
+      `SELECT state, total_requirements, completed_requirements, blocking_open_requirements
          FROM platform.organization_setup_plans
         WHERE tenant_id = $1::uuid
           AND organization_id = $2::uuid`,
@@ -199,7 +199,8 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
     assert.deepEqual(setup.rows[0], {
       state: 'CONFIGURING',
       total_requirements: 3,
-      blocking_open_requirements: 3,
+      completed_requirements: 2,
+      blocking_open_requirements: 1,
     });
 
     const events = await c.query(
