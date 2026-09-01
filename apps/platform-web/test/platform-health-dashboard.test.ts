@@ -8,6 +8,8 @@ const dashboard = read('../app/(shell)/platform-health/PlatformHealthDashboard.t
 const page = read('../app/(shell)/platform-health/page.tsx');
 const css = read('../app/(shell)/platform-health/telemetry.module.css');
 const workspaces = read('../app/api/workspaces/route.ts');
+const landing = read('../app/(shell)/page.tsx');
+const overview = read('../app/(shell)/overview/page.tsx');
 
 test('platform health dashboard consumes only governed health APIs', () => {
   for (const endpoint of [
@@ -45,8 +47,11 @@ test('platform health page preserves workspace query context', () => {
 });
 
 test('telemetry command center is discoverable and uses honest live signals', () => {
-  assert.match(workspaces, /href: '\/platform-health'/);
-  assert.match(workspaces, /Telemetry & Health/);
+  assert.match(workspaces, /label: 'Command Center'.*href: '\/'/);
+  assert.match(workspaces, /label: 'Business Overview'.*href: '\/overview'/);
+  assert.match(landing, /platform-health\/page/);
+  assert.match(overview, /BusinessOverviewPage/);
+  assert.match(overview, /liveWorkspaceAdapter\.loadOverview/);
   assert.match(dashboard, /POLL_INTERVAL_MS = 30_000/);
   assert.match(dashboard, /performance\.now\(\)/);
   assert.match(dashboard, /All governed health APIs currently report a clear snapshot/);
