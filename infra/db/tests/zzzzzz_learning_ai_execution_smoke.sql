@@ -95,7 +95,28 @@ INSERT INTO platform.learning_ai_requests (
     '{"surface":"learner"}'::jsonb
   );
 
-DO $$
+DO $
+BEGIN
+  BEGIN
+    INSERT INTO platform.ai_job_artifacts (
+      tenant_id, job_id, artifact_type, content,
+      metadata, created_by_subject_id
+    ) VALUES (
+      'c1c1c1c1-c1c1-41c1-81c1-c1c1c1c1c1c1',
+      'c1000000-0000-4000-8000-000000000001',
+      'OUTPUT',
+      'must not be stored in the job artifact table',
+      '{}'::jsonb,
+      'ai-worker'
+    );
+    RAISE EXCEPTION 'AI OUTPUT job artifact unexpectedly succeeded';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+END;
+$;
+
+DO $
 BEGIN
   BEGIN
     UPDATE platform.ai_job_artifacts
