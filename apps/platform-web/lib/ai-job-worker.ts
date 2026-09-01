@@ -88,6 +88,91 @@ function nextSequence(events: readonly AiJobEvent[]): number {
   return (events.at(-1)?.sequence ?? 0) + 1;
 }
 
+const DURABLE_TEXT_OPERATIONS = new Set([
+  'GENERATE',
+  'CLASSIFY',
+  'SUMMARIZE',
+  'EXTRACT',
+  'TRANSLATE',
+]);
+
+async function reconcileUsageFromOutputArtifact(
+  client: PoolClient,
+  input: {
+    readonly tenantId: string;
+    readonly jobId: string;
+    readonly correlationId: string;
+    readonly outputReference: string;
+    readonly occurredAt: string;
+  },
+): Promise<void> {
+  const artifact = await loadAiJobArtifact(client, {
+    tenantId: input.tenantId,
+    jobId: input.jobId,
+    reference: input.outputReference,
+    expectedType: 'OUTPUT',
+  });
+  const metadata = artifact.metadata;
+  const connectorKey =
+    typeof metadata.connectorKey === 'string' ? metadata.connectorKey : null;
+  const providerKey =
+    typeof metadata.providerKey === 'string' ? metadata.providerKey : null;
+  const modelKey =
+    typeof metadata.modelKey === 'string' ? metadata.modelKey : null;
+  const costMinorUnits =
+    typeof metadata.costMinorUnits === 'number'
+    && Number.isSafeInteger(metadata.costMinorUnits)
+    && metadata.costMinorUnits >= 0
+      ? metadata.costMinorUnits
+      : null;
+  if (
+    connectorKey === null
+    || providerKey === null
+    || modelKey === null
+    || costMinorUnits === null
+  ) {
+    throw new Error('AI_OUTPUT_PROVENANCE_INCOMPLETE');
+  }
+
+  const registry = new PostgresProviderRegistryRepository(client);
+  const connectors = await registry.listConnectors(
+    input.tenantId,
+    'ai.generate',
+  );
+  const connector = connectors.find(
+    (entry) => entry.connectorKey === connectorKey,
+  );
+
+  await new PostgresIntelligenceUsageRepository(client).record({
+    // One AI job produces at most one terminal provider execution charge in
+    // this worker. Reusing jobId makes usage reconciliation replay-safe.
+    eventId: input.jobId,
+    tenantId: input.tenantId,
+    organizationId: null,
+    meter: 'AI_REQUEST',
+    quantity: 1,
+    costMinorUnits,
+    currency: 'USD',
+    capabilityKey:
+      typeof metadata.capabilityKey === 'string'
+        ? metadata.capabilityKey
+        : 'ai.generate',
+    connectorKey,
+    providerKey,
+    modelKey,
+    providerCostOwnership:
+      connector?.ownership === 'TENANT' ? 'BYOK' : 'EXPADIO_MANAGED',
+    workReference: `ai-job:${input.jobId}`,
+    occurredAt: input.occurredAt,
+    recordedAt: input.occurredAt,
+    correlationId: input.correlationId,
+    evidenceRefs: [
+      `ai-job:${input.jobId}`,
+      input.outputReference,
+    ],
+  });
+}
+
 async function append(
   repository: PostgresAiJobRepository,
   event: AiJobEvent,
@@ -224,6 +309,18 @@ export async function runAiJobWorkerOnce(
   });
   const snapshot = replayAiJob(job, priorEvents);
   if (snapshot.status === 'SUCCEEDED' || snapshot.status === 'CANCELLED') {
+    if (
+      snapshot.status === 'SUCCEEDED'
+      && snapshot.outputReference?.startsWith('ai-artifact://')
+    ) {
+      await reconcileUsageFromOutputArtifact(client, {
+        tenantId: claim.tenantId,
+        jobId: claim.jobId,
+        correlationId: job.correlationId,
+        outputReference: snapshot.outputReference,
+        occurredAt: snapshot.updatedAt,
+      });
+    }
     const completed = await completeAiJobExecution(client, {
       claim,
       completedAt: now,
@@ -262,6 +359,22 @@ export async function runAiJobWorkerOnce(
       ? []
       : [job.intent.contextReference]),
   ];
+
+  if (!DURABLE_TEXT_OPERATIONS.has(job.intent.operation)) {
+    return retryOrDead(client, {
+      claim,
+      repository,
+      sequence: sequence + 1,
+      actorSubjectId: serviceSubjectId,
+      correlationId: job.correlationId,
+      evidenceRefs,
+      failureCode: 'AI_OPERATION_NOT_DURABLE_IN_WORKER',
+      reason:
+        `AI operation ${job.intent.operation} is not enabled in the durable text worker.`,
+      maximumAttempts: 1,
+      now,
+    });
+  }
 
   try {
     const inputArtifact = await loadAiJobArtifact(client, {
@@ -395,6 +508,7 @@ export async function runAiJobWorkerOnce(
               confidence: proposal.confidence ?? null,
               costMinorUnits:
                 proposal.provenance.costMinorUnits ?? 0,
+              capabilityKey,
             },
             createdBySubjectId: serviceSubjectId,
           });
@@ -423,33 +537,12 @@ export async function runAiJobWorkerOnce(
       costMinorUnits: proposal.provenance.costMinorUnits ?? 0,
     });
 
-    await new PostgresIntelligenceUsageRepository(client).record({
-      eventId: randomUUID(),
+    await reconcileUsageFromOutputArtifact(client, {
       tenantId: claim.tenantId,
-      organizationId: null,
-      meter: 'AI_REQUEST',
-      quantity: 1,
-      costMinorUnits: proposal.provenance.costMinorUnits ?? 0,
-      currency: 'USD',
-      capabilityKey,
-      connectorKey: proposal.provenance.connectorKey,
-      providerKey: proposal.provenance.providerKey,
-      modelKey: proposal.provenance.modelKey,
-      providerCostOwnership:
-        connectors.find(
-          (entry) =>
-            entry.connectorKey === proposal.provenance.connectorKey,
-        )?.ownership === 'TENANT'
-          ? 'BYOK'
-          : 'EXPADIO_MANAGED',
-      workReference: `ai-job:${claim.jobId}`,
-      occurredAt: completedAt.toISOString(),
-      recordedAt: completedAt.toISOString(),
+      jobId: claim.jobId,
       correlationId: job.correlationId,
-      evidenceRefs: [
-        `ai-job:${claim.jobId}`,
-        outputReference,
-      ],
+      outputReference,
+      occurredAt: completedAt.toISOString(),
     });
 
     const completed = await completeAiJobExecution(client, {
