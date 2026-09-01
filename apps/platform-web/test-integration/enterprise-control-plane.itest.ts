@@ -72,6 +72,38 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
 
     assert.equal(submitted.idempotent, false);
     assert.equal(submitted.request.status, 'SUBMITTED');
+    assert.equal(submitted.request.enterpriseId, enterpriseId);
+
+    await c.query('BEGIN');
+    const replay = await requestChildOrganization(c, {
+      tenantId,
+      enterpriseId,
+      parentOrganizationId: rootOrganizationId,
+      name: 'Canada Operations',
+      organizationKind: 'COUNTRY',
+      requestedBySubjectId: 'enterprise-requester',
+      correlationId: randomUUID(),
+      idempotencyKey: 'enterprise-canada-create',
+    });
+    await c.query('COMMIT');
+    assert.equal(replay.idempotent, true);
+    assert.equal(replay.request.requestId, submitted.request.requestId);
+
+    await c.query('BEGIN');
+    await assert.rejects(
+      () => requestChildOrganization(c, {
+        tenantId,
+        enterpriseId,
+        parentOrganizationId: rootOrganizationId,
+        name: 'Different Canada Organization',
+        organizationKind: 'COUNTRY',
+        requestedBySubjectId: 'enterprise-requester',
+        correlationId: randomUUID(),
+        idempotencyKey: 'enterprise-canada-create',
+      }),
+      /ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT/,
+    );
+    await c.query('ROLLBACK');
 
     await c.query('BEGIN');
     await assert.rejects(
