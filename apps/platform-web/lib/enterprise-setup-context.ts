@@ -12,6 +12,9 @@ export interface EnterpriseSetupAccessContext {
   readonly organizationId: string;
   readonly setupPlanId: string;
   readonly role: 'OWNER' | 'CONTRIBUTOR' | 'REVIEWER';
+  readonly organizationName: string;
+  readonly organizationKind: string;
+  readonly parentOrganizationId: string | null;
 }
 
 export class EnterpriseSetupDenied extends Error {
@@ -70,15 +73,37 @@ export async function listSetupAccessForCurrentUser(): Promise<
     );
     await client.query('COMMIT');
 
-    return result.rows.map((row) => ({
-      subjectId: userId,
-      issuer: ISSUER,
-      tenantId: row.tenant_id,
-      enterpriseId: row.enterprise_id,
-      organizationId: row.organization_id,
-      setupPlanId: row.setup_plan_id,
-      role: row.role,
-    }));
+    const contexts: EnterpriseSetupAccessContext[] = [];
+    for (const row of result.rows) {
+      await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', row.tenant_id]);
+      const organization = await client.query<{
+        name: string;
+        organization_kind: string;
+        parent_organization_id: string | null;
+      }>(
+        `SELECT name, organization_kind, parent_organization_id
+           FROM platform.organizations
+          WHERE tenant_id = $1::uuid
+            AND organization_id = $2::uuid
+          LIMIT 1`,
+        [row.tenant_id, row.organization_id],
+      );
+      const org = organization.rows[0];
+      if (!org) continue;
+      contexts.push({
+        subjectId: userId,
+        issuer: ISSUER,
+        tenantId: row.tenant_id,
+        enterpriseId: row.enterprise_id,
+        organizationId: row.organization_id,
+        setupPlanId: row.setup_plan_id,
+        role: row.role,
+        organizationName: org.name,
+        organizationKind: org.organization_kind,
+        parentOrganizationId: org.parent_organization_id,
+      });
+    }
+    return contexts;
   } catch (error) {
     try {
       await client.query('ROLLBACK');
@@ -145,6 +170,27 @@ export async function withSetupParticipantTransaction<T>(
       row.organization_id,
     ]);
 
+    const organization = await client.query<{
+      name: string;
+      organization_kind: string;
+      parent_organization_id: string | null;
+    }>(
+      `SELECT name, organization_kind, parent_organization_id
+         FROM platform.organizations
+        WHERE tenant_id = $1::uuid
+          AND organization_id = $2::uuid
+        LIMIT 1`,
+      [row.tenant_id, row.organization_id],
+    );
+    const org = organization.rows[0];
+    if (!org) {
+      throw new EnterpriseSetupDenied(
+        'ENTERPRISE_SETUP_ORGANIZATION_NOT_FOUND',
+        'The organization assigned to this setup plan is unavailable.',
+        404,
+      );
+    }
+
     const context: EnterpriseSetupAccessContext = {
       subjectId: userId,
       issuer: ISSUER,
@@ -153,6 +199,9 @@ export async function withSetupParticipantTransaction<T>(
       organizationId: row.organization_id,
       setupPlanId: row.setup_plan_id,
       role: row.role,
+      organizationName: org.name,
+      organizationKind: org.organization_kind,
+      parentOrganizationId: org.parent_organization_id,
     };
 
     const result = await work(client, context);
