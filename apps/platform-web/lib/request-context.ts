@@ -7,11 +7,8 @@ import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
 /**
  * Design spec §0.2 G5 — un-scaffolding.
  *
- * Communications API routes used to hardcode
- *   tenantId: '00000000-0000-0000-0000-000000000001'
- *   organizationId: '00000000-0000-0000-0000-000000000002'
- *
- * That was scaffolding presenting as wiring. Tenant selection now arrives on
+ * Several early API routes used fixed demo tenant/organization identifiers.
+ * That scaffolding has been removed from runtime context resolution. Tenant selection now arrives on
  * the `x-expadio-tenant-id` / `x-expadio-organization-id` request headers,
  * which `proxy.ts` injects from the shell's active workspace
  * (`?account=<tenantId>&org=<organizationId>`, with a cookie fallback).
