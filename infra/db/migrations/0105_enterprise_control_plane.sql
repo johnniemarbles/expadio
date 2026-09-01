@@ -665,4 +665,184 @@ CREATE POLICY enterprise_change_requests_tenant_all ON platform.enterprise_chang
   FOR ALL USING (tenant_id = platform.current_tenant_id())
   WITH CHECK (tenant_id = platform.current_tenant_id());
 
+
+-- Hierarchical membership bootstrap. Existing IAM resolution remains exact-org
+-- based; this function expands a persisted membership into the organizations
+-- that its scope mode authorizes, so downstream context resolution needs no
+-- tenant-wide bypass and no new IAM model.
+
+CREATE POLICY membership_organizations_subject_bootstrap_select
+  ON platform.membership_organizations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.membership_id = membership_organizations.membership_id
+        AND membership.tenant_id = membership_organizations.tenant_id
+        AND membership.subject_id = platform.current_subject_id()
+        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+    )
+  );
+
+CREATE POLICY organization_closure_subject_bootstrap_select
+  ON platform.organization_closure
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.tenant_id = organization_closure.tenant_id
+        AND membership.organization_id = organization_closure.ancestor_organization_id
+        AND membership.subject_id = platform.current_subject_id()
+        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+    )
+  );
+
+CREATE POLICY organizations_subject_hierarchy_bootstrap_select
+  ON platform.organizations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.tenant_id = organizations.tenant_id
+        AND membership.subject_id = platform.current_subject_id()
+        AND membership.issuer IS NOT DISTINCT FROM platform.current_issuer()
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+        AND (
+          (
+            membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
+            AND membership.organization_id = organizations.organization_id
+          )
+          OR (
+            membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
+            AND EXISTS (
+              SELECT 1
+              FROM platform.organization_closure closure
+              WHERE closure.tenant_id = membership.tenant_id
+                AND closure.ancestor_organization_id = membership.organization_id
+                AND closure.descendant_organization_id = organizations.organization_id
+                AND closure.depth > 0
+            )
+          )
+          OR (
+            membership.organization_scope_mode = 'SELECTED'
+            AND EXISTS (
+              SELECT 1
+              FROM platform.membership_organizations selected
+              WHERE selected.membership_id = membership.membership_id
+                AND selected.tenant_id = membership.tenant_id
+                AND selected.organization_id = organizations.organization_id
+            )
+          )
+        )
+    )
+  );
+
+CREATE OR REPLACE FUNCTION platform.active_memberships_for_subject(
+  p_subject_id text,
+  p_issuer text DEFAULT NULL
+)
+RETURNS TABLE (
+  tenant_id uuid,
+  organization_id uuid,
+  workspace_scope_mode text,
+  workspace_ids uuid[],
+  operating_unit_scope_mode text,
+  operating_unit_ids uuid[]
+)
+LANGUAGE sql
+VOLATILE
+SECURITY DEFINER
+SET search_path = pg_catalog, platform
+AS $
+  WITH bootstrap_context AS MATERIALIZED (
+    SELECT
+      set_config('app.subject_id', p_subject_id, true) AS subject_setting,
+      set_config('app.issuer', COALESCE(p_issuer, ''), true) AS issuer_setting
+  ),
+  active_membership AS (
+    SELECT membership.*
+    FROM bootstrap_context
+    CROSS JOIN platform.memberships membership
+    JOIN platform.tenants tenant
+      ON tenant.tenant_id = membership.tenant_id
+     AND tenant.status = 'ACTIVE'
+    WHERE membership.subject_id = p_subject_id
+      AND membership.status = 'ACTIVE'
+      AND membership.valid_from <= now()
+      AND (membership.valid_until IS NULL OR membership.valid_until > now())
+      AND membership.issuer IS NOT DISTINCT FROM p_issuer
+  ),
+  expanded AS (
+    SELECT membership.membership_id, membership.tenant_id, membership.organization_id,
+           membership.workspace_scope_mode, membership.operating_unit_scope_mode
+    FROM active_membership membership
+    WHERE membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
+
+    UNION
+
+    SELECT membership.membership_id, membership.tenant_id, closure.descendant_organization_id,
+           membership.workspace_scope_mode, membership.operating_unit_scope_mode
+    FROM active_membership membership
+    JOIN platform.organization_closure closure
+      ON closure.tenant_id = membership.tenant_id
+     AND closure.ancestor_organization_id = membership.organization_id
+     AND closure.depth > 0
+    WHERE membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
+
+    UNION
+
+    SELECT membership.membership_id, membership.tenant_id, selected.organization_id,
+           membership.workspace_scope_mode, membership.operating_unit_scope_mode
+    FROM active_membership membership
+    JOIN platform.membership_organizations selected
+      ON selected.membership_id = membership.membership_id
+     AND selected.tenant_id = membership.tenant_id
+    WHERE membership.organization_scope_mode = 'SELECTED'
+  )
+  SELECT
+    expanded.tenant_id,
+    expanded.organization_id,
+    expanded.workspace_scope_mode,
+    CASE
+      WHEN expanded.workspace_scope_mode = 'ALL' THEN NULL::uuid[]
+      ELSE ARRAY(
+        SELECT membership_workspace.workspace_id
+        FROM platform.membership_workspaces membership_workspace
+        WHERE membership_workspace.membership_id = expanded.membership_id
+          AND membership_workspace.tenant_id = expanded.tenant_id
+        ORDER BY membership_workspace.workspace_id
+      )
+    END AS workspace_ids,
+    expanded.operating_unit_scope_mode,
+    CASE
+      WHEN expanded.operating_unit_scope_mode = 'ALL' THEN NULL::uuid[]
+      ELSE ARRAY(
+        SELECT membership_unit.operating_unit_id
+        FROM platform.membership_operating_units membership_unit
+        WHERE membership_unit.membership_id = expanded.membership_id
+          AND membership_unit.tenant_id = expanded.tenant_id
+        ORDER BY membership_unit.operating_unit_id
+      )
+    END AS operating_unit_ids
+  FROM expanded
+  JOIN platform.organizations organization
+    ON organization.organization_id = expanded.organization_id
+   AND organization.tenant_id = expanded.tenant_id
+   AND organization.status = 'ACTIVE'
+  ORDER BY expanded.tenant_id, expanded.organization_id;
+$;
+
+REVOKE ALL ON FUNCTION platform.active_memberships_for_subject(text, text) FROM PUBLIC;
+
 COMMIT;
