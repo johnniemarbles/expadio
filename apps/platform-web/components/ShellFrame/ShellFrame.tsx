@@ -123,12 +123,12 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
       <nav className={styles.primaryNav} aria-label="Platform sections"><p className={styles.navLabel}>Workspace</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>
       <div className={styles.sidebarFoot}>
-        <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--green)', boxShadow: '0 0 0 4px rgba(22,129,94,.12)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
+        <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--theme-success)', boxShadow: '0 0 0 4px color-mix(in srgb,var(--theme-success) 12%,transparent)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
         <div ref={accountAreaRef} className={styles.accountArea} style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <UserButton appearance={{ elements: { userButtonAvatarBox: { width: 32, height: 32 } } }} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <strong style={{ fontSize: '13px', lineHeight: 1.2, fontWeight: 600 }}>My Account</strong>
-            <small style={{ fontSize: '11px', color: 'var(--ink-500)' }}>Manage Identity</small>
+            <small style={{ fontSize: '11px', color: 'var(--theme-text-muted)' }}>Manage Identity</small>
           </div>
         </div>
       </div>
