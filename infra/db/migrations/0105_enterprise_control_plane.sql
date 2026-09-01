@@ -63,6 +63,70 @@ ALTER TABLE platform.organizations
   REFERENCES platform.organizations(organization_id, tenant_id, enterprise_id)
   DEFERRABLE INITIALLY DEFERRED;
 
+
+CREATE OR REPLACE FUNCTION platform.bootstrap_default_enterprise_for_tenant()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  INSERT INTO platform.enterprise_profiles (
+    enterprise_id, tenant_id, name, mode, status, created_by_subject_id
+  ) VALUES (
+    gen_random_uuid(), NEW.tenant_id, NEW.name, 'SIMPLE', 'ACTIVE', 'tenant-bootstrap'
+  )
+  ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER tenants_bootstrap_default_enterprise
+AFTER INSERT ON platform.tenants
+FOR EACH ROW EXECUTE FUNCTION platform.bootstrap_default_enterprise_for_tenant();
+
+CREATE OR REPLACE FUNCTION platform.bind_default_enterprise_to_organization()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+DECLARE
+  default_enterprise_id uuid;
+BEGIN
+  IF NEW.enterprise_id IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT enterprise.enterprise_id
+    INTO default_enterprise_id
+    FROM platform.enterprise_profiles enterprise
+   WHERE enterprise.tenant_id = NEW.tenant_id
+     AND enterprise.status = 'ACTIVE'
+   ORDER BY enterprise.created_at ASC, enterprise.enterprise_id ASC
+   LIMIT 1;
+
+  IF default_enterprise_id IS NULL THEN
+    INSERT INTO platform.enterprise_profiles (
+      enterprise_id, tenant_id, name, mode, status, created_by_subject_id
+    )
+    SELECT
+      gen_random_uuid(), tenant.tenant_id, tenant.name, 'SIMPLE', 'ACTIVE', 'organization-bootstrap'
+    FROM platform.tenants tenant
+    WHERE tenant.tenant_id = NEW.tenant_id
+    RETURNING enterprise_id INTO default_enterprise_id;
+  END IF;
+
+  IF default_enterprise_id IS NULL THEN
+    RAISE EXCEPTION 'enterprise profile required for organization tenant %', NEW.tenant_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  NEW.enterprise_id := default_enterprise_id;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER organizations_bind_default_enterprise
+BEFORE INSERT ON platform.organizations
+FOR EACH ROW EXECUTE FUNCTION platform.bind_default_enterprise_to_organization();
+
 CREATE TABLE platform.legal_entities (
   legal_entity_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
