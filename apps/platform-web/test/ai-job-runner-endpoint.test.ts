@@ -20,9 +20,12 @@ test('AI worker endpoint is machine authenticated and tenant scoped', () => {
   assert.doesNotMatch(route, /auth\(\)/);
 });
 
-test('AI worker endpoint is disabled without configured service identity', () => {
+test('AI worker endpoint is disabled without configured service identity or durable storage', () => {
   assert.match(route, /AI_WORKER_IDENTITY_DISABLED/);
   assert.match(route, /serviceSubjectId === ''/);
+  assert.match(route, /loadArtifactStorageEnvironment/);
+  assert.match(route, /AI_ARTIFACT_STORAGE_DISABLED/);
+  assert.match(route, /artifactStorage/);
   assert.match(route, /status: error\.status/);
 });
 
