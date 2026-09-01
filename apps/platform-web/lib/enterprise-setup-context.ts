@@ -15,6 +15,9 @@ export interface EnterpriseSetupAccessContext {
   readonly organizationName: string;
   readonly organizationKind: string;
   readonly parentOrganizationId: string | null;
+  readonly setupState: 'PROVISIONING' | 'CONFIGURING' | 'READY_FOR_ACTIVATION';
+  readonly completionPercent: number;
+  readonly blockingOpenRequirements: number;
 }
 
 export class EnterpriseSetupDenied extends Error {
@@ -35,6 +38,9 @@ interface SetupAccessRow {
   readonly organization_id: string;
   readonly setup_plan_id: string;
   readonly role: EnterpriseSetupAccessContext['role'];
+  readonly state: EnterpriseSetupAccessContext['setupState'];
+  readonly completion_percent: string | number;
+  readonly blocking_open_requirements: number;
 }
 
 export async function listSetupAccessForCurrentUser(): Promise<
@@ -57,7 +63,10 @@ export async function listSetupAccessForCurrentUser(): Promise<
          plan.enterprise_id,
          plan.organization_id,
          plan.setup_plan_id,
-         participant.role
+         participant.role,
+         plan.state,
+         plan.completion_percent,
+         plan.blocking_open_requirements
        FROM platform.organization_setup_participants participant
        JOIN platform.organization_setup_plans plan
          ON plan.tenant_id = participant.tenant_id
@@ -101,6 +110,9 @@ export async function listSetupAccessForCurrentUser(): Promise<
         organizationName: org.name,
         organizationKind: org.organization_kind,
         parentOrganizationId: org.parent_organization_id,
+        setupState: row.state,
+        completionPercent: Number(row.completion_percent),
+        blockingOpenRequirements: Number(row.blocking_open_requirements),
       });
     }
     return contexts;
@@ -140,7 +152,10 @@ export async function withSetupParticipantTransaction<T>(
          plan.enterprise_id,
          plan.organization_id,
          plan.setup_plan_id,
-         participant.role
+         participant.role,
+         plan.state,
+         plan.completion_percent,
+         plan.blocking_open_requirements
        FROM platform.organization_setup_participants participant
        JOIN platform.organization_setup_plans plan
          ON plan.tenant_id = participant.tenant_id
@@ -202,6 +217,9 @@ export async function withSetupParticipantTransaction<T>(
       organizationName: org.name,
       organizationKind: org.organization_kind,
       parentOrganizationId: org.parent_organization_id,
+      setupState: row.state,
+      completionPercent: Number(row.completion_percent),
+      blockingOpenRequirements: Number(row.blocking_open_requirements),
     };
 
     const result = await work(client, context);
