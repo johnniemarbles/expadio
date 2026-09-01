@@ -62,6 +62,7 @@ export async function GET() {
     { id: 'ws_live_gov_analytics', label: 'Decision Analytics', short: 'DA', href: '/governance/analytics' },
     { id: 'ws_live_auth_inspector', label: 'Auth Inspector', short: 'AI', href: '/governance/authorization' },
     { id: 'ws_live_config_manager', label: 'Config Manager', short: 'CM', href: '/configuration' },
+    { id: 'ws_live_appearance', label: 'Appearance', short: 'AP', href: '/appearance' },
     { id: 'ws_live_credentials', label: 'Credentials & Secrets', short: 'CS', href: '/configuration/credentials' },
     { id: 'ws_live_data_pipelines', label: 'Data Pipelines', short: 'DP', href: '/data/pipelines' },
     { id: 'ws_live_context_engine', label: 'Context Engine', short: 'CE', href: '/context-engine' },
