@@ -551,6 +551,13 @@ export async function loadLearningAiRequestStatus(
     readonly actorSubjectId: string;
     readonly actorIssuer: string | null;
     readonly allowAdminRead?: boolean;
+    readonly outputResolver?: (input: {
+      readonly jobId: string;
+      readonly reference: string;
+    }) => Promise<{
+      readonly mediaType: string;
+      readonly content: string;
+    } | null>;
   },
 ): Promise<LearningAiRequestStatus> {
   await requireTenantModuleOperational(client, {
@@ -609,18 +616,13 @@ export async function loadLearningAiRequestStatus(
   let output: LearningAiRequestStatus['output'] = null;
   if (
     snapshot.status === 'SUCCEEDED'
-    && snapshot.outputReference?.startsWith('ai-artifact://')
+    && snapshot.outputReference !== undefined
+    && input.outputResolver !== undefined
   ) {
-    const artifact = await loadAiJobArtifact(client, {
-      tenantId: input.tenantId,
+    output = await input.outputResolver({
       jobId: row.job_id,
       reference: snapshot.outputReference,
-      expectedType: 'OUTPUT',
     });
-    output = {
-      mediaType: artifact.mediaType,
-      content: artifact.content,
-    };
   }
 
   return {
