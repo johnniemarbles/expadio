@@ -13,7 +13,7 @@ import {
 function pool(){return new pg.Pool({
   host:process.env.PGHOST??'localhost',port:Number(process.env.PGPORT??5432),
   user:process.env.PGUSER??'postgres',password:process.env.PGPASSWORD??'postgres',
-  database:process.env.PGDATABASE??'expadio_test',max:1,
+  database:process.env.PGDATABASE??'expadio_test',max:2,
 })}
 
 test('Platform membership grant -> suspend -> restore -> revoke is durable and audited',async()=>{
