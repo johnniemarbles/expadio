@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-const migration = read('../../../infra/db/migrations/0105_enterprise_control_plane.sql');
+const migration = read('../../../infra/db/migrations/0106_enterprise_control_plane.sql');
 const runtime = read('../../../packages/postgres-runtime/src/enterprise.ts');
 const requestContext = read('../lib/request-context.ts');
 const contextRoute = read('../app/api/context/route.ts');
