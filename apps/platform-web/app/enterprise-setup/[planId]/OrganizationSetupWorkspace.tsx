@@ -9,6 +9,7 @@ import styles from '../setup.module.css';
 type SetupRole = 'OWNER' | 'CONTRIBUTOR' | 'REVIEWER';
 type SetupAction = 'START' | 'SATISFY' | 'WAIVE' | 'BLOCK' | 'REOPEN';
 type RequirementStatus = 'PENDING' | 'IN_PROGRESS' | 'SATISFIED' | 'WAIVED' | 'BLOCKED';
+type SatisfactionMode = 'MANUAL' | 'EVIDENCE' | 'AUTOMATED' | 'APPROVAL';
 
 interface SetupContext {
   subjectId: string;
@@ -49,6 +50,7 @@ interface Requirement {
   title: string;
   description: string;
   blocking: boolean;
+  satisfactionMode: SatisfactionMode;
   status: RequirementStatus;
   ownerSubjectId: string | null;
   dueAt: string | null;
@@ -62,11 +64,27 @@ interface Dependency {
   dependsOnRequirementId: string;
 }
 
+interface LegalEntityOption {
+  legalEntityId: string;
+  legalName: string;
+  entityType: string;
+  jurisdictionCountryCode: string;
+}
+
+interface OperatingEntityBinding {
+  bindingId: string;
+  legalEntityId: string;
+  legalName: string;
+  jurisdictionCountryCode: string;
+}
+
 interface PlanResponse {
   context?: SetupContext;
   plan?: SetupPlan;
   requirements?: Requirement[];
   dependencies?: Dependency[];
+  verifiedLegalEntities?: LegalEntityOption[];
+  operatingEntities?: OperatingEntityBinding[];
   denied?: true;
   reasonKey?: string;
   message?: string;
@@ -106,6 +124,7 @@ function stateLabel(state: SetupPlan['state']): string {
 }
 
 function actionsFor(requirement: Requirement, role: SetupRole): SetupAction[] {
+  if (requirement.satisfactionMode === 'AUTOMATED') return [];
   const candidates: SetupAction[] = [];
   if (requirement.status === 'PENDING') candidates.push('START', 'SATISFY', 'WAIVE', 'BLOCK');
   if (requirement.status === 'IN_PROGRESS') candidates.push('SATISFY', 'WAIVE', 'BLOCK');
@@ -149,9 +168,12 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
     description: '',
     category: 'CUSTOM',
     sourceKind: 'CUSTOM',
+    satisfactionMode: 'MANUAL',
     blocking: true,
   });
   const [savingRequirement, setSavingRequirement] = useState(false);
+  const [selectedLegalEntityId, setSelectedLegalEntityId] = useState('');
+  const [assigningOperatingEntity, setAssigningOperatingEntity] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +215,14 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
     const reasonRequired = ['WAIVE', 'BLOCK', 'REOPEN'].includes(actionTarget.action);
     if (reasonRequired && !actionReason.trim()) {
       setMutationError('A reason is required for this governed status change.');
+      return;
+    }
+    if (
+      actionTarget.action === 'SATISFY'
+      && actionTarget.requirement.satisfactionMode === 'EVIDENCE'
+      && !actionEvidence.split(',').some((value) => value.trim() !== '')
+    ) {
+      setMutationError('At least one evidence reference is required.');
       return;
     }
 
@@ -262,6 +292,7 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
         description: '',
         category: 'CUSTOM',
         sourceKind: 'CUSTOM',
+        satisfactionMode: 'MANUAL',
         blocking: true,
       });
       setShowRequirementForm(false);
@@ -273,9 +304,45 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
     }
   }
 
+  async function assignOperatingEntity() {
+    if (!selectedLegalEntityId) {
+      setMutationError('Select a verified legal entity first.');
+      return;
+    }
+    setAssigningOperatingEntity(true);
+    setMutationError('');
+    try {
+      const response = await fetch(
+        '/api/enterprise/setup/plans/' + planId + '/operating-entity',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'idempotency-key': crypto.randomUUID(),
+            'x-correlation-id': crypto.randomUUID(),
+          },
+          body: JSON.stringify({ legalEntityId: selectedLegalEntityId }),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) {
+        setMutationError(body.message ?? body.error ?? 'The operating entity could not be assigned.');
+        return;
+      }
+      setSelectedLegalEntityId('');
+      await load();
+    } catch {
+      setMutationError('The operating entity could not be assigned.');
+    } finally {
+      setAssigningOperatingEntity(false);
+    }
+  }
+
   const context = data?.context;
   const plan = data?.plan;
   const requirements = data?.requirements ?? [];
+  const verifiedLegalEntities = data?.verifiedLegalEntities ?? [];
+  const operatingEntities = data?.operatingEntities ?? [];
 
   return (
     <div className={styles.workspaceShell} data-expadio-theme="platform">
@@ -422,6 +489,22 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
                           <option value="CUSTOM">Custom</option>
                         </select>
                       </div>
+                      <div className={styles.field}>
+                        <label htmlFor="requirement-mode">Completion mode</label>
+                        <select
+                          id="requirement-mode"
+                          value={newRequirement.satisfactionMode}
+                          onChange={(event) =>
+                            setNewRequirement((current) => ({
+                              ...current,
+                              satisfactionMode: event.target.value as 'MANUAL' | 'EVIDENCE',
+                            }))
+                          }
+                        >
+                          <option value="MANUAL">Manual attestation</option>
+                          <option value="EVIDENCE">Evidence required</option>
+                        </select>
+                      </div>
                       <label className={styles.checkboxRow}>
                         <input
                           type="checkbox"
@@ -469,6 +552,8 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
                             <span>•</span>
                             <span>{requirement.sourceKind}</span>
                             <span>•</span>
+                            <span>{requirement.satisfactionMode}</span>
+                            <span>•</span>
                             <span>{requirement.blocking ? 'Blocking' : 'Non-blocking'}</span>
                             {dependencyIds.length > 0 && (
                               <>
@@ -486,6 +571,11 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
                               </>
                             )}
                           </div>
+                          {requirement.satisfactionMode === 'AUTOMATED' && (
+                            <p className={styles.inlineMessage}>
+                              This gate is derived from authoritative enterprise state and cannot be manually completed.
+                            </p>
+                          )}
                           {actions.length > 0 && (
                             <div className={styles.actionRow}>
                               {actions.map((action) => (
@@ -573,7 +663,64 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
               </section>
 
               <aside>
-                <section className={styles.panel} aria-labelledby="summary-title">
+                <section className={styles.panel} aria-labelledby="operating-entity-title">
+                  <div className={styles.panelHeading}>
+                    <h2 id="operating-entity-title">Operating legal entity</h2>
+                  </div>
+                  <div className={styles.panelBody}>
+                    {operatingEntities.length > 0 ? (
+                      <div className={styles.summaryStack}>
+                        {operatingEntities.map((binding) => (
+                          <div className={styles.summaryRow} key={binding.bindingId}>
+                            <span>{binding.jurisdictionCountryCode}</span>
+                            <strong>{binding.legalName}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={styles.inlineMessage}>
+                        No verified legal entity is currently bound as OPERATED_BY.
+                      </p>
+                    )}
+
+                    {context.role === 'OWNER' && (
+                      <div className={[styles.form, styles.sectionGap].join(' ')}>
+                        <div className={styles.field}>
+                          <label htmlFor="operating-entity-select">
+                            Assign verified enterprise entity
+                          </label>
+                          <select
+                            id="operating-entity-select"
+                            value={selectedLegalEntityId}
+                            onChange={(event) => setSelectedLegalEntityId(event.target.value)}
+                          >
+                            <option value="">Select verified entity</option>
+                            {verifiedLegalEntities.map((entity) => (
+                              <option key={entity.legalEntityId} value={entity.legalEntityId}>
+                                {entity.legalName} · {entity.jurisdictionCountryCode}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.button}
+                          disabled={!selectedLegalEntityId || assigningOperatingEntity}
+                          onClick={() => void assignOperatingEntity()}
+                        >
+                          {assigningOperatingEntity ? 'Assigning…' : 'Assign operating entity'}
+                        </button>
+                        {verifiedLegalEntities.length === 0 && (
+                          <p className={styles.inlineMessage}>
+                            No verified legal entities are available in this enterprise. Create and verify one through Enterprise Legal Entities before activation.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className={[styles.panel, styles.sectionGap].join(' ')} aria-labelledby="summary-title">
                   <div className={styles.panelHeading}>
                     <h2 id="summary-title">Readiness summary</h2>
                   </div>
