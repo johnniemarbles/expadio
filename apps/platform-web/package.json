@@ -34,7 +34,9 @@
     "@expadio/industry-packs": "workspace:*",
     "@expadio/governed-actions": "workspace:*",
     "@expadio/workflow": "workspace:*",
-    "@expadio/learning": "workspace:*"
+    "@expadio/learning": "workspace:*",
+    "@expadio/ai-gateway": "workspace:*",
+    "@expadio/provider-registry": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
