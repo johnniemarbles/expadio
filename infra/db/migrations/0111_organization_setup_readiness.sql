@@ -120,6 +120,7 @@ CREATE TABLE platform.organization_setup_requirement_dependencies (
   setup_plan_id uuid NOT NULL,
   setup_requirement_id uuid NOT NULL,
   depends_on_requirement_id uuid NOT NULL,
+  created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (tenant_id, setup_requirement_id, depends_on_requirement_id),
   FOREIGN KEY (setup_requirement_id, tenant_id, setup_plan_id)
