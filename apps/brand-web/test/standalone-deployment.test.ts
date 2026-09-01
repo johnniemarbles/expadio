@@ -16,3 +16,10 @@ test('Brand standalone launcher copies static assets before start',()=>{
   assert.match(launcher,/cp\(sourceStatic, targetStatic/);
   assert.match(launcher,/0\.0\.0\.0/);
 });
+
+
+test('Brand launcher supports Next monorepo standalone layout',()=>{
+  const launcher=read('../scripts/start-standalone.mjs');
+  assert.match(launcher,/join\(standaloneRoot, 'apps', appName, 'server\.js'\)/);
+  assert.match(launcher,/const runtimeRoot = dirname\(serverPath\)/);
+});

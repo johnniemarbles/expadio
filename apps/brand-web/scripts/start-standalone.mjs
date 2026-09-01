@@ -1,23 +1,50 @@
 import { access, cp, mkdir, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const appName = basename(appRoot);
 const standaloneRoot = join(appRoot, '.next', 'standalone');
-const serverPath = join(standaloneRoot, 'server.js');
 const sourceStatic = join(appRoot, '.next', 'static');
-const targetStatic = join(standaloneRoot, '.next', 'static');
 
-await access(serverPath);
+async function firstExisting(paths) {
+  for (const path of paths) {
+    try {
+      await access(path);
+      return path;
+    } catch {
+      // Try the next supported Next.js standalone layout.
+    }
+  }
+  return null;
+}
+
+const serverCandidates = [
+  join(standaloneRoot, 'server.js'),
+  join(standaloneRoot, 'apps', appName, 'server.js'),
+];
+
+const serverPath = await firstExisting(serverCandidates);
+if (!serverPath) {
+  throw new Error(
+    `Next.js standalone server was not found. Checked: ${serverCandidates.join(', ')}`,
+  );
+}
+
 await access(sourceStatic);
+
+const runtimeRoot = dirname(serverPath);
+const targetStatic = join(runtimeRoot, '.next', 'static');
 
 await rm(targetStatic, { recursive: true, force: true });
 await mkdir(dirname(targetStatic), { recursive: true });
 await cp(sourceStatic, targetStatic, { recursive: true });
 
+console.log(`Starting Next.js standalone server: ${serverPath}`);
+
 const child = spawn(process.execPath, [serverPath], {
-  cwd: standaloneRoot,
+  cwd: runtimeRoot,
   stdio: 'inherit',
   env: {
     ...process.env,

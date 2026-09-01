@@ -19,3 +19,11 @@ test('standalone launcher copies static assets and binds Railway-compatible host
   assert.match(launcher,/cp\(sourceStatic, targetStatic/);
   assert.match(launcher,/HOSTNAME: process\.env\.HOSTNAME \|\| '0\.0\.0\.0'/);
 });
+
+
+test('Platform launcher supports Next monorepo standalone layout',()=>{
+  const launcher=read('../scripts/start-standalone.mjs');
+  assert.match(launcher,/join\(standaloneRoot, 'apps', appName, 'server\.js'\)/);
+  assert.match(launcher,/const runtimeRoot = dirname\(serverPath\)/);
+  assert.match(launcher,/const targetStatic = join\(runtimeRoot, '\.next', 'static'\)/);
+});
