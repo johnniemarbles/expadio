@@ -1,55 +1,78 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { authenticateAndResolveContext } from '@expadio/iam';
-import { identityVerifier, membershipRepository, dbPool } from '../../../lib/iam-adapter';
 import type { PlatformOrganization } from '../../../lib/contracts';
+import {
+  deniedResponse,
+  resolveRequestContext,
+  withTenantTransaction,
+} from '../../../lib/request-context';
+import { membershipRepository } from '../../../lib/iam-adapter';
 
 export async function GET(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    const denied: DeniedResult = { denied: true, reasonKey: 'UNAUTHENTICATED', message: 'User is not authenticated' };
-    return NextResponse.json(denied, { status: 401 });
-  }
-
-  const resolve = () =>
-    authenticateAndResolveContext(
-      { identityVerifier, membershipRepository },
-      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
-    );
-
   try {
-    const effectiveContext = await resolve();
-    const result = await dbPool.query(
-      `SELECT organization_id, name, parent_organization_id, organization_kind, status 
-       FROM platform.organizations 
-       WHERE tenant_id = $1 AND organization_id = $2`,
-      [effectiveContext.tenantId, effectiveContext.organizationId]
-    );
-
-    if (result.rowCount === 0) {
-      return NextResponse.json({
-        id: effectiveContext.organizationId,
-        name: 'Unknown Organization',
-        environment: 'production',
-        level: 'platform',
-        parentId: null
-      } as PlatformOrganization);
+    const context = await resolveRequestContext(request);
+    const url = new URL(request.url);
+    const requestedId = url.searchParams.get('id') || context.organizationId;
+    if (!requestedId) {
+      const denied: DeniedResult = {
+        denied: true,
+        reasonKey: 'ORGANIZATION_CONTEXT_REQUIRED',
+        message: 'Select an organization workspace to continue.',
+      };
+      return NextResponse.json(denied, { status: 403 });
     }
 
-    const row = result.rows[0];
-    const org: PlatformOrganization = {
+    const memberships = await membershipRepository.listActiveMemberships({
+      subjectId: context.subjectId,
+      issuer: context.issuer ?? undefined,
+      actorKind: 'user',
+    } as any);
+    const allowed = memberships.some(
+      (membership) =>
+        membership.tenantId === context.tenantId &&
+        membership.organizationId === requestedId,
+    );
+    if (!allowed) {
+      const denied: DeniedResult = {
+        denied: true,
+        reasonKey: 'ORGANIZATION_ACCESS_DENIED',
+        message: 'You do not have access to this organization.',
+      };
+      return NextResponse.json(denied, { status: 403 });
+    }
+
+    const row = await withTenantTransaction(context, async (client) => {
+      const result = await client.query(
+        `SELECT organization_id, enterprise_id, name, parent_organization_id,
+                organization_kind, status
+           FROM platform.organizations
+          WHERE tenant_id = $1::uuid
+            AND organization_id = $2::uuid`,
+        [context.tenantId, requestedId],
+      );
+      return result.rows[0] as any;
+    });
+
+    if (!row) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'ORGANIZATION_NOT_FOUND' } satisfies DeniedResult,
+        { status: 404 },
+      );
+    }
+
+    const organization: PlatformOrganization = {
       id: row.organization_id,
       name: row.name,
-      environment: 'production',
-      level: 'platform',
-      parentId: row.parent_organization_id || null
+      environment: row.organization_kind,
+      level: 'organization',
+      parentId: row.parent_organization_id ?? null,
     };
 
-    return NextResponse.json(org);
-  } catch (error: any) {
-    console.error("Organizations API Error:", error);
-    const denied: DeniedResult = { denied: true, reasonKey: 'INTERNAL_ERROR', message: error.message || 'Unknown error' };
-    return NextResponse.json(denied, { status: 500 });
+    return NextResponse.json(organization, {
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
+  } catch (error) {
+    const denied = deniedResponse(error);
+    return NextResponse.json(denied.body, { status: denied.status });
   }
 }
