@@ -72,6 +72,9 @@ CREATE TABLE platform.organization_setup_requirements (
   title text NOT NULL CHECK (btrim(title) <> ''),
   description text NOT NULL DEFAULT '',
   blocking boolean NOT NULL DEFAULT true,
+  satisfaction_mode text NOT NULL DEFAULT 'MANUAL' CHECK (satisfaction_mode IN (
+    'MANUAL','EVIDENCE','AUTOMATED','APPROVAL'
+  )),
   status text NOT NULL DEFAULT 'PENDING' CHECK (status IN (
     'PENDING','IN_PROGRESS','SATISFIED','WAIVED','BLOCKED'
   )),
