@@ -42,3 +42,20 @@ test('handoff returns an explicit 403 when the caller has no Brand membership', 
   assert.match(handoff, /NO_BRAND_MEMBERSHIP/);
   assert.match(handoff, /status: 403/);
 });
+
+
+test('Brand unavailable state is self-diagnosing and supports Clerk session recovery', () => {
+  const context = read('../lib/brand-context.ts');
+  const layout = read('../app/(workspace)/layout.tsx');
+  const recovery = read('../components/BrandAccessRecovery.tsx');
+  assert.match(context, /diagnoseBrandAccess/);
+  assert.match(context, /NO_MATCHING_MEMBERSHIP/);
+  assert.match(context, /MEMBERSHIP_SUSPENDED/);
+  assert.match(context, /MEMBERSHIP_REVOKED/);
+  assert.match(context, /MEMBERSHIP_EXPIRED/);
+  assert.match(layout, /BrandAccessRecovery/);
+  assert.match(recovery, /Signed in as/);
+  assert.match(recovery, /Sign out & use another account/);
+  assert.match(recovery, /Retry access/);
+  assert.match(recovery, /Compare the Clerk user ID/);
+});

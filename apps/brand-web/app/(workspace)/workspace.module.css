@@ -34,3 +34,9 @@
 .accessCard h1{margin:0;font-size:30px;letter-spacing:-.035em}
 .accessCard p{color:var(--muted);line-height:1.65}
 .accessHint{margin-top:18px;padding:12px 14px;border-radius:10px;background:var(--surface-muted);color:var(--muted);font-size:12px;font-weight:700}
+
+.accessRecovery{display:grid;gap:14px;margin-top:20px}
+.accessIdentity,.accessDiagnostic{display:grid;gap:5px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-muted)}
+.accessIdentity span,.accessDiagnostic span{color:var(--muted);font-size:12px}.accessIdentity code{overflow-wrap:anywhere;font-size:12px;color:var(--muted)}
+.accessDiagnostic p{margin:2px 0 0;font-size:13px;line-height:1.5}.accessActions{display:flex;gap:10px;flex-wrap:wrap}
+.secondaryButton{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;padding:10px 14px;background:var(--surface);color:var(--text);font-weight:750;cursor:pointer}

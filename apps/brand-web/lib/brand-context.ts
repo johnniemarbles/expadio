@@ -65,4 +65,75 @@ export async function hasLearningAdmin(client:pg.PoolClient,subjectId:string):Pr
   return result.rows.length>0;
 }
 
+
+
+export type BrandAccessDiagnosticReason =
+  | 'NO_MATCHING_MEMBERSHIP'
+  | 'MEMBERSHIP_SUSPENDED'
+  | 'MEMBERSHIP_REVOKED'
+  | 'MEMBERSHIP_EXPIRED'
+  | 'ACTIVE_MEMBERSHIP_NOT_RESOLVED';
+
+export interface BrandAccessDiagnostic {
+  readonly subjectId:string;
+  readonly issuer:string;
+  readonly reason:BrandAccessDiagnosticReason;
+  readonly membershipId:string|null;
+  readonly tenantId:string|null;
+  readonly organizationId:string|null;
+  readonly status:'ACTIVE'|'SUSPENDED'|'REVOKED'|null;
+  readonly validUntil:string|null;
+}
+
+export async function diagnoseBrandAccess():Promise<BrandAccessDiagnostic|null>{
+  const {userId}=await auth();
+  if(!userId)return null;
+  const client=await dbPool.connect();
+  try{
+    await client.query('BEGIN');
+    await client.query(
+      `SELECT set_config('app.subject_id',$1,true),
+              set_config('app.issuer',$2,true)`,
+      [userId,ISSUER],
+    );
+    const result=await client.query<{
+      membership_id:string;tenant_id:string;organization_id:string;
+      status:'ACTIVE'|'SUSPENDED'|'REVOKED';valid_until:Date|string|null;
+    }>(
+      `SELECT membership_id,tenant_id,organization_id,status,valid_until
+         FROM platform.memberships
+        WHERE subject_id=$1
+          AND issuer IS NOT DISTINCT FROM $2
+        ORDER BY updated_at DESC
+        LIMIT 1`,
+      [userId,ISSUER],
+    );
+    await client.query('COMMIT');
+    const row=result.rows[0];
+    if(!row){
+      return {
+        subjectId:userId,issuer:ISSUER,reason:'NO_MATCHING_MEMBERSHIP',
+        membershipId:null,tenantId:null,organizationId:null,status:null,validUntil:null,
+      };
+    }
+    const validUntil=row.valid_until===null?null:(row.valid_until instanceof Date?row.valid_until:new Date(row.valid_until)).toISOString();
+    const expired=validUntil!==null&&new Date(validUntil).getTime()<=Date.now();
+    const reason:BrandAccessDiagnosticReason =
+      row.status==='SUSPENDED'?'MEMBERSHIP_SUSPENDED'
+      :row.status==='REVOKED'?'MEMBERSHIP_REVOKED'
+      :expired?'MEMBERSHIP_EXPIRED'
+      :'ACTIVE_MEMBERSHIP_NOT_RESOLVED';
+    return {
+      subjectId:userId,issuer:ISSUER,reason,
+      membershipId:row.membership_id,tenantId:row.tenant_id,organizationId:row.organization_id,
+      status:row.status,validUntil,
+    };
+  }catch(error){
+    try{await client.query('ROLLBACK')}catch{}
+    throw error;
+  }finally{
+    client.release();
+  }
+}
+
 export const brandWorkspaceCookieNames={tenant:TENANT_COOKIE,organization:ORG_COOKIE} as const;
