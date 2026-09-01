@@ -522,8 +522,9 @@ export async function addOrganizationSetupParticipant(
   const existing = await client.query<{
     readonly setup_participant_id: string;
     readonly role: OrganizationSetupParticipantRole;
+    readonly valid_until: Date | string | null;
   }>(
-    `SELECT setup_participant_id, role
+    `SELECT setup_participant_id, role, valid_until
        FROM platform.organization_setup_participants
       WHERE tenant_id = $1::uuid
         AND setup_plan_id = $2::uuid
@@ -536,7 +537,11 @@ export async function addOrganizationSetupParticipant(
   );
   const prior = existing.rows[0];
   if (prior) {
-    if (prior.role === input.role) {
+    const priorValidUntil = prior.valid_until === null ? null : iso(prior.valid_until);
+    const requestedValidUntil =
+      input.validUntil == null ? null : iso(input.validUntil);
+
+    if (prior.role === input.role && priorValidUntil === requestedValidUntil) {
       return { participantId: prior.setup_participant_id, idempotent: true };
     }
 
@@ -555,10 +560,10 @@ export async function addOrganizationSetupParticipant(
       ],
     );
 
-    const roleEvent = await appendSetupEvent(client, {
+    const participantEvent = await appendSetupEvent(client, {
       tenantId: input.tenantId,
       setupPlanId: input.setupPlanId,
-      eventType: 'PARTICIPANT_ROLE_CHANGED',
+      eventType: 'PARTICIPANT_ACCESS_CHANGED',
       fromState: prior.role,
       toState: input.role,
       actorSubjectId: input.createdBySubjectId,
@@ -569,13 +574,15 @@ export async function addOrganizationSetupParticipant(
         subjectId,
         fromRole: prior.role,
         toRole: input.role,
+        fromValidUntil: priorValidUntil,
+        toValidUntil: requestedValidUntil,
       },
     });
-    if (!roleEvent.replay) {
+    if (!participantEvent.replay) {
       await appendSetupDomainEvent(client, {
         tenantId: input.tenantId,
         aggregateId: input.setupPlanId,
-        eventType: 'organization.setup.participant_role_changed',
+        eventType: 'organization.setup.participant_access_changed',
         actorSubjectId: input.createdBySubjectId,
         correlationId: input.correlationId,
         payload: {
@@ -583,6 +590,8 @@ export async function addOrganizationSetupParticipant(
           subjectId,
           fromRole: prior.role,
           toRole: input.role,
+          fromValidUntil: priorValidUntil,
+          toValidUntil: requestedValidUntil,
         },
       });
     }
