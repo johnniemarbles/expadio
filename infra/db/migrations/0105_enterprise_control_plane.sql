@@ -558,15 +558,20 @@ $$;
 CREATE OR REPLACE FUNCTION platform.refresh_organization_closure_after_change()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+AS $
 BEGIN
-  PERFORM platform.refresh_organization_closure(COALESCE(NEW.tenant_id, OLD.tenant_id));
+  IF TG_OP = 'DELETE' THEN
+    PERFORM platform.refresh_organization_closure(OLD.tenant_id);
+    RETURN OLD;
+  END IF;
+
+  PERFORM platform.refresh_organization_closure(NEW.tenant_id);
   IF TG_OP = 'UPDATE' AND OLD.tenant_id IS DISTINCT FROM NEW.tenant_id THEN
     PERFORM platform.refresh_organization_closure(OLD.tenant_id);
   END IF;
-  RETURN COALESCE(NEW, OLD);
+  RETURN NEW;
 END;
-$$;
+$;
 
 CREATE TRIGGER organizations_refresh_closure
 AFTER INSERT OR UPDATE OF parent_organization_id, tenant_id OR DELETE
