@@ -95,10 +95,11 @@ export function isExpadioThemeDefinition(value: unknown): value is ExpadioThemeD
   if (!validStringSection(value.typography, [
     'uiFamily','displayFamily','monoFamily','baseSize','lineHeight','headingWeight','tracking',
   ])) return false;
-  if (!stringRecord(value.geometry)
-    || (value.geometry.density !== 'comfortable' && value.geometry.density !== 'compact')
+  const geometry=value.geometry;
+  if (!stringRecord(geometry)
+    || (geometry.density !== 'comfortable' && geometry.density !== 'compact')
     || !['pagePadding','sectionGap','cardGap','controlRadius','cardRadius','modalRadius']
-      .every((field) => typeof value.geometry![field] === 'string' && safeCssValue(value.geometry![field] as string))) return false;
+      .every((field) => typeof geometry[field] === 'string' && safeCssValue(geometry[field] as string))) return false;
   if (!validStringSection(value.material, [
     'shadowSubtle','shadowCard','shadowElevated','blur','translucency','borderGlow',
   ])) return false;
@@ -107,13 +108,14 @@ export function isExpadioThemeDefinition(value: unknown): value is ExpadioThemeD
     'sidebarWidth','headerHeight','sidebarSurfaceLight','sidebarSurfaceDark',
     'navigationActiveLight','navigationActiveDark','commandSurfaceLight','commandSurfaceDark',
   ])) return false;
-  if (!stringRecord(value.assets)
-    || typeof value.assets.brandName !== 'string'
-    || value.assets.brandName.trim() === ''
-    || value.assets.brandName.length > 100
+  const assets=value.assets;
+  if (!stringRecord(assets)
+    || typeof assets.brandName !== 'string'
+    || assets.brandName.trim() === ''
+    || assets.brandName.length > 100
     || ['logoUrl','faviconUrl','watermarkUrl'].some((field) =>
-      value.assets![field] !== undefined
-      && (typeof value.assets![field] !== 'string' || !/^https:\/\//i.test(value.assets![field] as string))
+      assets[field] !== undefined
+      && (typeof assets[field] !== 'string' || !/^https:\/\//i.test(assets[field] as string))
     )) return false;
   return validPolicy(value.overridePolicy);
 }
