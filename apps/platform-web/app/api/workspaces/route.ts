@@ -37,6 +37,7 @@ export async function GET() {
 
   const workspaces: WorkspaceSection[] = [
     { id: 'ws_live_platform', label: 'Platform Operations', short: 'PL', href: '/' },
+    { id: 'ws_live_health', label: 'Telemetry & Health', short: 'TH', href: '/platform-health' },
     { id: 'ws_live_orgs', label: 'Organizations & CRM', short: 'OR', href: '/organizations' },
     { id: 'ws_live_crm', label: 'CRM', short: 'CR', href: '/crm' },
     { id: 'ws_live_modules', label: 'Tenant Apps & Modules', short: 'TM', href: '/modules' },

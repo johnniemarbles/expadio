@@ -6,6 +6,8 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 
 const dashboard = read('../app/(shell)/platform-health/PlatformHealthDashboard.tsx');
 const page = read('../app/(shell)/platform-health/page.tsx');
+const css = read('../app/(shell)/platform-health/telemetry.module.css');
+const workspaces = read('../app/api/workspaces/route.ts');
 
 test('platform health dashboard consumes only governed health APIs', () => {
   for (const endpoint of [
@@ -39,5 +41,24 @@ test('platform health page preserves workspace query context', () => {
   assert.match(page, /params\.account/);
   assert.match(page, /params\.org/);
   assert.match(page, /queryString=\{q\}/);
-  assert.match(page, /Platform health dashboard/);
+  assert.match(dashboard, /Telemetry Command Center/);
+});
+
+test('telemetry command center is discoverable and uses honest live signals', () => {
+  assert.match(workspaces, /href: '\/platform-health'/);
+  assert.match(workspaces, /Telemetry & Health/);
+  assert.match(dashboard, /POLL_INTERVAL_MS = 30_000/);
+  assert.match(dashboard, /performance\.now\(\)/);
+  assert.match(dashboard, /All governed health APIs currently report a clear snapshot/);
+  assert.doesNotMatch(dashboard, /CPU|Memory|Throughput/);
+});
+
+test('telemetry visual language includes motion with reduced-motion safety', () => {
+  for (const token of ['#09090b', '#121215', '#27272a', '#06b6d4', '#8b5cf6', '#f59e0b']) {
+    assert.match(css, new RegExp(token));
+  }
+  assert.match(css, /prefers-reduced-motion:reduce/);
+  assert.match(css, /--spot-x/);
+  assert.match(dashboard, /aria-live="polite"/);
+  assert.match(dashboard, /aria-modal="true"/);
 });
