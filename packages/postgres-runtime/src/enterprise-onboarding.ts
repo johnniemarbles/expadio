@@ -384,7 +384,6 @@ export async function registerOrganizationSetupRequirement(
     readonly createdBySubjectId: string;
     readonly correlationId: string;
     readonly idempotencyKey: string;
-    readonly systemEvaluation?: boolean;
   },
 ): Promise<{ readonly requirement: OrganizationSetupRequirement; readonly idempotent: boolean }> {
   const requirementKey = input.requirementKey.trim();
@@ -867,6 +866,7 @@ export async function changeOrganizationSetupRequirement(
     readonly evidenceRefs?: readonly string[];
     readonly correlationId: string;
     readonly idempotencyKey: string;
+    readonly systemEvaluation?: boolean;
   },
 ): Promise<{
   readonly requirement: OrganizationSetupRequirement;
