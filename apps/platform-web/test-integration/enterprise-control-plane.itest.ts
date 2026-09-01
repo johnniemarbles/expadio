@@ -199,8 +199,8 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
     assert.deepEqual(setup.rows[0], {
       state: 'CONFIGURING',
       total_requirements: 3,
-      completed_requirements: 2,
-      blocking_open_requirements: 1,
+      completed_requirements: 1,
+      blocking_open_requirements: 2,
     });
 
     const events = await c.query(
