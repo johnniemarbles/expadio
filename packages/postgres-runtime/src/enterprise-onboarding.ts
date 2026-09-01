@@ -66,6 +66,8 @@ export interface OrganizationSetupPlan {
   readonly enterpriseId: string;
   readonly organizationId: string;
   readonly provisioningChangeRequestId: string | null;
+  readonly primaryAdministratorSubjectId: string | null;
+  readonly primaryAdministratorIssuer: string | null;
   readonly version: number;
   readonly state: OrganizationSetupPlanState;
   readonly totalRequirements: number;
@@ -110,6 +112,8 @@ interface SetupPlanRow {
   readonly enterprise_id: string;
   readonly organization_id: string;
   readonly provisioning_change_request_id: string | null;
+  readonly primary_administrator_subject_id: string | null;
+  readonly primary_administrator_issuer: string | null;
   readonly version: number;
   readonly state: OrganizationSetupPlanState;
   readonly total_requirements: number;
@@ -164,7 +168,8 @@ interface SetupEventRow {
 }
 
 const PLAN_SELECT = `setup_plan_id, tenant_id, enterprise_id, organization_id,
-  provisioning_change_request_id, version, state, total_requirements,
+  provisioning_change_request_id, primary_administrator_subject_id,
+  primary_administrator_issuer, version, state, total_requirements,
   completed_requirements, blocking_open_requirements, completion_percent,
   started_by_subject_id, started_at, ready_at, activated_at, updated_at`;
 
@@ -189,6 +194,8 @@ function mapPlan(row: SetupPlanRow): OrganizationSetupPlan {
     enterpriseId: row.enterprise_id,
     organizationId: row.organization_id,
     provisioningChangeRequestId: row.provisioning_change_request_id,
+    primaryAdministratorSubjectId: row.primary_administrator_subject_id,
+    primaryAdministratorIssuer: row.primary_administrator_issuer,
     version: Number(row.version),
     state: row.state,
     totalRequirements: Number(row.total_requirements),
