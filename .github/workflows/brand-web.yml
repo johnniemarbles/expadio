@@ -1,0 +1,32 @@
+name: Brand Web
+on:
+  pull_request:
+    paths:
+      - 'apps/brand-web/**'
+      - 'packages/learning/**'
+      - 'packages/postgres-runtime/**'
+      - 'packages/tenancy/**'
+      - 'infra/db/migrations/009*.sql'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/brand-web.yml'
+concurrency:
+  group: brand-web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.16.0'
+          package-manager-cache: false
+      - run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @expadio/brand-web check

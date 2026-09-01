@@ -1,0 +1,26 @@
+import { randomUUID } from 'node:crypto';
+import { NextResponse } from 'next/server';
+import { activateLearningModule } from '@expadio/postgres-runtime/product-module';
+import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
+
+export async function POST() {
+  try {
+    const context = await resolveBrandContext();
+    const value = await withBrandTransaction(context, async (client) => {
+      if (!(await hasLearningAdmin(client, context.subjectId))) throw new Error('LEARNING_ADMIN_REQUIRED');
+      return activateLearningModule(client, {
+        tenantId: context.tenantId,
+        actorSubjectId: context.subjectId,
+        correlationId: randomUUID(),
+      });
+    });
+    return NextResponse.json(value, { status: value.idempotent ? 200 : 201 });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : 'INTERNAL_ERROR';
+    const status =
+      code === 'LEARNING_ADMIN_REQUIRED' || code === 'MODULE_LOCKED_BY_PLAN' ? 403
+        : code === 'MODULE_UNAVAILABLE' ? 404
+          : 400;
+    return NextResponse.json({ error: code }, { status });
+  }
+}
