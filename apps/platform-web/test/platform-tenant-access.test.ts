@@ -51,3 +51,17 @@ test('a same-workspace pending invitation is idempotent',()=>{
   assert.match(route,/outcome: 'INVITATION_ALREADY_PENDING'/);
   assert.doesNotMatch(route,/ignoreExisting:\s*true/);
 });
+
+
+test('pending Clerk invitation collisions are scope-aware',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/pendingEmailInvitations/);
+  assert.match(route,/INVITATION_PENDING_UNSCOPED/);
+  assert.match(route,/INVITATION_PENDING_OTHER_WORKSPACE/);
+  assert.match(route,/not linked to an EXPADIO workspace/);
+});
+
+test('pending invitation empty state is explicitly workspace-scoped',()=>{
+  const manager=read('../components/TenantAccessManager/TenantAccessManager.tsx');
+  assert.match(manager,/No pending invitations for this workspace/);
+});
