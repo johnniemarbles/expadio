@@ -1,5 +1,6 @@
 packages:
   - 'apps/*'
+  - '!apps/brand-web'
   - 'packages/*'
   - 'modules/*'
   - 'verticals/*'
