@@ -474,10 +474,25 @@ test('Learning event uses shared governed action worker and suspends side effect
       }),
     );
 
+    const suspendedQueue = await c.query<{
+      available_at: Date | string;
+    }>(
+      `SELECT available_at
+         FROM platform.domain_event_outbox
+        WHERE tenant_id = $1::uuid
+          AND event_id = $2::uuid
+        LIMIT 1`,
+      [tenantId, suspendedEventId],
+    );
+    const suspendedAvailableAt = suspendedQueue.rows[0]?.available_at;
+    assert.ok(suspendedAvailableAt);
+    const suspendedDueAt = new Date(suspendedAvailableAt);
+    assert.equal(Number.isNaN(suspendedDueAt.getTime()), false);
+
     const suspendedProcessed = await runUntilEvent(c, {
       tenantId,
       eventId: suspendedEventId,
-      start: new Date('2026-09-01T03:01:00.000Z'),
+      start: new Date(suspendedDueAt.getTime() + 1_000),
     });
     assert.deepEqual(suspendedProcessed.actions, []);
     assert.deepEqual(suspendedProcessed.tasks, []);
