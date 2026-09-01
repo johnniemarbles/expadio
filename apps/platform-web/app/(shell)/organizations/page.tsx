@@ -3,30 +3,83 @@ import styles from '../page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
 import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
-import { requestedOrganizationId, type RouteSearchParams } from '../../../lib/request-context';
+import type { RouteSearchParams } from '../../../lib/request-context';
+import {
+  ReadinessPortfolio,
+  type ReadinessPortfolioItem,
+} from './ReadinessPortfolio';
 
-export default async function OrganizationsPage({ searchParams }: { searchParams: RouteSearchParams }) {
-  const orgs = await fetchApi<any[]>('/api/organizations/list');
-  
+interface OrganizationRow {
+  organization_id: string;
+  name: string;
+  status: string;
+  members?: number;
+  created_at: string;
+}
+
+interface ReadinessPortfolioResponse {
+  parentOrganizationId: string;
+  items: ReadinessPortfolioItem[];
+}
+
+export default async function OrganizationsPage({
+  searchParams,
+}: {
+  searchParams: RouteSearchParams | Promise<RouteSearchParams>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const query = new URLSearchParams();
+  const account = resolvedSearchParams.account;
+  const org = resolvedSearchParams.org;
+  if (typeof account === 'string') query.set('account', account);
+  if (typeof org === 'string') query.set('org', org);
+  const suffix = query.size > 0 ? '?' + query.toString() : '';
+
+  const [orgs, readiness] = await Promise.all([
+    fetchApi<OrganizationRow[]>('/api/organizations/list' + suffix),
+    fetchApi<ReadinessPortfolioResponse>('/api/enterprise/setup/portfolio' + suffix),
+  ]);
+
   if (isDenied(orgs)) return <DeniedState result={orgs} />;
+  const readinessItems = isDenied(readiness) ? [] : readiness.items;
 
   return (
     <>
       <section className={styles.pageHeading} aria-labelledby="page-title">
         <div>
-          <p className={styles.eyebrow}>CRM & Tenancy</p>
+          <p className={styles.eyebrow}>Enterprise structure</p>
           <h1 id="page-title">Organizations</h1>
-          <p>Manage organizational hierarchy and view membership distributions within this tenant.</p>
+          <p>
+            Manage the governed organization hierarchy, monitor descendant onboarding,
+            and activate organizations only after their blocking readiness gates are satisfied.
+          </p>
         </div>
       </section>
 
-      <section className={styles.panel} aria-labelledby="orgs-title">
+      <section className={styles.panel} aria-labelledby="readiness-title">
         <div className={styles.panelHeading}>
           <div>
-            <h2 id="orgs-title">Active Organizations</h2>
+            <p className={styles.eyebrow}>Setup &amp; readiness</p>
+            <h2 id="readiness-title">Descendant onboarding portfolio</h2>
           </div>
+          <span className={styles.countBadge}>{readinessItems.length}</span>
         </div>
-        
+        <ReadinessPortfolio items={readinessItems} />
+      </section>
+
+      <section
+        className={[styles.panel, styles.activityPanel].join(' ')}
+        style={{ marginTop: 16 }}
+        aria-labelledby="orgs-title"
+      >
+        <div className={styles.panelHeading}>
+          <div>
+            <p className={styles.eyebrow}>Hierarchy</p>
+            <h2 id="orgs-title">Accessible organizations</h2>
+          </div>
+          <span className={styles.countBadge}>{orgs.length}</span>
+        </div>
+
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -38,20 +91,37 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
               </tr>
             </thead>
             <tbody>
-              {orgs.map((org) => (
-                <tr key={org.organization_id}>
-                  <td><strong>{org.name}</strong><br /><span className={styles.code}>{org.organization_id}</span></td>
+              {orgs.map((organization) => (
+                <tr key={organization.organization_id}>
                   <td>
-                    <StatePill state={org.status === 'ACTIVE' ? 'Published' : org.status === 'SUSPENDED' ? 'Review' : 'Draft'} />
+                    <strong>{organization.name}</strong>
+                    <br />
+                    <span className={styles.code}>{organization.organization_id}</span>
                   </td>
-                  <td>{org.members || 0}</td>
-                  <td className={styles.muted}>{new Date(org.created_at).toLocaleString()}</td>
+                  <td>
+                    <StatePill
+                      state={
+                        organization.status === 'ACTIVE'
+                          ? 'Published'
+                          : organization.status === 'SUSPENDED'
+                            ? 'Review'
+                            : 'Draft'
+                      }
+                    />
+                  </td>
+                  <td>{organization.members ?? 0}</td>
+                  <td className={styles.muted}>
+                    {new Date(organization.created_at).toLocaleString()}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           {orgs.length === 0 && (
-            <EmptyState title="No organizations" description="No child organizations exist in this tenant yet." />
+            <EmptyState
+              title="No organizations"
+              description="No organizations are currently accessible from this workspace."
+            />
           )}
         </div>
       </section>
