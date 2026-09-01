@@ -63,13 +63,19 @@
 .overlay { display:none; }
 .content { max-width:1450px; margin:0 auto; padding:34px 36px 60px; }
 .content :global(table) { width:100%; border-collapse:collapse; font-size:14px; }
-.content :global(th),.content :global(td) { padding:12px 16px; border-bottom:1px solid var(--theme-border); text-align:left; vertical-align:middle; }
+.content :global(th) { padding:12px 16px; border-bottom:1px solid var(--theme-border); text-align:left; vertical-align:middle; }
+.content :global(td) { padding:12px 16px; border-bottom:1px solid var(--theme-border); text-align:left; vertical-align:middle; }
 .content :global(th) { color:var(--theme-text-muted); font-size:12px; font-weight:800; letter-spacing:.04em; }
 .content :global(tr:last-child td) { border-bottom:0; }
-.content :global(input),.content :global(select),.content :global(textarea) { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); }
-.content :global(input),.content :global(select) { min-height:36px; padding:0 10px; }
+.content :global(input) { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); }
+.content :global(select) { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); }
+.content :global(textarea) { border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text-primary); background:var(--theme-surface-muted); }
+.content :global(input) { min-height:36px; padding:0 10px; }
+.content :global(select) { min-height:36px; padding:0 10px; }
 .content :global(textarea) { padding:10px; }
-.content :global(button:disabled),.content :global(input:disabled),.content :global(select:disabled) { cursor:not-allowed; opacity:.56; }
+.content :global(button:disabled) { cursor:not-allowed; opacity:.56; }
+.content :global(input:disabled) { cursor:not-allowed; opacity:.56; }
+.content :global(select:disabled) { cursor:not-allowed; opacity:.56; }
 @media(max-width:1050px) {
   .appShell { grid-template-columns:78px minmax(0,1fr); }
   .sidebar { padding-inline:11px; }
