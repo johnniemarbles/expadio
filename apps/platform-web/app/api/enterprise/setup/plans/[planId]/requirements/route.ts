@@ -10,10 +10,10 @@ import {
   withSetupParticipantTransaction,
 } from '../../../../../../../lib/enterprise-setup-context';
 
-const ALLOWED_SOURCES = new Set(['TENANT', 'PARENT_POLICY', 'CUSTOM']);
+const ALLOWED_SOURCES = new Set(['CUSTOM']);
 const ALLOWED_CATEGORIES = new Set([
   'ORGANIZATION','LEGAL','GOVERNANCE','ACCESS','FINANCE','COMPLIANCE',
-  'MODULE','VERTICAL','OPERATIONS','DATA','COMMUNICATION','CUSTOM',
+  'OPERATIONS','DATA','COMMUNICATION','CUSTOM',
 ]);
 
 export async function POST(
@@ -48,7 +48,7 @@ export async function POST(
         if (!ALLOWED_SOURCES.has(sourceKind)) {
           throw new EnterpriseSetupDenied(
             'ENTERPRISE_SETUP_REQUIREMENT_SOURCE_FORBIDDEN',
-            'Module and vertical requirements must be injected by their platform runtime.',
+            'Tenant, parent-policy, module, and vertical requirements must be injected by their governing runtime.',
             403,
           );
         }
