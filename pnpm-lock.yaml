@@ -261,6 +261,8 @@ importers:
         specifier: workspace:*
         version: link:../domain-events
 
+  packages/gtm: {}
+
   packages/iam:
     dependencies:
       '@expadio/tenancy':
