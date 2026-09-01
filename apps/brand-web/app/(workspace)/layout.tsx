@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { resolveBrandContext } from '../../lib/brand-context';
+import { BrandContextError, resolveBrandContext } from '../../lib/brand-context';
 import styles from './workspace.module.css';
 
 const NAV = [
@@ -16,7 +16,31 @@ const NAV = [
 ] as const;
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
-  const context = await resolveBrandContext();
+  let context;
+  try {
+    context = await resolveBrandContext();
+  } catch (error) {
+    if (error instanceof BrandContextError && error.code === 'NO_BRAND_MEMBERSHIP') {
+      return (
+        <main className={styles.accessShell}>
+          <section className={styles.accessCard}>
+            <div className={styles.accessMark}>EXPADIO</div>
+            <p className={styles.eyebrow}>Brand workspace access</p>
+            <h1>No Brand workspace assigned</h1>
+            <p>
+              Your identity is authenticated, but it is not assigned to an active tenant
+              and organization in EXPADIO. A Platform administrator must grant Brand
+              membership before this workspace can be opened.
+            </p>
+            <div className={styles.accessHint}>
+              Access is intentionally not auto-provisioned from Brand.
+            </div>
+          </section>
+        </main>
+      );
+    }
+    throw error;
+  }
   const selected = `${context.tenantId}:${context.organizationId}`;
   return (
     <div className={styles.shell}>

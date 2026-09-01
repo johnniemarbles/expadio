@@ -19,3 +19,18 @@ test('Platform-to-Brand handoff revalidates membership before changing workspace
   assert.match(handoff, /BRAND_WORKSPACE_ACCESS_DENIED/);
   assert.match(handoff, /response\.cookies\.set/);
 });
+
+
+test('missing Brand membership renders a controlled access state instead of a server error', () => {
+  const layout = read('../app/(workspace)/layout.tsx');
+  assert.match(layout, /BrandContextError/);
+  assert.match(layout, /NO_BRAND_MEMBERSHIP/);
+  assert.match(layout, /No Brand workspace assigned/);
+  assert.match(layout, /not auto-provisioned from Brand/);
+});
+
+test('handoff returns an explicit 403 when the caller has no Brand membership', () => {
+  const handoff = read('../app/handoff/route.ts');
+  assert.match(handoff, /NO_BRAND_MEMBERSHIP/);
+  assert.match(handoff, /status: 403/);
+});

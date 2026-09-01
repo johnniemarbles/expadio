@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  BrandContextError,
   brandWorkspaceCookieNames,
   resolveBrandContext,
 } from '../../lib/brand-context';
@@ -12,7 +13,22 @@ function safeReturnTo(value: string | null): string {
 }
 
 export async function GET(request: Request) {
-  const context = await resolveBrandContext();
+  let context;
+  try {
+    context = await resolveBrandContext();
+  } catch (error) {
+    if (error instanceof BrandContextError && error.code === 'NO_BRAND_MEMBERSHIP') {
+      return NextResponse.json(
+        {
+          denied: true,
+          reasonKey: 'NO_BRAND_MEMBERSHIP',
+          message: 'This signed-in user has no active Brand workspace membership.',
+        },
+        { status: 403 },
+      );
+    }
+    throw error;
+  }
   const url = new URL(request.url);
   const tenantId = url.searchParams.get('tenant');
   const organizationId = url.searchParams.get('org');
