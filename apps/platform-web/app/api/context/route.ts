@@ -31,14 +31,14 @@ async function loadTenantWorkspaceRows(
     await client.query('SELECT set_config($1, $2, true)', ['app.subject_id', subjectId]);
     await client.query('SELECT set_config($1, $2, true)', ['app.issuer', ISSUER]);
 
-    const [tenant, organizations] = await Promise.all([
-      client.query(
-        'SELECT tenant_id, name FROM platform.tenants WHERE tenant_id = $1::uuid',
-        [tenantId],
-      ),
+    const tenant = await client.query(
+      'SELECT tenant_id, name FROM platform.tenants WHERE tenant_id = $1::uuid',
+      [tenantId],
+    );
+    const organizations =
       organizationIds.length === 0
-        ? Promise.resolve({ rows: [] } as { rows: any[] })
-        : client.query(
+        ? { rows: [] as any[] }
+        : await client.query(
             `SELECT organization_id, tenant_id, enterprise_id, name, organization_kind,
                     parent_organization_id, status
                FROM platform.organizations
@@ -46,8 +46,7 @@ async function loadTenantWorkspaceRows(
                 AND organization_id = ANY($2::uuid[])
               ORDER BY name ASC`,
             [tenantId, organizationIds],
-          ),
-    ]);
+          );
 
     await client.query('COMMIT');
     return { tenant: tenant.rows[0] as any, organizations: organizations.rows as any[] };
