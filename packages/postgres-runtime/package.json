@@ -58,7 +58,8 @@
     "./ai-execution-queue": "./src/ai-execution-queue.ts",
     "./learning-ai": "./src/learning-ai.ts",
     "./execution-artifact": "./src/execution-artifact.ts",
-    "./indexed-artifact-sink": "./src/indexed-artifact-sink.ts"
+    "./indexed-artifact-sink": "./src/indexed-artifact-sink.ts",
+    "./enterprise": "./src/enterprise.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
