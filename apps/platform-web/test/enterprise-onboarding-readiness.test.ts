@@ -88,6 +88,9 @@ test('readiness cannot be bypassed by direct organization or plan state mutation
   assert.match(runtime, /ORGANIZATION_SETUP_AUTOMATED_REQUIREMENT/);
   assert.match(runtime, /ORGANIZATION_SETUP_EVIDENCE_REQUIRED/);
   assert.match(runtime, /ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED/);
+  assert.match(runtime, /ORGANIZATION_SETUP_PRIMARY_ADMIN_OWNER_REQUIRED/);
+  assert.match(runtime, /designateOrganizationSetupPrimaryAdministrator/);
+  assert.match(runtime, /primaryAdministratorSubjectId/);
   assert.match(runtime, /ORGANIZATION_SETUP_ACCESS_HANDOFF_CONFLICT/);
 });
 
@@ -155,8 +158,19 @@ test('pre-activation users receive a dedicated setup workspace instead of normal
   assert.match(setupLanding, /Business-runtime access remains locked/);
   assert.match(setupWorkspace, /Final activation remains controlled by an authorized active ancestor/);
   assert.match(setupWorkspace, /Assign operating entity/);
+  assert.match(setupWorkspace, /Primary administrator/);
+  assert.match(setupWorkspace, /No tenant administration role is automatically granted/);
   assert.match(setupWorkspace, /This gate is derived from authoritative enterprise state/);
   assert.doesNotMatch(setupWorkspace, /activateOrganizationSetup/);
   assert.match(organizationsPage, /Descendant onboarding portfolio/);
   assert.match(organizationsPage, /ReadinessPortfolio/);
+});
+
+test('activation handoff targets an explicitly designated setup owner', () => {
+  assert.match(migration, /primary_administrator_subject_id text/);
+  assert.match(migration, /primary_administrator_issuer text/);
+  assert.match(runtime, /plan\.primaryAdministratorSubjectId/);
+  assert.match(runtime, /plan\.primaryAdministratorIssuer/);
+  assert.match(runtime, /tenant\.membership\.handed_off_from_setup/);
+  assert.match(runtime, /authorizationRolesGranted: \[\]/);
 });
