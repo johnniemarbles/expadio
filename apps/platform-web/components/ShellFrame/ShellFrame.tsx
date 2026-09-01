@@ -7,6 +7,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
 
+function matchesSection(pathname: string, section: WorkspaceSection) {
+  return section.href === "/" ? pathname === "/" : pathname === section.href || pathname.startsWith(section.href + "/");
+}
+
+function sectionDepth(section: WorkspaceSection) {
+  return section.href === "/" ? 0 : section.href.split("/").filter(Boolean).length;
+}
+
 export function ShellFrame({ children, sections, overview, workspaceContext, brandAppOrigin }: { children: React.ReactNode; sections: WorkspaceSection[]; overview: PlatformOverview; workspaceContext: PlatformWorkspaceContext; brandAppOrigin: string | null; }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -25,7 +33,20 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   const allowedOrganizations = useMemo(() => currentAccount ? workspaceContext.organizations.filter((item) => currentAccount.allowedOrganizationIds.includes(item.id)) : [], [currentAccount, workspaceContext.organizations]);
   const currentOrganization = allowedOrganizations.find((item) => item.id === searchParams.get("org")) ?? allowedOrganizations[0] ?? overview.organization;
   const selectableOrganizations = allowedOrganizations.length > 0 ? allowedOrganizations : [currentOrganization];
-  const currentSection = sections.find((item) => item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/")) ?? sections[0];
+  const currentSection = useMemo(() => [...sections].sort((a, b) => sectionDepth(b) - sectionDepth(a)).find((item) => matchesSection(pathname, item)) ?? sections[0], [pathname, sections]);
+  const navigationGroups = useMemo(() => {
+    const groups: Array<{ label: string; items: WorkspaceSection[] }> = [];
+    for (const section of sections) {
+      const label = section.group ?? "Workspace";
+      let group = groups.find((item) => item.label === label);
+      if (!group) {
+        group = { label, items: [] };
+        groups.push(group);
+      }
+      group.items.push(section);
+    }
+    return groups;
+  }, [sections]);
   const brandHref = useMemo(() => {
     if (!brandAppOrigin || !currentAccount || !currentOrganization) return null;
     const url = new URL('/handoff', brandAppOrigin);
@@ -121,7 +142,12 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   return <div className={styles.appShell} data-expadio-theme="platform">
     <aside ref={sidebarRef} className={[styles.sidebar, mobileOpen ? styles.sidebarOpen : ""].join(" ")} aria-label="Platform navigation">
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
-      <nav className={styles.primaryNav} aria-label="Platform sections"><p className={styles.navLabel}>Workspace</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>
+      <nav className={styles.primaryNav} aria-label="Platform sections">
+        {navigationGroups.map((group) => <section className={styles.navGroup} key={group.label} aria-label={group.label}>
+          <p className={styles.navLabel}>{group.label}</p>
+          <div className={styles.navGroupItems}>{group.items.map((section) => <Link href={href(section.href)} className={[styles.navItem, section.priority === "secondary" ? styles.navItemSecondary : "", currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</div>
+        </section>)}
+      </nav>
       <div className={styles.sidebarFoot}>
         <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--theme-success)', boxShadow: '0 0 0 4px color-mix(in srgb,var(--theme-success) 12%,transparent)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
         <div ref={accountAreaRef} className={styles.accountArea} style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -138,7 +164,6 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
       <header className={styles.topbar}>
         <button type="button" ref={mobileMenuRef} className={styles.mobileMenu} onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-expanded={mobileOpen}><span aria-hidden="true">☰</span></button>
         
-        {/* Audience Selector Pills */}
         <div className={styles.audiencePills} role="tablist" aria-label="Audience Scope">
           {brandHref ? (
             <a className={styles.audiencePill} href={brandHref}>
@@ -160,7 +185,6 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
           </button>
         </div>
 
-        {/* Global Search */}
         <div className={styles.searchBar}>
           <span style={{ fontSize: '13px', color: 'var(--ink-400)' }}>🔍</span>
           <input
