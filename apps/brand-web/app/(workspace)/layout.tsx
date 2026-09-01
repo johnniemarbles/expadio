@@ -1,8 +1,9 @@
 import { listTenantProductModules } from '@expadio/postgres-runtime/product-module';
-import { parseProductModuleShellDescriptor } from '@expadio/ui';
+import { compileScopedThemeCss, parseProductModuleShellDescriptor } from '@expadio/ui';
 import { BrandContextError, diagnoseBrandAccess, resolveBrandContext, withBrandTransaction } from '../../lib/brand-context';
 import { BrandAccessRecovery } from '../../components/BrandAccessRecovery';
 import { BrandShellFrame } from '../../components/BrandShellFrame';
+import { loadBrandEffectiveTheme } from '../../lib/effective-theme';
 import styles from './workspace.module.css';
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
@@ -27,9 +28,11 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
     throw error;
   }
 
-  const modules = await withBrandTransaction(context, (client) =>
-    listTenantProductModules(client, context.tenantId)
-  );
+  const state = await withBrandTransaction(context, async (client) => ({
+    modules: await listTenantProductModules(client, context.tenantId),
+    theme: await loadBrandEffectiveTheme(client, context),
+  }));
+  const modules = state.modules;
   const descriptors = modules
     .filter((module) => module.availability === 'ACTIVE')
     .map((module) => parseProductModuleShellDescriptor({
@@ -40,15 +43,19 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
     }))
     .filter((module): module is NonNullable<typeof module> => module !== null);
 
+  const themeCss = compileScopedThemeCss(state.theme.theme, 'brand');
   return (
-    <BrandShellFrame
+    <>
+      <style data-expadio-effective-theme="brand" dangerouslySetInnerHTML={{__html:themeCss}} />
+      <BrandShellFrame
       tenantName={context.tenantName}
       organizationName={context.organizationName}
       workspaces={context.workspaces}
       selectedWorkspace={context.tenantId+':'+context.organizationId}
       modules={descriptors}
-    >
-      {children}
-    </BrandShellFrame>
+      >
+        {children}
+      </BrandShellFrame>
+    </>
   );
 }
