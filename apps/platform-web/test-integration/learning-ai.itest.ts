@@ -297,51 +297,125 @@ test('Learning tutor request executes through governed durable AI worker', async
     const workerNow = new Date(new Date(availableAt).getTime() + 1_000);
 
     let providerCalls = 0;
-    let secretReads = 0;
+    let aiSecretReads = 0;
+    let storageSecretReads = 0;
+    let storageWrites = 0;
+    let storageReads = 0;
+    let bucketChecks = 0;
+
+    const secretResolver = {
+      async resolve(reference: string) {
+        if (reference === credentialRef) {
+          aiSecretReads += 1;
+          return { value: 'sk-learning-ai-itest' };
+        }
+        if (reference === storageCredentialRef) {
+          storageSecretReads += 1;
+          return { value: 'storage-learning-ai-itest' };
+        }
+        assert.fail(`unexpected credential reference: ${reference}`);
+      },
+    };
+
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      const headers = new Headers(init?.headers);
+
+      if (url === 'https://api.openai.com/v1/chat/completions') {
+        providerCalls += 1;
+        assert.equal(
+          headers.get('Authorization'),
+          'Bearer sk-learning-ai-itest',
+        );
+        const payload = JSON.parse(String(init?.body)) as {
+          model: string;
+          messages: Array<{ role: string; content: string }>;
+        };
+        assert.equal(payload.model, 'gpt-4o-mini');
+        assert.equal(
+          payload.messages.at(-1)?.content,
+          'Explain the difference between recall and precision.',
+        );
+        return new Response(
+          JSON.stringify({
+            choices: [{
+              message: {
+                content:
+                  'Recall measures relevant items found; precision measures how many found items are relevant.',
+              },
+            }],
+            usage: { total_tokens: 120 },
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      }
+
+      assert.equal(
+        headers.get('Authorization'),
+        'Bearer storage-learning-ai-itest',
+      );
+      const bucketUrl =
+        `${storageProjectUrl}/storage/v1/bucket/${encodeURIComponent(storageBucket)}`;
+      if (url === bucketUrl && (init?.method ?? 'GET') === 'GET') {
+        bucketChecks += 1;
+        return new Response(
+          JSON.stringify({ id: storageBucket, public: false }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      }
+
+      const writePrefix =
+        `${storageProjectUrl}/storage/v1/object/${encodeURIComponent(storageBucket)}/`;
+      if (url.startsWith(writePrefix) && init?.method === 'POST') {
+        storageWrites += 1;
+        const path = url.slice(writePrefix.length);
+        const body = init.body;
+        const bytes =
+          body instanceof Uint8Array
+            ? body
+            : typeof body === 'string'
+              ? new TextEncoder().encode(body)
+              : new Uint8Array(
+                  await new Response(body as BodyInit | null).arrayBuffer(),
+                );
+        storedObjects.set(path, bytes);
+        return new Response('', { status: 200 });
+      }
+
+      const readPrefix =
+        `${storageProjectUrl}/storage/v1/object/authenticated/${encodeURIComponent(storageBucket)}/`;
+      if (url.startsWith(readPrefix) && (init?.method ?? 'GET') === 'GET') {
+        storageReads += 1;
+        const path = url.slice(readPrefix.length);
+        const bytes = storedObjects.get(path);
+        if (bytes === undefined) {
+          return new Response('not found', { status: 404 });
+        }
+        return new Response(bytes, {
+          status: 200,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+
+      assert.fail(`unexpected fetch URL: ${url}`);
+    };
+
     const worker = await runAiJobWorkerOnce(client, {
       tenantId,
       options: {
         serviceSubjectId,
         now: () => workerNow,
-        secretResolver: {
-          async resolve(reference) {
-            secretReads += 1;
-            assert.equal(reference, credentialRef);
-            return { value: 'sk-learning-ai-itest' };
-          },
-        },
-        fetchImpl: async (input, init) => {
-          providerCalls += 1;
-          assert.equal(
-            String(input),
-            'https://api.openai.com/v1/chat/completions',
-          );
-          const headers = new Headers(init?.headers);
-          assert.equal(
-            headers.get('Authorization'),
-            'Bearer sk-learning-ai-itest',
-          );
-          const payload = JSON.parse(String(init?.body)) as {
-            model: string;
-            messages: Array<{ role: string; content: string }>;
-          };
-          assert.equal(payload.model, 'gpt-4o-mini');
-          assert.equal(
-            payload.messages.at(-1)?.content,
-            'Explain the difference between recall and precision.',
-          );
-          return new Response(
-            JSON.stringify({
-              choices: [{
-                message: {
-                  content:
-                    'Recall measures relevant items found; precision measures how many found items are relevant.',
-                },
-              }],
-              usage: { total_tokens: 120 },
-            }),
-            { status: 200, headers: { 'content-type': 'application/json' } },
-          );
+        secretResolver,
+        fetchImpl,
+        artifactStorage: {
+          projectUrl: storageProjectUrl,
+          bucket: storageBucket,
         },
       },
     });
@@ -352,8 +426,52 @@ test('Learning tutor request executes through governed durable AI worker', async
     }
     assert.equal(worker.connectorKey, connectorKey);
     assert.equal(providerCalls, 1);
-    assert.equal(secretReads, 1);
-    assert.match(worker.outputReference, /^ai-artifact:\/\//);
+    assert.equal(aiSecretReads, 1);
+    assert.equal(storageSecretReads, 1);
+    assert.equal(storageWrites, 1);
+    assert.equal(storageReads, 0);
+    assert.equal(bucketChecks, 1);
+    assert.match(worker.outputReference, /^supabase-storage:\/\//);
+
+    const outputResolver = async (input: {
+      readonly jobId: string;
+      readonly reference: string;
+    }) => {
+      const artifact = await findExecutionArtifactBySource(client, {
+        tenantId,
+        artifactKind: 'AI_TEXT',
+        sourceKind: 'AI_INVOCATION',
+        sourceId: `ai-job:${input.jobId}`,
+      });
+      assert.ok(artifact);
+      assert.equal(artifact.storageReference, input.reference);
+
+      const store = await createGovernedSupabaseArtifactStore(client, {
+        tenantId,
+        organizationId:
+          '00000000-0000-0000-0000-000000000000',
+        serviceSubjectId,
+        correlationId: request.request.correlationId,
+        projectUrl: storageProjectUrl,
+        bucket: storageBucket,
+        requiredResidencyTags: [],
+        requiredComplianceTags: [],
+        secretResolver,
+        fetchImpl,
+        now: () => workerNow,
+      });
+      const resolved = await store.readText({
+        tenantId,
+        reference: input.reference,
+        purpose: `learning.ai.output:${input.jobId}`,
+        requiredResidencyTags: [],
+        requiredComplianceTags: [],
+      });
+      return {
+        mediaType: artifact.mediaType,
+        content: resolved.content,
+      };
+    };
 
     const status = await tx(client, () =>
       loadLearningAiRequestStatus(client, {
@@ -361,6 +479,7 @@ test('Learning tutor request executes through governed durable AI worker', async
         learningAiRequestId: request.request.learningAiRequestId,
         actorSubjectId: learnerSubjectId,
         actorIssuer: learnerIssuer,
+        outputResolver,
       }),
     );
     assert.equal(status.jobStatus, 'SUCCEEDED');
@@ -370,6 +489,9 @@ test('Learning tutor request executes through governed durable AI worker', async
     );
     assert.equal(status.confidence, 0.95);
     assert.equal(status.costMinorUnits, 1);
+    assert.equal(storageSecretReads, 2);
+    assert.equal(storageReads, 1);
+    assert.equal(bucketChecks, 2);
 
     const evidence = await client.query<{
       input_reference: string;
