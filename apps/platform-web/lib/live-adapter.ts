@@ -19,31 +19,31 @@ import {
 } from './brain-contracts';
 import { headers } from 'next/headers';
 import type { AdapterResult } from '@expadio/ui/contracts';
+import { resolvePlatformSelfOrigin } from './self-origin';
 
-// Helper to construct absolute URLs for Server Components
 async function getBaseUrl() {
-  if (typeof window !== 'undefined') return ''; // Browser uses relative URLs
-  
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  
-  // Railway specific environment variable
-  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
-  }
-  
+  if (typeof window !== 'undefined') return '';
+
+  let forwardedHost: string | null = null;
+  let host: string | null = null;
+  let forwardedProto: string | null = null;
   try {
     const headersList = await headers();
-    const host = headersList.get('x-forwarded-host') || headersList.get('host');
-    if (host) {
-      const protocol = host.includes('localhost') ? 'http' : 'https';
-      return `${protocol}://${host}`;
-    }
-  } catch (e) {
-    // Fallback if headers() fails (e.g., outside request context)
+    forwardedHost = headersList.get('x-forwarded-host');
+    host = headersList.get('host');
+    forwardedProto = headersList.get('x-forwarded-proto');
+  } catch {
+    // Request headers are unavailable outside an active request.
   }
-  return process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
+
+  return resolvePlatformSelfOrigin({
+    railwayPublicDomain: process.env.RAILWAY_PUBLIC_DOMAIN,
+    forwardedHost,
+    host,
+    forwardedProto,
+    fallbackPublicUrl: process.env.NEXT_PUBLIC_APP_URL,
+    nodeEnv: process.env.NODE_ENV,
+  }) ?? '';
 }
 
 export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
@@ -54,17 +54,27 @@ export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
     }
     const url = `${baseUrl}${path}`;
     
-    // Forward headers (specifically cookies) if running on the server
+    // Preserve authentication and the workspace context already resolved by
+    // Platform proxy.ts. These headers request a scope; API handlers still
+    // verify membership before reading tenant data.
     const fetchOptions: RequestInit = {};
     if (typeof window === 'undefined') {
       try {
-        const headersList = await headers();
-        const cookieHeader = headersList.get('cookie');
-        if (cookieHeader) {
-          fetchOptions.headers = { 'Cookie': cookieHeader };
+        const incoming = await headers();
+        const forwarded = new Headers();
+        for (const name of [
+          'cookie',
+          'authorization',
+          'x-expadio-tenant-id',
+          'x-expadio-organization-id',
+          'x-expadio-scope',
+        ]) {
+          const value = incoming.get(name);
+          if (value) forwarded.set(name, value);
         }
-      } catch (e) {
-        // Fallback
+        fetchOptions.headers = forwarded;
+      } catch {
+        // API auth will return an explicit denial when no request context exists.
       }
     }
 
