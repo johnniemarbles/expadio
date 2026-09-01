@@ -49,19 +49,18 @@ test("membership in a tenant does not grant a different org in it", () => {
   );
 });
 
-test("platform-admin grant is gated by allowlist and demo switch", () => {
-  const prevOpen = process.env.DEMO_OPEN_ADMIN;
+test("request-time admin grant is not open by default", () => {
   const prevList = process.env.PLATFORM_ADMIN_SUBJECTS;
+  const prevBootstrap = process.env.CLERK_ADMIN_USER_ID;
   try {
-    process.env.DEMO_OPEN_ADMIN = "false";
-    process.env.PLATFORM_ADMIN_SUBJECTS = "user_allowed, user_other";
+    process.env.PLATFORM_ADMIN_SUBJECTS = "user_allowed,user_other";
+    process.env.CLERK_ADMIN_USER_ID = "user_bootstrap";
     assert.equal(shouldGrantPlatformAdmin("user_allowed"), true);
+    assert.equal(shouldGrantPlatformAdmin("user_bootstrap"), true);
     assert.equal(shouldGrantPlatformAdmin("user_random"), false);
-    process.env.DEMO_OPEN_ADMIN = "true";
-    assert.equal(shouldGrantPlatformAdmin("user_random"), true);
   } finally {
-    if (prevOpen === undefined) delete process.env.DEMO_OPEN_ADMIN; else process.env.DEMO_OPEN_ADMIN = prevOpen;
     if (prevList === undefined) delete process.env.PLATFORM_ADMIN_SUBJECTS; else process.env.PLATFORM_ADMIN_SUBJECTS = prevList;
+    if (prevBootstrap === undefined) delete process.env.CLERK_ADMIN_USER_ID; else process.env.CLERK_ADMIN_USER_ID = prevBootstrap;
   }
 });
 
@@ -84,4 +83,19 @@ test("the provider list response type exposes a fingerprint, never a secret", ()
   assert.doesNotMatch(body, /secret|credentialRef|token|password/i);
   // And registration only accepts an external secret reference, never a raw secret.
   assert.match(providers, /credentialRef must be an external secret reference/);
+});
+
+
+test("Platform membership discovery never auto-provisions access", () => {
+  const iam = read("../lib/iam-adapter.ts");
+  const workspaces = read("../app/api/workspaces/route.ts");
+  assert.doesNotMatch(iam, /AutoProvisioningMembershipRepository|INSERT INTO platform\.memberships/);
+  assert.doesNotMatch(workspaces, /Auto-provisioning user|INSERT INTO platform\.memberships/);
+});
+
+test("Clerk webhooks are public to Clerk auth but signature verified in route", () => {
+  const proxy = read("../proxy.ts");
+  const webhook = read("../app/api/webhooks/clerk/route.ts");
+  assert.match(proxy, /\/api\/webhooks/);
+  assert.match(webhook, /verifyWebhook/);
 });

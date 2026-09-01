@@ -18,13 +18,10 @@ import { identityVerifier, membershipRepository, dbPool } from './iam-adapter';
  * Membership is verified below, so the header is a *request* for a tenant, not
  * proof of access.
  *
- * The demo UUID survives only as a bootstrap default: a cold request that
- * carries no selection at all (first load before the shell threads a
- * workspace) resolves to it. Any real selection overrides it, and any
- * selection the caller is not a member of is denied.
+ * A cold request without a selected workspace resolves to the caller's first
+ * active persisted membership. No demo tenant or request-time provisioning is
+ * used.
  */
-
-const DEMO_TENANT = '00000000-0000-0000-0000-000000000001';
 
 export interface ResolvedRequestContext {
   readonly subjectId: string;
@@ -69,9 +66,31 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     if (url.searchParams.has('account')) requestedTenant = url.searchParams.get('account');
     if (url.searchParams.has('org')) requestedOrganization = url.searchParams.get('org');
   }
-  requestedTenant = requestedTenant || DEMO_TENANT;
-  requestedOrganization = requestedOrganization || '00000000-0000-0000-0000-000000000002';
-  
+  const memberships = await membershipRepository.listActiveMemberships({
+    subjectId: userId,
+    issuer: 'https://clerk.expadio.com',
+    actorKind: 'user',
+  } as any);
+  if (memberships.length === 0) {
+    throw new ContextDenied(
+      'NO_PLATFORM_MEMBERSHIP',
+      'No active EXPADIO workspace membership is assigned to this user.',
+      403,
+    );
+  }
+
+  const selectedMembership =
+    memberships.find((membership) =>
+      (!requestedTenant || membership.tenantId === requestedTenant)
+      && (!requestedOrganization || membership.organizationId === requestedOrganization)
+    )
+    ?? memberships.find((membership) =>
+      !requestedTenant || membership.tenantId === requestedTenant
+    )
+    ?? memberships[0];
+
+  requestedTenant = selectedMembership.tenantId;
+  requestedOrganization = selectedMembership.organizationId;
 
   let effective;
   try {

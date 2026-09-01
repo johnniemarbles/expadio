@@ -53,7 +53,51 @@ async function seed() {
       await client.query("UPDATE platform.memberships SET issuer = 'https://clerk.expadio.com' WHERE subject_id = $1", [SUBJECT_ID]);
       console.log(`Subject ${SUBJECT_ID} already has membership. Updated issuer.`);
     }
-    // 4. Seed capabilities
+
+    // 4. Explicit bootstrap administrator role + tenant roles.
+    // This is the only bootstrap privilege path. It runs only when
+    // CLERK_ADMIN_USER_ID (or an explicit CLI subject) is provided.
+    await client.query(
+      `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
+       VALUES ('PLATFORM_SUPER_ADMIN', 'Platform Super Admin', 'PLATFORM', NULL, 'ACTIVE')
+       ON CONFLICT (role_key) WHERE tenant_id IS NULL DO NOTHING`
+    );
+    const tenantRoles = [
+      ['TENANT_OWNER', 'Tenant Owner'],
+      ['TENANT_ADMIN', 'Tenant Admin'],
+      ['TENANT_OPERATOR', 'Tenant Operator'],
+      ['TENANT_FINANCE', 'Tenant Finance'],
+      ['TENANT_COMPLIANCE', 'Tenant Compliance'],
+    ];
+    for (const [roleKey, displayName] of tenantRoles) {
+      await client.query(
+        `INSERT INTO platform.authorization_roles (role_key, display_name, ownership_scope, tenant_id, status)
+         VALUES ($1, $2, 'TENANT', $3::uuid, 'ACTIVE')
+         ON CONFLICT (tenant_id, role_key) WHERE tenant_id IS NOT NULL DO NOTHING`,
+        [roleKey, displayName, DEFAULT_TENANT]
+      );
+    }
+    await client.query(
+      `INSERT INTO platform.authorization_assignments
+         (tenant_id, organization_id, subject_id, role_id, status)
+       SELECT $1::uuid, $2::uuid, $3, r.role_id, 'ACTIVE'
+         FROM platform.authorization_roles r
+        WHERE r.role_key = 'PLATFORM_SUPER_ADMIN'
+          AND r.tenant_id IS NULL
+          AND NOT EXISTS (
+            SELECT 1
+              FROM platform.authorization_assignments a
+             WHERE a.tenant_id = $1::uuid
+               AND a.organization_id = $2::uuid
+               AND a.subject_id = $3
+               AND a.role_id = r.role_id
+               AND a.status = 'ACTIVE'
+          )`,
+      [DEFAULT_TENANT, DEFAULT_ORG, SUBJECT_ID]
+    );
+    console.log(`Granted explicit Platform Super Admin bootstrap to subject: ${SUBJECT_ID}`);
+
+    // 5. Seed capabilities
     const capRes = await client.query('SELECT capability_id FROM platform.capabilities LIMIT 1');
     if (capRes.rowCount === 0) {
       // Create base capabilities
@@ -74,7 +118,7 @@ async function seed() {
       console.log(`Seeded ${caps.length} capabilities.`);
     }
 
-    // 5. Seed capability bindings + state
+    // 6. Seed capability bindings + state
     const bindRes = await client.query('SELECT binding_id FROM platform.tenant_capability_bindings WHERE tenant_id = $1 LIMIT 1', [DEFAULT_TENANT]);
     if (bindRes.rowCount === 0) {
       const capIds = await client.query('SELECT capability_id FROM platform.capabilities ORDER BY created_at');
@@ -95,7 +139,7 @@ async function seed() {
       console.log('Seeded capability bindings and state.');
     }
 
-    // 6. Seed knowledge documents
+    // 7. Seed knowledge documents
     const kdRes = await client.query('SELECT document_reference FROM platform.knowledge_documents WHERE tenant_id = $1 LIMIT 1', [DEFAULT_TENANT]);
     if (kdRes.rowCount === 0) {
       const docs = [
@@ -128,7 +172,7 @@ async function seed() {
       console.log(`Seeded ${docs.length} knowledge documents.`);
     }
 
-    // 7. Seed correction proposals
+    // 8. Seed correction proposals
     const cpRes = await client.query('SELECT proposal_reference FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 LIMIT 1', [DEFAULT_TENANT]);
     if (cpRes.rowCount === 0) {
       const proposals = [
@@ -167,7 +211,7 @@ async function seed() {
     }
 
     
-    // 8. Seed communication templates
+    // 9. Seed communication templates
     const ctRes = await client.query("SELECT template_id FROM platform.communication_templates WHERE trigger_key = 'identity.verification.code' LIMIT 1");
     if (ctRes.rowCount === 0) {
       await client.query(`

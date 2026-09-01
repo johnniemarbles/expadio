@@ -5,12 +5,8 @@ import { membershipRepository, dbPool } from '../../../lib/iam-adapter';
 import type { PlatformWorkspaceContext } from '../../../lib/contracts';
 
 /**
- * Workspace context for the shell's account/org picker, built from the caller's
- * REAL memberships rather than a hardcoded demo tenant. Each tenant the operator
- * belongs to becomes an account; its organizations become selectable workspaces.
- * A first-time operator is auto-provisioned into the demo tenant by the
- * membership repository, so the picker is never empty; a multi-tenant operator
- * sees every tenant they actually belong to.
+ * Workspace context for the shell's account/org picker, built strictly from
+ * active persisted memberships. Reads never create membership or privilege.
  */
 
 export const runtime = 'nodejs';

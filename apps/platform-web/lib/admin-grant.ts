@@ -1,16 +1,14 @@
 /**
- * Whether a subject should receive the platform-admin / tenant-owner grant.
+ * Explicit bootstrap/platform-admin allowlist helper.
  *
- * An explicit allowlist (PLATFORM_ADMIN_SUBJECTS) is the production mechanism;
- * DEMO_OPEN_ADMIN keeps the demo open unless a deployment turns it off. Kept in
- * its own dependency-free module so it is unit-testable without loading the DB
- * pool or Clerk.
+ * No environment default grants privilege. A subject is privileged only when
+ * named explicitly by CLERK_ADMIN_USER_ID or PLATFORM_ADMIN_SUBJECTS.
  */
 export function shouldGrantPlatformAdmin(subjectId: string): boolean {
   const allowlist = (process.env.PLATFORM_ADMIN_SUBJECTS ?? '')
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
-  if (allowlist.includes(subjectId)) return true;
-  return (process.env.DEMO_OPEN_ADMIN ?? 'true').toLowerCase() !== 'false';
+  const bootstrap = process.env.CLERK_ADMIN_USER_ID?.trim();
+  return bootstrap === subjectId || allowlist.includes(subjectId);
 }
