@@ -189,7 +189,7 @@ export function governedThemeProfileValidator(input: {
   };
 }
 
-function validatePatchAgainstPolicy(
+export function validateThemeOverrideAgainstPolicy(
   theme: ExpadioThemeDefinition,
   patch: ThemeOverride,
 ): ConfigurationOverrideValidation {
@@ -308,7 +308,7 @@ export async function resolveGovernedTheme(
       continue;
     }
 
-    const validation = validatePatchAgainstPolicy(theme, candidate.value);
+    const validation = validateThemeOverrideAgainstPolicy(theme, candidate.value);
     if (!validation.allowed) {
       trace.push(traceEntry(candidate, 'REJECTED', validation.code));
       continue;
