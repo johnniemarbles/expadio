@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  replayAiJob,
   type AiJobRegistration,
   type AiOperation,
 } from '@expadio/ai-gateway';
@@ -284,6 +285,50 @@ async function findExistingByJob(
   return result.rows[0] === undefined ? null : map(result.rows[0]);
 }
 
+export async function loadLearningAiSettings(
+  client: PostgresClient,
+  tenantId: string,
+): Promise<{ readonly aiFeaturesEnabled: boolean }> {
+  await requireTenantModuleOperational(client, {
+    tenantId,
+    moduleKey: 'learning',
+  });
+  const result = await client.query<{ readonly ai_features_enabled: boolean }>(
+    `SELECT ai_features_enabled
+       FROM platform.learning_tenant_settings
+      WHERE tenant_id = $1::uuid
+      LIMIT 1`,
+    [tenantId],
+  );
+  const row = result.rows[0];
+  if (row === undefined) throw new Error('LEARNING_SETTINGS_NOT_FOUND');
+  return { aiFeaturesEnabled: row.ai_features_enabled };
+}
+
+export async function updateLearningAiSettings(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly aiFeaturesEnabled: boolean;
+  },
+): Promise<{ readonly aiFeaturesEnabled: boolean }> {
+  await requireTenantModuleOperational(client, {
+    tenantId: input.tenantId,
+    moduleKey: 'learning',
+  });
+  const result = await client.query<{ readonly ai_features_enabled: boolean }>(
+    `UPDATE platform.learning_tenant_settings
+        SET ai_features_enabled = $2,
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+      RETURNING ai_features_enabled`,
+    [input.tenantId, input.aiFeaturesEnabled],
+  );
+  const row = result.rows[0];
+  if (row === undefined) throw new Error('LEARNING_SETTINGS_NOT_FOUND');
+  return { aiFeaturesEnabled: row.ai_features_enabled };
+}
+
 export async function createLearningAiRequest(
   client: PostgresClient,
   input: {
@@ -515,10 +560,7 @@ export async function loadLearningAiRequestStatus(
     tenantId: input.tenantId,
     jobId: row.job_id,
   });
-  const snapshot = (await import('@expadio/ai-gateway')).replayAiJob(
-    job,
-    events,
-  );
+  const snapshot = replayAiJob(job, events);
 
   let output: LearningAiRequestStatus['output'] = null;
   if (
