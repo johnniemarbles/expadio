@@ -40,6 +40,9 @@ export async function POST(request:Request){
       if(!(await hasPlatformAdministrationRole(client,context.subjectId))){
         return {forbidden:true} as const;
       }
+      // Forced RLS permits PLATFORM profile inserts only inside this trusted,
+      // role-verified control-plane transaction. The flag is transaction-local.
+      await client.query("SELECT set_config('app.platform_admin','true',true)");
 
       let value:ExpadioThemeDefinition|null=preset(body.presetKey);
       let evidence='appearance:preset-publication';
