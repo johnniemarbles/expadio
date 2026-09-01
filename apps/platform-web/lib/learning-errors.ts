@@ -109,6 +109,16 @@ export function learningApiError(error: unknown): LearningApiError | null {
           message: 'Learning AI features are disabled for this tenant.',
         },
       };
+    case 'LEARNING_AI_ARTIFACT_STORAGE_UNAVAILABLE':
+    case 'LEARNING_AI_ARTIFACT_READER_IDENTITY_DISABLED':
+      return {
+        status: 503,
+        body: {
+          denied: true,
+          reasonKey: error.message,
+          message: 'Learning AI result storage is temporarily unavailable.',
+        },
+      };
     case 'LEARNING_AI_LEARNER_ACCESS_DENIED':
     case 'LEARNING_AI_REQUEST_ACCESS_DENIED':
       return {
@@ -204,6 +214,7 @@ export function learningApiError(error: unknown): LearningApiError | null {
     case 'LEARNING_AI_COURSE_NOT_FOUND':
     case 'LEARNING_AI_REQUEST_NOT_FOUND':
     case 'LEARNING_AI_JOB_NOT_FOUND':
+    case 'LEARNING_AI_OUTPUT_PROVENANCE_NOT_FOUND':
     case 'LEARNING_SETTINGS_NOT_FOUND':
       return {
         status: 404,
