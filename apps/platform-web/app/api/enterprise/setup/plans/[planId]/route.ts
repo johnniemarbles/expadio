@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   findOrganizationSetupPlan,
   listOrganizationOperatingEntities,
+  listOrganizationSetupParticipants,
   listOrganizationSetupRequirements,
   listVerifiedEnterpriseLegalEntities,
 } from '@expadio/postgres-runtime/enterprise-onboarding';
@@ -35,6 +36,7 @@ export async function GET(
           dependencyRows,
           verifiedLegalEntities,
           operatingEntities,
+          participants,
         ] = await Promise.all([
           listOrganizationSetupRequirements(client, {
             tenantId: context.tenantId,
@@ -59,6 +61,10 @@ export async function GET(
             tenantId: context.tenantId,
             organizationId: context.organizationId,
           }),
+          listOrganizationSetupParticipants(client, {
+            tenantId: context.tenantId,
+            setupPlanId: planId,
+          }),
         ]);
 
         return {
@@ -71,6 +77,7 @@ export async function GET(
           })),
           verifiedLegalEntities,
           operatingEntities,
+          participants,
         };
       },
     );
