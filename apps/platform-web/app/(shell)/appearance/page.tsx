@@ -1,9 +1,9 @@
 import { isExpadioThemeDefinition } from '@expadio/ui';
 import { listPlatformThemeProfiles } from '@expadio/postgres-runtime/theme-configuration';
 import { PlatformAppearanceManager } from './PlatformAppearanceManager';
-import { loadPlatformEffectiveTheme } from '../../lib/effective-theme';
-import { hasPlatformAdministrationRole } from '../../lib/governance-authz';
-import { resolveRequestContext, withTenantTransaction } from '../../lib/request-context';
+import { loadPlatformEffectiveTheme } from '@/lib/effective-theme';
+import { hasPlatformAdministrationRole } from '@/lib/governance-authz';
+import { resolveRequestContext, withTenantTransaction } from '@/lib/request-context';
 import styles from './appearance.module.css';
 
 export const dynamic='force-dynamic';
