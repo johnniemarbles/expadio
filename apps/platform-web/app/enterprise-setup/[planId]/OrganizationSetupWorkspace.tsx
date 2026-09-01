@@ -417,16 +417,9 @@ export function OrganizationSetupWorkspace({ planId }: { planId: string }) {
                         <select
                           id="requirement-source"
                           value={newRequirement.sourceKind}
-                          onChange={(event) =>
-                            setNewRequirement((current) => ({
-                              ...current,
-                              sourceKind: event.target.value,
-                            }))
-                          }
+                          disabled
                         >
                           <option value="CUSTOM">Custom</option>
-                          <option value="TENANT">Tenant policy</option>
-                          <option value="PARENT_POLICY">Parent policy</option>
                         </select>
                       </div>
                       <label className={styles.checkboxRow}>
