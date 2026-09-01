@@ -40,6 +40,24 @@ type ClerkApiErrorItem = {
   longMessage?: string;
 };
 
+
+function tenantAccessErrorResponse(error: unknown, correlationId: string): NextResponse | null {
+  if (!(error instanceof Error)) return null;
+  const safe = new Map<string, { status: number; message: string }>([
+    ['TENANT_ACCESS_WINDOW_INVALID', { status: 400, message: 'Access expiry must be in the future.' }],
+    ['TENANT_ACCESS_ORGANIZATION_INVALID', { status: 409, message: 'The selected organization is not active for this tenant.' }],
+    ['TENANT_ACCESS_ROLE_NOT_CONFIGURED', { status: 409, message: 'The selected tenant role is not configured for this tenant.' }],
+    ['TENANT_ACCESS_WRITE_FAILED', { status: 500, message: 'EXPADIO could not persist the tenant access grant.' }],
+  ]);
+  const mapped = safe.get(error.message);
+  if (!mapped) return null;
+  console.error('Tenant access operation failed', { reasonKey: error.message, correlationId });
+  return NextResponse.json(
+    { denied: true, reasonKey: error.message, message: mapped.message, correlationId },
+    { status: mapped.status },
+  );
+}
+
 function clerkInvitationErrorResponse(error: unknown): NextResponse | null {
   if (!error || typeof error !== 'object') return null;
   const candidate = error as { status?: unknown; errors?: unknown };
@@ -286,16 +304,51 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    await withTenantTransaction(context, (client) =>
-      recordTenantInvitation(client, {
-        tenantId: context.tenantId,
-        organizationId,
+    try {
+      await withTenantTransaction(context, (client) =>
+        recordTenantInvitation(client, {
+          tenantId: context.tenantId,
+          organizationId,
+          invitationId: invitation.id,
+          roleKey,
+          actorSubjectId: context.subjectId,
+          correlationId,
+        })
+      );
+    } catch (auditError) {
+      console.error('Invitation audit persistence failed', {
         invitationId: invitation.id,
-        roleKey,
-        actorSubjectId: context.subjectId,
         correlationId,
-      })
-    );
+        error: auditError instanceof Error ? auditError.message : String(auditError),
+      });
+      try {
+        await clerk.invitations.revokeInvitation(invitation.id);
+      } catch (revokeError) {
+        console.error('CRITICAL: invitation audit failed and compensation revoke failed', {
+          invitationId: invitation.id,
+          correlationId,
+          error: revokeError instanceof Error ? revokeError.message : String(revokeError),
+        });
+        return NextResponse.json(
+          {
+            denied: true,
+            reasonKey: 'INVITATION_STATE_UNCERTAIN',
+            message: 'The invitation may have been created, but EXPADIO could not persist its audit record or confirm rollback. Check Clerk pending invitations before retrying.',
+            correlationId,
+          },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json(
+        {
+          denied: true,
+          reasonKey: 'INVITATION_AUDIT_FAILED_ROLLED_BACK',
+          message: 'Clerk created the invitation, but EXPADIO could not persist its audit record. The invitation was revoked automatically; retry after checking Platform logs.',
+          correlationId,
+        },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({
       outcome: 'INVITATION_SENT',
@@ -306,15 +359,18 @@ export async function POST(request: Request) {
       },
     }, { status: 202 });
   } catch (error: any) {
-    if (error instanceof Error && error.message === 'TENANT_ACCESS_ROLE_NOT_CONFIGURED') {
-      return NextResponse.json(
-        { denied: true, reasonKey: error.message, message: 'The selected tenant role is not configured for this tenant.' },
-        { status: 409 },
-      );
-    }
+    const correlationId =
+      request.headers.get('x-correlation-id')?.trim()
+      || (error && typeof error === 'object' && typeof error.correlationId === 'string' ? error.correlationId : randomUUID());
+    const accessResponse = tenantAccessErrorResponse(error, correlationId);
+    if (accessResponse) return accessResponse;
     const clerkResponse = clerkInvitationErrorResponse(error);
     if (clerkResponse) return clerkResponse;
+    console.error('Unhandled tenant invitation failure', {
+      correlationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     const { body, status } = deniedResponse(error);
-    return NextResponse.json(body, { status });
+    return NextResponse.json({ ...body, correlationId }, { status });
   }
 }

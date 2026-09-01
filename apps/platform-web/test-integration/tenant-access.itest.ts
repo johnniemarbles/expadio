@@ -6,6 +6,7 @@ import {
   grantTenantMembership,
   listTenantMemberships,
   setTenantMembershipStatus,
+  recordTenantInvitation,
 } from '../lib/tenant-access';
 
 function pool(){return new pg.Pool({
@@ -69,5 +70,39 @@ test('Platform membership grant -> suspend -> restore -> revoke is durable and a
       {event_type:'tenant.membership.revoked',count:1},
       {event_type:'tenant.membership.suspended',count:1},
     ]);
+  }finally{try{await c.query('ROLLBACK')}catch{}c.release();await p.end()}
+});
+
+
+test('Clerk-style invitation ids append tenant access audit event and outbox row',async()=>{
+  const p=pool();const c=await p.connect();
+  const tenantId=randomUUID(),orgId=randomUUID();
+  const invitationId=`inv_${randomUUID().replaceAll('-','')}`;
+  const correlationId=randomUUID();
+  try{
+    await c.query(`INSERT INTO platform.tenants(tenant_id,name)VALUES($1,'Invite audit tenant')`,[tenantId]);
+    await c.query(`INSERT INTO platform.organizations(organization_id,tenant_id,name)VALUES($1,$2,'Invite audit org')`,[orgId,tenantId]);
+    await c.query(`SELECT set_config('app.tenant_id',$1,false)`,[tenantId]);
+    await c.query('BEGIN');
+    await recordTenantInvitation(c,{
+      tenantId,organizationId:orgId,invitationId,roleKey:'TENANT_ADMIN',
+      actorSubjectId:'platform-admin',correlationId,
+    });
+    await c.query('COMMIT');
+
+    const event=await c.query(`SELECT event_id,aggregate_id,event_type,correlation_id
+      FROM platform.domain_events
+      WHERE tenant_id=$1 AND aggregate_type='tenant.access' AND aggregate_id=$2`,
+      [tenantId,invitationId]);
+    assert.equal(event.rowCount,1);
+    assert.equal(event.rows[0].event_type,'tenant.membership.invited');
+    assert.equal(event.rows[0].correlation_id,correlationId);
+
+    const outbox=await c.query(`SELECT o.status
+      FROM platform.domain_event_outbox o
+      JOIN platform.domain_events e ON e.event_id=o.event_id AND e.tenant_id=o.tenant_id
+      WHERE e.tenant_id=$1 AND e.aggregate_id=$2`,[tenantId,invitationId]);
+    assert.equal(outbox.rowCount,1);
+    assert.equal(outbox.rows[0].status,'PENDING');
   }finally{try{await c.query('ROLLBACK')}catch{}c.release();await p.end()}
 });
