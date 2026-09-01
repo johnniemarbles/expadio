@@ -118,7 +118,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
     requestAnimationFrame(() => accountButtonRef.current?.focus());
   }
 
-  return <div className={styles.appShell}>
+  return <div className={styles.appShell} data-expadio-theme="platform">
     <aside ref={sidebarRef} className={[styles.sidebar, mobileOpen ? styles.sidebarOpen : ""].join(" ")} aria-label="Platform navigation">
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
       <nav className={styles.primaryNav} aria-label="Platform sections"><p className={styles.navLabel}>Workspace</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>

@@ -33,7 +33,7 @@ export function BrandShellFrame({
   const pinned=ordered.filter((module)=>module.defaultPinned).slice(0,5);
   const active=ordered.find((module)=>pathname===module.baseRoute||pathname.startsWith(module.baseRoute+'/'))??null;
 
-  return <div className={styles.shell}>
+  return <div className={styles.shell} data-expadio-theme="brand">
     <aside className={styles.sidebar} aria-label="Brand navigation">
       <div className={styles.brandLockup}>
         <span className={styles.brandGlyph}>E</span>

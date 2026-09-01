@@ -19,7 +19,8 @@
     "pg": "^8.23.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "@expadio/ui": "workspace:*"
+    "@expadio/ui": "workspace:*",
+    "@expadio/business-config": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

@@ -88,3 +88,16 @@ test('Learning manifest contributes navigation metadata without granting entitle
   assert.match(migration, /'defaultPinned', true/);
   assert.doesNotMatch(migration, /tenant_module_entitlements.*INSERT|INSERT INTO platform\.tenant_module_entitlements/s);
 });
+
+test('Brand resolves and injects governed effective theme server-side', () => {
+  const layout = read('../app/(workspace)/layout.tsx');
+  const runtime = read('../lib/effective-theme.ts');
+  const shell = read('../components/BrandShellFrame.tsx');
+  assert.match(layout, /loadBrandEffectiveTheme/);
+  assert.match(layout, /compileScopedThemeCss/);
+  assert.match(layout, /data-expadio-effective-theme="brand"/);
+  assert.match(runtime, /verticalKey/);
+  assert.match(runtime, /tenantId:context\.tenantId/);
+  assert.match(runtime, /brandId:context\.organizationId/);
+  assert.match(shell, /data-expadio-theme="brand"/);
+});
