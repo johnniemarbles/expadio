@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
-import { ThemeModeControl, type ModuleShellDescriptor } from '@expadio/ui';
+import { CommandPalette, ThemeModeControl, type ModuleShellDescriptor } from '@expadio/ui';
 import { usePathname } from 'next/navigation';
 import styles from '../app/(workspace)/workspace.module.css';
 
@@ -79,6 +79,22 @@ export function BrandShellFrame({
             <summary>Switch app</summary>
             <div>{ordered.map((module)=><Link key={module.key} href={module.baseRoute}>{module.name}</Link>)}</div>
           </details>:null}
+          <CommandPalette
+            triggerLabel="Search workspace"
+            placeholder="Search workspace navigation…"
+            items={[
+              {id:'brand-home',label:'Home',description:'Open Brand workspace home',href:'/',keywords:['workspace','home'],group:'Workspace'},
+              ...ordered.map((module)=>({
+                id:`brand-${module.key}`,
+                label:module.name,
+                description:`Open ${module.name}`,
+                href:module.baseRoute,
+                keywords:[module.key,module.iconKey,'app','module'],
+                group:'Apps',
+              })),
+              {id:'brand-appearance',label:'Appearance',description:'Manage Brand appearance',href:'/appearance',keywords:['theme','brand','settings'],group:'Administration'},
+            ]}
+          />
           <ThemeModeControl />
           <UserButton appearance={{elements:{userButtonAvatarBox:{width:32,height:32}}}} />
         </div>
