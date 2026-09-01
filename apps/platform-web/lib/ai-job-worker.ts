@@ -125,23 +125,20 @@ async function reconcileUsageFromOutputArtifact(
     && metadata.costMinorUnits >= 0
       ? metadata.costMinorUnits
       : null;
+  const providerCostOwnership =
+    metadata.providerCostOwnership === 'BYOK'
+    || metadata.providerCostOwnership === 'EXPADIO_MANAGED'
+      ? metadata.providerCostOwnership
+      : null;
   if (
     connectorKey === null
     || providerKey === null
     || modelKey === null
     || costMinorUnits === null
+    || providerCostOwnership === null
   ) {
     throw new Error('AI_OUTPUT_PROVENANCE_INCOMPLETE');
   }
-
-  const registry = new PostgresProviderRegistryRepository(client);
-  const connectors = await registry.listConnectors(
-    input.tenantId,
-    'ai.generate',
-  );
-  const connector = connectors.find(
-    (entry) => entry.connectorKey === connectorKey,
-  );
 
   await new PostgresIntelligenceUsageRepository(client).record({
     // One AI job produces at most one terminal provider execution charge in
@@ -160,8 +157,7 @@ async function reconcileUsageFromOutputArtifact(
     connectorKey,
     providerKey,
     modelKey,
-    providerCostOwnership:
-      connector?.ownership === 'TENANT' ? 'BYOK' : 'EXPADIO_MANAGED',
+    providerCostOwnership,
     workReference: `ai-job:${input.jobId}`,
     occurredAt: input.occurredAt,
     recordedAt: input.occurredAt,
@@ -509,6 +505,14 @@ export async function runAiJobWorkerOnce(
               costMinorUnits:
                 proposal.provenance.costMinorUnits ?? 0,
               capabilityKey,
+              providerCostOwnership:
+                connectors.find(
+                  (entry) =>
+                    entry.connectorKey ===
+                    proposal.provenance.connectorKey,
+                )?.ownership === 'TENANT'
+                  ? 'BYOK'
+                  : 'EXPADIO_MANAGED',
             },
             createdBySubjectId: serviceSubjectId,
           });
