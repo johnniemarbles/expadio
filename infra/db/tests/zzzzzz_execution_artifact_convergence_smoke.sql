@@ -13,7 +13,8 @@ SELECT set_config(
 INSERT INTO platform.execution_artifacts (
   artifact_id, tenant_id, artifact_kind, source_kind, source_id,
   storage_reference, content_sha256, media_type, byte_length,
-  provider_key, connector_key, model_key, correlation_id
+  provider_key, connector_key, model_key, capability_key,
+  cost_minor_units, provider_cost_ownership, correlation_id
 ) VALUES (
   'e1000000-0000-4000-8000-000000000011',
   'e1000000-0000-4000-8000-000000000001',
@@ -21,7 +22,8 @@ INSERT INTO platform.execution_artifacts (
   'object://tenant-a/ai/e1.txt',
   repeat('a', 64),
   'text/plain', 12,
-  'openai', 'openai-a', 'gpt-test', 'corr-a'
+  'openai', 'openai-a', 'gpt-test', 'ai.generate',
+  7, 'BYOK', 'corr-a'
 );
 
 DO $$
@@ -74,14 +76,16 @@ BEGIN
     INSERT INTO platform.execution_artifacts (
       tenant_id, artifact_kind, source_kind, source_id,
       storage_reference, content_sha256, media_type, byte_length,
-      provider_key, connector_key
+      provider_key, connector_key, capability_key,
+      cost_minor_units, provider_cost_ownership
     ) VALUES (
       'e2000000-0000-4000-8000-000000000002',
       'AI_TEXT', 'AI_INVOCATION', 'cross-tenant',
       'object://tenant-b/ai/cross.txt',
       repeat('b', 64),
       'text/plain', 12,
-      'openai', 'openai-b'
+      'openai', 'openai-b', 'ai.generate',
+      9, 'EXPADIO_MANAGED'
     );
     RAISE EXCEPTION 'cross-tenant execution artifact insert unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
