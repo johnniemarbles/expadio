@@ -38,9 +38,9 @@ test('platform navigation avoids duplicate ambiguous initials and CRM double nam
   assert.doesNotMatch(route, /short: 'AR'/);
 });
 
-test('shell applies consistent primitive chrome for raw module tables and forms', () => {
-  assert.match(styles, /:global\(table\)/);
-  assert.match(styles, /:global\(th\),:global\(td\)/);
-  assert.match(styles, /:global\(input\),:global\(select\),:global\(textarea\)/);
-  assert.match(styles, /:global\(button:disabled\)/);
+test('shell applies consistent primitive chrome only inside the content viewport', () => {
+  assert.match(styles, /\.content :global\(table\)/);
+  assert.match(styles, /\.content :global\(th\),\.content :global\(td\)/);
+  assert.match(styles, /\.content :global\(input\),\.content :global\(select\),\.content :global\(textarea\)/);
+  assert.match(styles, /\.content :global\(button:disabled\),\.content :global\(input:disabled\),\.content :global\(select:disabled\)/);
 });
