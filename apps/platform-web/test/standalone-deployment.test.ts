@@ -17,13 +17,20 @@ test('standalone launcher copies static assets and binds Railway-compatible host
   assert.match(launcher,/\.next', 'standalone'/);
   assert.match(launcher,/sourceStatic/);
   assert.match(launcher,/cp\(sourceStatic, targetStatic/);
-  assert.match(launcher,/HOSTNAME: process\.env\.HOSTNAME \|\| '0\.0\.0\.0'/);
+  assert.match(launcher,/HOSTNAME: '0\.0\.0\.0'/);
+  assert.doesNotMatch(launcher,/HOSTNAME: process\.env\.HOSTNAME/);
 });
-
 
 test('Platform launcher supports Next monorepo standalone layout',()=>{
   const launcher=read('../scripts/start-standalone.mjs');
   assert.match(launcher,/join\(standaloneRoot, 'apps', appName, 'server\.js'\)/);
   assert.match(launcher,/const runtimeRoot = dirname\(serverPath\)/);
   assert.match(launcher,/const targetStatic = join\(runtimeRoot, '\.next', 'static'\)/);
+});
+
+test('Platform never inherits the container hostname for the listening socket',()=>{
+  const launcher=read('../scripts/start-standalone.mjs');
+  assert.match(launcher,/Binding Next\.js to 0\.0\.0\.0/);
+  assert.match(launcher,/HOSTNAME: '0\.0\.0\.0'/);
+  assert.doesNotMatch(launcher,/process\.env\.HOSTNAME \|\|/);
 });
