@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SourceBadge, ThemeModeControl } from "@expadio/ui";
+import { CommandPalette, SourceBadge, ThemeModeControl } from "@expadio/ui";
 import { UserButton } from "@clerk/nextjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
@@ -160,17 +160,18 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
           </button>
         </div>
 
-        {/* Global Search */}
-        <div className={styles.searchBar}>
-          <span style={{ fontSize: '13px', color: 'var(--ink-400)' }}>🔍</span>
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder="Search fleet &amp; connectors..."
-            readOnly
-          />
-          <span className={styles.searchKbd}>⌘K</span>
-        </div>
+        <CommandPalette
+          triggerLabel="Search platform"
+          placeholder="Search Platform navigation…"
+          items={sections.map((section)=>({
+            id:`platform-${section.id}`,
+            label:section.label,
+            description:`Open ${section.label}`,
+            href:href(section.href),
+            keywords:[section.id,'platform','navigation'],
+            group:'Platform',
+          }))}
+        />
 
         <div className={styles.topbarActions}>
           <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{selectableOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
