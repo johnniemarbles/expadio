@@ -45,7 +45,8 @@ export async function POST(
     if (!local.invitation || local.invitation.status !== 'PENDING') {
       return NextResponse.json({ denied:true, reasonKey:'INVITATION_NOT_PENDING', message:'Only a pending EXPADIO invitation can be resent.' }, { status:409 });
     }
-    const roleKey = local.invitation.roleKey.toUpperCase();
+    const sourceInvitation = local.invitation;
+    const roleKey = sourceInvitation.roleKey.toUpperCase();
     if (!TENANT_ACCESS_ROLE_KEYS.includes(roleKey as TenantAccessRoleKey)) {
       return NextResponse.json({ denied:true, reasonKey:'INVITATION_ROLE_INVALID', message:'Invitation role is invalid.' }, { status:409 });
     }
@@ -62,7 +63,7 @@ export async function POST(
     }
 
     const replacement = await clerk.invitations.createInvitation({
-      emailAddress: local.invitation.email,
+      emailAddress: sourceInvitation.email,
       redirectUrl: new URL('/sign-up', brandOrigin).toString(),
       expiresInDays: 14,
       notify: true,
@@ -75,7 +76,7 @@ export async function POST(
           roleKey,
           invitedBySubjectId: context.subjectId,
           issuer: 'https://clerk.expadio.com',
-          validUntil: local.invitation.validUntil,
+          validUntil: sourceInvitation.validUntil,
         },
       },
     });
@@ -97,7 +98,7 @@ export async function POST(
           roleKey: roleKey as TenantAccessRoleKey,
           invitedBySubjectId: context.subjectId,
           correlationId,
-          validUntil: local.invitation.validUntil ? new Date(local.invitation.validUntil) : null,
+          validUntil: sourceInvitation.validUntil ? new Date(sourceInvitation.validUntil) : null,
           clerkCreatedAt: createdAt,
           clerkExpiresAt: new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000),
         });
