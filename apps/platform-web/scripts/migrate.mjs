@@ -26,19 +26,28 @@ async function runMigrations() {
       )
     `);
 
-    // Backfill schema_migrations for the existing database
+    // Legacy reconciliation must never infer "all migrations applied" from an
+    // early schema object. Only a latest-generation sentinel proves that the
+    // existing database already contains the current migration generation.
     const { rowCount: smCount } = await client.query('SELECT 1 FROM public.schema_migrations LIMIT 1');
     if (smCount === 0) {
-      const { rowCount: capCount } = await client.query(`
-        SELECT 1 FROM information_schema.tables WHERE table_schema = 'platform' AND table_name = 'capability_state'
+      const { rows: sentinelRows } = await client.query(`
+        SELECT
+          to_regclass('platform.capability_state') AS early_sentinel,
+          to_regclass('platform.execution_artifacts') AS latest_sentinel
       `);
-      if (capCount && capCount > 0) {
-        console.log("Database was already migrated. Backfilling schema_migrations...");
+      const sentinel = sentinelRows[0] ?? {};
+      if (sentinel.latest_sentinel) {
+        console.log("Database has the latest schema sentinel. Backfilling schema_migrations...");
         const migrationsDir = path.resolve(__dirname, '../../../infra/db/migrations');
         const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
         for (const file of files) {
           await client.query('INSERT INTO public.schema_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING', [file]);
         }
+      } else if (sentinel.early_sentinel) {
+        throw new Error(
+          'SCHEMA_MIGRATION_HISTORY_INCOMPLETE: legacy schema detected without a latest-generation sentinel; refusing to mark unverified migrations as applied.'
+        );
       }
     }
 
