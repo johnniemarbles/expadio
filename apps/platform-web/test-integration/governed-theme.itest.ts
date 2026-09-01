@@ -7,7 +7,7 @@ import {
   governedThemeProfileValidator,
   resolveGovernedTheme,
   THEME_PROFILE_SETTING_KEY,
-} from '@expadio/ui';
+} from '../../../packages/ui/src/governed-theme.ts';
 import {
   PostgresConfigurationSettingDefinitionRepository,
   PostgresConfigurationValueCandidateRepository,
