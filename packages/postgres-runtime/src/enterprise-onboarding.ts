@@ -1468,6 +1468,135 @@ export async function evaluateOrganizationSetupAutomatedRequirements(
   };
 }
 
+async function handoffSetupOwnerMembership(
+  client: OrganizationSetupSqlClient,
+  input: {
+    readonly tenantId: string;
+    readonly setupPlanId: string;
+    readonly organizationId: string;
+    readonly activatedBySubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<{
+  readonly membershipId: string;
+  readonly subjectId: string;
+  readonly issuer: string | null;
+}> {
+  const owner = await client.query<{
+    readonly subject_id: string;
+    readonly issuer: string | null;
+    readonly valid_until: Date | string | null;
+  }>(
+    `SELECT subject_id, issuer, valid_until
+       FROM platform.organization_setup_participants
+      WHERE tenant_id = $1::uuid
+        AND setup_plan_id = $2::uuid
+        AND role = 'OWNER'
+        AND status = 'ACTIVE'
+        AND valid_from <= now()
+        AND (valid_until IS NULL OR valid_until > now())
+      ORDER BY created_at ASC, setup_participant_id ASC
+      LIMIT 1
+      FOR UPDATE`,
+    [input.tenantId, input.setupPlanId],
+  );
+  const row = owner.rows[0];
+  if (!row) throw new Error('ORGANIZATION_SETUP_PRIMARY_ADMIN_REQUIRED');
+
+  const existing = await client.query<{
+    readonly membership_id: string;
+    readonly status: 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
+  }>(
+    `SELECT membership_id, status
+       FROM platform.memberships
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+        AND subject_id = $3
+        AND issuer IS NOT DISTINCT FROM $4
+      ORDER BY updated_at DESC, membership_id DESC
+      LIMIT 1
+      FOR UPDATE`,
+    [input.tenantId, input.organizationId, row.subject_id, row.issuer],
+  );
+  const prior = existing.rows[0];
+  let membershipId: string;
+
+  if (prior?.status === 'SUSPENDED' || prior?.status === 'REVOKED') {
+    throw new Error('ORGANIZATION_SETUP_ACCESS_HANDOFF_CONFLICT');
+  }
+
+  if (prior?.status === 'ACTIVE') {
+    membershipId = prior.membership_id;
+    await client.query(
+      `UPDATE platform.memberships
+          SET organization_scope_mode = 'SELF',
+              workspace_scope_mode = 'ALL',
+              operating_unit_scope_mode = 'ALL',
+              valid_until = $5::timestamptz,
+              updated_at = now()
+        WHERE membership_id = $1::uuid
+          AND tenant_id = $2::uuid
+          AND organization_id = $3::uuid
+          AND subject_id = $4`,
+      [
+        membershipId,
+        input.tenantId,
+        input.organizationId,
+        row.subject_id,
+        row.valid_until ?? null,
+      ],
+    );
+  } else {
+    membershipId = randomUUID();
+    await client.query(
+      `INSERT INTO platform.memberships (
+         membership_id, tenant_id, organization_id, subject_id, actor_kind,
+         issuer, status, workspace_scope_mode, operating_unit_scope_mode,
+         organization_scope_mode, valid_until
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, $4, 'user',
+         $5, 'ACTIVE', 'ALL', 'ALL', 'SELF', $6::timestamptz
+       )`,
+      [
+        membershipId,
+        input.tenantId,
+        input.organizationId,
+        row.subject_id,
+        row.issuer,
+        row.valid_until ?? null,
+      ],
+    );
+  }
+
+  await appendDomainEventWithOutbox(client, {
+    event: {
+      eventId: randomUUID(),
+      tenantId: input.tenantId,
+      aggregateType: 'tenant.access',
+      aggregateId: membershipId,
+      eventType: 'tenant.membership.handed_off_from_setup',
+      eventVersion: 1,
+      occurredAt: new Date(),
+      actorSubjectId: input.activatedBySubjectId,
+      correlationId: input.correlationId,
+      payload: {
+        organizationId: input.organizationId,
+        setupPlanId: input.setupPlanId,
+        subjectId: row.subject_id,
+        organizationScopeMode: 'SELF',
+        authorizationRolesGranted: [],
+      },
+      metadata: { source: 'enterprise.organization-setup' },
+    },
+  });
+
+  return {
+    membershipId,
+    subjectId: row.subject_id,
+    issuer: row.issuer,
+  };
+}
+
 export async function activateOrganizationSetup(
   client: OrganizationSetupSqlClient,
   input: {
@@ -1515,7 +1644,11 @@ export async function activateOrganizationSetup(
     reason: input.reason?.trim() || null,
     correlationId: input.correlationId,
     idempotencyKey: input.idempotencyKey,
-    payload: { organizationId: plan.organizationId },
+    payload: {
+      organizationId: plan.organizationId,
+      membershipId: accessHandoff.membershipId,
+      setupOwnerSubjectId: accessHandoff.subjectId,
+    },
   });
   if (setupEvent.replay) {
     const current = await loadPlanById(client, input.tenantId, input.setupPlanId);
@@ -1541,6 +1674,14 @@ export async function activateOrganizationSetup(
     [input.tenantId, plan.organizationId],
   );
 
+  const accessHandoff = await handoffSetupOwnerMembership(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+    organizationId: plan.organizationId,
+    activatedBySubjectId: input.activatedBySubjectId,
+    correlationId: input.correlationId,
+  });
+
   await appendSetupDomainEvent(client, {
     tenantId: input.tenantId,
     aggregateId: input.setupPlanId,
@@ -1560,7 +1701,12 @@ export async function activateOrganizationSetup(
       occurredAt: new Date(),
       actorSubjectId: input.activatedBySubjectId,
       correlationId: input.correlationId,
-      payload: { setupPlanId: input.setupPlanId },
+      payload: {
+        setupPlanId: input.setupPlanId,
+        membershipId: accessHandoff.membershipId,
+        setupOwnerSubjectId: accessHandoff.subjectId,
+        authorizationRolesGranted: [],
+      },
       metadata: { source: 'enterprise.organization-setup' },
     },
   });
