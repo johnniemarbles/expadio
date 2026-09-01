@@ -2,17 +2,14 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
+import { activateLearningModule } from '@expadio/postgres-runtime/product-module';
+import { createLearningLearner } from '@expadio/postgres-runtime/learning-enrollment';
 import {
   createLearningAiRequest,
   loadLearningAiRequestStatus,
   updateLearningAiSettings,
 } from '@expadio/postgres-runtime/learning-ai';
-import { activateLearningModule } from '@expadio/postgres-runtime/product-module';
-import {
-  aiArtifactReference,
-  createAiJobArtifact,
-} from '@expadio/postgres-runtime/ai-artifact';
-import { PostgresAiJobRepository } from '@expadio/postgres-runtime/ai-job';
+import { runAiJobWorkerOnce } from '../lib/ai-job-worker';
 
 function pool(): pg.Pool {
   return new pg.Pool({
@@ -25,194 +22,330 @@ function pool(): pg.Pool {
   });
 }
 
-async function provisionLearningTenant(
+async function tx<T>(
   client: pg.PoolClient,
-  tenantId: string,
-  name: string,
-): Promise<void> {
-  await client.query(
-    `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-     VALUES ($1::uuid, $2, 'dentex')`,
-    [tenantId, name],
-  );
-  await client.query(
-    `INSERT INTO platform.tenant_module_entitlements
-       (tenant_id, module_key, source_type, source_key, status)
-     VALUES ($1::uuid, 'learning', 'PLAN', 'itest-enterprise', 'ACTIVE')`,
-    [tenantId],
-  );
-  await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
+  work: () => Promise<T>,
+): Promise<T> {
   await client.query('BEGIN');
-  await activateLearningModule(client, {
-    tenantId,
-    actorSubjectId: 'learning-admin',
-    correlationId: randomUUID(),
-  });
-  await client.query('COMMIT');
+  try {
+    const value = await work();
+    await client.query('COMMIT');
+    return value;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
 }
 
-test('Learning AI enablement, idempotency, historical status, and tenant isolation are durable', async () => {
-  const p = pool();
-  const c = await p.connect();
+test('Learning tutor request executes through governed durable AI worker', async () => {
+  const db = pool();
+  const client = await db.connect();
+
+  const tenantId = randomUUID();
+  const learnerSubjectId = `learner-${randomUUID()}`;
+  const learnerIssuer = 'https://clerk.expadio.com';
+  const serviceSubjectId = `ai-worker-${randomUUID()}`;
+  const connectorKey = `openai-learning-${randomUUID()}`;
+  const roleKey = `ai-worker-role-${randomUUID()}`;
+  const credentialRef =
+    `vault://tenant/${tenantId}/connector/${connectorKey}/v1`;
+
   try {
-    const tenantA = randomUUID();
-    const tenantB = randomUUID();
-    const learnerSubject = 'learning-ai-learner';
-    const learnerIssuer = 'itest';
-
-    await provisionLearningTenant(c, tenantA, 'Learning AI tenant A');
-
-    await c.query(
-      `INSERT INTO platform.learning_learners (
-         tenant_id, subject_id, subject_issuer, full_name, audience_type,
-         created_by_subject_id
-       ) VALUES ($1::uuid, $2, $3, 'AI Learner', 'INTERNAL', 'learning-admin')`,
-      [tenantA, learnerSubject, learnerIssuer],
+    await client.query(
+      `INSERT INTO platform.tenants (tenant_id, name)
+       VALUES ($1::uuid, 'Learning AI Integration Tenant')`,
+      [tenantId],
+    );
+    await client.query(
+      `INSERT INTO platform.tenant_module_entitlements (
+         tenant_id, module_key, source_type, source_key, status
+       ) VALUES (
+         $1::uuid, 'learning', 'PLAN', 'itest-learning-ai', 'ACTIVE'
+       )`,
+      [tenantId],
+    );
+    await client.query(
+      `SELECT set_config('app.tenant_id', $1, false)`,
+      [tenantId],
     );
 
-    await updateLearningAiSettings(c, {
-      tenantId: tenantA,
-      aiFeaturesEnabled: true,
+    await tx(client, () =>
+      activateLearningModule(client, {
+        tenantId,
+        actorSubjectId: 'learning-admin',
+        correlationId: randomUUID(),
+      }),
+    );
+    await tx(client, () =>
+      updateLearningAiSettings(client, {
+        tenantId,
+        aiFeaturesEnabled: true,
+      }),
+    );
+
+    const learner = await tx(client, () =>
+      createLearningLearner(client, {
+        tenantId,
+        actorSubjectId: 'learning-admin',
+        learner: {
+          subjectId: learnerSubjectId,
+          subjectIssuer: learnerIssuer,
+          fullName: 'AI Tutor Learner',
+          email: 'ai.tutor.learner@example.test',
+          audienceType: 'INTERNAL',
+        },
+      }),
+    );
+
+    const capability = await client.query<{ capability_id: string }>(
+      `INSERT INTO platform.capabilities (
+         capability_key, display_name, permitted_modes, enabled
+       ) VALUES (
+         'ai.generate', 'AI Generate', ARRAY['A']::text[], true
+       )
+       ON CONFLICT (capability_key)
+       DO UPDATE SET display_name = EXCLUDED.display_name
+       RETURNING capability_id`,
+    );
+    const connector = await client.query<{ connector_id: string }>(
+      `INSERT INTO platform.connectors (
+         connector_key, provider_type, provider_key, ownership_scope,
+         tenant_id, health, priority, enabled, fallback_enabled
+       ) VALUES (
+         $1, 'openai', 'openai', 'TENANT', $2::uuid,
+         'HEALTHY', 1, true, false
+       )
+       RETURNING connector_id`,
+      [connectorKey, tenantId],
+    );
+    await client.query(
+      `INSERT INTO platform.connector_capabilities (
+         connector_id, capability_id
+       ) VALUES ($1::uuid, $2::uuid)`,
+      [connector.rows[0]!.connector_id, capability.rows[0]!.capability_id],
+    );
+    await client.query(
+      `INSERT INTO platform.connector_credentials (
+         connector_id, credential_ref, key_version, custody_mode, state
+       ) VALUES ($1::uuid, $2, 'v1', 'PLATFORM_MANAGED', 'ACTIVE')`,
+      [connector.rows[0]!.connector_id, credentialRef],
+    );
+
+    const role = await client.query<{ role_id: string }>(
+      `INSERT INTO platform.authorization_roles (
+         role_key, display_name, ownership_scope, tenant_id, status
+       ) VALUES ($1, 'Learning AI worker', 'TENANT', $2::uuid, 'ACTIVE')
+       RETURNING role_id`,
+      [roleKey, tenantId],
+    );
+    await client.query(
+      `INSERT INTO platform.authorization_role_capabilities (
+         role_id, action, resource_type
+       ) VALUES ($1::uuid, 'credential.lease', 'connector-credential')`,
+      [role.rows[0]!.role_id],
+    );
+    await client.query(
+      `INSERT INTO platform.authorization_assignments (
+         tenant_id, organization_id, subject_id, role_id, status,
+         clearances, sensitive_compartments
+       ) VALUES (
+         $1::uuid, NULL, $2, $3::uuid, 'ACTIVE',
+         ARRAY['sensitive']::text[],
+         ARRAY['provider-credentials']::text[]
+       )`,
+      [tenantId, serviceSubjectId, role.rows[0]!.role_id],
+    );
+
+    const request = await tx(client, () =>
+      createLearningAiRequest(client, {
+        tenantId,
+        actorSubjectId: learnerSubjectId,
+        actorIssuer: learnerIssuer,
+        correlationId: randomUUID(),
+        requestType: 'TUTOR',
+        prompt: 'Explain the difference between recall and precision.',
+        idempotencyKey: 'tutor-precision-recall-1',
+      }),
+    );
+    assert.equal(request.created, true);
+    assert.equal(request.request.learnerId, learner.learnerId);
+    assert.match(request.request.inputArtifactReference, /^ai-artifact:\/\//);
+
+    let providerCalls = 0;
+    let secretReads = 0;
+    const worker = await runAiJobWorkerOnce(client, {
+      tenantId,
+      options: {
+        serviceSubjectId,
+        now: () => new Date('2026-09-01T03:30:00.000Z'),
+        secretResolver: {
+          async resolve(reference) {
+            secretReads += 1;
+            assert.equal(reference, credentialRef);
+            return { value: 'sk-learning-ai-itest' };
+          },
+        },
+        fetchImpl: async (input, init) => {
+          providerCalls += 1;
+          assert.equal(
+            String(input),
+            'https://api.openai.com/v1/chat/completions',
+          );
+          const headers = new Headers(init?.headers);
+          assert.equal(
+            headers.get('Authorization'),
+            'Bearer sk-learning-ai-itest',
+          );
+          const payload = JSON.parse(String(init?.body)) as {
+            model: string;
+            messages: Array<{ role: string; content: string }>;
+          };
+          assert.equal(payload.model, 'gpt-4o-mini');
+          assert.equal(
+            payload.messages.at(-1)?.content,
+            'Explain the difference between recall and precision.',
+          );
+          return new Response(
+            JSON.stringify({
+              choices: [{
+                message: {
+                  content:
+                    'Recall measures relevant items found; precision measures how many found items are relevant.',
+                },
+              }],
+              usage: { total_tokens: 120 },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          );
+        },
+      },
     });
 
-    const idempotencyKey = 'tutor-request-1';
-    const first = await createLearningAiRequest(c, {
-      tenantId: tenantA,
-      actorSubjectId: learnerSubject,
-      actorIssuer: learnerIssuer,
-      correlationId: randomUUID(),
-      requestType: 'TUTOR',
-      prompt: 'Explain the approved course concept in simple terms.',
-      idempotencyKey,
-    });
-    assert.equal(first.created, true);
+    assert.equal(worker.status, 'SUCCEEDED');
+    if (worker.status !== 'SUCCEEDED') {
+      throw new Error('expected successful AI worker result');
+    }
+    assert.equal(worker.connectorKey, connectorKey);
+    assert.equal(providerCalls, 1);
+    assert.equal(secretReads, 1);
+    assert.match(worker.outputReference, /^ai-artifact:\/\//);
 
-    const replay = await createLearningAiRequest(c, {
-      tenantId: tenantA,
-      actorSubjectId: learnerSubject,
-      actorIssuer: learnerIssuer,
-      correlationId: randomUUID(),
-      requestType: 'TUTOR',
-      prompt: 'Explain the approved course concept in simple terms.',
-      idempotencyKey,
-    });
-    assert.equal(replay.created, false);
-    assert.equal(replay.request.jobId, first.request.jobId);
+    const status = await tx(client, () =>
+      loadLearningAiRequestStatus(client, {
+        tenantId,
+        learningAiRequestId: request.request.learningAiRequestId,
+        actorSubjectId: learnerSubjectId,
+        actorIssuer: learnerIssuer,
+      }),
+    );
+    assert.equal(status.jobStatus, 'SUCCEEDED');
     assert.equal(
-      replay.request.learningAiRequestId,
-      first.request.learningAiRequestId,
+      status.output?.content,
+      'Recall measures relevant items found; precision measures how many found items are relevant.',
+    );
+    assert.equal(status.confidence, 0.95);
+    assert.equal(status.costMinorUnits, 1);
+
+    const evidence = await client.query<{
+      input_reference: string;
+      output_artifacts: number;
+      started_events: number;
+      succeeded_events: number;
+      usage_events: number;
+      completed_queue_rows: number;
+      credential_lease_events: number;
+    }>(
+      `SELECT
+         (SELECT input_reference FROM platform.ai_jobs
+           WHERE tenant_id = $1::uuid AND job_id = $2::uuid)
+           AS input_reference,
+         (SELECT count(*)::int FROM platform.ai_job_artifacts
+           WHERE tenant_id = $1::uuid AND job_id = $2::uuid
+             AND artifact_type = 'OUTPUT') AS output_artifacts,
+         (SELECT count(*)::int FROM platform.ai_job_events
+           WHERE tenant_id = $1::uuid AND job_id = $2::uuid
+             AND event_type = 'STARTED') AS started_events,
+         (SELECT count(*)::int FROM platform.ai_job_events
+           WHERE tenant_id = $1::uuid AND job_id = $2::uuid
+             AND event_type = 'SUCCEEDED') AS succeeded_events,
+         (SELECT count(*)::int FROM platform.intelligence_usage_events
+           WHERE tenant_id = $1::uuid AND work_reference = $3
+             AND meter = 'AI_REQUEST') AS usage_events,
+         (SELECT count(*)::int FROM platform.ai_job_execution_queue
+           WHERE tenant_id = $1::uuid AND job_id = $2::uuid
+             AND status = 'COMPLETED') AS completed_queue_rows,
+         (SELECT count(*)::int FROM platform.credential_lease_events
+           WHERE tenant_id = $1::uuid
+             AND requested_by_subject_id = $4)
+           AS credential_lease_events`,
+      [
+        tenantId,
+        request.request.jobId,
+        `ai-job:${request.request.jobId}`,
+        serviceSubjectId,
+      ],
     );
 
-    const queued = await loadLearningAiRequestStatus(c, {
-      tenantId: tenantA,
-      learningAiRequestId: first.request.learningAiRequestId,
-      actorSubjectId: learnerSubject,
-      actorIssuer: learnerIssuer,
-    });
-    assert.equal(queued.jobStatus, 'QUEUED');
-    assert.equal(queued.output, null);
+    assert.match(evidence.rows[0]!.input_reference, /^ai-artifact:\/\//);
+    assert.doesNotMatch(evidence.rows[0]!.input_reference, /recall|precision/i);
+    assert.equal(evidence.rows[0]!.output_artifacts, 1);
+    assert.equal(evidence.rows[0]!.started_events, 1);
+    assert.equal(evidence.rows[0]!.succeeded_events, 1);
+    assert.equal(evidence.rows[0]!.usage_events, 1);
+    assert.equal(evidence.rows[0]!.completed_queue_rows, 1);
+    assert.equal(evidence.rows[0]!.credential_lease_events, 1);
 
-    const output = await createAiJobArtifact(c, {
-      tenantId: tenantA,
-      jobId: first.request.jobId,
-      artifactType: 'OUTPUT',
-      content: 'Grounded tutor response.',
-      createdBySubjectId: 'ai-worker',
+    const secondPass = await runAiJobWorkerOnce(client, {
+      tenantId,
+      options: {
+        serviceSubjectId,
+        secretResolver: {
+          async resolve() {
+            assert.fail('completed job must not resolve credentials again');
+          },
+        },
+        fetchImpl: async () => {
+          assert.fail('completed job must not call provider again');
+        },
+      },
     });
-    const repository = new PostgresAiJobRepository(c);
-    const startedAt = new Date().toISOString();
-    const started = await repository.appendEvent({
-      eventId: randomUUID(),
-      jobId: first.request.jobId,
-      tenantId: tenantA,
-      sequence: 1,
-      type: 'STARTED',
-      occurredAt: startedAt,
-      actorSubjectId: 'ai-worker',
-      reason: 'Bounded worker started Learning AI execution.',
-      correlationId: first.request.correlationId,
-      evidenceRefs: [],
-    });
-    assert.equal(started.status, 'COMMITTED');
+    assert.equal(secondPass.status, 'IDLE');
 
-    const succeeded = await repository.appendEvent({
-      eventId: randomUUID(),
-      jobId: first.request.jobId,
-      tenantId: tenantA,
-      sequence: 2,
-      type: 'SUCCEEDED',
-      occurredAt: new Date().toISOString(),
-      actorSubjectId: 'ai-worker',
-      reason: 'Bounded worker completed Learning AI execution.',
-      correlationId: first.request.correlationId,
-      evidenceRefs: [],
-      outputReference: aiArtifactReference(output.artifactId),
-      confidence: 0.9,
-      costMinorUnits: 7,
-    });
-    assert.equal(succeeded.status, 'COMMITTED');
-
-    const completed = await loadLearningAiRequestStatus(c, {
-      tenantId: tenantA,
-      learningAiRequestId: first.request.learningAiRequestId,
-      actorSubjectId: learnerSubject,
-      actorIssuer: learnerIssuer,
-    });
-    assert.equal(completed.jobStatus, 'SUCCEEDED');
-    assert.equal(completed.output?.content, 'Grounded tutor response.');
-    assert.equal(completed.costMinorUnits, 7);
-
-    await updateLearningAiSettings(c, {
-      tenantId: tenantA,
-      aiFeaturesEnabled: false,
-    });
+    await tx(client, () =>
+      updateLearningAiSettings(client, {
+        tenantId,
+        aiFeaturesEnabled: false,
+      }),
+    );
 
     await assert.rejects(
       () =>
-        createLearningAiRequest(c, {
-          tenantId: tenantA,
-          actorSubjectId: learnerSubject,
-          actorIssuer: learnerIssuer,
-          correlationId: randomUUID(),
-          requestType: 'TUTOR',
-          prompt: 'This new request must be denied after disable.',
-          idempotencyKey: 'tutor-request-after-disable',
-        }),
+        tx(client, () =>
+          createLearningAiRequest(client, {
+            tenantId,
+            actorSubjectId: learnerSubjectId,
+            actorIssuer: learnerIssuer,
+            correlationId: randomUUID(),
+            requestType: 'TUTOR',
+            prompt: 'This should be blocked.',
+            idempotencyKey: 'tutor-disabled-1',
+          }),
+        ),
       /LEARNING_AI_FEATURES_DISABLED/,
     );
 
-    const historical = await loadLearningAiRequestStatus(c, {
-      tenantId: tenantA,
-      learningAiRequestId: first.request.learningAiRequestId,
-      actorSubjectId: learnerSubject,
-      actorIssuer: learnerIssuer,
-    });
+    const historical = await tx(client, () =>
+      loadLearningAiRequestStatus(client, {
+        tenantId,
+        learningAiRequestId: request.request.learningAiRequestId,
+        actorSubjectId: learnerSubjectId,
+        actorIssuer: learnerIssuer,
+      }),
+    );
     assert.equal(historical.jobStatus, 'SUCCEEDED');
-    assert.equal(historical.output?.content, 'Grounded tutor response.');
-
-    await provisionLearningTenant(c, tenantB, 'Learning AI tenant B');
-
-    await assert.rejects(
-      () =>
-        loadLearningAiRequestStatus(c, {
-          tenantId: tenantA,
-          learningAiRequestId: first.request.learningAiRequestId,
-          actorSubjectId: learnerSubject,
-          actorIssuer: learnerIssuer,
-        }),
-      /MODULE_|LEARNING_AI_REQUEST_NOT_FOUND|TENANT/,
-    );
-
-    const hidden = await c.query(
-      `SELECT count(*)::int AS count
-         FROM platform.learning_ai_requests
-        WHERE tenant_id = $1::uuid
-          AND learning_ai_request_id = $2::uuid`,
-      [tenantA, first.request.learningAiRequestId],
-    );
-    assert.equal(hidden.rows[0]?.count, 0);
+    assert.equal(historical.output?.content, status.output?.content);
   } finally {
-    c.release();
-    await p.end();
+    client.release();
+    await db.end();
   }
 });
