@@ -273,6 +273,9 @@ test('approved child is configured through governed readiness before activation'
       setupPlanId: approved.setupPlanId!,
       requirementId: policyB.requirement.setupRequirementId,
       dependsOnRequirementId: policyA.requirement.setupRequirementId,
+      actorSubjectId: 'setup-owner',
+      correlationId: 'setup-dependency',
+      idempotencyKey: 'setup-dependency-b-on-a',
     });
     await c.query('COMMIT');
 
@@ -283,6 +286,9 @@ test('approved child is configured through governed readiness before activation'
         setupPlanId: approved.setupPlanId!,
         requirementId: policyA.requirement.setupRequirementId,
         dependsOnRequirementId: policyB.requirement.setupRequirementId,
+        actorSubjectId: 'setup-owner',
+        correlationId: 'setup-dependency',
+        idempotencyKey: 'setup-dependency-a-on-b-cycle',
       }),
       /organization setup dependency cycle rejected/,
     );
