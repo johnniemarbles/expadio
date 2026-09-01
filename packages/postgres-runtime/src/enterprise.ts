@@ -88,6 +88,7 @@ export async function listOrganizationHierarchy(
 
 export interface EnterpriseChangeRequest {
   readonly requestId: string;
+  readonly enterpriseId: string | null;
   readonly operation: string;
   readonly requestingOrganizationId: string;
   readonly approvingOrganizationId: string;
@@ -102,6 +103,7 @@ export interface EnterpriseChangeRequest {
 
 interface EnterpriseChangeRequestRow {
   readonly enterprise_change_request_id: string;
+  readonly enterprise_id: string | null;
   readonly operation: string;
   readonly requesting_organization_id: string;
   readonly approving_organization_id: string;
@@ -117,6 +119,7 @@ interface EnterpriseChangeRequestRow {
 function mapChangeRequest(row: EnterpriseChangeRequestRow): EnterpriseChangeRequest {
   return {
     requestId: row.enterprise_change_request_id,
+    enterpriseId: row.enterprise_id,
     operation: row.operation,
     requestingOrganizationId: row.requesting_organization_id,
     approvingOrganizationId: row.approving_organization_id,
@@ -138,6 +141,7 @@ async function loadChangeRequestForUpdate(
   const result = await client.query<EnterpriseChangeRequestRow>(
     `SELECT
        enterprise_change_request_id,
+       enterprise_id,
        operation,
        requesting_organization_id,
        approving_organization_id,
@@ -179,6 +183,7 @@ export async function requestChildOrganization(
   const existing = await client.query<EnterpriseChangeRequestRow>(
     `SELECT
        enterprise_change_request_id,
+       enterprise_id,
        operation,
        requesting_organization_id,
        approving_organization_id,
@@ -196,6 +201,15 @@ export async function requestChildOrganization(
   );
   const existingRow = existing.rows[0];
   if (existingRow !== undefined) {
+    const payload = existingRow.proposed_payload;
+    const replayMatches =
+      existingRow.operation === 'CREATE_ORGANIZATION'
+      && existingRow.enterprise_id === (input.enterpriseId ?? null)
+      && existingRow.requesting_organization_id === input.parentOrganizationId
+      && payload.name === name
+      && payload.organizationKind === (input.organizationKind?.trim() || 'BUSINESS')
+      && payload.parentOrganizationId === input.parentOrganizationId;
+    if (!replayMatches) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
     return { request: mapChangeRequest(existingRow), idempotent: true };
   }
 
@@ -237,6 +251,7 @@ export async function requestChildOrganization(
      ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
      RETURNING
        enterprise_change_request_id,
+       enterprise_id,
        operation,
        requesting_organization_id,
        approving_organization_id,
@@ -264,6 +279,7 @@ export async function requestChildOrganization(
     const replay = await client.query<EnterpriseChangeRequestRow>(
       `SELECT
          enterprise_change_request_id,
+         enterprise_id,
          operation,
          requesting_organization_id,
          approving_organization_id,
@@ -281,6 +297,15 @@ export async function requestChildOrganization(
     );
     const replayRow = replay.rows[0];
     if (replayRow === undefined) throw new Error('ENTERPRISE_CHANGE_REQUEST_CREATE_FAILED');
+    const replayPayload = replayRow.proposed_payload;
+    const replayMatches =
+      replayRow.operation === 'CREATE_ORGANIZATION'
+      && replayRow.enterprise_id === (input.enterpriseId ?? null)
+      && replayRow.requesting_organization_id === input.parentOrganizationId
+      && replayPayload.name === name
+      && replayPayload.organizationKind === (input.organizationKind?.trim() || 'BUSINESS')
+      && replayPayload.parentOrganizationId === input.parentOrganizationId;
+    if (!replayMatches) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
     return { request: mapChangeRequest(replayRow), idempotent: true };
   }
 
@@ -335,6 +360,8 @@ export async function approveCreateOrganizationRequest(
     throw new Error('ENTERPRISE_SEPARATION_OF_DUTIES_REQUIRED');
   }
 
+  if (!row.enterprise_id) throw new Error('ENTERPRISE_CHANGE_REQUEST_ENTERPRISE_REQUIRED');
+
   const payload = row.proposed_payload;
   const name = typeof payload.name === 'string' ? payload.name.trim() : '';
   const organizationKind =
@@ -353,6 +380,7 @@ export async function approveCreateOrganizationRequest(
     `INSERT INTO platform.organizations (
        organization_id,
        tenant_id,
+       enterprise_id,
        parent_organization_id,
        organization_kind,
        name,
@@ -360,11 +388,12 @@ export async function approveCreateOrganizationRequest(
        created_at,
        updated_at
      ) VALUES (
-       $1::uuid, $2::uuid, $3::uuid, $4, $5, 'PROVISIONING', now(), now()
+       $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6, 'PROVISIONING', now(), now()
      )`,
     [
       organizationId,
       input.tenantId,
+      row.enterprise_id,
       parentOrganizationId,
       organizationKind,
       name,
@@ -383,6 +412,7 @@ export async function approveCreateOrganizationRequest(
         AND enterprise_change_request_id = $2::uuid
       RETURNING
        enterprise_change_request_id,
+       enterprise_id,
        operation,
        requesting_organization_id,
        approving_organization_id,
