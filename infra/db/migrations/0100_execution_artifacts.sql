@@ -23,6 +23,9 @@ CREATE TABLE platform.execution_artifacts (
   provider_cost_ownership text NOT NULL CHECK (
     provider_cost_ownership IN ('BYOK','EXPADIO_MANAGED')
   ),
+  confidence numeric NULL CHECK (
+    confidence IS NULL OR (confidence >= 0 AND confidence <= 1)
+  ),
   correlation_id text NULL CHECK (correlation_id IS NULL OR btrim(correlation_id) <> ''),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   UNIQUE (tenant_id, artifact_kind, source_kind, source_id)
