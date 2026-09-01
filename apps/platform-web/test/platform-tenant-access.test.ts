@@ -33,3 +33,21 @@ test('membership mutations append access audit events',()=>{
   assert.match(access,/tenant\.membership\.roles\.updated/);
   assert.match(access,/appendDomainEventWithOutbox/);
 });
+
+
+test('Clerk invitation failures surface safe actionable reasons instead of INTERNAL_ERROR',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/clerkInvitationErrorResponse/);
+  assert.match(route,/INVITATION_ALREADY_PENDING/);
+  assert.match(route,/CLERK_INVITATIONS_NOT_SUPPORTED/);
+  assert.match(route,/CLERK_INVITATION_RATE_LIMITED/);
+  assert.match(route,/CLERK_BACKEND_AUTH_FAILED/);
+});
+
+test('a same-workspace pending invitation is idempotent',()=>{
+  const route=read('../app/api/platform/tenant/access/route.ts');
+  assert.match(route,/getInvitationList/);
+  assert.match(route,/existingInvitation/);
+  assert.match(route,/outcome: 'INVITATION_ALREADY_PENDING'/);
+  assert.doesNotMatch(route,/ignoreExisting:\s*true/);
+});
