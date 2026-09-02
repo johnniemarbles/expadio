@@ -213,28 +213,54 @@ export async function createEnterpriseAppointment(
   client: PoolClient,
   input: EnterpriseAppointmentInput,
 ): Promise<{ readonly appointmentId: string; readonly workflowInstanceId: string }> {
-  const agreement = await client.query(
-    `SELECT 1
+  const agreement = await client.query<{
+    readonly sponsoring_organization_id: string;
+    readonly grantee_legal_entity_id: string;
+  }>(
+    `SELECT sponsoring_organization_id, grantee_legal_entity_id
        FROM platform.enterprise_commercial_agreements
       WHERE tenant_id = $1::uuid
         AND enterprise_id = $2::uuid
         AND enterprise_commercial_agreement_id = $3::uuid
         AND state = 'ACTIVE'
+        AND effective_from <= now()
         AND (effective_until IS NULL OR effective_until > now())`,
     [input.tenantId, input.enterpriseId, input.agreementId],
   );
-  if (agreement.rowCount !== 1) throw new Error('ENTERPRISE_APPOINTMENT_ACTIVE_AGREEMENT_REQUIRED');
+  const agreementRow = agreement.rows[0];
+  if (!agreementRow) throw new Error('ENTERPRISE_APPOINTMENT_ACTIVE_AGREEMENT_REQUIRED');
+  if (agreementRow.sponsoring_organization_id !== input.grantorOrganizationId) {
+    throw new Error('ENTERPRISE_APPOINTMENT_GRANTOR_NOT_AGREEMENT_SPONSOR');
+  }
+  if (agreementRow.grantee_legal_entity_id !== input.beneficiaryLegalEntityId) {
+    throw new Error('ENTERPRISE_APPOINTMENT_BENEFICIARY_ENTITY_MISMATCH');
+  }
 
   const beneficiary = await client.query(
     `SELECT 1
-       FROM platform.organizations
-      WHERE tenant_id = $1::uuid
-        AND enterprise_id = $2::uuid
-        AND organization_id = $3::uuid
-        AND status = 'ACTIVE'`,
-    [input.tenantId, input.enterpriseId, input.beneficiaryOrganizationId],
+       FROM platform.organizations organization
+       JOIN platform.organization_legal_entity_bindings binding
+         ON binding.tenant_id = organization.tenant_id
+        AND binding.organization_id = organization.organization_id
+        AND binding.legal_entity_id = $4::uuid
+        AND binding.binding_role = 'OPERATED_BY'
+        AND binding.status = 'ACTIVE'
+        AND binding.valid_from <= now()
+        AND (binding.valid_until IS NULL OR binding.valid_until > now())
+      WHERE organization.tenant_id = $1::uuid
+        AND organization.enterprise_id = $2::uuid
+        AND organization.organization_id = $3::uuid
+        AND organization.status = 'ACTIVE'`,
+    [
+      input.tenantId,
+      input.enterpriseId,
+      input.beneficiaryOrganizationId,
+      input.beneficiaryLegalEntityId,
+    ],
   );
-  if (beneficiary.rowCount !== 1) throw new Error('ENTERPRISE_APPOINTMENT_ACTIVE_BENEFICIARY_REQUIRED');
+  if (beneficiary.rowCount !== 1) {
+    throw new Error('ENTERPRISE_APPOINTMENT_BENEFICIARY_OPERATING_ENTITY_REQUIRED');
+  }
 
   const legalEntity = await client.query(
     `SELECT 1
