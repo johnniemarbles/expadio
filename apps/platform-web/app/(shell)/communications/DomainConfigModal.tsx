@@ -136,7 +136,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
     >
       <div
         style={{
-          background: "var(--surface, var(--theme-text-inverse)fff)",
+          background: "var(--theme-surface-raised)",
           border: "1px solid var(--theme-border)",
           borderRadius: "16px",
           width: "100%",
@@ -184,9 +184,9 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
         <div
           style={{
             padding: "18px",
-            border: "1px solid #fed7aa",
+            border: "1px solid color-mix(in srgb,var(--theme-warning) 28%,transparent)",
             borderRadius: "12px",
-            background: "var(--theme-text-inverse)af5",
+            background: "color-mix(in srgb,var(--theme-warning) 6%,var(--theme-surface))",
             marginBottom: "24px",
             display: "flex",
             flexDirection: "column",
@@ -194,7 +194,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           }}
         >
           <div style={{ display: "grid", gap: "10px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#9a3412", display: "grid", gap: "4px" }}>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--theme-warning)", display: "grid", gap: "4px" }}>
               Sending domain
               <input
                 type="text"
@@ -205,8 +205,8 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
               />
               {domain && !domainValid && <span style={{ fontSize: "11px", color: "var(--theme-danger)", fontWeight: 500 }}>Enter a valid domain such as mail.example.com.</span>}
             </label>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#9a3412", display: "grid", gap: "4px" }}>
-              Cloudflare API token <span style={{ fontWeight: 500, color: "#9a3412aa" }}>(optional if the deployment has one)</span>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--theme-warning)", display: "grid", gap: "4px" }}>
+              Cloudflare API token <span style={{ fontWeight: 500, color: "var(--theme-warning)aa" }}>(optional if the deployment has one)</span>
               <input
                 type="password"
                 value={apiToken}
@@ -215,7 +215,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 autoComplete="off"
                 style={{ padding: "8px 12px", border: "1px solid var(--theme-warning)", borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
               />
-              <span style={{ fontSize: "11px", color: "#9a3412aa", fontWeight: 500 }}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
+              <span style={{ fontSize: "11px", color: "var(--theme-warning)aa", fontWeight: 500 }}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
             </label>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
@@ -278,7 +278,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                   border: "1px solid var(--theme-border)",
                   borderRadius: "10px",
                   padding: "16px",
-                  background: "var(--surface, var(--theme-text-inverse)fff)",
+                  background: "var(--theme-surface-raised)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
@@ -343,7 +343,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                         <tr key={idx} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
                           <td style={{ padding: "6px 8px", fontWeight: 700 }}><code>{r.type}</code></td>
                           <td style={{ padding: "6px 8px", fontFamily: "monospace" }}>{r.name}</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "monospace", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", var(--theme-text-inverse)Space: "nowrap" }}>
+                          <td style={{ padding: "6px 8px", fontFamily: "monospace", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {r.value}
                           </td>
                           <td style={{ padding: "6px 8px" }}>
