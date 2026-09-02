@@ -46,6 +46,7 @@ ALTER TABLE platform.enterprise_profiles
     (configuration_state = 'CONFIGURED'
       AND root_organization_id IS NOT NULL
       AND configured_at IS NOT NULL
+      AND configured_by_subject_id IS NOT NULL
       AND btrim(configured_by_subject_id) <> '')
     OR
     (configuration_state = 'BOOTSTRAPPED'
