@@ -2,6 +2,7 @@ import type {
   EntityReference,
   EntityRelationship,
   RelationshipDefinition,
+  RelationshipPerspective,
   RelationshipProvenanceSource,
 } from '@expadio/relationship';
 import {
@@ -28,6 +29,7 @@ interface RelationshipRow {
   readonly source_entity_type: string;
   readonly source_entity_id: string;
   readonly relationship_key: string;
+  readonly perspective: RelationshipPerspective | null;
   readonly target_entity_type: string;
   readonly target_entity_id: string;
   readonly status: 'ACTIVE' | 'INACTIVE';
@@ -64,6 +66,7 @@ function mapRow(row: RelationshipRow): EntityRelationship {
       entityId: row.source_entity_id,
     },
     relationshipKey: row.relationship_key,
+    perspective: row.perspective,
     target: {
       entityType: row.target_entity_type,
       entityId: row.target_entity_id,
@@ -126,18 +129,31 @@ export class PostgresEntityRelationshipRepository {
     const relationshipKey = input.relationshipKey?.trim() || null;
 
     const result = await this.#client.query<RelationshipRow>(
-      `SELECT relationship_id, tenant_id, source_entity_type, source_entity_id,
-              relationship_key, target_entity_type, target_entity_id, status,
-              valid_from, valid_until, attributes, provenance_source,
-              created_by_subject_id, updated_by_subject_id, created_at, updated_at
-         FROM platform.entity_relationships
-        WHERE tenant_id = $1::uuid
-          AND source_entity_type = $2
-          AND source_entity_id = $3
-          AND status = 'ACTIVE'
-          AND valid_until IS NULL
-          AND ($4::text IS NULL OR relationship_key = $4)
-        ORDER BY relationship_key, valid_from, relationship_id`,
+      `SELECT relationship.relationship_id, relationship.tenant_id,
+              relationship.source_entity_type, relationship.source_entity_id,
+              relationship.relationship_key,
+              definition.perspective AS perspective,
+              relationship.target_entity_type, relationship.target_entity_id,
+              relationship.status, relationship.valid_from, relationship.valid_until,
+              relationship.attributes, relationship.provenance_source,
+              relationship.created_by_subject_id, relationship.updated_by_subject_id,
+              relationship.created_at, relationship.updated_at
+         FROM platform.entity_relationships relationship
+         LEFT JOIN platform.entity_relationship_definitions definition
+           ON definition.definition_id = relationship.definition_id
+          AND (
+            definition.tenant_id = relationship.tenant_id
+            OR definition.tenant_id IS NULL
+          )
+        WHERE relationship.tenant_id = $1::uuid
+          AND relationship.source_entity_type = $2
+          AND relationship.source_entity_id = $3
+          AND relationship.status = 'ACTIVE'
+          AND relationship.valid_until IS NULL
+          AND ($4::text IS NULL OR relationship.relationship_key = $4)
+        ORDER BY relationship.relationship_key,
+                 relationship.valid_from,
+                 relationship.relationship_id`,
       [tenantId, sourceEntityType, sourceEntityId, relationshipKey],
     );
     return result.rows.map(mapRow);
@@ -150,16 +166,27 @@ export class PostgresEntityRelationshipRepository {
     readonly relationshipKey: string;
   }): Promise<readonly EntityRelationship[]> {
     const result = await this.#client.query<RelationshipRow>(
-      `SELECT relationship_id, tenant_id, source_entity_type, source_entity_id,
-              relationship_key, target_entity_type, target_entity_id, status,
-              valid_from, valid_until, attributes, provenance_source,
-              created_by_subject_id, updated_by_subject_id, created_at, updated_at
-         FROM platform.entity_relationships
-        WHERE tenant_id = $1::uuid
-          AND source_entity_type = $2
-          AND source_entity_id = $3
-          AND relationship_key = $4
-        ORDER BY valid_from, relationship_id`,
+      `SELECT relationship.relationship_id, relationship.tenant_id,
+              relationship.source_entity_type, relationship.source_entity_id,
+              relationship.relationship_key,
+              definition.perspective AS perspective,
+              relationship.target_entity_type, relationship.target_entity_id,
+              relationship.status, relationship.valid_from, relationship.valid_until,
+              relationship.attributes, relationship.provenance_source,
+              relationship.created_by_subject_id, relationship.updated_by_subject_id,
+              relationship.created_at, relationship.updated_at
+         FROM platform.entity_relationships relationship
+         LEFT JOIN platform.entity_relationship_definitions definition
+           ON definition.definition_id = relationship.definition_id
+          AND (
+            definition.tenant_id = relationship.tenant_id
+            OR definition.tenant_id IS NULL
+          )
+        WHERE relationship.tenant_id = $1::uuid
+          AND relationship.source_entity_type = $2
+          AND relationship.source_entity_id = $3
+          AND relationship.relationship_key = $4
+        ORDER BY relationship.valid_from, relationship.relationship_id`,
       [
         required(input.tenantId, 'tenant_id'),
         required(input.sourceEntityType, 'source_entity_type'),
@@ -167,6 +194,51 @@ export class PostgresEntityRelationshipRepository {
         required(input.relationshipKey, 'relationship_key'),
       ],
     );
+    return result.rows.map(mapRow);
+  }
+
+  async listActiveByPerspective(input: {
+    readonly tenantId: string;
+    readonly perspective: RelationshipPerspective;
+    readonly sourceEntityType?: string;
+    readonly sourceEntityId?: string;
+  }): Promise<readonly EntityRelationship[]> {
+    const tenantId = required(input.tenantId, 'tenant_id');
+    const sourceEntityType = input.sourceEntityType?.trim() || null;
+    const sourceEntityId = input.sourceEntityId?.trim() || null;
+
+    const result = await this.#client.query<RelationshipRow>(
+      `SELECT relationship.relationship_id, relationship.tenant_id,
+              relationship.source_entity_type, relationship.source_entity_id,
+              relationship.relationship_key,
+              definition.perspective AS perspective,
+              relationship.target_entity_type, relationship.target_entity_id,
+              relationship.status, relationship.valid_from, relationship.valid_until,
+              relationship.attributes, relationship.provenance_source,
+              relationship.created_by_subject_id, relationship.updated_by_subject_id,
+              relationship.created_at, relationship.updated_at
+         FROM platform.entity_relationships relationship
+         JOIN platform.entity_relationship_definitions definition
+           ON definition.definition_id = relationship.definition_id
+          AND definition.status = 'ACTIVE'
+          AND (
+            definition.tenant_id = relationship.tenant_id
+            OR definition.tenant_id IS NULL
+          )
+        WHERE relationship.tenant_id = $1::uuid
+          AND definition.perspective = $2
+          AND relationship.status = 'ACTIVE'
+          AND relationship.valid_until IS NULL
+          AND ($3::text IS NULL OR relationship.source_entity_type = $3)
+          AND ($4::text IS NULL OR relationship.source_entity_id = $4)
+        ORDER BY relationship.source_entity_type,
+                 relationship.source_entity_id,
+                 relationship.relationship_key,
+                 relationship.valid_from,
+                 relationship.relationship_id`,
+      [tenantId, input.perspective, sourceEntityType, sourceEntityId],
+    );
+
     return result.rows.map(mapRow);
   }
 
@@ -299,7 +371,8 @@ export class PostgresEntityRelationshipRepository {
          $1::uuid, $2, $3, $4, $5, $6, 'ACTIVE', clock_timestamp(), $7::jsonb, $8, $9
        )
        RETURNING relationship_id, tenant_id, source_entity_type, source_entity_id,
-                 relationship_key, target_entity_type, target_entity_id, status,
+                 relationship_key, NULL::text AS perspective,
+                 target_entity_type, target_entity_id, status,
                  valid_from, valid_until, attributes, provenance_source,
                  created_by_subject_id, updated_by_subject_id, created_at, updated_at`,
       [
