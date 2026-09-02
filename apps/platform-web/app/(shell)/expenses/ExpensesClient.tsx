@@ -45,11 +45,36 @@ const money = (minor: number, currency: string): string => {
 
 const badge = (state: string): React.CSSProperties => {
   const map: Record<string, string> = { PAID: 'var(--theme-primary)', SUBMITTED: 'var(--theme-warning)', APPROVED: 'var(--theme-primary)', REJECTED: 'var(--theme-danger)' };
-  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: 'var(--theme-text-inverse)', background: map[state] ?? 'var(--theme-neutral)' };
+  return {
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'var(--theme-text-inverse)',
+    background: map[state] ?? 'var(--theme-neutral)',
+    transition: 'background var(--theme-motion-fast) var(--theme-easing), color var(--theme-motion-fast) var(--theme-easing)',
+  };
 };
 
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
+const inp: React.CSSProperties = {
+  padding: '8px 12px',
+  border: '1px solid var(--line, #cbd5e1)',
+  borderRadius: 8,
+  fontSize: 13,
+  transition: 'border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing)',
+};
+const btn: React.CSSProperties = {
+  padding: '6px 12px',
+  borderRadius: 8,
+  border: 'none',
+  background: 'var(--theme-primary)',
+  color: 'var(--theme-text-inverse)',
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: 'pointer',
+  transition: 'transform var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing)',
+};
 
 export function ExpensesClient({ initialExpenses, queryString = '' }: { initialExpenses: ExpenseRow[]; queryString?: string }) {
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
