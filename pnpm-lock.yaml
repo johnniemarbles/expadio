@@ -63,12 +63,12 @@ importers:
       '@clerk/nextjs':
         specifier: ^7.8.2
         version: 7.8.2(next@16.3.3(@types/node@22.15.3)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@expadio/ai-gateway':
-        specifier: workspace:*
-        version: link:../../packages/ai-gateway
       '@expadio/agreement':
         specifier: workspace:*
         version: link:../../packages/agreement
+      '@expadio/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../../packages/business-config
@@ -102,12 +102,12 @@ importers:
       '@expadio/party':
         specifier: workspace:*
         version: link:../../packages/party
-      '@expadio/provider-registry':
-        specifier: workspace:*
-        version: link:../../packages/provider-registry
       '@expadio/postgres-runtime':
         specifier: workspace:*
         version: link:../../packages/postgres-runtime
+      '@expadio/provider-registry':
+        specifier: workspace:*
+        version: link:../../packages/provider-registry
       '@expadio/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -251,7 +251,6 @@ importers:
         specifier: workspace:*
         version: link:../tenancy
 
-
   packages/governed-actions:
     dependencies:
       '@expadio/ai-gateway':
@@ -260,6 +259,8 @@ importers:
       '@expadio/domain-events':
         specifier: workspace:*
         version: link:../domain-events
+
+  packages/gtm: {}
 
   packages/iam:
     dependencies:
