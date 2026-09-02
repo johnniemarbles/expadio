@@ -21,9 +21,15 @@ export type CommunicationDeliveryLifecycleState =
   | 'COMPLAINED'
   | 'CANCELLED';
 
+export type CommunicationWebhookProviderKey =
+  | 'resend'
+  | 'twilio-sms'
+  | 'twilio-whatsapp'
+  | 'twilio-voice';
+
 export interface VerifiedCommunicationProviderWebhook {
   readonly tenantId: string;
-  readonly providerKey: 'resend';
+  readonly providerKey: CommunicationWebhookProviderKey;
   readonly connectorKey: string;
   readonly providerEventId: string;
   readonly providerMessageId: string | null;
@@ -63,59 +69,24 @@ interface WebhookEventRow {
   readonly reason_code: string;
 }
 
-/**
- * Canonical provider lifecycle semantics.
- *
- * Provider callbacks may be duplicated, replayed, delayed or delivered out of
- * order. This matrix is the only place where provider evidence is allowed to
- * change the canonical delivery state. Missing entries are intentionally
- * treated as recorded-but-not-applied evidence.
- *
- * Important policy choices:
- * - CANCELLED is local-terminal; provider callbacks after cancellation are
- *   evidence only.
- * - DELIVERED may be superseded by BOUNCED or COMPLAINED because providers can
- *   report delayed negative outcomes after initial delivery.
- * - BOUNCED and COMPLAINED are not superseded by later DELIVERED/SENT events.
- * - FAILED is allowed to recover to DELIVERED/BOUNCED/COMPLAINED because the
- *   current Resend mapping uses FAILED for delivery_delayed webhooks.
- */
 const PROVIDER_LIFECYCLE_TRANSITIONS: Record<
   CommunicationDeliveryLifecycleState,
   Partial<Record<ProviderLifecycleOutcome, CommunicationDeliveryLifecycleState>>
 > = {
   PENDING: {
-    SENT: 'SENT',
-    DELIVERED: 'DELIVERED',
-    FAILED: 'FAILED',
-    BOUNCED: 'BOUNCED',
-    COMPLAINED: 'COMPLAINED',
+    SENT: 'SENT', DELIVERED: 'DELIVERED', FAILED: 'FAILED', BOUNCED: 'BOUNCED', COMPLAINED: 'COMPLAINED',
   },
   ACCEPTED: {
-    SENT: 'SENT',
-    DELIVERED: 'DELIVERED',
-    FAILED: 'FAILED',
-    BOUNCED: 'BOUNCED',
-    COMPLAINED: 'COMPLAINED',
+    SENT: 'SENT', DELIVERED: 'DELIVERED', FAILED: 'FAILED', BOUNCED: 'BOUNCED', COMPLAINED: 'COMPLAINED',
   },
   SENT: {
-    DELIVERED: 'DELIVERED',
-    FAILED: 'FAILED',
-    BOUNCED: 'BOUNCED',
-    COMPLAINED: 'COMPLAINED',
+    DELIVERED: 'DELIVERED', FAILED: 'FAILED', BOUNCED: 'BOUNCED', COMPLAINED: 'COMPLAINED',
   },
   FAILED: {
-    DELIVERED: 'DELIVERED',
-    BOUNCED: 'BOUNCED',
-    COMPLAINED: 'COMPLAINED',
+    DELIVERED: 'DELIVERED', BOUNCED: 'BOUNCED', COMPLAINED: 'COMPLAINED',
   },
-  DELIVERED: {
-    BOUNCED: 'BOUNCED',
-    COMPLAINED: 'COMPLAINED',
-  },
-  BOUNCED: {
-    COMPLAINED: 'COMPLAINED',
-  },
+  DELIVERED: { BOUNCED: 'BOUNCED', COMPLAINED: 'COMPLAINED' },
+  BOUNCED: { COMPLAINED: 'COMPLAINED' },
   COMPLAINED: {},
   CANCELLED: {},
 };
@@ -126,24 +97,36 @@ function nonBlank(value: string, code: string): string {
   return normalized;
 }
 
+/** Provider-specific callback vocabulary is collapsed into the canonical lifecycle here. */
 export function normalizeCommunicationProviderWebhook(
   webhook: Pick<VerifiedCommunicationProviderWebhook, 'providerKey' | 'eventType'>,
 ): Exclude<CommunicationProviderWebhookOutcome, 'UNMATCHED'> {
-  if (webhook.providerKey !== 'resend') return 'IGNORED';
-  switch (webhook.eventType) {
-    case 'email.sent':
-      return 'SENT';
-    case 'email.delivered':
-      return 'DELIVERED';
-    case 'email.bounced':
-      return 'BOUNCED';
-    case 'email.complained':
-      return 'COMPLAINED';
-    case 'email.delivery_delayed':
-      return 'FAILED';
-    default:
-      return 'IGNORED';
+  if (webhook.providerKey === 'resend') {
+    switch (webhook.eventType) {
+      case 'email.sent': return 'SENT';
+      case 'email.delivered': return 'DELIVERED';
+      case 'email.bounced': return 'BOUNCED';
+      case 'email.complained': return 'COMPLAINED';
+      case 'email.delivery_delayed': return 'FAILED';
+      default: return 'IGNORED';
+    }
   }
+
+  const eventType = webhook.eventType.trim().toUpperCase();
+  if (
+    webhook.providerKey === 'twilio-sms'
+    || webhook.providerKey === 'twilio-whatsapp'
+    || webhook.providerKey === 'twilio-voice'
+  ) {
+    switch (eventType) {
+      case 'SENT': return 'SENT';
+      case 'DELIVERED': return 'DELIVERED';
+      case 'FAILED': return 'FAILED';
+      default: return 'IGNORED';
+    }
+  }
+
+  return 'IGNORED';
 }
 
 function outcomeAlreadyReflected(
@@ -160,10 +143,7 @@ export function resolveCommunicationProviderWebhookTransition(
 ): CommunicationProviderWebhookTransition {
   if (outcome === 'IGNORED') {
     return {
-      previousState: current,
-      outcome,
-      nextState: current,
-      applied: false,
+      previousState: current, outcome, nextState: current, applied: false,
       reasonCode: 'PROVIDER_WEBHOOK_IGNORED',
     };
   }
@@ -246,10 +226,7 @@ export async function ingestVerifiedCommunicationProviderWebhook(
       delivery = deliveryResult.rows[0];
     }
 
-    const outcome: CommunicationProviderWebhookOutcome = delivery === undefined
-      ? 'UNMATCHED'
-      : providerOutcome;
-
+    const outcome: CommunicationProviderWebhookOutcome = delivery === undefined ? 'UNMATCHED' : providerOutcome;
     const transition = delivery === undefined
       ? null
       : resolveCommunicationProviderWebhookTransition(delivery.state, providerOutcome);
@@ -271,13 +248,8 @@ export async function ingestVerifiedCommunicationProviderWebhook(
             AND delivery_id = $2::uuid
             AND state = $3`,
         [
-          tenantId,
-          delivery.delivery_id,
-          transition.previousState,
-          transition.nextState,
-          reasonCode,
-          `Provider webhook ${eventType} applied.`,
-          processedAt,
+          tenantId, delivery.delivery_id, transition.previousState, transition.nextState,
+          reasonCode, `Provider webhook ${eventType} applied.`, processedAt,
         ],
       );
       if (updated.rowCount !== 1) throw new Error('PROVIDER_WEBHOOK_DELIVERY_UPDATE_CONFLICT');
@@ -288,14 +260,8 @@ export async function ingestVerifiedCommunicationProviderWebhook(
            reason_code, reason, occurred_at
          ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8::timestamptz)`,
         [
-          delivery.delivery_id,
-          tenantId,
-          transition.previousState,
-          transition.nextState,
-          providerEventId,
-          reasonCode,
-          `Provider webhook ${eventType} applied.`,
-          webhook.receivedAt,
+          delivery.delivery_id, tenantId, transition.previousState, transition.nextState,
+          providerEventId, reasonCode, `Provider webhook ${eventType} applied.`, webhook.receivedAt,
         ],
       );
     }
@@ -313,20 +279,10 @@ export async function ingestVerifiedCommunicationProviderWebhook(
        RETURNING normalized_outcome, delivery_id, previous_delivery_state,
                  new_delivery_state, reason_code`,
       [
-        tenantId,
-        webhook.providerKey,
-        connectorKey,
-        providerEventId,
-        providerMessageId,
-        eventType,
-        outcome,
-        delivery?.delivery_id ?? null,
-        previousState,
-        nextState,
-        reasonCode,
-        JSON.stringify(webhook.payload),
-        webhook.receivedAt,
-        processedAt,
+        tenantId, webhook.providerKey, connectorKey, providerEventId,
+        providerMessageId, eventType, outcome, delivery?.delivery_id ?? null,
+        previousState, nextState, reasonCode, JSON.stringify(webhook.payload),
+        webhook.receivedAt, processedAt,
       ],
     );
     const row = inserted.rows[0];
