@@ -83,7 +83,7 @@ export async function GET(request: Request) {
           WHERE tenant_id = $1::uuid
             AND organization_id = $2::uuid
           LIMIT 1`,
-        [context.tenantId, context.organizationId],
+        [context.tenantId, organizationId],
       );
       const enterpriseId = enterprise.rows[0]?.enterprise_id;
       if (!enterpriseId) throw new Error('ENTERPRISE_CONTEXT_REQUIRED');
@@ -237,7 +237,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
-    if (!context.organizationId) throw new Error('ORGANIZATION_CONTEXT_REQUIRED');
+    if (!organizationId) throw new Error('ORGANIZATION_CONTEXT_REQUIRED');
+    const organizationId = organizationId;
     const body = await request.json() as Record<string, unknown>;
     const action = requiredString(body.action, 'action');
 
@@ -248,7 +249,7 @@ export async function POST(request: Request) {
           WHERE tenant_id = $1::uuid
             AND organization_id = $2::uuid
           LIMIT 1`,
-        [context.tenantId, context.organizationId],
+        [context.tenantId, organizationId],
       );
       const enterpriseId = enterprise.rows[0]?.enterprise_id;
       if (!enterpriseId) throw new Error('ENTERPRISE_CONTEXT_REQUIRED');
@@ -261,7 +262,7 @@ export async function POST(request: Request) {
 
       switch (action) {
         case 'CREATE_TERRITORY': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           const territoryId = crypto.randomUUID();
           await client.query(
             `INSERT INTO platform.enterprise_territories (
@@ -293,7 +294,7 @@ export async function POST(request: Request) {
 
         case 'CREATE_AGREEMENT': {
           const sponsoringOrganizationId =
-            optionalString(body.sponsoringOrganizationId) ?? context.organizationId;
+            optionalString(body.sponsoringOrganizationId) ?? organizationId;
           await requireAuthority(sponsoringOrganizationId);
           return createEnterpriseCommercialAgreement(client, {
             tenantId: context.tenantId,
@@ -311,7 +312,7 @@ export async function POST(request: Request) {
         }
 
         case 'ACTIVATE_AGREEMENT': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           await approveAndActivateEnterpriseCommercialAgreement(client, {
             tenantId: context.tenantId,
             agreementId: requiredString(body.agreementId, 'agreementId'),
@@ -325,7 +326,7 @@ export async function POST(request: Request) {
 
         case 'CREATE_APPOINTMENT': {
           const grantorOrganizationId =
-            optionalString(body.grantorOrganizationId) ?? context.organizationId;
+            optionalString(body.grantorOrganizationId) ?? organizationId;
           await requireAuthority(grantorOrganizationId);
           return createEnterpriseAppointment(client, {
             tenantId: context.tenantId,
@@ -351,7 +352,7 @@ export async function POST(request: Request) {
         }
 
         case 'MOVE_APPOINTMENT_TO_REVIEW': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           await moveEnterpriseAppointmentToReview(client, {
             tenantId: context.tenantId,
             appointmentId: requiredString(body.appointmentId, 'appointmentId'),
@@ -361,7 +362,7 @@ export async function POST(request: Request) {
         }
 
         case 'APPROVE_APPOINTMENT': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           await approveEnterpriseAppointment(client, {
             tenantId: context.tenantId,
             appointmentId: requiredString(body.appointmentId, 'appointmentId'),
@@ -371,7 +372,7 @@ export async function POST(request: Request) {
         }
 
         case 'ISSUE_APPOINTMENT_RIGHTS': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           return issueEnterpriseAppointmentRights(client, {
             tenantId: context.tenantId,
             appointmentId: requiredString(body.appointmentId, 'appointmentId'),
@@ -382,7 +383,7 @@ export async function POST(request: Request) {
         }
 
         case 'START_JURISDICTION_ACTIVATION': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           return startEnterpriseJurisdictionActivation(client, {
             tenantId: context.tenantId,
             enterpriseId,
@@ -395,7 +396,7 @@ export async function POST(request: Request) {
         }
 
         case 'VERIFY_AND_ACTIVATE_JURISDICTION': {
-          await requireAuthority(context.organizationId);
+          await requireAuthority(organizationId);
           const assessments = body.assessments;
           if (!Array.isArray(assessments)) {
             throw new Error('ENTERPRISE_COMMERCIAL_ASSESSMENTS_INVALID');
