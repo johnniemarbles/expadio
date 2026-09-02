@@ -50,12 +50,14 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
   async register(run: AgentRunRecord): Promise<RegisterAgentRunResult> {
     const result = await this.#client.query(
       `INSERT INTO platform.agent_runs (
-         run_id, tenant_id, agent_id, purpose,
+         run_id, tenant_id, organization_id, agent_id, purpose,
          context_bundle_reference, budget_policy_reference,
          idempotency_key, requested_by_subject_id,
          requested_at, created_at, reason, correlation_id, evidence_refs
        ) VALUES (
-         $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8,
+         $1::uuid, $2::uuid,
+         NULLIF(current_setting('app.organization_id', true), '')::uuid,
+         $3, $4, $5, $6, $7, $8,
          $9::timestamptz, $10::timestamptz, $11, $12::uuid, $13::text[]
        )
        ON CONFLICT DO NOTHING`,
@@ -87,12 +89,18 @@ export class PostgresAgentRunRepository implements AgentRunRepository {
     try {
       const result = await this.#client.query(
         `INSERT INTO platform.agent_run_events (
-           event_id, run_id, tenant_id, sequence, event_type,
+           event_id, run_id, tenant_id, organization_id, sequence, event_type,
            event_reference, occurred_at, actor_subject_id, reason,
            correlation_id, evidence_refs, cost_minor_units
          ) VALUES (
-           $1::uuid, $2::uuid, $3::uuid, $4, $5, $6,
-           $7::timestamptz, $8, $9, $10::uuid, $11::text[], $12
+           $1::uuid, $2::uuid, $3::uuid,
+           COALESCE(
+             NULLIF(current_setting('app.organization_id', true), '')::uuid,
+             (SELECT organization_id
+                FROM platform.agent_runs
+               WHERE run_id = $2::uuid AND tenant_id = $3::uuid)
+           ),
+           $4, $5, $6, $7::timestamptz, $8, $9, $10::uuid, $11::text[], $12
          )`,
         eventValues(event),
       );
