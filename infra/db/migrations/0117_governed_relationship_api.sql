@@ -4,8 +4,6 @@ ALTER TABLE platform.entity_relationships
   ADD COLUMN IF NOT EXISTS agreement_reference text,
   ADD COLUMN IF NOT EXISTS decision_reference text;
 
--- Canonical platform vocabulary. Tenant-specific definitions may extend this
--- catalog without changing platform semantics.
 INSERT INTO platform.entity_relationship_definitions
   (tenant_id, relationship_key, source_node_type, target_node_type,
    inverse_relationship_key, perspective, cardinality, requires_approval)
@@ -19,18 +17,11 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 CREATE OR REPLACE FUNCTION platform.create_governed_entity_relationship(
-  p_tenant_id uuid,
-  p_source_entity_type text,
-  p_source_entity_id text,
-  p_relationship_key text,
-  p_target_entity_type text,
-  p_target_entity_id text,
-  p_created_by_subject_id text,
-  p_provenance_source text DEFAULT 'USER',
-  p_valid_from timestamptz DEFAULT now(),
-  p_valid_until timestamptz DEFAULT NULL,
-  p_agreement_reference text DEFAULT NULL,
-  p_decision_reference text DEFAULT NULL,
+  p_tenant_id uuid, p_source_entity_type text, p_source_entity_id text,
+  p_relationship_key text, p_target_entity_type text, p_target_entity_id text,
+  p_created_by_subject_id text, p_provenance_source text DEFAULT 'USER',
+  p_valid_from timestamptz DEFAULT now(), p_valid_until timestamptz DEFAULT NULL,
+  p_agreement_reference text DEFAULT NULL, p_decision_reference text DEFAULT NULL,
   p_attributes jsonb DEFAULT '{}'::jsonb
 )
 RETURNS uuid
@@ -83,14 +74,13 @@ BEGIN
   END IF;
 
   INSERT INTO platform.entity_relationships (
-    tenant_id, source_entity_type, source_entity_id, relationship_key,
-    target_entity_type, target_entity_id, valid_from, valid_until,
-    attributes, provenance_source, created_by_subject_id,
-    agreement_reference, decision_reference
+    tenant_id, definition_id, source_entity_type, source_entity_id, relationship_key,
+    target_entity_type, target_entity_id, valid_from, valid_until, attributes,
+    provenance_source, created_by_subject_id, agreement_reference, decision_reference
   ) VALUES (
-    p_tenant_id, p_source_entity_type, p_source_entity_id, p_relationship_key,
-    p_target_entity_type, p_target_entity_id, p_valid_from, p_valid_until,
-    p_attributes, p_provenance_source, p_created_by_subject_id,
+    p_tenant_id, definition.definition_id, p_source_entity_type, p_source_entity_id,
+    p_relationship_key, p_target_entity_type, p_target_entity_id, p_valid_from,
+    p_valid_until, p_attributes, p_provenance_source, p_created_by_subject_id,
     p_agreement_reference, p_decision_reference
   ) RETURNING relationship_id INTO new_id;
   RETURN new_id;
