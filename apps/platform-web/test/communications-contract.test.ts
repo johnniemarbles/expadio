@@ -27,6 +27,10 @@ const connectorActionsModal = readFileSync(
   new URL("../app/(shell)/communications/ConnectorActionsModal.tsx", import.meta.url),
   "utf8",
 );
+const connectorActionsModalStyles = readFileSync(
+  new URL("../app/(shell)/communications/ConnectorActionsModal.module.css", import.meta.url),
+  "utf8",
+);
 const capacityPanel = readFileSync(
   new URL("../app/(shell)/communications/CapacityPanel.tsx", import.meta.url),
   "utf8",
@@ -126,6 +130,21 @@ test("connector actions surface the governed custody endpoints", () => {
   assert.match(connectorActionsModal, /method:\s*"POST"/);
   // Step-up (§3.4) rides with the destructive action.
   assert.match(connectorActionsModal, /x-expadio-reauth-at/);
+});
+
+test("connector actions modal uses governed dashboard styling primitives", () => {
+  assert.match(connectorActionsModal, /ConnectorActionsModal\.module\.css/);
+  assert.match(connectorActionsModal, /styles\.backdrop/);
+  assert.match(connectorActionsModal, /styles\.dialog/);
+  assert.match(connectorActionsModal, /probeClass/);
+  assert.match(connectorActionsModalStyles, /var\(--theme-primary\)/);
+  assert.match(connectorActionsModalStyles, /var\(--theme-border\)/);
+  assert.match(connectorActionsModalStyles, /var\(--theme-danger\)/);
+  assert.doesNotMatch(connectorActionsModal, /React\.CSSProperties/);
+  assert.doesNotMatch(connectorActionsModal, /style=\{/);
+  assert.doesNotMatch(connectorActionsModal, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(connectorActionsModalStyles, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(connectorActionsModalStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
 });
 
 test("capacity tab surfaces planes, quota and the spend breaker", () => {
