@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
-import { DENTEX_PACK, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
+import { ACME_CORP_PACK, resolveCaseSchema, validateCaseAttributes } from '@expadio/industry-packs';
 import { PostgresIndustryPackRuntimeResolver } from '@expadio/postgres-runtime/industry-pack-runtime';
 
 /**
@@ -97,20 +97,30 @@ test('a LEXFLOW-bound tenant is validated against the legal schema', async () =>
   }
 });
 
-test('a DENTEX-bound tenant is validated against the dental schema', async () => {
+test('an ACME Corp-bound tenant is validated against its service schema', async () => {
   const p = pool();
   const c = await p.connect();
   try {
-    const tenantId = await seedTenant(c, 'dentex');
+    const tenantId = await seedTenant(c, 'acme-corp');
 
-    // DENTEX's own required field (urgency) governs this tenant's cases.
-    const missing = await bindResolveValidate(c, tenantId, { tooth: 'UR6' });
+    // ACME Corp's required service fields govern this tenant's cases.
+    const missing = await bindResolveValidate(c, tenantId, { referenceCode: 'SR-1' });
     assert.equal(missing.ok, false);
-    assert.match(missing.errors.join(' '), /Urgency is required/);
+    assert.match(missing.errors.join(' '), /Service type is required/);
+    assert.match(missing.errors.join(' '), /Priority is required/);
 
-    const good = await bindResolveValidate(c, tenantId, { tooth: 'UR6', urgency: 'Emergency' });
+    const good = await bindResolveValidate(c, tenantId, {
+      serviceType: 'Consulting',
+      priority: 'High',
+      referenceCode: ' SR-1 ',
+      junk: 'x',
+    });
     assert.equal(good.ok, true);
-    assert.deepEqual(good.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+    assert.deepEqual(good.attributes, {
+      serviceType: 'Consulting',
+      priority: 'High',
+      referenceCode: 'SR-1',
+    });
   } finally {
     c.release();
     await p.end();
@@ -121,10 +131,10 @@ test('tenant PUBLISHED pack overrides the code baseline at runtime', async () =>
   const p = pool();
   const c = await p.connect();
   try {
-    const tenantId = await seedTenant(c, 'dentex');
+    const tenantId = await seedTenant(c, 'acme-corp');
     const authored = {
-      ...DENTEX_PACK,
-      label: 'Tenant DENTEX v2',
+      ...ACME_CORP_PACK,
+      label: 'Tenant ACME Corp v2',
       caseSchema: {
         version: 2,
         fields: [
@@ -137,7 +147,7 @@ test('tenant PUBLISHED pack overrides the code baseline at runtime', async () =>
       `INSERT INTO platform.industry_pack_versions
          (tenant_id, vertical_key, version, source, state, revision, definition,
           created_by_subject_id, updated_by_subject_id)
-       VALUES ($1::uuid, 'dentex', 2, 'TENANT_AUTHORED', 'PUBLISHED', 1, $2::jsonb,
+       VALUES ($1::uuid, 'acme-corp', 2, 'TENANT_AUTHORED', 'PUBLISHED', 1, $2::jsonb,
                'itest-author', 'itest-author')`,
       [tenantId, JSON.stringify(authored)],
     );

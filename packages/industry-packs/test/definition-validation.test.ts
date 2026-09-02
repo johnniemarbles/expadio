@@ -1,24 +1,24 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DENTEX_PACK,
+  ACME_CORP_PACK,
   validateIndustryPackDefinition,
 } from '../src/index.ts';
 
 test('accepts a structurally valid Pack and normalizes its vertical key', () => {
   const result = validateIndustryPackDefinition(
-    { ...DENTEX_PACK, verticalKey: ' DENTEX ' },
-    'dentex',
+    { ...ACME_CORP_PACK, verticalKey: ' ACME-CORP ' },
+    'acme-corp',
   );
   assert.equal(result.valid, true);
   if (result.valid) {
-    assert.equal(result.definition.verticalKey, 'dentex');
-    assert.equal(result.definition.profile.industryKey, 'dentex');
+    assert.equal(result.definition.verticalKey, 'acme-corp');
+    assert.equal(result.definition.profile.industryKey, 'acme-corp');
   }
 });
 
 test('rejects a Pack whose vertical identity does not match the requested family', () => {
-  const result = validateIndustryPackDefinition(DENTEX_PACK, 'lexflow');
+  const result = validateIndustryPackDefinition(ACME_CORP_PACK, 'lexflow');
   assert.equal(result.valid, false);
   if (!result.valid) {
     assert.ok(result.issues.some((issue) => issue.code === 'PACK_VERTICAL_KEY_MISMATCH'));
@@ -27,8 +27,8 @@ test('rejects a Pack whose vertical identity does not match the requested family
 
 test('rejects a Pack whose profile identity differs from its vertical identity', () => {
   const result = validateIndustryPackDefinition({
-    ...DENTEX_PACK,
-    profile: { ...DENTEX_PACK.profile, industryKey: 'other' },
+    ...ACME_CORP_PACK,
+    profile: { ...ACME_CORP_PACK.profile, industryKey: 'other' },
   });
   assert.equal(result.valid, false);
   if (!result.valid) {
@@ -41,11 +41,11 @@ test('rejects a Pack whose profile identity differs from its vertical identity',
 
 test('rejects malformed domain schema before authoring persistence', () => {
   const result = validateIndustryPackDefinition({
-    ...DENTEX_PACK,
+    ...ACME_CORP_PACK,
     caseSchema: {
       version: 1,
       fields: [
-        { key: 'urgency', label: 'Urgency', type: 'select', options: [] },
+        { key: 'priority', label: 'Priority', type: 'select', options: [] },
       ],
     },
   });
@@ -64,16 +64,16 @@ test('rejects non-object HTTP input without throwing', () => {
 
 
 test('preserves valid executable case-stage semantics through definition validation', () => {
-  const result = validateIndustryPackDefinition(DENTEX_PACK, 'dentex');
+  const result = validateIndustryPackDefinition(ACME_CORP_PACK, 'acme-corp');
   assert.equal(result.valid, true);
   if (result.valid) {
-    assert.deepEqual(result.definition.caseStageSemantics, DENTEX_PACK.caseStageSemantics);
+    assert.deepEqual(result.definition.caseStageSemantics, ACME_CORP_PACK.caseStageSemantics);
   }
 });
 
 test('rejects semantic rules with a non-canonical case stage', () => {
   const result = validateIndustryPackDefinition({
-    ...DENTEX_PACK,
+    ...ACME_CORP_PACK,
     caseStageSemantics: {
       requirements: [{
         stageKey: 'DISCHARGE',
@@ -91,7 +91,7 @@ test('rejects semantic rules with a non-canonical case stage', () => {
 
 test('rejects semantic attributes that are not declared by the Pack case schema', () => {
   const result = validateIndustryPackDefinition({
-    ...DENTEX_PACK,
+    ...ACME_CORP_PACK,
     caseStageSemantics: {
       requirements: [{
         stageKey: 'IN_PROGRESS',
@@ -109,7 +109,7 @@ test('rejects semantic attributes that are not declared by the Pack case schema'
 
 test('rejects non-canonical semantic relationships and empty rules', () => {
   const invalidRelationship = validateIndustryPackDefinition({
-    ...DENTEX_PACK,
+    ...ACME_CORP_PACK,
     caseStageSemantics: {
       requirements: [{
         stageKey: 'INTAKE',
@@ -122,7 +122,7 @@ test('rejects non-canonical semantic relationships and empty rules', () => {
   assert.equal(invalidRelationship.valid, false);
 
   const emptyRule = validateIndustryPackDefinition({
-    ...DENTEX_PACK,
+    ...ACME_CORP_PACK,
     caseStageSemantics: {
       requirements: [{
         stageKey: 'INTAKE',

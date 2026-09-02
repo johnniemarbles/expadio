@@ -40,7 +40,7 @@ test('COMMUNICATE Action Intent queues once and late suppression still wins', as
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Governed communicate tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Governed communicate tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -105,7 +105,7 @@ test('COMMUNICATE Action Intent queues once and late suppression still wins', as
             actorSubjectId: actor,
             correlationId: randomUUID(),
             causationId: 'workflow-transition',
-            packKey: 'dentex',
+            packKey: 'acme-corp',
             payload: {
               patientEmail: recipient,
               patientName: 'Mira',
@@ -162,7 +162,7 @@ test('COMMUNICATE Action Intent queues once and late suppression still wins', as
 
     const firstIntent = await makeIntent({
       eventId: randomUUID(),
-      ruleKey: 'dentex.discharge.follow-up.email',
+      ruleKey: 'acme-corp.discharge.follow-up.email',
       occurredAt: '2026-08-30T10:00:00.000Z',
       evaluatedAt: '2026-08-30T10:00:01.000Z',
     });
@@ -215,7 +215,7 @@ test('COMMUNICATE Action Intent queues once and late suppression still wins', as
 
     const secondIntent = await makeIntent({
       eventId: randomUUID(),
-      ruleKey: 'dentex.discharge.follow-up.email.second',
+      ruleKey: 'acme-corp.discharge.follow-up.email.second',
       occurredAt: '2026-08-30T10:01:00.000Z',
       evaluatedAt: '2026-08-30T10:01:01.000Z',
     });

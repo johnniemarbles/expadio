@@ -72,7 +72,7 @@ test('competency reconciliation promotes, downgrades and lapses from pinned evid
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Competency Tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Competency Tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(

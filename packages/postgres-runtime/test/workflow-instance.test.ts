@@ -23,7 +23,7 @@ const instance: WorkflowInstance = {
   workTypeKey: 'partner-onboarding',
   subject: { type: 'PARTNER', id: 'partner-1' },
   blueprint: { blueprintKey: 'partner-onboarding', version: 2, scope: 'TENANT' },
-  industryPackProvenance: { runtimeSource: 'TENANT_PUBLISHED', verticalKey: 'dentex', version: 7 },
+  industryPackProvenance: { runtimeSource: 'TENANT_PUBLISHED', verticalKey: 'acme-corp', version: 7 },
   state: 'RUNNING',
   currentStageKey: 'review',
   revision: 1,

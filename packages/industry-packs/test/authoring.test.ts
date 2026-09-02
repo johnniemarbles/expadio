@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DENTEX_PACK,
+  ACME_CORP_PACK,
   type IndustryPackVersion,
   type PinnedIndustryPackVersion,
 } from '../src/index.ts';
 
 test('an authored pack version carries scope, lifecycle, provenance and draft revision separately', () => {
   const record: IndustryPackVersion = {
-    identity: { verticalKey: 'dentex', version: 2 },
+    identity: { verticalKey: 'acme-corp', version: 2 },
     scope: { type: 'TENANT', tenantId: '11111111-1111-1111-1111-111111111111' },
     source: 'TENANT_AUTHORED',
     state: 'DRAFT',
-    definition: DENTEX_PACK,
+    definition: ACME_CORP_PACK,
     revision: 4,
-    parent: { verticalKey: 'dentex', version: 1 },
+    parent: { verticalKey: 'acme-corp', version: 1 },
     createdBySubjectId: 'subject-author',
     createdAt: '2026-08-29T18:00:00.000Z',
     updatedBySubjectId: 'subject-editor',
@@ -32,12 +32,12 @@ test('an authored pack version carries scope, lifecycle, provenance and draft re
 
 test('a runtime pin includes authoring scope to prevent platform/tenant version ambiguity', () => {
   const pin: PinnedIndustryPackVersion = {
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
     version: 1,
     scope: { type: 'PLATFORM' },
   };
 
   assert.equal(pin.scope.type, 'PLATFORM');
-  assert.equal(pin.verticalKey, 'dentex');
+  assert.equal(pin.verticalKey, 'acme-corp');
   assert.equal(pin.version, 1);
 });

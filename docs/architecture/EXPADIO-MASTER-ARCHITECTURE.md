@@ -47,12 +47,16 @@ EXPADIO
 │   ├── Jobs
 │   └── Marketplace
 │
-├── Industry Packs / Verticals
-│   ├── DENTEX
-│   ├── WeRealtors
-│   ├── Nordrux
-│   ├── Insurance
-│   └── TPA / LIMS
+ ├── Industry Packs / Verticals
+ │   │
+ │   │   Industry Packs are authored by Platform operators or by tenant brands.
+ │   │   There are no built-in vertical packages; each brand/tenant configures its
+ │   │   own domain vocabulary (terminology, case schema, workflow stages, and
+ │   │   ontology roles) as a published pack. Examples live in
+ │   │   docs/reference/experiments/ (DENTEX, WeRealtors) as tenant reference
+ │   │   implementations — not as platform code.
+ │   │
+ │   └── (any brand onboards as a tenant and authors its own pack)
 │
 └── Experience Channels
     ├── Public
@@ -94,7 +98,7 @@ Business Model
   └── Lifecycles
 ```
 
-Persona, functional role and relationship are deliberately separate concepts. A DENTEX `Dentist`, a real-estate `Broker` and a logistics `Driver` can be industry-specific labels over neutral person/relationship primitives.
+Persona, functional role and relationship are deliberately separate concepts. A dental clinic `Dentist`, a real-estate `Broker` and a logistics `Driver` can be industry-specific labels over neutral person/relationship primitives — authored by each brand tenant as an Industry Pack.
 
 ## 4. Authorization
 
@@ -224,11 +228,8 @@ modules/
   marketplace/
 
 verticals/
-  dentex/
-  werealtors/
-  nordrux/
-  insurance/
-  tpa-lims/
+  (removed — DENTEX and WeRealtors are now in docs/reference/experiments/
+   as tenant reference implementations, not platform code)
 
 infrastructure/
   migrations/

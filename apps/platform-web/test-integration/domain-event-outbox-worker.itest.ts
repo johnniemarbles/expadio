@@ -24,7 +24,7 @@ async function tenant(client: pg.PoolClient): Promise<string> {
   const tenantId = randomUUID();
   await client.query(
     `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-     VALUES ($1::uuid, 'Outbox worker tenant', 'dentex')`,
+     VALUES ($1::uuid, 'Outbox worker tenant', 'acme-corp')`,
     [tenantId],
   );
   await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -43,7 +43,7 @@ async function event(client: pg.PoolClient, tenantId: string, eventType = 'Treat
       occurredAt: new Date('2026-08-30T14:00:00.000Z'),
       actorSubjectId: 'worker-itest',
       correlationId: randomUUID(),
-      packKey: 'dentex',
+      packKey: 'acme-corp',
       payload: {},
     },
   });
@@ -273,7 +273,7 @@ test('later events in one partition remain blocked until the earlier event is PU
         occurredAt: new Date('2026-08-30T19:00:00.000Z'),
         actorSubjectId: 'worker-itest',
         correlationId: randomUUID(),
-        packKey: 'dentex',
+        packKey: 'acme-corp',
         payload: {},
       },
     });
@@ -288,7 +288,7 @@ test('later events in one partition remain blocked until the earlier event is PU
         occurredAt: new Date('2026-08-30T19:00:01.000Z'),
         actorSubjectId: 'worker-itest',
         correlationId: randomUUID(),
-        packKey: 'dentex',
+        packKey: 'acme-corp',
         payload: {},
       },
     });

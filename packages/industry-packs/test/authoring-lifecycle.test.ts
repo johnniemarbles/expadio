@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DENTEX_PACK,
+  ACME_CORP_PACK,
   canTransitionIndustryPackVersion,
   transitionIndustryPackVersion,
   type IndustryPackVersion,
 } from '../src/index.ts';
 
 const draft: IndustryPackVersion = {
-  identity: { verticalKey: 'dentex', version: 2 },
+  identity: { verticalKey: 'acme-corp', version: 2 },
   scope: { type: 'TENANT', tenantId: '11111111-1111-1111-1111-111111111111' },
   source: 'TENANT_AUTHORED',
   state: 'DRAFT',
-  definition: DENTEX_PACK,
+  definition: ACME_CORP_PACK,
   revision: 3,
   createdBySubjectId: 'author',
   createdAt: '2026-08-29T18:00:00.000Z',

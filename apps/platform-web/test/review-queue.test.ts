@@ -7,6 +7,7 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const lib = read('../lib/governance-review-queue.ts');
 const route = read('../app/api/governance/queue/route.ts');
 const client = read('../app/(shell)/governance/queue/ReviewQueueClient.tsx');
+const clientStyles = read('../app/(shell)/governance/queue/ReviewQueueClient.module.css');
 const page = read('../app/(shell)/governance/queue/page.tsx');
 const nav = read('../app/api/workspaces/route.ts');
 
@@ -39,7 +40,7 @@ test('the queue route is a membership read behind RLS, scoped to the caller', ()
 test('the queue surface lists pending work and links to each vertical', () => {
   assert.match(page, /ReviewQueueClient/);
   assert.match(client, /Your review queue/);
-  assert.match(client, /style=\{badge\}>\{items\.length\}/); // at-a-glance count
+  assert.match(client, /styles\.countBadge/); // at-a-glance count
   // Actionable in place: load available actions, record a decision, drop the row.
   assert.match(client, /\/api\/governance\/actions\?workType=/);
   assert.match(client, /action: 'DECIDE'/);
@@ -55,4 +56,21 @@ test('the queue surface lists pending work and links to each vertical', () => {
   assert.match(client, /'expense\.reimbursement': '\/expenses'/);
   assert.match(client, /'access\.request': '\/access-requests'/);
   assert.match(nav, /href: '\/governance\/queue'/);
+});
+
+test('the review queue surface uses governed dashboard styling primitives', () => {
+  assert.match(client, /ReviewQueueClient\.module\.css/);
+  assert.match(client, /styles\.panel/);
+  assert.match(client, /styles\.tableWrap/);
+  assert.match(client, /ageClass/);
+  assert.match(client, /outcomeClass/);
+  assert.doesNotMatch(client, /React\.CSSProperties/);
+  assert.doesNotMatch(client, /style=\{/);
+  assert.doesNotMatch(client, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(clientStyles, /#[0-9a-fA-F]{3,8}/);
+  // Forbid CSS variable fallbacks like var(--token, fallback) while allowing valid color-mix() commas.
+  assert.doesNotMatch(clientStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
+  assert.match(clientStyles, /var\(--theme-primary\)/);
+  assert.match(clientStyles, /var\(--theme-border\)/);
+  assert.match(clientStyles, /var\(--theme-danger\)/);
 });

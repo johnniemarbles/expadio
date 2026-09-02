@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DENTEX_PACK } from '@expadio/industry-packs';
+import { ACME_CORP_PACK } from '@expadio/industry-packs';
 import { PostgresIndustryPackVersionRepository } from '../src/industry-pack-authoring.ts';
 import type { PostgresClient, SqlQueryResult } from '../src/index.ts';
 
@@ -19,13 +19,13 @@ class ScriptedClient implements PostgresClient {
 
 const row = {
   tenant_id: '11111111-1111-1111-1111-111111111111',
-  vertical_key: 'dentex',
+  vertical_key: 'acme-corp',
   version: 2,
   source: 'TENANT_AUTHORED',
   state: 'DRAFT',
   revision: 1,
-  definition: DENTEX_PACK,
-  parent_vertical_key: 'dentex',
+  definition: ACME_CORP_PACK,
+  parent_vertical_key: 'acme-corp',
   parent_version: 1,
   created_by_subject_id: 'author',
   created_at: '2026-08-29T18:00:00.000Z',
@@ -43,10 +43,10 @@ test('createDraft allocates the next scoped version and maps the persisted artif
 
   const result = await new PostgresIndustryPackVersionRepository(client).createDraft({
     scope: { type: 'TENANT', tenantId: row.tenant_id },
-    verticalKey: ' DENTEX ',
-    definition: DENTEX_PACK,
+    verticalKey: ' ACME-CORP ',
+    definition: ACME_CORP_PACK,
     createdBySubjectId: 'author',
-    parent: { verticalKey: 'dentex', version: 1 },
+    parent: { verticalKey: 'acme-corp', version: 1 },
   });
 
   assert.equal(result.identity.version, 2);
@@ -55,7 +55,7 @@ test('createDraft allocates the next scoped version and maps the persisted artif
   assert.match(client.calls[0]?.text ?? '', /COALESCE\(MAX\(version\), 0\) \+ 1/);
   assert.deepEqual(client.calls[0]?.values.slice(0, 3), [
     row.tenant_id,
-    'dentex',
+    'acme-corp',
     'TENANT_AUTHORED',
   ]);
 });

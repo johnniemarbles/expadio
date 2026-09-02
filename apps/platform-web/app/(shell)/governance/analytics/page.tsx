@@ -1,5 +1,5 @@
-import React from 'react';
-import styles from '../../workflows/page.module.css';
+import pageStyles from '../../workflows/page.module.css';
+import styles from './DecisionAnalytics.module.css';
 import { fetchApi } from '../../../../lib/live-adapter';
 import { DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
@@ -30,8 +30,11 @@ interface Cycle {
 
 const pct = (r: number) => `${(r * 100).toFixed(0)}%`;
 
-// A calmer bar for high approval rates, warmer as rejections dominate.
-const barColor = (r: number) => (r >= 0.66 ? '#0f766e' : r >= 0.33 ? '#b45309' : '#b91c1c');
+const rateTone = (r: number): string => {
+  if (r >= 0.66) return styles.rateHigh;
+  if (r >= 0.33) return styles.rateMedium;
+  return styles.rateLow;
+};
 
 export default async function DecisionAnalyticsPage() {
   const [payload, cyclePayload, vertical] = await Promise.all([
@@ -48,69 +51,72 @@ export default async function DecisionAnalyticsPage() {
 
   return (
     <>
-      <section className={styles.pageHeading} aria-labelledby="page-title">
+      <section className={pageStyles.pageHeading} aria-labelledby="page-title">
         <div>
-          <p className={styles.eyebrow}>Governance</p>
+          <p className={pageStyles.eyebrow}>Governance</p>
           <h1 id="page-title">Decision analytics</h1>
           <p>Decision volume and approval rate for each vertical, from the same append-only decision log — the tenant-wide read of how much review is happening and how often it clears.</p>
         </div>
       </section>
 
-      <section className={styles.panel} aria-labelledby="an-title">
-        <div className={styles.panelHeading}>
-          <div><p className={styles.eyebrow}>Oversight</p><h2 id="an-title">Approval rate by work type</h2></div>
+      <section className={pageStyles.panel} aria-labelledby="an-title">
+        <div className={pageStyles.panelHeading}>
+          <div><p className={pageStyles.eyebrow}>Oversight</p><h2 id="an-title">Approval rate by work type</h2></div>
           {grandTotal > 0 && (
-            <span style={{ fontSize: 13, color: '#475569' }}>
+            <span className={styles.summary}>
               {grandApproved}/{grandTotal} approved overall ({pct(grandTotal > 0 ? grandApproved / grandTotal : 0)})
             </span>
           )}
         </div>
 
         {stats.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>No decisions have been recorded yet.</p>
+          <p className={styles.empty}>No decisions have been recorded yet.</p>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={pageStyles.tableWrap}>
+            <table className={pageStyles.table}>
               <thead><tr><th>Work type</th><th>Decisions</th><th>Approved</th><th>Approval rate</th></tr></thead>
               <tbody>
-                {stats.map((s) => (
-                  <tr key={s.workTypeKey}>
-                    <td title={pack ? s.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, s.workTypeKey)}</td>
-                    <td>{s.total}</td>
-                    <td>{s.approved}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 160 }}>
-                        <div aria-hidden style={{ flex: 1, height: 8, background: 'var(--surface-2, #f1f5f9)', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ width: pct(s.approvalRate), height: '100%', background: barColor(s.approvalRate) }} />
+                {stats.map((s) => {
+                  const tone = rateTone(s.approvalRate);
+                  return (
+                    <tr key={s.workTypeKey}>
+                      <td title={pack ? s.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, s.workTypeKey)}</td>
+                      <td>{s.total}</td>
+                      <td>{s.approved}</td>
+                      <td>
+                        <div className={styles.rateCell}>
+                          <meter className={`${styles.meter} ${tone}`} min={0} max={1} value={s.approvalRate} aria-label={`${resolveWorkTypeLabel(pack, s.workTypeKey)} approval rate`}>
+                            {pct(s.approvalRate)}
+                          </meter>
+                          <span className={`${styles.rateText} ${tone}`}>{pct(s.approvalRate)}</span>
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: barColor(s.approvalRate), width: 40, textAlign: 'right' }}>{pct(s.approvalRate)}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
 
-      <section className={styles.panel} aria-labelledby="ct-title" style={{ marginTop: 16 }}>
-        <div className={styles.panelHeading}>
-          <div><p className={styles.eyebrow}>Oversight</p><h2 id="ct-title">Time to decision by work type</h2></div>
+      <section className={`${pageStyles.panel} ${styles.sectionGap}`} aria-labelledby="ct-title">
+        <div className={pageStyles.panelHeading}>
+          <div><p className={pageStyles.eyebrow}>Oversight</p><h2 id="ct-title">Time to decision by work type</h2></div>
         </div>
         {cycles.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>No decided stages with a recorded entry yet.</p>
+          <p className={styles.empty}>No decided stages with a recorded entry yet.</p>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={pageStyles.tableWrap}>
+            <table className={pageStyles.table}>
               <thead><tr><th>Work type</th><th>Decided</th><th>Avg time to decision</th><th>Slowest</th></tr></thead>
               <tbody>
                 {cycles.map((cyc) => (
                   <tr key={cyc.workTypeKey}>
                     <td title={pack ? cyc.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, cyc.workTypeKey)}</td>
                     <td>{cyc.decided}</td>
-                    <td style={{ fontWeight: 600 }}>{formatDuration(cyc.avgSeconds)}</td>
-                    <td style={{ color: '#b45309' }}>{formatDuration(cyc.maxSeconds)}</td>
+                    <td className={styles.strongMetric}>{formatDuration(cyc.avgSeconds)}</td>
+                    <td className={styles.slowest}>{formatDuration(cyc.maxSeconds)}</td>
                   </tr>
                 ))}
               </tbody>

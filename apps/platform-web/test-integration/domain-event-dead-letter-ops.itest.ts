@@ -30,7 +30,7 @@ test('DEAD Domain Event outbox can start a new audited retry cycle', async () =>
     const tenantId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Dead letter tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Dead letter tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -46,7 +46,7 @@ test('DEAD Domain Event outbox can start a new audited retry cycle', async () =>
         occurredAt: new Date('2026-08-30T17:00:00.000Z'),
         actorSubjectId: 'dead-letter-itest',
         correlationId: randomUUID(),
-        packKey: 'dentex',
+        packKey: 'acme-corp',
         payload: {},
       },
     });

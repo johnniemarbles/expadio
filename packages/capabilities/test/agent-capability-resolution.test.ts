@@ -101,7 +101,7 @@ test('chooses the latest effective published version within the winning scope', 
 
 test('resolves a worker only with exact published skills allowed by worker scope', async () => {
   const skill = manifest({
-    scope: { kind: 'VERTICAL', verticalKey: 'dentex' },
+    scope: { kind: 'VERTICAL', verticalKey: 'acme-corp' },
   });
   const otherTenantSkill = manifest({
     scope: { kind: 'TENANT', tenantId: 'tenant-2' },
@@ -109,7 +109,7 @@ test('resolves a worker only with exact published skills allowed by worker scope
   const worker = manifest({
     kind: 'WORKER',
     key: 'knowledge-worker',
-    scope: { kind: 'VERTICAL', verticalKey: 'dentex' },
+    scope: { kind: 'VERTICAL', verticalKey: 'acme-corp' },
     skillReferences: [{ key: 'source-verify', version: 1 }],
   });
   const resolver = new PublishedAgentCapabilityResolver(
@@ -125,7 +125,7 @@ test('resolves a worker only with exact published skills allowed by worker scope
   assert.equal(resolved.resolvedSkills.length, 1);
   assert.deepEqual(resolved.resolvedSkills[0]?.scope, {
     kind: 'VERTICAL',
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
   });
 });
 

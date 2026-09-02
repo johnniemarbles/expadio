@@ -78,7 +78,7 @@ test('maps vertical and tenant scopes without widening tenant ownership', async 
   const client = new Client();
   client.responses.push({
     rows: [
-      row({ scope_kind: 'VERTICAL', scope_key: 'dentex' }),
+      row({ scope_kind: 'VERTICAL', scope_key: 'acme-corp' }),
       row({ scope_kind: 'TENANT', scope_key: tenantId, tenant_id: tenantId }),
     ],
     rowCount: 2,
@@ -88,7 +88,7 @@ test('maps vertical and tenant scopes without widening tenant ownership', async 
     .findByKindAndKey('SKILL', 'source-verify');
 
   assert.deepEqual(manifests.map((manifest) => manifest.scope), [
-    { kind: 'VERTICAL', verticalKey: 'dentex' },
+    { kind: 'VERTICAL', verticalKey: 'acme-corp' },
     { kind: 'TENANT', tenantId },
   ]);
   assert.notEqual(

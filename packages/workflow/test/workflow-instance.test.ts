@@ -15,7 +15,7 @@ const instance: WorkflowInstance = {
     version: 7,
     scope: 'TENANT',
   },
-  industryPackProvenance: { runtimeSource: 'TENANT_PUBLISHED', verticalKey: 'dentex', version: 7 },
+  industryPackProvenance: { runtimeSource: 'TENANT_PUBLISHED', verticalKey: 'acme-corp', version: 7 },
   state: 'RUNNING',
   currentStageKey: 'qualification',
   revision: 3,

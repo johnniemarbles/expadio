@@ -22,7 +22,7 @@ async function seedTenant(c: pg.PoolClient): Promise<string> {
   const tenantId = randomUUID();
   await c.query(
     `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-     VALUES ($1::uuid, 'Runner tenant', 'dentex')`,
+     VALUES ($1::uuid, 'Runner tenant', 'acme-corp')`,
     [tenantId],
   );
   await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -99,7 +99,7 @@ async function seedCaseEvent(
        $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5,
        'NORMAL', 'RESOLVED', 'crm.case', 'RESOLVED', 'runner-reviewer',
        '{"urgency":"Routine","procedureCode":"D3310"}'::jsonb,
-       1, 'dentex', NULL, 'CODE_BASELINE'
+       1, 'acme-corp', NULL, 'CODE_BASELINE'
      )`,
     [caseId, input.tenantId, accountId, contactId, input.subject],
   );
@@ -113,7 +113,7 @@ async function seedCaseEvent(
     actorSubjectId: 'runner-reviewer',
     correlationId: `runner-${caseId}`,
     provenance: {
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
       version: null,
       runtimeSource: 'CODE_BASELINE',
     },

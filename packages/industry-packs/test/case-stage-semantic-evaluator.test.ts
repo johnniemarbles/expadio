@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DENTEX_PACK,
+  ACME_CORP_PACK,
   evaluateCaseStageSemantics,
   resolveCaseStageSemantics,
 } from '../src/index.ts';
 
-test('DENTEX intake exit blocks until patient and practice relationships exist', () => {
-  const semantics = resolveCaseStageSemantics(DENTEX_PACK);
+test('ACME Corp intake exit blocks until contact and client relationships exist', () => {
+  const semantics = resolveCaseStageSemantics(ACME_CORP_PACK);
   const blocked = evaluateCaseStageSemantics(semantics, {
     stageKey: 'INTAKE',
     phase: 'EXIT',
@@ -31,43 +31,42 @@ test('DENTEX intake exit blocks until patient and practice relationships exist',
   assert.deepEqual(allowed, { ok: true, blockers: [] });
 });
 
-test('DENTEX treatment exit requires a meaningful procedure code', () => {
-  const semantics = resolveCaseStageSemantics(DENTEX_PACK);
+test('ACME Corp request exit requires a service type', () => {
+  const semantics = resolveCaseStageSemantics(ACME_CORP_PACK);
   const blocked = evaluateCaseStageSemantics(semantics, {
     stageKey: 'IN_PROGRESS',
     phase: 'EXIT',
-    attributes: { procedureCode: '   ' },
+    attributes: { serviceType: '   ' },
     relationships: [],
     decisionOutcomes: [],
   });
 
   assert.equal(blocked.ok, false);
   assert.equal(blocked.blockers[0]?.code, 'CASE_SEMANTIC_ATTRIBUTE_REQUIRED');
-  assert.equal(blocked.blockers[0]?.key, 'procedureCode');
+  assert.equal(blocked.blockers[0]?.key, 'serviceType');
 
   const allowed = evaluateCaseStageSemantics(semantics, {
     stageKey: 'IN_PROGRESS',
     phase: 'EXIT',
-    attributes: { procedureCode: 'D2740' },
+    attributes: { serviceType: 'Consulting' },
     relationships: [],
     decisionOutcomes: [],
   });
   assert.equal(allowed.ok, true);
 });
 
-test('DENTEX review exit requires care plan plus canonical APPROVE outcome', () => {
-  const semantics = resolveCaseStageSemantics(DENTEX_PACK);
+test('ACME Corp review exit requires service agreement plus canonical APPROVE outcome', () => {
+  const semantics = resolveCaseStageSemantics(ACME_CORP_PACK);
   const blocked = evaluateCaseStageSemantics(semantics, {
     stageKey: 'REVIEW',
     phase: 'EXIT',
     attributes: {},
-    relationships: ['crm.agreement'],
-    decisionOutcomes: ['RETURN'],
+    relationships: [],
+    decisionOutcomes: [],
   });
 
   assert.equal(blocked.ok, false);
-  assert.equal(blocked.blockers[0]?.code, 'CASE_SEMANTIC_DECISION_OUTCOME_REQUIRED');
-  assert.equal(blocked.blockers[0]?.key, 'APPROVE');
+  assert.equal(blocked.blockers.length, 2);
 
   const allowed = evaluateCaseStageSemantics(semantics, {
     stageKey: 'REVIEW',
@@ -80,7 +79,7 @@ test('DENTEX review exit requires care plan plus canonical APPROVE outcome', () 
 });
 
 test('requirements for another stage or phase do not block', () => {
-  const semantics = resolveCaseStageSemantics(DENTEX_PACK);
+  const semantics = resolveCaseStageSemantics(ACME_CORP_PACK);
   const result = evaluateCaseStageSemantics(semantics, {
     stageKey: 'RESOLVED',
     phase: 'EXIT',

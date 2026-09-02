@@ -23,7 +23,7 @@ async function seedEvent(
 ): Promise<string> {
   await client.query(
     `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-     VALUES ($1::uuid, $2, 'dentex')`,
+     VALUES ($1::uuid, $2, 'acme-corp')`,
     [tenantId, label],
   );
   await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -39,7 +39,7 @@ async function seedEvent(
       occurredAt: new Date('2026-08-30T16:00:00.000Z'),
       actorSubjectId: 'multi-tenant-itest',
       correlationId: randomUUID(),
-      packKey: 'dentex',
+      packKey: 'acme-corp',
       payload: {},
     },
   });

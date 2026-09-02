@@ -1,6 +1,6 @@
 # EXPADIO
 
-EXPADIO is the master business-expansion platform. **BEMP is the core business engine**; verticals such as DENTEX, WeRealtors, Nordrux, Insurance and TPA/LIMS consume the same horizontal platform capabilities.
+EXPADIO is the master business-expansion platform. **BEMP is the core business engine**; verticals such as tenant brands, tenant brands, Nordrux, Insurance and TPA/LIMS consume the same horizontal platform capabilities.
 
 ## Architecture status
 

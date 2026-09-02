@@ -31,7 +31,7 @@ test('business mutation + Domain Event + outbox commit atomically and roll back 
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Domain event tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Domain event tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -64,7 +64,7 @@ test('business mutation + Domain Event + outbox commit atomically and roll back 
           actorSubjectId: actor,
           correlationId,
           causationId: 'lead-conversion',
-          packKey: 'dentex',
+          packKey: 'acme-corp',
           payload: {
             previousLifecycleStage: 'PROSPECT',
             lifecycleStage: 'CUSTOMER',
@@ -117,7 +117,7 @@ test('business mutation + Domain Event + outbox commit atomically and roll back 
       aggregate_id: accountId,
       correlation_id: correlationId,
       causation_id: 'lead-conversion',
-      pack_key: 'dentex',
+      pack_key: 'acme-corp',
       pack_version: null,
       payload: {
         lifecycleStage: 'CUSTOMER',
@@ -156,7 +156,7 @@ test('business mutation + Domain Event + outbox commit atomically and roll back 
           actorSubjectId: actor,
           correlationId: randomUUID(),
           causationId: eventId,
-          packKey: 'dentex',
+          packKey: 'acme-corp',
           payload: { lifecycleStage: 'CHURNED' },
         },
       });
