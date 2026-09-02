@@ -23,10 +23,10 @@ export interface GovernedInstance {
 
 const stateColor = (s: string): string => {
   const up = s.toUpperCase();
-  if (up === 'RUNNING') return '#0f766e';
-  if (up === 'PAUSED') return '#b45309';
-  if (up === 'CREATED') return '#2563eb';
-  return '#64748b';
+  if (up === 'RUNNING') return 'var(--theme-primary)';
+  if (up === 'PAUSED') return 'var(--theme-warning)';
+  if (up === 'CREATED') return 'var(--theme-primary)';
+  return 'var(--theme-neutral)';
 };
 
 const sinceLabel = (iso: string): string => {
@@ -76,14 +76,14 @@ export function WorkflowsClient({ initial, verticalKey = null, queryString = '' 
               const sep = queryString ? '&' : '?';
               return `${queryString}${workType.trim() !== '' ? `${sep}workType=${encodeURIComponent(workType.trim())}` : ''}`;
             })()}`}
-            style={{ ...inp, textDecoration: 'none', color: '#2563eb', whiteSpace: 'nowrap' }}
+            style={{ ...inp, textDecoration: 'none', color: 'var(--theme-primary)', whiteSpace: 'nowrap' }}
           >
             Download CSV
           </a>
         </div>
       </div>
 
-      {error && <p role="alert" style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
+      {error && <p role="alert" style={{ color: 'var(--theme-danger)', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
