@@ -76,7 +76,8 @@ test('the Vendors surface uses governed dashboard styling primitives', () => {
   assert.doesNotMatch(client, /style=\{/);
   assert.doesNotMatch(client, /#[0-9a-fA-F]{3,8}/);
   assert.doesNotMatch(clientStyles, /#[0-9a-fA-F]{3,8}/);
-  assert.doesNotMatch(clientStyles, /var\([^,]+,/);
+  // Forbid CSS variable fallbacks like var(--token, fallback) while allowing valid color-mix() commas.
+  assert.doesNotMatch(clientStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
   assert.match(clientStyles, /var\(--theme-primary\)/);
   assert.match(clientStyles, /var\(--theme-border\)/);
   assert.match(clientStyles, /var\(--theme-danger\)/);
