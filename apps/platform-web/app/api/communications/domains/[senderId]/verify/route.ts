@@ -231,7 +231,7 @@ export async function POST(
             preflight: {
               allowed: true,
               reasonCode: 'OK',
-              reason: 'Platform administration domain-verification routing probe.',
+              detail: 'Platform administration domain-verification routing probe.',
             },
             evaluatedAt: requestedAt,
           },
