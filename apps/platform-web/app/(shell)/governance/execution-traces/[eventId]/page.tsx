@@ -14,8 +14,8 @@ function Badge({ value }: { value: string }) {
       display: 'inline-block',
       padding: '3px 8px',
       borderRadius: 999,
-      background: '#f1f5f9',
-      color: '#334155',
+      background: 'var(--theme-surface-muted)',
+      color: 'var(--theme-text-secondary)',
       fontSize: 11,
       fontWeight: 800,
     }}>
@@ -38,16 +38,16 @@ export default async function ExecutionTracePage({
   return (
     <main style={{ display: 'grid', gap: 18 }}>
       <section>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6366f1' }}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--theme-primary)' }}>
           Governance · execution trace
         </p>
         <h1 style={{ margin: '5px 0 6px' }}>{trace.event.eventType}</h1>
-        <p style={{ margin: 0, color: '#64748b', maxWidth: 900 }}>
+        <p style={{ margin: 0, color: 'var(--theme-text-secondary)', maxWidth: 900 }}>
           Decision → Action → Outcome evidence for one immutable Domain Event. This view is derived from the event, governed actions and capability execution records.
         </p>
       </section>
 
-      <section style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, background: '#fff' }}>
+      <section style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 16, background: 'var(--theme-surface)' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
           <Badge value={trace.event.outbox?.status ?? 'NO_OUTBOX'} />
           {trace.event.packKey ? <Badge value={trace.event.packKey} /> : null}
@@ -61,7 +61,7 @@ export default async function ExecutionTracePage({
           <Field label="Published" value={fmt(trace.event.outbox?.publishedAt ?? null)} />
         </div>
         {trace.event.outbox?.lastError ? (
-          <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: 12 }}>
+          <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: 'color-mix(in srgb,var(--theme-danger) 10%,transparent)', color: 'var(--theme-danger)', fontSize: 12 }}>
             {trace.event.outbox.lastError}
           </div>
         ) : null}
@@ -71,25 +71,25 @@ export default async function ExecutionTracePage({
         <h2 style={{ fontSize: 16, marginBottom: 10 }}>Governed actions</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           {trace.actions.map((action) => (
-            <article key={action.actionIntentId} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, background: '#fff' }}>
+            <article key={action.actionIntentId} style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 14, background: 'var(--theme-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                 <div>
                   <strong>{action.actionKey}</strong>
-                  <div style={{ color: '#64748b', fontSize: 12 }}>{action.ruleKey}</div>
+                  <div style={{ color: 'var(--theme-text-secondary)', fontSize: 12 }}>{action.ruleKey}</div>
                 </div>
                 <Badge value={action.executorClass} />
               </div>
-              <div style={{ marginTop: 9, fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
+              <div style={{ marginTop: 9, fontSize: 11, color: 'var(--theme-text-secondary)', fontFamily: 'monospace' }}>
                 intent {action.actionIntentId} · caused by {action.causationId}
               </div>
               <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
                 {action.attempts.map((attempt) => (
-                  <div key={attempt.executionAttemptId} style={{ padding: 9, borderRadius: 8, background: '#f8fafc', fontSize: 12 }}>
+                  <div key={attempt.executionAttemptId} style={{ padding: 9, borderRadius: 8, background: 'var(--theme-surface-muted)', fontSize: 12 }}>
                     <strong>{attempt.status}</strong> · {attempt.reasonCode}
                     {attempt.outputReference ? <span> · {attempt.outputReference}</span> : null}
                   </div>
                 ))}
-                {action.attempts.length === 0 ? <div style={{ color: '#94a3b8', fontSize: 12 }}>No execution attempt recorded yet.</div> : null}
+                {action.attempts.length === 0 ? <div style={{ color: 'var(--theme-text-muted)', fontSize: 12 }}>No execution attempt recorded yet.</div> : null}
               </div>
             </article>
           ))}
@@ -125,20 +125,20 @@ export default async function ExecutionTracePage({
         <h2 style={{ fontSize: 16, marginBottom: 10 }}>External capability outcomes</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           {trace.deliveries.map((delivery) => (
-            <article key={delivery.deliveryId} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, background: '#fff' }}>
+            <article key={delivery.deliveryId} style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 14, background: 'var(--theme-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <strong>{delivery.connectorKey}</strong>
-                  <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{delivery.deliveryId}</div>
+                  <div style={{ fontSize: 11, color: 'var(--theme-text-secondary)', fontFamily: 'monospace' }}>{delivery.deliveryId}</div>
                 </div>
                 <Badge value={delivery.state} />
               </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: '#475569' }}>
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--theme-text-secondary)' }}>
                 Adapter {delivery.adapterKey} · attempts {delivery.attemptCount}
                 {delivery.providerMessageId ? ` · provider message ${delivery.providerMessageId}` : ''}
               </div>
               {delivery.providerAttempts.map((attempt) => (
-                <div key={attempt.providerAttemptId} style={{ marginTop: 8, padding: 9, background: '#f8fafc', borderRadius: 8, fontSize: 12 }}>
+                <div key={attempt.providerAttemptId} style={{ marginTop: 8, padding: 9, background: 'var(--theme-surface-muted)', borderRadius: 8, fontSize: 12 }}>
                   <strong>{attempt.providerKey}</strong> · {attempt.outcome} · {attempt.reasonCode}
                 </div>
               ))}
@@ -154,7 +154,7 @@ export default async function ExecutionTracePage({
 function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <div style={{ color: '#94a3b8', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+      <div style={{ color: 'var(--theme-text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
       <div style={{ marginTop: 3, fontFamily: mono ? 'monospace' : undefined, overflowWrap: 'anywhere' }}>{value}</div>
     </div>
   );
@@ -174,16 +174,16 @@ function TraceGroup({ title, empty, children }: { title: string; empty: string; 
 
 function TraceRow({ title, status, detail }: { title: string; status: string; detail: string }) {
   return (
-    <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 13, background: '#fff' }}>
+    <div style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 13, background: 'var(--theme-surface)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <strong style={{ fontSize: 13 }}>{title}</strong>
         <Badge value={status} />
       </div>
-      <div style={{ marginTop: 5, color: '#64748b', fontSize: 12, overflowWrap: 'anywhere' }}>{detail}</div>
+      <div style={{ marginTop: 5, color: 'var(--theme-text-secondary)', fontSize: 12, overflowWrap: 'anywhere' }}>{detail}</div>
     </div>
   );
 }
 
 function Empty({ text }: { text: string }) {
-  return <div style={{ padding: 14, color: '#64748b', border: '1px dashed #cbd5e1', borderRadius: 10, fontSize: 12 }}>{text}</div>;
+  return <div style={{ padding: 14, color: 'var(--theme-text-secondary)', border: '1px dashed var(--theme-border)', borderRadius: 10, fontSize: 12 }}>{text}</div>;
 }
