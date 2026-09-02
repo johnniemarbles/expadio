@@ -19,7 +19,29 @@
      presentation only and never invents operational status. */
 }
 
-/* Communications dashboard: staggered entrance for real, already-rendered data. */
+.expadioMotionEnter {
+  animation: expadioMotionEnter var(--theme-motion-slow) var(--theme-easing) both;
+}
+
+.expadioMotionPanelIn {
+  animation: expadioMotionPanelIn var(--theme-motion-panel) var(--theme-easing) both;
+}
+
+.expadioMotionRowIn {
+  animation: expadioMotionRowIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+.expadioMotionTab {
+  transition:
+    color var(--theme-motion-fast) var(--theme-easing),
+    background-color var(--theme-motion-fast) var(--theme-easing),
+    border-color var(--theme-motion-fast) var(--theme-easing),
+    transform var(--theme-motion-fast) var(--theme-easing);
+}
+
+.expadioMotionTab:active { transform: translateY(1px); }
+
+/* Legacy Communications dashboard bridge. New surfaces should use explicit motion primitives/classes. */
 [class*="summaryMetricCard"] {
   animation: expadioMotionEnter var(--theme-motion-slow) var(--theme-easing) both;
 }
@@ -73,14 +95,23 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
+  :root,
+  [data-expadio-theme="platform"],
+  [data-expadio-theme="brand"] {
     --theme-motion-fast: 0ms;
     --theme-motion-normal: 0ms;
     --theme-motion-slow: 0ms;
     --theme-motion-panel: 0ms;
     --theme-motion-data: 0ms;
+    --theme-motion-distance-micro: 0px;
+    --theme-motion-distance-small: 0px;
+    --theme-motion-distance-panel: 0px;
+    --theme-easing-emphasis: var(--theme-easing);
   }
 
+  .expadioMotionEnter,
+  .expadioMotionPanelIn,
+  .expadioMotionRowIn,
   [class*="summaryMetricCard"],
   [class*="cardPanel"],
   [class*="attentionTablePanel"],
