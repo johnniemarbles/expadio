@@ -161,6 +161,12 @@ class OwnershipClient implements EnterpriseOwnershipSqlClient {
         rowCount: 1,
       };
     }
+    if (sql.startsWith('INSERT INTO platform.domain_event_outbox')) {
+      return {
+        rows: [{ outbox_id: '70100000-0000-0000-0000-000000000098' }] as Row[],
+        rowCount: 1,
+      };
+    }
 
     return { rows: [], rowCount: 1 };
   }
