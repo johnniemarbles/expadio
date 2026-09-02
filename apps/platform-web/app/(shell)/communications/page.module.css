@@ -491,3 +491,9 @@
   }
   .cardRight { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
 }
+
+.scopeMeta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.scopeBadge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--theme-info) 12%,transparent);color:var(--theme-info);font-size:11px;font-weight:800;border:1px solid color-mix(in srgb,var(--theme-info) 22%,transparent)}
+.successText{color:var(--theme-success);font-weight:700}
+.warningText{color:var(--theme-warning);font-weight:700}
+.dangerText{color:var(--theme-danger);font-weight:700}
