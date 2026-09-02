@@ -7,7 +7,7 @@ import {
   hasLearningAdmin,
   resolveBrandContext,
   withBrandTransaction,
-} from '../../../../../lib/brand-context';
+} from '../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
