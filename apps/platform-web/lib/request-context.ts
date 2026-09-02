@@ -58,10 +58,18 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   const headerList = await headers();
   let requestedTenant = headerList.get('x-expadio-tenant-id');
   let requestedOrganization = headerList.get('x-expadio-organization-id');
+  let tenantSelectionSource = headerList.get('x-expadio-tenant-source');
+  let organizationSelectionSource = headerList.get('x-expadio-organization-source');
   if (request) {
     const url = new URL(request.url);
-    if (url.searchParams.has('account')) requestedTenant = url.searchParams.get('account');
-    if (url.searchParams.has('org')) requestedOrganization = url.searchParams.get('org');
+    if (url.searchParams.has('account')) {
+      requestedTenant = url.searchParams.get('account');
+      tenantSelectionSource = 'query';
+    }
+    if (url.searchParams.has('org')) {
+      requestedOrganization = url.searchParams.get('org');
+      organizationSelectionSource = 'query';
+    }
   }
   const memberships = await membershipRepository.listActiveMemberships({
     subjectId: userId,
@@ -77,11 +85,20 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
   }
 
   let selectedMembership;
-  if (requestedOrganization) {
+
+  // Query-string selectors are an explicit authorization request and remain
+  // fail-closed. Cookies are only persisted UI preferences: if hierarchy,
+  // provisioning, or membership changes make one stale, recover to an
+  // authorized membership instead of permanently bricking the shell.
+  if (organizationSelectionSource === 'query' && requestedOrganization) {
     selectedMembership = memberships.find(
       (membership) =>
         membership.organizationId === requestedOrganization
-        && (!requestedTenant || membership.tenantId === requestedTenant),
+        && (
+          tenantSelectionSource !== 'query'
+          || !requestedTenant
+          || membership.tenantId === requestedTenant
+        ),
     );
     if (!selectedMembership) {
       throw new ContextDenied(
@@ -90,19 +107,44 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
         403,
       );
     }
-  } else if (requestedTenant) {
-    selectedMembership = memberships.find(
+  } else if (tenantSelectionSource === 'query' && requestedTenant) {
+    const tenantMemberships = memberships.filter(
       (membership) => membership.tenantId === requestedTenant,
     );
-    if (!selectedMembership) {
+    if (tenantMemberships.length === 0) {
       throw new ContextDenied(
         'TENANT_ACCESS_DENIED',
         'You do not have access to this workspace.',
         403,
       );
     }
+    selectedMembership =
+      (requestedOrganization
+        ? tenantMemberships.find(
+            (membership) => membership.organizationId === requestedOrganization,
+          )
+        : undefined)
+      ?? tenantMemberships[0];
   } else {
-    selectedMembership = memberships[0];
+    selectedMembership =
+      (requestedOrganization
+        ? memberships.find(
+            (membership) =>
+              membership.organizationId === requestedOrganization
+              && (!requestedTenant || membership.tenantId === requestedTenant),
+          )
+        : undefined)
+      ?? (requestedOrganization
+        ? memberships.find(
+            (membership) => membership.organizationId === requestedOrganization,
+          )
+        : undefined)
+      ?? (requestedTenant
+        ? memberships.find(
+            (membership) => membership.tenantId === requestedTenant,
+          )
+        : undefined)
+      ?? memberships[0];
   }
 
   requestedTenant = selectedMembership.tenantId;
