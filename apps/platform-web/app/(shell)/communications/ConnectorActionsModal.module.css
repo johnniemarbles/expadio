@@ -1,0 +1,284 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--theme-overlay) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.dialog {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-card);
+  background: var(--theme-surface-raised);
+  box-shadow: var(--theme-shadow-elevated);
+  color: var(--theme-text-primary);
+  padding: 28px;
+}
+
+.header,
+.sectionHeader,
+.footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header {
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  color: var(--theme-primary);
+  font: 800 11px/1.2 var(--theme-font-mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 4px 0 0;
+  color: var(--theme-text-primary);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.meta,
+.empty,
+.loading,
+.note,
+.attestationMeta {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.closeButton,
+.secondaryButton,
+.dangerButton {
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-control);
+  cursor: pointer;
+  font: inherit;
+}
+
+.closeButton {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  font-size: 16px;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+}
+
+.section,
+.stat,
+.attestation {
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-card);
+  background: var(--theme-surface);
+}
+
+.section {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  color: var(--theme-text-primary);
+  font-size: 14px;
+}
+
+.statement,
+.attestationText {
+  margin: 0 0 10px;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.statGrid,
+.healthBody,
+.attestationList {
+  display: grid;
+  gap: 10px;
+}
+
+.statGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stat {
+  padding: 8px 10px;
+}
+
+.statLabel {
+  color: var(--theme-text-muted);
+  font: 800 10px/1.2 var(--theme-font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  color: var(--theme-text-primary);
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.statValueDanger,
+.providerError {
+  color: var(--theme-danger);
+}
+
+.statusBadge {
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+  padding: 3px 10px;
+}
+
+.statusValid {
+  border-color: color-mix(in srgb, var(--theme-success) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-success) 12%, transparent);
+  color: var(--theme-success);
+}
+
+.statusFailing {
+  border-color: color-mix(in srgb, var(--theme-warning) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-warning) 12%, transparent);
+  color: var(--theme-warning);
+}
+
+.statusInvalid {
+  border-color: color-mix(in srgb, var(--theme-danger) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-danger) 12%, transparent);
+  color: var(--theme-danger);
+}
+
+.healthBody {
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
+.healthBody strong {
+  color: var(--theme-text-primary);
+}
+
+.code {
+  font-family: var(--theme-font-mono);
+}
+
+.note {
+  font-style: italic;
+}
+
+.attestation {
+  padding: 12px;
+}
+
+.attestationTime {
+  color: var(--theme-text-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bannerError,
+.bannerNotice {
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-control);
+  font-size: 13px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.bannerError {
+  border-color: color-mix(in srgb, var(--theme-danger) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  color: var(--theme-danger);
+}
+
+.bannerNotice {
+  border-color: color-mix(in srgb, var(--theme-success) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-success) 10%, transparent);
+  color: var(--theme-success);
+}
+
+.approvalLabel {
+  display: grid;
+  gap: 6px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.approvalInput {
+  width: 100%;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-surface);
+  color: var(--theme-text-primary);
+  font: inherit;
+  padding: 6px 10px;
+}
+
+.footer {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.secondaryButton,
+.dangerButton {
+  min-height: 36px;
+  padding: 0 16px;
+  font-weight: 800;
+}
+
+.secondaryButton {
+  background: transparent;
+  color: var(--theme-text-primary);
+}
+
+.dangerButton {
+  background: var(--theme-danger);
+  border-color: var(--theme-danger);
+  color: var(--theme-text-inverse);
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.closeButton:focus-visible,
+.secondaryButton:focus-visible,
+.dangerButton:focus-visible,
+.approvalInput:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-primary) 54%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .dialog {
+    padding: 20px;
+  }
+
+  .header,
+  .sectionHeader,
+  .footer {
+    flex-direction: column;
+  }
+
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
