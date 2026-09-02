@@ -1,23 +1,21 @@
 import { NextResponse } from 'next/server';
 import { promises as dns } from 'node:dns';
-import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../../lib/request-context';
+import { resolveRequestContext, withTenantTransaction, deniedResponse } from '../../../../../../lib/request-context';
 import { expectedDnsRecords } from '../../../../../../lib/dns-records';
+import { hasPlatformAdministrationRole } from '../../../../../../lib/governance-authz';
+import { requireCommunicationDomainAdmin } from '../../../../../../lib/communication-domain-admin';
 
 /**
- * Real domain verification (design: no fabricated VERIFIED).
- *
- * Resolves the expected SPF, DMARC and return-path MX records against live DNS.
- * The domain is marked VERIFIED only when every verifiable requirement is
- * actually present with the required value. DKIM is provider-issued and is not
- * included in DNS observations until provider evidence is available.
- *
- * DNS resolution needs egress. Where egress is restricted the checks fail
- * closed — PENDING, with the resolver error surfaced — which is the honest
- * outcome, not a green tick.
+ * DNS verification for an existing email sender identity. Mutation authority is
+ * scope-aware: tenant senders require communication-domain administration and
+ * platform senders require Platform Administration. Provider-issued DKIM is
+ * still a separate evidence gap and is not fabricated by this boundary.
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface RecordCheck {
   purpose: string;
@@ -112,39 +110,81 @@ export async function POST(
   try {
     const context = await resolveRequestContext(request);
     const senderId = decodeURIComponent((await params).senderId);
+    if (!UUID_RE.test(senderId)) {
+      return NextResponse.json({ error: 'senderId must be a valid UUID.' }, { status: 400 });
+    }
 
-    const result = await withTenantClient(context, async (client) => {
-      const sender = await client.query(
-        `SELECT sender_id, address, verification_status
+    const outcome = await withTenantTransaction(context, async (client) => {
+      const senderResult = await client.query<{
+        sender_id: string;
+        scope: 'PLATFORM' | 'TENANT';
+        address: string;
+      }>(
+        `SELECT sender_id, scope, address
            FROM platform.communication_sender_identities
           WHERE sender_id = $1::uuid
-            AND (scope = 'PLATFORM' OR tenant_id = $2::uuid)`,
+            AND channel = 'email'
+            AND (
+              scope = 'PLATFORM'
+              OR (scope = 'TENANT' AND tenant_id = $2::uuid)
+            )
+          LIMIT 1`,
         [senderId, context.tenantId],
       );
-      if (sender.rows.length === 0) return null;
+      const sender = senderResult.rows[0];
+      if (sender === undefined) return { kind: 'NOT_FOUND' as const };
 
-      const address: string = sender.rows[0].address;
-      const domain = address.includes('@') ? address.split('@')[1] : address;
+      if (sender.scope === 'PLATFORM') {
+        if (!(await hasPlatformAdministrationRole(client, context.subjectId))) {
+          return { kind: 'DENIED' as const, reasonKey: 'PLATFORM_ADMIN_REQUIRED' };
+        }
+        await client.query("SELECT set_config('app.platform_admin', 'true', true)");
+      } else if (!(await requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId))) {
+        return { kind: 'DENIED' as const, reasonKey: 'FORBIDDEN' };
+      }
 
+      const domain = sender.address.includes('@') ? sender.address.split('@')[1]! : sender.address;
       const verifiable = expectedDnsRecords(domain).filter((spec) => spec.verifiable);
       const checks = await Promise.all(verifiable.map(checkRecord));
       const allVerified = checks.length > 0 && checks.every((check) => check.ok);
-
       const nextStatus = allVerified ? 'VERIFIED' : 'PENDING';
+
       await client.query(
         `UPDATE platform.communication_sender_identities
             SET verification_status = $2, updated_at = now()
-          WHERE sender_id = $1::uuid`,
-        [senderId, nextStatus],
+          WHERE sender_id = $1::uuid
+            AND channel = 'email'
+            AND (
+              (scope = 'PLATFORM' AND $4::boolean = true)
+              OR (scope = 'TENANT' AND tenant_id = $3::uuid)
+            )`,
+        [senderId, nextStatus, context.tenantId, sender.scope === 'PLATFORM'],
       );
 
-      return { domain, verificationStatus: nextStatus, checks };
+      return { kind: 'OK' as const, domain, verificationStatus: nextStatus, checks };
     });
 
-    if (result === null) {
+    if (outcome.kind === 'DENIED') {
+      return NextResponse.json(
+        {
+          denied: true,
+          reasonKey: outcome.reasonKey,
+          message: outcome.reasonKey === 'PLATFORM_ADMIN_REQUIRED'
+            ? 'Only Platform Administration can verify platform senders.'
+            : 'Sending-domain administration is required.',
+        },
+        { status: 403 },
+      );
+    }
+    if (outcome.kind === 'NOT_FOUND') {
       return NextResponse.json({ error: 'That sending domain was not found.' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({
+      success: true,
+      domain: outcome.domain,
+      verificationStatus: outcome.verificationStatus,
+      checks: outcome.checks,
+    });
   } catch (error) {
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
