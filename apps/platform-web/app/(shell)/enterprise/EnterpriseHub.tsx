@@ -34,6 +34,21 @@ export interface EnterpriseHubData {
     status: string;
     organization_ids: string[];
   }>;
+  ownershipInterests: Array<{
+    interestId: string;
+    changeRequestId: string;
+    ownerLegalEntityId: string;
+    subjectLegalEntityId: string;
+    interestType: 'EQUITY' | 'VOTING' | 'ECONOMIC' | 'CONTROL' | 'BENEFICIAL';
+    percentage: number | null;
+    validFrom: string;
+    validUntil: string | null;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED';
+    createdBySubjectId: string;
+    approvedBySubjectId: string | null;
+    approvedAt: string | null;
+    evidence: Record<string, unknown>;
+  }>;
   perspectives: Array<{
     perspective:
       | 'GOVERNANCE'
@@ -259,6 +274,28 @@ export function EnterpriseHub({
     );
   }
 
+  async function requestOwnershipChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const evidenceRef = String(form.get('evidenceRef') ?? '').trim();
+    await mutate(
+      'ownership:create',
+      '/api/enterprise/ownership/requests',
+      {
+        ownerLegalEntityId: form.get('ownerLegalEntityId'),
+        subjectLegalEntityId: form.get('subjectLegalEntityId'),
+        interestType: form.get('interestType'),
+        percentage:
+          String(form.get('percentage') ?? '').trim() === ''
+            ? null
+            : Number(form.get('percentage')),
+        evidenceRefs: evidenceRef ? [evidenceRef] : [],
+      },
+      'Ownership change submitted for independent approval.',
+      true,
+    );
+  }
+
   async function createAgreement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -435,22 +472,86 @@ export function EnterpriseHub({
       )}
 
       {tab === 'legal' && (
-        <section className={styles.panel}>
-          <header><div><span>Corporate identity</span><h2>Legal entities</h2></div><small>Verified entities are eligible for commercial authority.</small></header>
-          <div className={styles.cards}>
-            {data.legalEntities.map((entity) => (
-              <article key={entity.legal_entity_id}>
-                <span>{entity.jurisdiction_country_code}</span>
-                <h3>{entity.legal_name}</h3>
-                <p>{readable(entity.entity_type)}</p>
-                <footer>
-                  <b className={stateTone(entity.status)}>{readable(entity.status)}</b>
-                  <small>{entity.organization_ids.length} organization binding(s)</small>
-                </footer>
-              </article>
-            ))}
-          </div>
-        </section>
+        <div className={styles.stack}>
+          <section className={styles.panel}>
+            <header><div><span>Corporate identity</span><h2>Legal entities</h2></div><small>Verified entities are eligible for governed ownership and commercial authority.</small></header>
+            <div className={styles.cards}>
+              {data.legalEntities.map((entity) => (
+                <article key={entity.legal_entity_id}>
+                  <span>{entity.jurisdiction_country_code}</span>
+                  <h3>{entity.legal_name}</h3>
+                  <p>{readable(entity.entity_type)}</p>
+                  <footer>
+                    <b className={stateTone(entity.status)}>{readable(entity.status)}</b>
+                    <small>{entity.organization_ids.length} organization binding(s)</small>
+                  </footer>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.panel}>
+            <header>
+              <div><span>Ownership / legal perspective</span><h2>Governed ownership interests</h2></div>
+              <small>Changes remain pending until a different authorized subject approves them.</small>
+            </header>
+            <form className={styles.formGrid} onSubmit={requestOwnershipChange}>
+              <label>
+                Owner
+                <select name="ownerLegalEntityId" required defaultValue="">
+                  <option value="" disabled>Select verified owner</option>
+                  {data.legalEntities.map((entity) => (
+                    <option value={entity.legal_entity_id} key={'owner:' + entity.legal_entity_id}>{entity.legal_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Owned / controlled entity
+                <select name="subjectLegalEntityId" required defaultValue="">
+                  <option value="" disabled>Select verified subject</option>
+                  {data.legalEntities.map((entity) => (
+                    <option value={entity.legal_entity_id} key={'subject:' + entity.legal_entity_id}>{entity.legal_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Interest type
+                <select name="interestType" defaultValue="EQUITY">
+                  <option>EQUITY</option>
+                  <option>VOTING</option>
+                  <option>ECONOMIC</option>
+                  <option>CONTROL</option>
+                  <option>BENEFICIAL</option>
+                </select>
+              </label>
+              <label>
+                Percentage
+                <input name="percentage" type="number" min="0" max="100" step="0.0001" placeholder="e.g. 60" />
+              </label>
+              <label className={styles.wide}>
+                Evidence reference
+                <input name="evidenceRef" placeholder="document:cap-table:2026-09" />
+              </label>
+              <button disabled={busy !== null || data.legalEntities.length < 2}>Submit ownership change</button>
+            </form>
+            <div className={styles.tableWrap}>
+              <table>
+                <thead><tr><th>Owner</th><th>Subject</th><th>Interest</th><th>Effective</th><th>Status</th></tr></thead>
+                <tbody>
+                  {data.ownershipInterests.map((interest) => (
+                    <tr key={interest.interestId}>
+                      <td><strong>{legalById.get(interest.ownerLegalEntityId)?.legal_name ?? interest.ownerLegalEntityId}</strong></td>
+                      <td><strong>{legalById.get(interest.subjectLegalEntityId)?.legal_name ?? interest.subjectLegalEntityId}</strong></td>
+                      <td>{readable(interest.interestType)}{interest.percentage === null ? '' : ' · ' + interest.percentage + '%'}</td>
+                      <td>{new Date(interest.validFrom).toLocaleDateString()}{interest.validUntil ? ' → ' + new Date(interest.validUntil).toLocaleDateString() : ''}</td>
+                      <td><span className={stateTone(interest.status)}>{readable(interest.status)}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       )}
 
       {tab === 'commercial' && (
@@ -694,13 +795,40 @@ export function EnterpriseHub({
           <header><div><span>Governed change</span><h2>Pending enterprise changes</h2></div></header>
           <div className={styles.tableWrap}>
             <table>
-              <thead><tr><th>Operation</th><th>Status</th><th>Target</th><th>Requested</th></tr></thead>
+              <thead><tr><th>Operation</th><th>Status</th><th>Target</th><th>Requested</th><th>Governed action</th></tr></thead>
               <tbody>{data.pendingChangeRequests.map((item) => (
                 <tr key={item.enterprise_change_request_id}>
                   <td><strong>{readable(item.operation)}</strong></td>
                   <td><span className={stateTone(item.status)}>{readable(item.status)}</span></td>
-                  <td>{item.target_organization_id ? organizationById.get(item.target_organization_id)?.name ?? item.target_organization_id : item.target_legal_entity_id ?? '—'}</td>
+                  <td>{item.target_organization_id ? organizationById.get(item.target_organization_id)?.name ?? item.target_organization_id : item.target_legal_entity_id ? legalById.get(item.target_legal_entity_id)?.legal_name ?? item.target_legal_entity_id : '—'}</td>
                   <td>{new Date(item.requested_at).toLocaleString()}</td>
+                  <td>
+                    {item.operation === 'CHANGE_OWNERSHIP' ? (
+                      <div className={styles.inlineAction}>
+                        <button
+                          disabled={busy !== null}
+                          onClick={() => void mutate(
+                            'ownership:approve:' + item.enterprise_change_request_id,
+                            '/api/enterprise/change-requests/' + item.enterprise_change_request_id + '/decision',
+                            { action: 'APPROVE', reason: 'Ownership evidence reviewed and approved.' },
+                            'Ownership change approved and published to the Ownership / Legal graph.',
+                          )}
+                        >Approve</button>
+                        <button
+                          className={styles.secondaryButton}
+                          disabled={busy !== null}
+                          onClick={() => void mutate(
+                            'ownership:reject:' + item.enterprise_change_request_id,
+                            '/api/enterprise/change-requests/' + item.enterprise_change_request_id + '/decision',
+                            { action: 'REJECT', reason: 'Ownership change rejected during independent review.' },
+                            'Ownership change rejected.',
+                          )}
+                        >Reject</button>
+                      </div>
+                    ) : (
+                      <span className={styles.pendingState}>Existing decision flow</span>
+                    )}
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
