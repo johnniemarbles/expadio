@@ -50,13 +50,7 @@ interface DeliveryRow {
   updated_at: Date | string;
 }
 
-/**
- * Brand-facing Communications projection.
- *
- * This deliberately exposes business-operational state only. Provider registry,
- * connector routing, credential references, custody, provider attempts and raw
- * provider webhook payloads remain Platform-owned and are not selected here.
- */
+/** Brand-facing business-operational Communications projection. */
 export async function loadBrandCommunicationOverview(
   client: pg.PoolClient,
   input: { tenantId: string; organizationId: string },
