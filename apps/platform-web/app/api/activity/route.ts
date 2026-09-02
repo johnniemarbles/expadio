@@ -62,17 +62,30 @@ export async function GET(request: Request) {
     });
 
     const items: ActivityItem[] = [];
+    const now = Date.now();
+    const relativeTime = (iso: string): string => {
+      const diffMs = Math.max(0, now - new Date(iso).getTime());
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHrs = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHrs / 24);
+      if (diffMins < 1) return 'just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHrs < 24) return `${diffHrs}h ago`;
+      return `${diffDays}d ago`;
+    };
 
     for (const row of agentRows as any[]) {
       if (!row.id || !row.actor || !row.action || !row.target || !row.time) {
         throw new Error('Activity evidence is incomplete.');
       }
+      const time = new Date(row.time).toISOString();
       items.push({
         id: String(row.id),
         actor: String(row.actor),
         action: String(row.action).toLowerCase().replace(/_/g, ' '),
         target: String(row.target),
-        time: new Date(row.time).toISOString(),
+        time,
+        timeLabel: relativeTime(time),
       });
     }
 
@@ -80,12 +93,14 @@ export async function GET(request: Request) {
       if (!row.id || !row.actor || !row.outcome || !row.resource_type || !row.resource_id || !row.time) {
         throw new Error('Activity evidence is incomplete.');
       }
+      const time = new Date(row.time).toISOString();
       items.push({
         id: String(row.id),
         actor: String(row.actor),
         action: `read access ${String(row.outcome).toLowerCase()}`,
         target: `${String(row.resource_type)} ${String(row.resource_id)}`,
-        time: new Date(row.time).toISOString(),
+        time,
+        timeLabel: relativeTime(time),
       });
     }
 
