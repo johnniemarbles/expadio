@@ -722,6 +722,82 @@ export async function startEnterpriseJurisdictionActivation(
   );
   if (scope.rowCount !== 1) throw new Error('ENTERPRISE_JURISDICTION_TERRITORY_NOT_APPOINTED');
 
+  const loadReplay = async () => client.query<{
+    readonly enterprise_jurisdiction_activation_id: string;
+    readonly enterprise_id: string;
+    readonly organization_id: string;
+    readonly enterprise_appointment_id: string;
+    readonly territory_id: string;
+    readonly workflow_activation_id: string | null;
+  }>(
+    `SELECT enterprise_jurisdiction_activation_id, enterprise_id, organization_id,
+            enterprise_appointment_id, territory_id, workflow_activation_id
+       FROM platform.enterprise_jurisdiction_activations
+      WHERE tenant_id = $1::uuid
+        AND idempotency_key = $2
+      LIMIT 1`,
+    [input.tenantId, input.idempotencyKey],
+  );
+
+  const existing = (await loadReplay()).rows[0];
+  if (existing) {
+    const same =
+      existing.enterprise_id === input.enterpriseId
+      && existing.organization_id === appointment.beneficiary_organization_id
+      && existing.enterprise_appointment_id === input.appointmentId
+      && existing.territory_id === input.territoryId;
+    if (!same) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
+    if (!existing.workflow_activation_id) {
+      throw new Error('ENTERPRISE_JURISDICTION_REPLAY_INCOMPLETE');
+    }
+    return {
+      jurisdictionActivationId: existing.enterprise_jurisdiction_activation_id,
+      workflowActivationId: existing.workflow_activation_id,
+    };
+  }
+
+  const jurisdictionActivationId = randomUUID();
+  const reserved = await client.query<{ readonly enterprise_jurisdiction_activation_id: string }>(
+    `INSERT INTO platform.enterprise_jurisdiction_activations (
+       enterprise_jurisdiction_activation_id, tenant_id, enterprise_id,
+       organization_id, enterprise_appointment_id, territory_id,
+       idempotency_key, state, requested_by_subject_id, evidence_refs
+     ) VALUES (
+       $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+       $7, 'PLANNING', $8, $9::text[]
+     )
+     ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+     RETURNING enterprise_jurisdiction_activation_id`,
+    [
+      jurisdictionActivationId,
+      input.tenantId,
+      input.enterpriseId,
+      appointment.beneficiary_organization_id,
+      input.appointmentId,
+      input.territoryId,
+      input.idempotencyKey,
+      input.requestedBySubjectId,
+      [...input.evidenceRefs],
+    ],
+  );
+  if (!reserved.rows[0]) {
+    const replay = (await loadReplay()).rows[0];
+    if (!replay) throw new Error('ENTERPRISE_JURISDICTION_CREATE_FAILED');
+    const same =
+      replay.enterprise_id === input.enterpriseId
+      && replay.organization_id === appointment.beneficiary_organization_id
+      && replay.enterprise_appointment_id === input.appointmentId
+      && replay.territory_id === input.territoryId;
+    if (!same) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
+    if (!replay.workflow_activation_id) {
+      throw new Error('ENTERPRISE_JURISDICTION_REPLAY_INCOMPLETE');
+    }
+    return {
+      jurisdictionActivationId: replay.enterprise_jurisdiction_activation_id,
+      workflowActivationId: replay.workflow_activation_id,
+    };
+  }
+
   const activationId = input.activationId ?? randomUUID();
   const activationService = new RepositoryWorkflowActivationService({
     blueprints: new PostgresWorkflowActivationBlueprintProvider(client),
@@ -745,64 +821,14 @@ export async function startEnterpriseJurisdictionActivation(
   if (activation.status === 'DENIED') throw new Error(`ENTERPRISE_ACTIVATION_DENIED:${activation.code}`);
   if (activation.status === 'CONFLICT') throw new Error('ENTERPRISE_ACTIVATION_CONFLICT');
 
-  const existing = await client.query<{ readonly enterprise_jurisdiction_activation_id: string }>(
-    `SELECT enterprise_jurisdiction_activation_id
-       FROM platform.enterprise_jurisdiction_activations
-      WHERE tenant_id = $1::uuid
-        AND organization_id = $2::uuid
-        AND enterprise_appointment_id = $3::uuid
-        AND territory_id = $4::uuid
-        AND state IN ('PLANNING','ACTIVATION_REVIEW','APPROVED','ACTIVE')
-      ORDER BY created_at DESC
-      LIMIT 1
-      FOR UPDATE`,
-    [
-      input.tenantId,
-      appointment.beneficiary_organization_id,
-      input.appointmentId,
-      input.territoryId,
-    ],
-  );
-  const prior = existing.rows[0];
-  if (prior) {
-    await client.query(
-      `UPDATE platform.enterprise_jurisdiction_activations
-          SET workflow_activation_id = $3::uuid,
-              state = CASE WHEN state = 'PLANNING' THEN 'ACTIVATION_REVIEW' ELSE state END,
-              updated_at = now()
-        WHERE tenant_id = $1::uuid
-          AND enterprise_jurisdiction_activation_id = $2::uuid`,
-      [input.tenantId, prior.enterprise_jurisdiction_activation_id, activation.activation.activationId],
-    );
-    return {
-      jurisdictionActivationId: prior.enterprise_jurisdiction_activation_id,
-      workflowActivationId: activation.activation.activationId,
-    };
-  }
-
-  const jurisdictionActivationId = randomUUID();
   await client.query(
-    `INSERT INTO platform.enterprise_jurisdiction_activations (
-       enterprise_jurisdiction_activation_id, tenant_id, enterprise_id,
-       organization_id, enterprise_appointment_id, territory_id,
-       workflow_activation_id, idempotency_key, state,
-       requested_by_subject_id, evidence_refs
-     ) VALUES (
-       $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
-       $7::uuid, $8, 'ACTIVATION_REVIEW', $9, $10::text[]
-     )`,
-    [
-      jurisdictionActivationId,
-      input.tenantId,
-      input.enterpriseId,
-      appointment.beneficiary_organization_id,
-      input.appointmentId,
-      input.territoryId,
-      activation.activation.activationId,
-      input.idempotencyKey,
-      input.requestedBySubjectId,
-      [...input.evidenceRefs],
-    ],
+    `UPDATE platform.enterprise_jurisdiction_activations
+        SET workflow_activation_id = $3::uuid,
+            state = 'ACTIVATION_REVIEW',
+            updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND enterprise_jurisdiction_activation_id = $2::uuid`,
+    [input.tenantId, jurisdictionActivationId, activation.activation.activationId],
   );
 
   return {
