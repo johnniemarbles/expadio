@@ -94,6 +94,12 @@ function normalizeType(value: string): EnterpriseOwnershipInterestType {
   return normalized as EnterpriseOwnershipInterestType;
 }
 
+function relationshipKeyForInterestType(
+  interestType: EnterpriseOwnershipInterestType,
+): string {
+  return `OWNERSHIP_${interestType}`;
+}
+
 function normalizePercentage(
   interestType: EnterpriseOwnershipInterestType,
   value: number | null | undefined,
@@ -498,38 +504,79 @@ export async function decideEnterpriseOwnershipChange(
     );
   }
 
-  await client.query(
-    `UPDATE platform.entity_ownership_interests prior
-        SET valid_until = CASE
-              WHEN prior.valid_from < clock_timestamp()
-                THEN clock_timestamp()
-              ELSE prior.valid_from + interval '1 microsecond'
-            END,
-            updated_at = now()
-      WHERE prior.tenant_id = $1::uuid
-        AND prior.owner_node_id = (
-          SELECT current.owner_node_id
-            FROM platform.entity_ownership_interests current
-           WHERE current.tenant_id = $1::uuid
-             AND current.enterprise_change_request_id = $2::uuid
+  const currentApproved = await client.query<{
+    readonly interest_id: string;
+    readonly valid_from: Date | string;
+  }>(
+    `SELECT interest_id, valid_from
+       FROM platform.entity_ownership_interests
+      WHERE tenant_id = $1::uuid
+        AND owner_node_id = (
+          SELECT owner_node_id
+            FROM platform.entity_ownership_interests
+           WHERE tenant_id = $1::uuid
+             AND enterprise_change_request_id = $2::uuid
         )
-        AND prior.subject_node_id = (
-          SELECT current.subject_node_id
-            FROM platform.entity_ownership_interests current
-           WHERE current.tenant_id = $1::uuid
-             AND current.enterprise_change_request_id = $2::uuid
+        AND subject_node_id = (
+          SELECT subject_node_id
+            FROM platform.entity_ownership_interests
+           WHERE tenant_id = $1::uuid
+             AND enterprise_change_request_id = $2::uuid
         )
-        AND prior.interest_type = (
-          SELECT current.interest_type
-            FROM platform.entity_ownership_interests current
-           WHERE current.tenant_id = $1::uuid
-             AND current.enterprise_change_request_id = $2::uuid
+        AND interest_type = (
+          SELECT interest_type
+            FROM platform.entity_ownership_interests
+           WHERE tenant_id = $1::uuid
+             AND enterprise_change_request_id = $2::uuid
         )
-        AND prior.status = 'APPROVED'
-        AND prior.valid_until IS NULL
-        AND prior.enterprise_change_request_id <> $2::uuid`,
+        AND status = 'APPROVED'
+        AND valid_until IS NULL
+        AND enterprise_change_request_id <> $2::uuid
+      ORDER BY valid_from DESC, interest_id DESC
+      LIMIT 1
+      FOR UPDATE`,
     [input.tenantId, input.requestId],
   );
+  const prior = currentApproved.rows[0];
+  const nextValidFrom = new Date(interest.valid_from);
+  if (prior) {
+    const priorValidFrom = new Date(prior.valid_from);
+    if (nextValidFrom <= priorValidFrom) {
+      throw new Error('ENTERPRISE_OWNERSHIP_EFFECTIVE_ORDER_INVALID');
+    }
+    await client.query(
+      `UPDATE platform.entity_ownership_interests
+          SET status = 'SUPERSEDED',
+              valid_until = $3::timestamptz,
+              updated_at = now()
+        WHERE tenant_id = $1::uuid
+          AND interest_id = $2::uuid`,
+      [input.tenantId, prior.interest_id, nextValidFrom.toISOString()],
+    );
+    await client.query(
+      `UPDATE platform.entity_relationships
+          SET valid_until = $6::timestamptz,
+              updated_by_subject_id = $7,
+              updated_at = now()
+        WHERE tenant_id = $1::uuid
+          AND source_entity_type = 'LEGAL_ENTITY'
+          AND source_entity_id = $2
+          AND relationship_key = $3
+          AND target_entity_type = 'LEGAL_ENTITY'
+          AND target_entity_id = $4
+          AND status = 'ACTIVE'
+          AND valid_until IS NULL`,
+      [
+        input.tenantId,
+        interest.owner_entity_key,
+        relationshipKeyForInterestType(interest.interest_type),
+        interest.subject_entity_key,
+        input.requestId,
+        nextValidFrom.toISOString(),
+        input.decidedBySubjectId,
+      ],
+    );
+  }
 
   await client.query(
     `UPDATE platform.entity_ownership_interests
@@ -562,11 +609,13 @@ export async function decideEnterpriseOwnershipChange(
     tenantId: input.tenantId,
     sourceEntityType: 'LEGAL_ENTITY',
     sourceEntityId: interest.owner_entity_key,
-    relationshipKey: 'OWNERSHIP',
+    relationshipKey: relationshipKeyForInterestType(interest.interest_type),
     targetEntityType: 'LEGAL_ENTITY',
     targetEntityId: interest.subject_entity_key,
     actorSubjectId: input.decidedBySubjectId,
     provenanceSource: 'SYSTEM',
+    validFrom: interest.valid_from,
+    validUntil: interest.valid_until,
     decisionReference: `enterprise-change-request:${input.requestId}`,
     attributes: {
       interestType: interest.interest_type,
