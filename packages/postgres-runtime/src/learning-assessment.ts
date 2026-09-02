@@ -6,6 +6,7 @@ import {
   scorePercent,
   validateAssessmentDraft,
   validateQuestionDraft,
+  type LearningAssessmentCompletionRequirement,
   type LearningAssessmentType,
   type LearningQuestionType,
 } from '@expadio/learning';
@@ -40,6 +41,7 @@ interface AssessmentVersionRow {
   readonly max_attempts: number;
   readonly time_limit_seconds: number | null;
   readonly course_version_id: string | null;
+  readonly completion_requirement: LearningAssessmentCompletionRequirement;
 }
 
 interface AttemptRow {
@@ -99,6 +101,7 @@ export interface MyAssessmentSummary {
   readonly passed: boolean;
   readonly enrollmentId: string;
   readonly courseVersionId: string;
+  readonly completionRequirement: LearningAssessmentCompletionRequirement;
 }
 
 export interface MyAssessmentAttempt {
@@ -479,10 +482,10 @@ export async function createLearningAssessment(
       `INSERT INTO platform.learning_assessment_versions (
          tenant_id, assessment_id, version, state, title, instructions,
          assessment_type, pass_percent, max_attempts, time_limit_seconds,
-         course_version_id, created_by_subject_id, updated_by_subject_id
+         course_version_id, completion_requirement, created_by_subject_id, updated_by_subject_id
        ) VALUES (
          $1::uuid, $2::uuid, 1, 'DRAFT', $3, $4,
-         $5, $6, $7, $8, $9::uuid, $10, $10
+         $5, $6, $7, $8, $9::uuid, $10, $11, $11
        )
        RETURNING assessment_version_id`,
       [
@@ -495,6 +498,7 @@ export async function createLearningAssessment(
         draft.maxAttempts,
         draft.timeLimitSeconds,
         draft.courseVersionId,
+        draft.completionRequirement,
         input.actorSubjectId,
       ],
     );
@@ -581,7 +585,7 @@ export async function publishLearningAssessmentVersion(
   const versions = await client.query<AssessmentVersionRow>(
     `SELECT assessment_version_id, assessment_id, version, state, title,
             instructions, assessment_type, pass_percent, max_attempts,
-            time_limit_seconds, course_version_id
+            time_limit_seconds, course_version_id, completion_requirement
        FROM platform.learning_assessment_versions
       WHERE tenant_id = $1::uuid
         AND assessment_id = $2::uuid
@@ -704,10 +708,11 @@ export async function listMyAvailableAssessments(
     readonly attempts_used: string | number;
     readonly best_score_percent: string | number | null;
     readonly passed: boolean;
+    readonly completion_requirement: LearningAssessmentCompletionRequirement;
   }>(
     `SELECT a.assessment_id, a.assessment_key, v.assessment_version_id,
             v.version, v.title, v.assessment_type, v.pass_percent, v.max_attempts,
-            e.enrollment_id, e.course_version_id,
+            v.completion_requirement, e.enrollment_id, e.course_version_id,
             count(attempt.attempt_id) FILTER (WHERE attempt.status <> 'VOID') AS attempts_used,
             max(attempt.score_percent) FILTER (WHERE attempt.status = 'GRADED') AS best_score_percent,
             coalesce(bool_or(attempt.passed) FILTER (WHERE attempt.status = 'GRADED'), false) AS passed
@@ -730,7 +735,7 @@ export async function listMyAvailableAssessments(
         AND v.course_version_id IS NOT NULL
       GROUP BY a.assessment_id, a.assessment_key, v.assessment_version_id,
                v.version, v.title, v.assessment_type, v.pass_percent, v.max_attempts,
-               e.enrollment_id, e.course_version_id
+               v.completion_requirement, e.enrollment_id, e.course_version_id
       ORDER BY v.title, a.assessment_id`,
     [input.tenantId, learnerId],
   );
@@ -749,6 +754,7 @@ export async function listMyAvailableAssessments(
     passed: row.passed,
     enrollmentId: row.enrollment_id,
     courseVersionId: row.course_version_id,
+    completionRequirement: row.completion_requirement,
   }));
 }
 
