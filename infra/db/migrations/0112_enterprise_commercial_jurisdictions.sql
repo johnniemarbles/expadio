@@ -425,7 +425,9 @@ AS $$
 DECLARE
   verified_party_count integer;
 BEGIN
-  IF NEW.state = 'ACTIVE' AND OLD.state IS DISTINCT FROM 'ACTIVE' THEN
+  IF NEW.state = 'ACTIVE'
+     AND (TG_OP = 'INSERT' OR OLD.state IS DISTINCT FROM 'ACTIVE')
+  THEN
     SELECT count(*)
       INTO verified_party_count
       FROM platform.legal_entities legal_entity
@@ -450,7 +452,7 @@ END;
 $$;
 
 CREATE TRIGGER enterprise_commercial_agreements_activation_gate
-BEFORE UPDATE OF state
+BEFORE INSERT OR UPDATE OF state
 ON platform.enterprise_commercial_agreements
 FOR EACH ROW EXECUTE FUNCTION platform.enforce_enterprise_commercial_agreement_activation();
 
@@ -468,7 +470,9 @@ DECLARE
   missing_territory_count integer;
   exclusive_conflict_count integer;
 BEGIN
-  IF NEW.state <> 'ACTIVE' OR OLD.state IS NOT DISTINCT FROM 'ACTIVE' THEN
+  IF NEW.state <> 'ACTIVE'
+     OR (TG_OP = 'UPDATE' AND OLD.state IS NOT DISTINCT FROM 'ACTIVE')
+  THEN
     RETURN NEW;
   END IF;
 
@@ -552,7 +556,7 @@ END;
 $$;
 
 CREATE TRIGGER enterprise_appointments_rights_gate
-BEFORE UPDATE OF state
+BEFORE INSERT OR UPDATE OF state
 ON platform.enterprise_appointments
 FOR EACH ROW EXECUTE FUNCTION platform.enforce_enterprise_appointment_rights_gate();
 
@@ -639,7 +643,7 @@ END;
 $$;
 
 CREATE TRIGGER enterprise_jurisdiction_activations_active_gate
-BEFORE UPDATE OF state
+BEFORE INSERT OR UPDATE OF state
 ON platform.enterprise_jurisdiction_activations
 FOR EACH ROW EXECUTE FUNCTION platform.enforce_enterprise_jurisdiction_activation_gate();
 
