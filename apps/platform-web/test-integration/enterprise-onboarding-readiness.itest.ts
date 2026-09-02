@@ -548,7 +548,7 @@ test('approved child is configured through governed readiness before activation'
       `SELECT event_type
          FROM platform.domain_events
         WHERE tenant_id = $1::uuid
-          AND aggregate_id IN ($2::uuid, $3::uuid, $4::uuid)
+          AND aggregate_id IN ($2, $3, $4)
         ORDER BY event_type`,
       [
         tenantId,
