@@ -15,9 +15,9 @@ type AgreementRow = CrmAgreement & { accountName: string | null };
 
 const AGREEMENT_STATUSES: AgreementStatus[] = ["DRAFT", "ACTIVE", "EXPIRED", "CANCELLED"];
 const AGREEMENT_TONE: Record<string, { fg: string; bg: string }> = {
-  DRAFT: { fg: "#475569", bg: "#f1f5f9" },
-  ACTIVE: { fg: "#166534", bg: "#dcfce7" },
-  EXPIRED: { fg: "#925b0b", bg: "#fef3c7" },
+  DRAFT: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
+  ACTIVE: { fg: "var(--theme-success)", bg: "#dcfce7" },
+  EXPIRED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
   CANCELLED: { fg: "#991b1b", bg: "#fee2e2" },
 };
 
@@ -25,18 +25,18 @@ const CASE_STATUSES: CaseStatus[] = ["OPEN", "PENDING", "RESOLVED", "CLOSED"];
 const CASE_PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 const CASE_STATUS_TONE: Record<string, { fg: string; bg: string }> = {
   OPEN: { fg: "#3730a3", bg: "#e0e7ff" },
-  PENDING: { fg: "#925b0b", bg: "#fef3c7" },
-  RESOLVED: { fg: "#166534", bg: "#dcfce7" },
-  CLOSED: { fg: "#475569", bg: "#f1f5f9" },
+  PENDING: { fg: "var(--theme-warning)", bg: "#fef3c7" },
+  RESOLVED: { fg: "var(--theme-success)", bg: "#dcfce7" },
+  CLOSED: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
 };
-const PRIORITY_TONE: Record<string, string> = { URGENT: "#b91c1c", HIGH: "#c2410c", NORMAL: "#475569", LOW: "#94a3b8" };
+const PRIORITY_TONE: Record<string, string> = { URGENT: "var(--theme-danger)", HIGH: "#c2410c", NORMAL: "var(--theme-text-secondary)", LOW: "#94a3b8" };
 
 const LEAD_STAGES: LeadStage[] = ["NEW", "QUALIFIED", "PROPOSAL", "WON", "LOST"];
 const LEAD_TONE: Record<string, { fg: string; bg: string }> = {
-  NEW: { fg: "#475569", bg: "#f1f5f9" },
-  QUALIFIED: { fg: "#925b0b", bg: "#fef3c7" },
+  NEW: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
+  QUALIFIED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
   PROPOSAL: { fg: "#3730a3", bg: "#e0e7ff" },
-  WON: { fg: "#166534", bg: "#dcfce7" },
+  WON: { fg: "var(--theme-success)", bg: "#dcfce7" },
   LOST: { fg: "#991b1b", bg: "#fee2e2" },
 };
 
@@ -47,10 +47,10 @@ function money(minor: number | null, currency: string): string {
 
 const STAGES = ["PROSPECT", "LEAD", "OPPORTUNITY", "CUSTOMER", "CHURNED"] as const;
 const STAGE_TONE: Record<string, { fg: string; bg: string }> = {
-  PROSPECT: { fg: "#475569", bg: "#f1f5f9" },
-  LEAD: { fg: "#925b0b", bg: "#fef3c7" },
+  PROSPECT: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
+  LEAD: { fg: "var(--theme-warning)", bg: "#fef3c7" },
   OPPORTUNITY: { fg: "#3730a3", bg: "#e0e7ff" },
-  CUSTOMER: { fg: "#166534", bg: "#dcfce7" },
+  CUSTOMER: { fg: "var(--theme-success)", bg: "#dcfce7" },
   CHURNED: { fg: "#991b1b", bg: "#fee2e2" },
 };
 
@@ -350,7 +350,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
             <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.case.singular)}</button>
             <button type="button" onClick={() => setShowAgreement(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.agreement.singular)}</button>
           </div>
-          {verticalError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>⚠️ {verticalError}</div>}
+          {verticalError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)" }}>⚠️ {verticalError}</div>}
         </div>
       </div>
 
@@ -411,7 +411,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
         </Panel>
       ) : tab === "leads" ? (
         <Panel>
-          {leadError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {leadError}</div>}
+          {leadError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)", padding: "0 8px 8px" }}>⚠️ {leadError}</div>}
           {leads.length > 0 ? (
             <Table head={[vocab.lead.singular, vocab.account.singular, "Amount", "Source", "Stage", ""]}>
               {leads.map((l) => {
@@ -430,7 +430,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                             type="button"
                             onClick={() => setConvertTarget(l)}
                             title={`Close-won this ${lc(vocab.lead.singular)} and turn it into a customer ${lc(vocab.account.singular)}`}
-                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "#166534", color: "white", fontWeight: 700, cursor: "pointer" }}
+                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--theme-success)", color: "white", fontWeight: 700, cursor: "pointer" }}
                           >
                             Convert →
                           </button>
@@ -456,11 +456,11 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
         </Panel>
       ) : tab === "cases" ? (
         <Panel>
-          {caseError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
+          {caseError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)", padding: "0 8px 8px" }}>⚠️ {caseError}</div>}
           {wfError && (
-            <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>
+            <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)", padding: "0 8px 8px" }}>
               ⚠️ {wfError}
-              {wfAuthHint && <> · <a href={`/authority${queryString}`} style={{ color: "#0f766e", fontWeight: 700 }}>Grant approval authority →</a></>}
+              {wfAuthHint && <> · <a href={`/authority${queryString}`} style={{ color: "var(--theme-primary)", fontWeight: 700 }}>Grant approval authority →</a></>}
             </div>
           )}
           {cases.length > 0 ? (
@@ -487,7 +487,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                         </select>
                       )}
                     </td>
-                    <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "#475569" }}>{c.priority}</span></td>
+                    <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "var(--theme-text-secondary)" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--ink-500, #64748b)" }}>—</span>}</td>
                     <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} stageLabel={stageLabel} outcomeLabel={outcomeLabel} stageGuidance={stageGuidance} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onAssign={(stageKey, pk) => assignMe(c.caseId, stageKey, pk)} onTrace={() => setTraceCase(c)} /></td>
                     <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
@@ -512,7 +512,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
         </Panel>
       ) : (
         <Panel>
-          {agreementError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c", padding: "0 8px 8px" }}>⚠️ {agreementError}</div>}
+          {agreementError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)", padding: "0 8px 8px" }}>⚠️ {agreementError}</div>}
           {agreements.length > 0 ? (
             <Table head={[vocab.agreement.singular, vocab.account.singular, "Value", "Term", "Status", ""]}>
               {agreements.map((g) => {
@@ -645,7 +645,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   if (wf.state === "COMPLETED") {
     return (
       <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#166534", background: "#dcfce7" }} title={`Completed at ${stage} · revision ${wf.revision}`}>✓ Completed · {stageLabel(stage)}</span>
+        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "#dcfce7" }} title={`Completed at ${stage} · revision ${wf.revision}`}>✓ Completed · {stageLabel(stage)}</span>
         {traceBtn}
       </div>
     );
@@ -671,7 +671,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
         </select>
       )}
       {wf.currentDecision && (
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#166534", background: "#dcfce7" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
+        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "#dcfce7" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
       )}
       {gated ? (
         <select
@@ -788,13 +788,13 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
         </div>
       )}
       <p style={{ margin: 0, fontSize: 12, color: "var(--ink-500, #64748b)" }}>Append-only transitions and immutable decisions, in order. This is the governed audit trail.</p>
-      {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
       {entries === null && !error && <p style={{ fontSize: 13, color: "var(--ink-500, #64748b)" }}>Loading…</p>}
       {entries !== null && entries.length === 0 && <Empty title="No trace yet" desc="Start the workflow and advance it to build a history." />}
       {entries !== null && entries.length > 0 && (
         <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8, maxHeight: 360, overflowY: "auto" }}>
           {entries.map((e, i) => (
-            <li key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${e.kind === "DECISION" ? "#166534" : "#4f46e5"}`, paddingLeft: 10 }}>
+            <li key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${e.kind === "DECISION" ? "var(--theme-success)" : "#4f46e5"}`, paddingLeft: 10 }}>
               <span style={{ fontSize: 10, color: "var(--ink-500, #64748b)", minWidth: 132 }}>{new Date(e.at).toLocaleString()}</span>
               <span style={{ fontSize: 13 }}>
                 {e.kind === "TRANSITION" ? (
@@ -804,7 +804,7 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
                   </>
                 ) : (
                   <>
-                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "#166534", background: "#dcfce7" }}>DECISION</span>{" "}
+                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "var(--theme-success)", background: "#dcfce7" }}>DECISION</span>{" "}
                     <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
                     <span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}> · {e.bySubjectId}</span>
                     {e.evidenceRefs && e.evidenceRefs.length > 0 && (
@@ -898,7 +898,7 @@ function AccountModal({ vocab, queryString, onClose, onCreated }: { vocab: CrmVo
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Industry<input value={industry} onChange={(e) => setIndustry(e.target.value)} style={inp} /></label>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Stage<select value={stage} onChange={(e) => setStage(e.target.value)} style={inp}>{STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
         </div>
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.account.singular.toLowerCase()}`}</button>
@@ -948,7 +948,7 @@ function ContactModal({ accounts, vocab, queryString, onClose, onCreated }: { ac
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         </div>
         <p style={{ margin: 0, fontSize: 11, color: "var(--ink-500, #64748b)" }}>A {vocab.contact.singular.toLowerCase()} needs an email, a phone, or a {vocab.account.singular.toLowerCase()}.</p>
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.contact.singular.toLowerCase()}`}</button>
@@ -1004,7 +1004,7 @@ function LeadModal({ accounts, vocab, queryString, onClose, onCreated }: { accou
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Source<input value={source} onChange={(e) => setSource(e.target.value)} placeholder="inbound, referral…" style={inp} /></label>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.account.singular}<select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={inp}><option value="">— none —</option>{accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label>
         </div>
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.lead.singular.toLowerCase()}`}</button>
@@ -1063,7 +1063,7 @@ function AgreementModal({ accounts, vocab, queryString, onClose, onCreated }: { 
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Starts<input type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} style={inp} /></label>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Ends<input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} style={inp} /></label>
         </div>
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.agreement.singular.toLowerCase()}`}</button>
@@ -1102,7 +1102,7 @@ function ConvertModal({ lead, vocab, queryString, onClose, onConverted }: { lead
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
         <p style={{ margin: 0, fontSize: 13, color: "var(--ink-600, #475569)" }}>
           Closes <strong>{lead.title}</strong> as won and {lead.accountId ? `promotes its ${vocab.account.singular.toLowerCase()} to ` : `creates a new ${vocab.account.singular.toLowerCase()} at the `}
-          <span style={{ fontWeight: 700, color: "#166534" }}>CUSTOMER</span> stage.
+          <span style={{ fontWeight: 700, color: "var(--theme-success)" }}>CUSTOMER</span> stage.
         </p>
         <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
           <input type="checkbox" checked={openCase} onChange={(e) => setOpenCase(e.target.checked)} />
@@ -1111,10 +1111,10 @@ function ConvertModal({ lead, vocab, queryString, onClose, onConverted }: { lead
         {openCase && (
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>{vocab.case.singular} subject<input value={caseSubject} onChange={(e) => setCaseSubject(e.target.value)} style={inp} /></label>
         )}
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "#166534", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-success)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
         </div>
       </form>
     </Modal>
@@ -1166,7 +1166,7 @@ function CaseModal({ accounts, vocab, fields, queryString, onClose, onCreated }:
           <div style={{ display: "grid", gap: 12, paddingTop: 4, borderTop: "1px solid var(--line, #e2e8f0)" }}>
             {fields.map((f) => (
               <label key={f.key} style={{ display: "grid", gap: 4, fontSize: 12 }}>
-                {f.label}{f.required ? <span style={{ color: "#b91c1c" }}> *</span> : null}
+                {f.label}{f.required ? <span style={{ color: "var(--theme-danger)" }}> *</span> : null}
                 {f.type === "select" ? (
                   <select required={f.required} value={attrs[f.key] ?? ""} onChange={(e) => setAttr(f.key, e.target.value)} style={inp}>
                     <option value="">— select —</option>
@@ -1179,7 +1179,7 @@ function CaseModal({ accounts, vocab, fields, queryString, onClose, onCreated }:
             ))}
           </div>
         )}
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.case.singular.toLowerCase()}`}</button>
