@@ -77,6 +77,17 @@ export interface LearningQuestionCreated {
   readonly state: 'DRAFT';
 }
 
+export interface LearningPublishedQuestionSummary {
+  readonly questionId: string;
+  readonly questionKey: string;
+  readonly questionBankId: string;
+  readonly bankName: string;
+  readonly questionVersionId: string;
+  readonly version: number;
+  readonly type: LearningQuestionType;
+  readonly prompt: string;
+}
+
 export interface LearningAssessmentSummary {
   readonly assessmentId: string;
   readonly assessmentKey: string;
@@ -249,6 +260,51 @@ export async function listLearningQuestionBanks(
     bankKey: row.bank_key,
     name: row.name,
     status: row.status,
+  }));
+}
+
+export async function listLearningPublishedQuestions(
+  client: PostgresClient,
+  tenantId: string,
+): Promise<readonly LearningPublishedQuestionSummary[]> {
+  await requireLearning(client, tenantId);
+  const result = await client.query<{
+    readonly question_id: string;
+    readonly question_key: string;
+    readonly question_bank_id: string;
+    readonly bank_name: string;
+    readonly question_version_id: string;
+    readonly version: number;
+    readonly question_type: LearningQuestionType;
+    readonly prompt: string;
+  }>(
+    `SELECT question.question_id, question.question_key, question.question_bank_id,
+            bank.name AS bank_name, version.question_version_id, version.version,
+            version.question_type, version.prompt
+       FROM platform.learning_questions question
+       JOIN platform.learning_question_banks bank
+         ON bank.question_bank_id = question.question_bank_id
+        AND bank.tenant_id = question.tenant_id
+        AND bank.status = 'ACTIVE'
+       JOIN platform.learning_question_versions version
+         ON version.question_id = question.question_id
+        AND version.tenant_id = question.tenant_id
+        AND version.state = 'PUBLISHED'
+      WHERE question.tenant_id = $1::uuid
+        AND question.status = 'ACTIVE'
+      ORDER BY bank.name, question.question_key, question.question_id`,
+    [tenantId],
+  );
+
+  return result.rows.map((row) => ({
+    questionId: row.question_id,
+    questionKey: row.question_key,
+    questionBankId: row.question_bank_id,
+    bankName: row.bank_name,
+    questionVersionId: row.question_version_id,
+    version: row.version,
+    type: row.question_type,
+    prompt: row.prompt,
   }));
 }
 
