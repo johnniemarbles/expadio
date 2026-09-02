@@ -41,7 +41,7 @@ const row = {
   blueprint_key: instance.blueprint.blueprintKey,
   blueprint_version: instance.blueprint.version,
   blueprint_scope: instance.blueprint.scope,
-  industry_pack_vertical_key: 'dentex',
+  industry_pack_vertical_key: 'acme-corp',
   industry_pack_version: 7,
   industry_pack_runtime_source: 'TENANT_PUBLISHED',
   state: instance.state,
@@ -63,7 +63,7 @@ test('create persists and maps the workflow instance snapshot', async () => {
   assert.match(client.calls[0]?.text ?? '', /INSERT INTO platform\.workflow_instances/);
   assert.equal(client.calls[0]?.values[0], instance.instanceId);
   assert.equal(client.calls[0]?.values[7], 'TENANT');
-  assert.deepEqual(client.calls[0]?.values.slice(8, 11), ['dentex', 7, 'TENANT_PUBLISHED']);
+  assert.deepEqual(client.calls[0]?.values.slice(8, 11), ['acme-corp', 7, 'TENANT_PUBLISHED']);
 });
 
 test('findById scopes the lookup by tenant and instance', async () => {
