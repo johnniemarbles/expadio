@@ -4,8 +4,20 @@ INSERT INTO platform.tenants (tenant_id, name) VALUES
   ('9d6e3f40-a12b-4c53-d4e5-f60718293a4b', 'Agent Run Tenant A'),
   ('ae7f4051-b23c-4d64-e5f6-0718293a4b5c', 'Agent Run Tenant B');
 
+INSERT INTO platform.organizations (organization_id, tenant_id, enterprise_id, name)
+SELECT '9d6e3f40-a12b-4c53-d4e5-f60718293a40', e.tenant_id, e.enterprise_id, 'Agent Run Org A'
+FROM platform.enterprise_profiles e
+WHERE e.tenant_id = '9d6e3f40-a12b-4c53-d4e5-f60718293a4b'
+ORDER BY e.created_at ASC LIMIT 1;
+
+INSERT INTO platform.organizations (organization_id, tenant_id, enterprise_id, name)
+SELECT 'ae7f4051-b23c-4d64-e5f6-0718293a4b50', e.tenant_id, e.enterprise_id, 'Agent Run Org B'
+FROM platform.enterprise_profiles e
+WHERE e.tenant_id = 'ae7f4051-b23c-4d64-e5f6-0718293a4b5c'
+ORDER BY e.created_at ASC LIMIT 1;
+
 INSERT INTO platform.agent_runs (
-  run_id, tenant_id, agent_id, purpose,
+  run_id, tenant_id, organization_id, agent_id, purpose,
   context_bundle_reference, budget_policy_reference,
   idempotency_key, requested_by_subject_id,
   requested_at, created_at, reason, correlation_id, evidence_refs
@@ -13,6 +25,7 @@ INSERT INTO platform.agent_runs (
   (
     'b0000000-0000-0000-0000-000000000001',
     '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
+    '9d6e3f40-a12b-4c53-d4e5-f60718293a40',
     'agent-a', 'Prepare an authorized account proposal.',
     'context://tenant-a/bundle-1', 'policy://agent-budget/v1',
     'agent-run:a:1', 'subject-a',
@@ -23,6 +36,7 @@ INSERT INTO platform.agent_runs (
   (
     'b0000000-0000-0000-0000-000000000002',
     'ae7f4051-b23c-4d64-e5f6-0718293a4b5c',
+    'ae7f4051-b23c-4d64-e5f6-0718293a4b50',
     'agent-b', 'Prepare a tenant B proposal.',
     'context://tenant-b/bundle-1', 'policy://agent-budget/v1',
     'agent-run:b:1', 'subject-b',
@@ -56,6 +70,11 @@ SET ROLE expadio_agent_runs_test;
 SELECT set_config(
   'app.tenant_id',
   '9d6e3f40-a12b-4c53-d4e5-f60718293a4b',
+  false
+);
+SELECT set_config(
+  'app.organization_id',
+  '9d6e3f40-a12b-4c53-d4e5-f60718293a40',
   false
 );
 

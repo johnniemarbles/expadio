@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { ContextDenied, resolveRequestContext, deniedResponse } from '../../../lib/request-context';
+import { ContextDenied, resolveRequestContext, deniedResponse, withTenantTransaction } from '../../../lib/request-context';
 import { dbPool } from '../../../lib/iam-adapter';
 
 export const runtime = 'nodejs';
@@ -47,9 +47,11 @@ export async function GET(request: Request) {
         `SELECT COUNT(*)::int AS cnt FROM platform.company_brain_correction_proposals WHERE tenant_id = $1 AND status = 'UNREVIEWED'`,
         [effectiveContext.tenantId]
       ),
-      dbPool.query(
-        'SELECT COUNT(*)::int AS cnt FROM platform.agent_runs WHERE tenant_id = $1',
-        [effectiveContext.tenantId]
+      withTenantTransaction(effectiveContext, (client) =>
+        client.query(
+          'SELECT COUNT(*)::int AS cnt FROM platform.agent_runs WHERE tenant_id = $1 AND organization_id = $2',
+          [effectiveContext.tenantId, orgId],
+        ),
       )
     ]);
 
@@ -96,11 +98,16 @@ export async function GET(request: Request) {
       risk: 'Medium'
     }));
 
-    const topActivityRes = await dbPool.query(
-      `SELECT event_id, event_type, event_reference, occurred_at, actor_subject_id, reason
-       FROM platform.agent_run_events
-       WHERE tenant_id = $1 ORDER BY occurred_at DESC LIMIT 3`,
-      [effectiveContext.tenantId]
+    const topActivityRes = await withTenantTransaction(effectiveContext, (client) =>
+      client.query(
+        `SELECT event_id, event_type, event_reference, occurred_at, actor_subject_id, reason
+           FROM platform.agent_run_events
+          WHERE tenant_id = $1
+            AND organization_id = $2
+          ORDER BY occurred_at DESC
+          LIMIT 3`,
+        [effectiveContext.tenantId, orgId],
+      ),
     );
     const activity = topActivityRes.rows.map((row: any) => ({
       id: row.event_id,
