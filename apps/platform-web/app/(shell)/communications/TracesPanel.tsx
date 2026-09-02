@@ -17,18 +17,18 @@ import type { DecisionTrace, TraceOutcome } from "@expadio/communication";
 const OUTCOMES: TraceOutcome[] = ["SENT", "QUEUED", "REFUSED", "THROTTLED", "SUPPRESSED", "CANCELLED", "FAILED"];
 
 const OUTCOME_TONE: Record<string, { fg: string; bg: string }> = {
-  SENT: { fg: "#166534", bg: "#dcfce7" },
+  SENT: { fg: "var(--theme-success)", bg: "#dcfce7" },
   QUEUED: { fg: "#3730a3", bg: "#e0e7ff" },
   REFUSED: { fg: "#991b1b", bg: "#fee2e2" },
-  THROTTLED: { fg: "#925b0b", bg: "#fef3c7" },
-  SUPPRESSED: { fg: "#925b0b", bg: "#fef3c7" },
-  CANCELLED: { fg: "#475569", bg: "#f1f5f9" },
+  THROTTLED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
+  SUPPRESSED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
+  CANCELLED: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
   FAILED: { fg: "#991b1b", bg: "#fee2e2" },
 };
 
 const VERDICT_TONE: Record<string, string> = {
-  PASS: "#166534",
-  FAIL: "#b91c1c",
+  PASS: "var(--theme-success)",
+  FAIL: "var(--theme-danger)",
   NOT_EVALUATED: "#94a3b8",
 };
 
@@ -118,7 +118,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
         <button type="button" onClick={() => void load()} className={styles.btnPillDark} style={{ cursor: "pointer" }}>Apply filters</button>
       </div>
 
-      {error && <div role="alert" style={{ fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
+      {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
 
       {loading ? (
         <div style={{ padding: 20, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading decision traces…</div>
@@ -190,7 +190,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
                       </div>
                       <div style={{ fontSize: 12, color: "var(--ink-600, #475569)", marginTop: 4 }}>{g.detail}</div>
                       {g.remediation && (
-                        <div style={{ fontSize: 12, color: "#925b0b", marginTop: 6 }}>
+                        <div style={{ fontSize: 12, color: "var(--theme-warning)", marginTop: 6 }}>
                           → {g.remediation}
                           {g.remediationHref && <a href={g.remediationHref} style={{ marginLeft: 6, color: "var(--brand, #4f46e5)" }}>Fix</a>}
                         </div>
