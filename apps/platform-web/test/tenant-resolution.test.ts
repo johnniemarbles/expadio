@@ -28,6 +28,17 @@ test("middleware persists the selection so deep links keep the same workspace", 
   assert.match(middleware, /cookies\.set\(ORG_COOKIE/);
   // Cookie is read back as a fallback when the query string is absent.
   assert.match(middleware, /cookies\.get\(TENANT_COOKIE\)/);
+  assert.match(middleware, /x-expadio-tenant-source/);
+  assert.match(middleware, /x-expadio-organization-source/);
+  assert.match(middleware, /requestHeaders\.delete\(name\)/);
+});
+
+test("stale persisted workspace preferences recover without weakening explicit selection", () => {
+  assert.match(requestContext, /organizationSelectionSource === 'query'/);
+  assert.match(requestContext, /tenantSelectionSource === 'query'/);
+  assert.match(requestContext, /tenantMemberships\.length === 0/);
+  assert.match(requestContext, /\?\? memberships\[0\]/);
+  assert.match(requestContext, /TENANT_ACCESS_DENIED/);
 });
 
 test("tenant resolution verifies membership rather than trusting the header", () => {
