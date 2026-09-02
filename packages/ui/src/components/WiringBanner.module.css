@@ -19,13 +19,13 @@
 }
 
 .text {
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .dismissBtn {
   background: none;
   border: none;
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
   font-size: var(--text-17);
   cursor: pointer;
   padding: 0 var(--space-4);
@@ -33,7 +33,7 @@
 }
 
 .dismissBtn:hover {
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .fixture {
@@ -47,11 +47,11 @@
 
 .partial {
   background-color: var(--brand-soft);
-  border-bottom: 1px solid var(--brand);
+  border-bottom: 1px solid var(--theme-primary);
 }
 
 .partial .dot {
-  background-color: var(--brand);
+  background-color: var(--theme-primary);
 }
 
 .live {
