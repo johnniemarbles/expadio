@@ -101,15 +101,15 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
         </div>
       ) : null}
       {notice ? (
-        <div style={{ padding: 10, borderRadius: 8, background: "#f0fdf4", color: "#166534", marginBottom: 12 }}>
+        <div style={{ padding: 10, borderRadius: 8, background: "#f0fdf4", color: "var(--theme-success)", marginBottom: 12 }}>
           {notice}
         </div>
       ) : null}
 
       {loading ? (
-        <div style={{ padding: 20, textAlign: "center", color: "#64748b" }}>Loading recovery queue…</div>
+        <div style={{ padding: 20, textAlign: "center", color: "var(--theme-neutral)" }}>Loading recovery queue…</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 20, textAlign: "center", color: "#64748b" }}>
+        <div style={{ padding: 20, textAlign: "center", color: "var(--theme-neutral)" }}>
           No legacy PENDING deliveries require migration recovery.
         </div>
       ) : (
