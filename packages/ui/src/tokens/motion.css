@@ -1,0 +1,26 @@
+:root {
+  --theme-motion-instant: 0ms;
+  --theme-motion-fast: 140ms;
+  --theme-motion-normal: 220ms;
+  --theme-motion-slow: 340ms;
+  --theme-motion-panel: 360ms;
+  --theme-motion-data: 700ms;
+
+  --theme-motion-distance-micro: 2px;
+  --theme-motion-distance-small: 6px;
+  --theme-motion-distance-panel: 12px;
+
+  --theme-easing: cubic-bezier(.2,.8,.2,1);
+  --theme-easing-emphasis: cubic-bezier(.2,.9,.2,1.2);
+  --theme-easing-linear: linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --theme-motion-fast: 0ms;
+    --theme-motion-normal: 0ms;
+    --theme-motion-slow: 0ms;
+    --theme-motion-panel: 0ms;
+    --theme-motion-data: 0ms;
+  }
+}
