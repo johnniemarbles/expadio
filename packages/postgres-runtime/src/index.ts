@@ -246,3 +246,5 @@ export * from './membership-workspace-discovery.ts';
 export * from './enterprise.ts';
 
 export * from './enterprise-onboarding.ts';
+
+export * from './enterprise-commercial.ts';
