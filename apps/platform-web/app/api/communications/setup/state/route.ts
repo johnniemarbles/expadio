@@ -6,6 +6,9 @@ import { resolveRequestContext, withTenantClient, deniedResponse } from '../../.
  *
  * Setup state is computed only from authoritative persistence. A failed fact
  * query aborts the request instead of being translated into a fabricated zero.
+ * Domain readiness comes from the same sender-identity verification state used
+ * by governed dispatch; the legacy communication_sending_domains table has no
+ * active production write path and must not drive setup completion.
  */
 
 export const runtime = 'nodejs';
@@ -58,17 +61,23 @@ export async function GET(request: Request) {
       );
 
       const domains = await client.query(
-        `SELECT count(*) FILTER (WHERE status = 'VERIFIED')::int AS verified,
-                count(*)::int AS total
-           FROM platform.communication_sending_domains
-          WHERE scope = 'TENANT' AND tenant_id = $1::uuid`,
+        `SELECT count(*) FILTER (
+                  WHERE verification_status = 'VERIFIED'
+                    AND status = 'ACTIVE'
+                )::int AS verified,
+                count(*) FILTER (WHERE status <> 'INACTIVE')::int AS total
+           FROM platform.communication_sender_identities
+          WHERE tenant_id = $1::uuid
+            AND scope = 'TENANT'
+            AND channel = 'email'`,
         [context.tenantId],
       );
 
       const senders = await client.query(
         `SELECT count(*)::int AS total
            FROM platform.communication_sender_identities
-          WHERE tenant_id = $1::uuid`,
+          WHERE tenant_id = $1::uuid
+            AND status = 'ACTIVE'`,
         [context.tenantId],
       );
 
@@ -117,7 +126,7 @@ export async function GET(request: Request) {
     const steps: SetupStep[] = [
       { key: 'CHOOSE_CUSTODY', title: 'Choose how you want to send', description: 'Our providers, your provider accounts, or your own secret store.', complete: facts.withCredential > 0, blocked: false, href: '/communications/onboarding?step=custody' },
       { key: 'CONNECT_PROVIDER', title: 'Connect a provider', description: 'We check the credential works before saving it.', complete: facts.withCredential > 0, blocked: false, href: '/communications/onboarding?step=connect' },
-      { key: 'VERIFY_DOMAIN', title: 'Verify your sending domain', description: 'Four DNS records. We check each one separately.', complete: facts.verifiedDomains > 0, blocked: facts.withCredential === 0, ...(facts.withCredential === 0 ? { blockedReason: 'Connect a provider first — the records depend on which one you use.' } : {}), href: '/communications/onboarding?step=domain' },
+      { key: 'VERIFY_DOMAIN', title: 'Verify your sending domain', description: 'DNS verification must be reflected in the sender identity used for dispatch.', complete: facts.verifiedDomains > 0, blocked: facts.withCredential === 0, ...(facts.withCredential === 0 ? { blockedReason: 'Connect a provider first — the records depend on which one you use.' } : {}), href: '/communications/onboarding?step=domain' },
       { key: 'CREATE_SENDER', title: 'Create a sender identity', description: 'The name and address recipients will see.', complete: facts.senders > 0, blocked: facts.verifiedDomains === 0, ...(facts.verifiedDomains === 0 ? { blockedReason: 'A from-address can only sit on a verified domain.' } : {}), href: '/communications/onboarding?step=sender' },
       { key: 'SET_LIMITS', title: 'Set your limits', description: 'Daily volume, spend cap, quiet hours.', complete: facts.limitsSet, blocked: false, href: '/communications/onboarding?step=limits' },
       { key: 'TEST_SEND', title: 'Send a test and watch it land', description: "You'll see every check it passes, in real time.", complete: facts.testSends > 0, blocked: facts.senders === 0, ...(facts.senders === 0 ? { blockedReason: 'Create a sender identity first.' } : {}), href: '/communications/onboarding?step=test' },
