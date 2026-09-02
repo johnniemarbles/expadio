@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { apiError } from "../../../lib/api-error";
 import { wrapSecret, type PublishedWrappingKey } from "../../../lib/custody-wrap";
+import motionStyles from "./ProviderModal.module.css";
 
 type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () => void };
 
@@ -176,8 +177,8 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   };
 
   return (
-    <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
+    <div role="presentation" onClick={onClose} className={motionStyles.backdrop} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className={motionStyles.dialog} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>Register provider</h2>
@@ -252,15 +253,15 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
           </div>
         )}
 
-        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--brand, var(--theme-primary))" }}>{status}</p>}
+        {status && <p className={motionStyles.status} style={{ margin: 0, fontSize: 12, color: "var(--brand, var(--theme-primary))" }}>{status}</p>}
         {warnings.length > 0 && (
-          <div style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>
+          <div className={motionStyles.warning} style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>
             {warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
           </div>
         )}
-        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" className={motionStyles.error} style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+        <div className={motionStyles.actions} style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={() => { reset(); onClose(); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
             {saving ? "Working…" : custodyMode === "DELEGATED" ? "Verify & register" : "Register provider"}
