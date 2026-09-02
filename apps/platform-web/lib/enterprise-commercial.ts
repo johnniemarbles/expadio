@@ -320,8 +320,11 @@ export async function createEnterpriseAppointment(
   );
   const replayRow = replay.rows[0];
   if (replayRow) {
-    const territoryReplay = await client.query<{ readonly territory_id: string }>(
-      `SELECT territory_id
+    const territoryReplay = await client.query<{
+      readonly territory_id: string;
+      readonly exclusive: boolean;
+    }>(
+      `SELECT territory_id, exclusive
          FROM platform.enterprise_appointment_territories
         WHERE tenant_id = $1::uuid
           AND enterprise_appointment_id = $2::uuid
@@ -336,16 +339,21 @@ export async function createEnterpriseAppointment(
       && replayRow.beneficiary_legal_entity_id === input.beneficiaryLegalEntityId
       && replayRow.appointment_kind === input.appointmentKind
       && replayRow.rights_profile_key === input.rightsProfileKey
-      && JSON.stringify([...replayRow.requested_right_types]) === JSON.stringify(requestedRightTypes)
+      && JSON.stringify([...replayRow.requested_right_types].sort()) ===
+         JSON.stringify([...requestedRightTypes].sort())
       && replayRow.exclusivity_key === (input.exclusivityKey?.trim() || null)
       && replayRow.delegation_requested === (input.delegationRequested ?? false)
       && replayRow.sub_appointment_requested === (input.subAppointmentRequested ?? false)
-      && JSON.stringify([...replayRow.channel_keys]) === JSON.stringify(channelKeys)
-      && JSON.stringify([...replayRow.product_keys]) === JSON.stringify(productKeys)
+      && JSON.stringify([...replayRow.channel_keys].sort()) === JSON.stringify([...channelKeys].sort())
+      && JSON.stringify([...replayRow.product_keys].sort()) === JSON.stringify([...productKeys].sort())
+      && (effectiveFrom === null
+        || (replayRow.effective_from !== null
+          && iso(replayRow.effective_from) === new Date(effectiveFrom).toISOString()))
       && (replayRow.effective_until === null ? null : iso(replayRow.effective_until)) ===
          (effectiveUntil === null ? null : new Date(effectiveUntil).toISOString())
       && JSON.stringify(territoryReplay.rows.map((row) => row.territory_id).sort()) ===
-         JSON.stringify(requestedTerritoryIds);
+         JSON.stringify(requestedTerritoryIds)
+      && territoryReplay.rows.every((row) => row.exclusive === (input.exclusive ?? false));
     if (!same) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
     if (!replayRow.workflow_instance_id) throw new Error('ENTERPRISE_APPOINTMENT_REPLAY_INCOMPLETE');
     return {
