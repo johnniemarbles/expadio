@@ -174,3 +174,11 @@ test('activation handoff targets an explicitly designated setup owner', () => {
   assert.match(runtime, /tenant\.membership\.handed_off_from_setup/);
   assert.match(runtime, /authorizationRolesGranted: \[\]/);
 });
+
+test('automated readiness serializes queries on a transaction-scoped pg client', () => {
+  const evaluator = runtime.slice(
+    runtime.indexOf('export async function evaluateOrganizationSetupAutomatedRequirements'),
+    runtime.indexOf('async function handoffSetupOwnerMembership'),
+  );
+  assert.doesNotMatch(evaluator, /Promise\.all/);
+});
