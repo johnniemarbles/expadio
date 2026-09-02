@@ -85,3 +85,22 @@ test('governed theme emits the complete runtime motion token set', () => {
     assert.match(governed, new RegExp(`'${field}'`));
   }
 });
+
+
+test('semantic motion primitives are exported and token governed', () => {
+  const index = readUiSource('src/motion/index.ts');
+  const progressCss = readUiSource('src/motion/MotionProgress.module.css');
+  const activityCss = readUiSource('src/motion/MotionActivity.module.css');
+  const feedbackCss = readUiSource('src/motion/MotionFeedback.module.css');
+
+  for (const exported of ['MotionProgress', 'MotionActivity', 'MotionFeedback']) {
+    assert.match(index, new RegExp(exported));
+  }
+
+  for (const source of [progressCss, activityCss, feedbackCss]) {
+    assert.match(source, /var\(--theme-motion-/u);
+    assert.match(source, /var\(--theme-easing\)/u);
+    assert.match(source, /prefers-reduced-motion: reduce/u);
+    assert.doesNotMatch(source, /ease-in-out/u);
+  }
+});

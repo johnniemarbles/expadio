@@ -1,0 +1,91 @@
+.activity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-card);
+  background: var(--theme-surface);
+  animation: motionActivityIn var(--theme-motion-normal) var(--theme-easing) both;
+  transition:
+    border-color var(--theme-motion-fast) var(--theme-easing),
+    background var(--theme-motion-fast) var(--theme-easing),
+    transform var(--theme-motion-fast) var(--theme-easing);
+}
+
+.activity:hover {
+  border-color: color-mix(in srgb, var(--theme-primary) 18%, var(--theme-border));
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.marker {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--theme-neutral);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-neutral) 12%, transparent);
+}
+
+.pending .marker,
+.processing .marker {
+  animation: motionActivityPulse calc(var(--theme-motion-data) * 2) var(--theme-easing) infinite;
+}
+
+.pending .marker { background: var(--theme-warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-warning) 12%, transparent); }
+.processing .marker { background: var(--theme-info); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-info) 12%, transparent); }
+.success .marker { background: var(--theme-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-success) 12%, transparent); }
+.warning .marker { background: var(--theme-warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-warning) 12%, transparent); }
+.failure .marker { background: var(--theme-danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-danger) 12%, transparent); }
+
+.body {
+  min-width: 0;
+}
+
+.title {
+  color: var(--theme-text-primary);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.detail,
+.meta {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.detail {
+  margin-top: 3px;
+}
+
+.meta {
+  white-space: nowrap;
+}
+
+@keyframes motionActivityIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes motionActivityPulse {
+  0%, 100% { opacity: .6; transform: scale(.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity,
+  .pending .marker,
+  .processing .marker {
+    animation: none;
+  }
+
+  .activity {
+    transition: none;
+  }
+
+  .activity:hover {
+    transform: none;
+  }
+}
