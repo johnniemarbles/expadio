@@ -134,14 +134,14 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
               && (!requestedTenant || membership.tenantId === requestedTenant),
           )
         : undefined)
-      ?? (requestedOrganization
-        ? memberships.find(
-            (membership) => membership.organizationId === requestedOrganization,
-          )
-        : undefined)
       ?? (requestedTenant
         ? memberships.find(
             (membership) => membership.tenantId === requestedTenant,
+          )
+        : undefined)
+      ?? (requestedOrganization
+        ? memberships.find(
+            (membership) => membership.organizationId === requestedOrganization,
           )
         : undefined)
       ?? memberships[0];
