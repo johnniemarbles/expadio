@@ -47,6 +47,11 @@ export async function GET() {
 
     { id: 'ws_live_governance', label: 'Governance Center', short: 'GC', href: '/governance', group: 'Decision Fabric', priority: 'primary' },
     { id: 'ws_live_gov_queue', label: 'My Review Queue', short: 'RQ', href: '/governance/queue', group: 'Decision Fabric', priority: 'secondary' },
+    { id: 'ws_live_authority', label: 'Approval Authority', short: 'AA', href: '/authority', group: 'Decision Fabric', priority: 'secondary' },
+    { id: 'ws_live_gov_analytics', label: 'Governance Analytics', short: 'GA', href: '/governance/analytics', group: 'Decision Fabric', priority: 'secondary' },
+    { id: 'ws_live_gov_decisions', label: 'Governed Decisions', short: 'GD', href: '/governance/decisions', group: 'Decision Fabric', priority: 'secondary' },
+    { id: 'ws_live_gov_workflows', label: 'Governed Workflows', short: 'GW', href: '/governance/workflows', group: 'Decision Fabric', priority: 'secondary' },
+    { id: 'ws_live_gov_pending', label: 'Pending Reviews', short: 'PR', href: '/governance/pending', group: 'Decision Fabric', priority: 'secondary' },
     { id: 'ws_live_workflows', label: 'Workflow Console', short: 'WC', href: '/workflows', group: 'Decision Fabric', priority: 'primary' },
     { id: 'ws_live_workflow_blueprints', label: 'Workflow Blueprints', short: 'WB', href: '/workflows/blueprints', group: 'Decision Fabric', priority: 'secondary' },
     { id: 'ws_live_vendors', label: 'Vendor Onboarding', short: 'VO', href: '/vendors', group: 'Decision Fabric', priority: 'primary' },
