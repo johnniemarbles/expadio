@@ -149,7 +149,7 @@ BEGIN
 END;
 $$;
 
-DO $
+DO $$
 DECLARE
   item record;
 BEGIN
