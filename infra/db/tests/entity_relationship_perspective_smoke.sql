@@ -43,7 +43,7 @@ INSERT INTO platform.entity_registry_nodes (
     'perspective-smoke'
   );
 
-DO $
+DO $$
 DECLARE
   perspective_count integer;
 BEGIN
