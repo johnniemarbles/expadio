@@ -34,6 +34,7 @@ test('Brand overview exposes business lifecycle and inherited readiness only',()
   assert.match(projection,/communication_templates/);
   assert.match(projection,/communication_sender_identities/);
   assert.match(projection,/communication_suppressions/);
-  assert.match(page,/Provider credentials, routing controls and platform suppression governance remain Platform-owned/);
+  assert.match(page,/Delivery infrastructure and platform suppression governance remain Platform-owned/);
+  assert.match(page,/infrastructure configuration is not exposed here/);
   assert.match(page,/Organization-scoped/);
 });
