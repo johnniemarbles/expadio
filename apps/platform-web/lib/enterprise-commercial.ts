@@ -447,9 +447,34 @@ export async function issueEnterpriseAppointmentRights(
   );
   if (territories.rows.length === 0) throw new Error('ENTERPRISE_APPOINTMENT_TERRITORY_REQUIRED');
 
+  const profileProvider = new PostgresWorkflowRightsProfileProvider(client);
+  const profile = await profileProvider.resolve({
+    tenantId: input.tenantId,
+    profileKey: appointment.rights_profile_key,
+    version: appointment.rights_profile_version,
+  });
+  if (!profile) throw new Error('ENTERPRISE_RIGHTS_PROFILE_NOT_FOUND');
+  const flags = await client.query<{
+    readonly delegation_requested: boolean;
+    readonly sub_appointment_requested: boolean;
+  }>(
+    `SELECT delegation_requested, sub_appointment_requested
+       FROM platform.enterprise_appointments
+      WHERE tenant_id = $1::uuid
+        AND enterprise_appointment_id = $2::uuid`,
+    [input.tenantId, input.appointmentId],
+  );
+  const requestedFlags = flags.rows[0];
+  if (requestedFlags?.delegation_requested && !profile.permitsDelegation) {
+    throw new Error('ENTERPRISE_RIGHTS_DELEGATION_NOT_PERMITTED');
+  }
+  if (requestedFlags?.sub_appointment_requested && !profile.permitsSubAppointment) {
+    throw new Error('ENTERPRISE_RIGHTS_SUB_APPOINTMENT_NOT_PERMITTED');
+  }
+
   const grantId = input.grantId ?? randomUUID();
   const service = new RepositoryWorkflowRightsGrantService({
-    profiles: new PostgresWorkflowRightsProfileProvider(client),
+    profiles: profileProvider,
     repository: new PostgresWorkflowRightsGrantRepository(client),
   });
   const result = await service.grant({
