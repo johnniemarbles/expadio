@@ -1,5 +1,9 @@
 import { notFound } from 'next/navigation';
-import { listLearningCourses } from '@expadio/postgres-runtime/learning';
+import { listLearningCourses, loadLearningCourseVersion } from '@expadio/postgres-runtime/learning';
+import {
+  listLearningPublishedQuestions,
+  listLearningQuestionBanks,
+} from '@expadio/postgres-runtime/learning-assessment';
 import { listLearningPrograms } from '@expadio/postgres-runtime/learning-program-certification';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { LearningSectionAdminPanel } from '../../../../components/LearningSectionAdminPanel';
@@ -42,6 +46,9 @@ export default async function LearningSectionPage({ params }: { params: Promise<
         rows: [] as readonly Record<string, unknown>[],
         courseTargets: [] as readonly { id: string; label: string }[],
         programTargets: [] as readonly { id: string; label: string }[],
+        assessmentCourseTargets: [] as readonly { id: string; label: string }[],
+        questionBanks: [] as readonly { id: string; label: string }[],
+        publishedQuestions: [] as readonly { id: string; label: string; type: string }[],
       };
     }
 
@@ -59,20 +66,37 @@ export default async function LearningSectionPage({ params }: { params: Promise<
         rows,
         courseTargets: [] as readonly { id: string; label: string }[],
         programTargets: [] as readonly { id: string; label: string }[],
+        assessmentCourseTargets: [] as readonly { id: string; label: string }[],
+        questionBanks: [] as readonly { id: string; label: string }[],
+        publishedQuestions: [] as readonly { id: string; label: string; type: string }[],
       };
     }
 
-    const [courses, programs] = await Promise.all([
+    const [courses, programs, questionBanks, publishedQuestions] = await Promise.all([
       listLearningCourses(client, context.tenantId),
       listLearningPrograms(client, context.tenantId),
+      section === 'assessments' ? listLearningQuestionBanks(client, context.tenantId) : Promise.resolve([]),
+      section === 'assessments' ? listLearningPublishedQuestions(client, context.tenantId) : Promise.resolve([]),
     ]);
+
+    const publishedCourses = courses.filter(
+      (course) => course.status === 'ACTIVE' && course.currentPublishedVersion !== null,
+    );
+    const assessmentVersions = section === 'assessments'
+      ? await Promise.all(publishedCourses.map((course) =>
+          loadLearningCourseVersion(client, {
+            tenantId: context.tenantId,
+            courseId: course.courseId,
+            version: course.currentPublishedVersion!,
+          }),
+        ))
+      : [];
+
     return {
       module,
       admin,
       rows,
-      courseTargets: courses
-        .filter((course) => course.status === 'ACTIVE' && course.currentPublishedVersion !== null)
-        .map((course) => ({
+      courseTargets: publishedCourses.map((course) => ({
           id: course.courseId,
           label: course.publishedTitle ?? course.draftTitle ?? course.courseKey,
         })),
@@ -82,6 +106,19 @@ export default async function LearningSectionPage({ params }: { params: Promise<
           id: program.programId,
           label: program.publishedTitle ?? program.programKey,
         })),
+      assessmentCourseTargets: assessmentVersions.map((version) => ({
+        id: version.courseVersionId,
+        label: `${version.title} · v${version.version}`,
+      })),
+      questionBanks: questionBanks.map((bank) => ({
+        id: bank.questionBankId,
+        label: bank.name,
+      })),
+      publishedQuestions: publishedQuestions.map((question) => ({
+        id: question.questionVersionId,
+        label: `${question.bankName} · ${question.prompt}`,
+        type: question.type,
+      })),
     };
   });
 
@@ -106,6 +143,9 @@ export default async function LearningSectionPage({ params }: { params: Promise<
                   section={section as 'assessments' | 'programs' | 'skills' | 'assignments'}
                   courseTargets={data.courseTargets}
                   programTargets={data.programTargets}
+                  assessmentCourseTargets={data.assessmentCourseTargets}
+                  questionBanks={data.questionBanks}
+                  publishedQuestions={data.publishedQuestions}
                 />
               </div>
             </section>
