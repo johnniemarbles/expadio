@@ -5,7 +5,7 @@ import {
   resolveRequestContext,
   withTenantTransaction,
 } from '../../../../../../lib/request-context';
-import { hasGovernanceWriteRole } from '../../../../../../lib/governance-authz';
+import { hasGovernanceWriteRoleForOrganization } from '../../../../../../lib/governance-authz';
 
 export async function POST(
   request: Request,
@@ -34,7 +34,7 @@ export async function POST(
 
     const { id } = await params;
     const outcome = await withTenantTransaction(context, async (client) => {
-      if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
+      if (!(await hasGovernanceWriteRoleForOrganization(client, context.subjectId, context.organizationId!))) {
         return { forbidden: true } as const;
       }
       return approveCreateOrganizationRequest(client, {
@@ -47,6 +47,7 @@ export async function POST(
             ? body.reason.trim()
             : null,
         allowSelfApproval: false,
+        decidedByIssuer: context.issuer ?? null,
       });
     });
 

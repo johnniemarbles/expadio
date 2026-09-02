@@ -30,6 +30,38 @@ export async function hasGovernanceWriteRole(client: PoolClient, subjectId: stri
   return result.rows.length > 0;
 }
 
+/**
+ * Enterprise parent-governed mutations are narrower than generic tenant writes.
+ * A governing assignment must be unscoped or anchored to the selected parent,
+ * and any explicit action_organization_ids must include that parent. This
+ * prevents a sibling-scoped tenant administrator from governing another branch.
+ */
+export async function hasGovernanceWriteRoleForOrganization(
+  client: PoolClient,
+  subjectId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const result = await client.query(
+    `SELECT 1
+       FROM platform.authorization_assignments a
+       JOIN platform.authorization_roles r ON r.role_id = a.role_id
+      WHERE a.subject_id = $1
+        AND a.status = 'ACTIVE'
+        AND r.status = 'ACTIVE'
+        AND r.role_key = ANY($2::text[])
+        AND a.valid_from <= now()
+        AND (a.valid_until IS NULL OR a.valid_until > now())
+        AND (a.organization_id IS NULL OR a.organization_id = $3::uuid)
+        AND (
+          a.action_organization_ids IS NULL
+          OR $3::uuid = ANY(a.action_organization_ids)
+        )
+      LIMIT 1`,
+    [subjectId, GOVERNANCE_WRITE_ROLES, organizationId],
+  );
+  return result.rows.length > 0;
+}
+
 // Highest authority first: platform roles outrank tenant roles.
 const ROLE_RANK = ['PLATFORM_SUPER_ADMIN', 'PLATFORM_ADMIN', 'TENANT_OWNER', 'TENANT_ADMIN'];
 

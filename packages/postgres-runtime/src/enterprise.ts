@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
+import { startOrganizationSetup } from './enterprise-onboarding.ts';
 
 export interface EnterpriseSqlResult<Row = Record<string, unknown>> {
   readonly rows: readonly Row[];
@@ -340,8 +341,13 @@ export async function approveCreateOrganizationRequest(
     readonly decidedBySubjectId: string;
     readonly decisionReason?: string | null;
     readonly allowSelfApproval?: boolean;
+    readonly decidedByIssuer?: string | null;
   },
-): Promise<{ readonly request: EnterpriseChangeRequest; readonly organizationId: string }> {
+): Promise<{
+  readonly request: EnterpriseChangeRequest;
+  readonly organizationId: string;
+  readonly setupPlanId?: string;
+}> {
   const row = await loadChangeRequestForUpdate(client, input.tenantId, input.requestId);
 
   if (row.operation !== 'CREATE_ORGANIZATION') {
@@ -471,5 +477,19 @@ export async function approveCreateOrganizationRequest(
     },
   });
 
-  return { request: mapChangeRequest(updatedRow), organizationId };
+  const setup = await startOrganizationSetup(client, {
+    tenantId: input.tenantId,
+    enterpriseId: row.enterprise_id,
+    organizationId,
+    provisioningChangeRequestId: input.requestId,
+    startedBySubjectId: input.decidedBySubjectId,
+    issuer: input.decidedByIssuer ?? null,
+    correlationId: row.correlation_id,
+  });
+
+  return {
+    request: mapChangeRequest(updatedRow),
+    organizationId,
+    setupPlanId: setup.plan.setupPlanId,
+  };
 }

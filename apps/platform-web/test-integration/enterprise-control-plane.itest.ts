@@ -123,6 +123,7 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
       requestId: submitted.request.requestId,
       approverOrganizationId: rootOrganizationId,
       decidedBySubjectId: 'enterprise-approver',
+      decidedByIssuer: 'https://clerk.expadio.com',
       decisionReason: 'Country structure approved',
     });
     await c.query('COMMIT');
@@ -138,7 +139,7 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
     assert.deepEqual(child.rows[0], {
       parent_organization_id: rootOrganizationId,
       enterprise_id: enterpriseId,
-      status: 'PROVISIONING',
+      status: 'CONFIGURING',
     });
 
     const closure = await c.query(
@@ -162,11 +163,15 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
       /organization hierarchy cycle rejected/,
     );
 
-    await c.query(
-      `UPDATE platform.organizations
-          SET status = 'ACTIVE'
-        WHERE tenant_id = $1::uuid AND organization_id = $2::uuid`,
-      [tenantId, approved.organizationId],
+    await assert.rejects(
+      () => c.query(
+        `UPDATE platform.organizations
+            SET status = 'ACTIVE'
+          WHERE tenant_id = $1::uuid
+            AND organization_id = $2::uuid`,
+        [tenantId, approved.organizationId],
+      ),
+      /organization activation requires activated setup plan/,
     );
 
     const expanded = await c.query(
@@ -180,9 +185,23 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
       [tenantId],
     );
     assert.deepEqual(
-      expanded.rows.map((row) => row.organization_id).sort(),
-      [rootOrganizationId, approved.organizationId].sort(),
+      expanded.rows.map((row) => row.organization_id),
+      [rootOrganizationId],
     );
+
+    const setup = await c.query(
+      `SELECT state, total_requirements, completed_requirements, blocking_open_requirements
+         FROM platform.organization_setup_plans
+        WHERE tenant_id = $1::uuid
+          AND organization_id = $2::uuid`,
+      [tenantId, approved.organizationId],
+    );
+    assert.deepEqual(setup.rows[0], {
+      state: 'CONFIGURING',
+      total_requirements: 3,
+      completed_requirements: 1,
+      blocking_open_requirements: 2,
+    });
 
     const events = await c.query(
       `SELECT event_type
@@ -192,13 +211,14 @@ test('enterprise hierarchy request -> approval -> provisioning is durable and cy
         ORDER BY event_type`,
       [tenantId, submitted.request.correlationId],
     );
-    assert.deepEqual(
-      events.rows.map((row) => row.event_type),
-      [
-        'enterprise.change_request.approved',
-        'enterprise.change_request.submitted',
-        'organization.provisioned',
-      ],
+    const eventTypes = events.rows.map((row) => row.event_type);
+    assert.ok(eventTypes.includes('enterprise.change_request.approved'));
+    assert.ok(eventTypes.includes('enterprise.change_request.submitted'));
+    assert.ok(eventTypes.includes('organization.provisioned'));
+    assert.ok(eventTypes.includes('organization.setup.started'));
+    assert.equal(
+      eventTypes.filter((eventType) => eventType === 'organization.setup.requirement_added').length,
+      3,
     );
   } finally {
     c.release();
