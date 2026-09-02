@@ -110,7 +110,10 @@ export function BrandEnterpriseOnboarding({
             legal identity, accountable administration, readiness, and activation.
           </p>
         </div>
-        <Link className={styles.secondaryButton} href="/enterprise">Enterprise Hub</Link>
+        <div className={styles.appActions}>
+          <Link className={styles.button} href="/enterprise/onboard/profile">Enterprise profile</Link>
+          <Link className={styles.secondaryButton} href="/enterprise">Enterprise Hub</Link>
+        </div>
       </section>
 
       {message ? <section className={styles.notice}>{message}</section> : null}
