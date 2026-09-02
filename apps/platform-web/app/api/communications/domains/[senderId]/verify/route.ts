@@ -7,10 +7,9 @@ import { expectedDnsRecords } from '../../../../../../lib/dns-records';
  * Real domain verification (design: no fabricated VERIFIED).
  *
  * Resolves the expected SPF, DMARC and return-path MX records against live DNS.
- * The domain is marked VERIFIED only when every verifiable record actually
- * resolves; otherwise it stays PENDING and we report which records are missing.
- * DKIM is issued by the sending provider, so it is reported informationally,
- * never asserted as passing.
+ * The domain is marked VERIFIED only when every verifiable requirement is
+ * actually present with the required value. DKIM is provider-issued and is not
+ * included in DNS observations until provider evidence is available.
  *
  * DNS resolution needs egress. Where egress is restricted the checks fail
  * closed — PENDING, with the resolver error surfaced — which is the honest
@@ -28,30 +27,79 @@ interface RecordCheck {
   detail: string;
 }
 
-async function checkRecord(spec: ReturnType<typeof expectedDnsRecords>[number]): Promise<RecordCheck> {
+type DnsSpec = ReturnType<typeof expectedDnsRecords>[number];
+
+function normalizeTxt(value: string) {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function requiredTokens(value: string) {
+  return normalizeTxt(value).split(' ').filter(Boolean);
+}
+
+function normalizeHost(value: string) {
+  return value.trim().replace(/\.$/, '').toLowerCase();
+}
+
+async function checkRecord(spec: DnsSpec): Promise<RecordCheck> {
   const base = { purpose: spec.purpose, type: spec.type, name: spec.name };
   try {
     if (spec.purpose === 'SPF') {
-      const domain = spec.name;
-      const txt = (await dns.resolveTxt(domain)).map((chunks) => chunks.join(''));
-      const found = txt.find((r) => r.toLowerCase().startsWith('v=spf1'));
-      return { ...base, ok: found !== undefined, detail: found ?? 'No v=spf1 TXT record found.' };
-    }
-    if (spec.purpose === 'DMARC') {
       const txt = (await dns.resolveTxt(spec.name)).map((chunks) => chunks.join(''));
-      const found = txt.find((r) => r.toLowerCase().startsWith('v=dmarc1'));
-      return { ...base, ok: found !== undefined, detail: found ?? 'No v=DMARC1 TXT record found.' };
-    }
-    if (spec.purpose === 'Return-path (MX)') {
-      const domain = spec.name.replace(/^mail\./, '');
-      const mx = await dns.resolveMx(domain).catch(() => dns.resolveMx(spec.name));
+      const candidates = txt.filter((record) => normalizeTxt(record).startsWith('v=spf1'));
+      const required = requiredTokens(spec.value);
+      const found = candidates.find((record) => {
+        const tokens = new Set(requiredTokens(record));
+        return required.every((token) => tokens.has(token));
+      });
       return {
         ...base,
-        ok: mx.length > 0,
-        detail: mx.length > 0 ? mx.map((m) => `${m.priority} ${m.exchange}`).join(', ') : 'No MX records found.',
+        ok: found !== undefined,
+        detail: found ?? (candidates.length > 0
+          ? `SPF exists but does not contain the required policy: ${spec.value}`
+          : 'No v=spf1 TXT record found.'),
       };
     }
-    return { ...base, ok: false, detail: 'Not a verifiable record.' };
+
+    if (spec.purpose === 'DMARC') {
+      const txt = (await dns.resolveTxt(spec.name)).map((chunks) => chunks.join(''));
+      const candidates = txt.filter((record) => normalizeTxt(record).startsWith('v=dmarc1'));
+      const requiredDirectives = spec.value
+        .split(';')
+        .map((directive) => normalizeTxt(directive))
+        .filter(Boolean);
+      const found = candidates.find((record) => {
+        const directives = new Set(record.split(';').map((directive) => normalizeTxt(directive)).filter(Boolean));
+        return requiredDirectives.every((directive) => directives.has(directive));
+      });
+      return {
+        ...base,
+        ok: found !== undefined,
+        detail: found ?? (candidates.length > 0
+          ? `DMARC exists but does not contain the required policy: ${spec.value}`
+          : 'No v=DMARC1 TXT record found.'),
+      };
+    }
+
+    if (spec.purpose === 'Return-path (MX)') {
+      const mx = await dns.resolveMx(spec.name);
+      const requiredExchange = normalizeHost(spec.value);
+      const found = mx.find((record) =>
+        normalizeHost(record.exchange) === requiredExchange
+        && (spec.priority === undefined || record.priority === spec.priority),
+      );
+      return {
+        ...base,
+        ok: found !== undefined,
+        detail: found
+          ? `${found.priority} ${found.exchange}`
+          : (mx.length > 0
+            ? `MX exists but required ${spec.priority ?? ''} ${spec.value}`.trim()
+            : 'No MX records found.'),
+      };
+    }
+
+    return { ...base, ok: false, detail: 'Unsupported DNS requirement.' };
   } catch (error) {
     return { ...base, ok: false, detail: (error as Error).message };
   }
@@ -78,11 +126,9 @@ export async function POST(
       const address: string = sender.rows[0].address;
       const domain = address.includes('@') ? address.split('@')[1] : address;
 
-      const specs = expectedDnsRecords(domain);
-      const verifiable = specs.filter((s) => s.verifiable);
-      const checks = await Promise.all(specs.map(checkRecord));
-      const verifiableChecks = checks.filter((c) => verifiable.some((s) => s.purpose === c.purpose));
-      const allVerified = verifiableChecks.length > 0 && verifiableChecks.every((c) => c.ok);
+      const verifiable = expectedDnsRecords(domain).filter((spec) => spec.verifiable);
+      const checks = await Promise.all(verifiable.map(checkRecord));
+      const allVerified = checks.length > 0 && checks.every((check) => check.ok);
 
       const nextStatus = allVerified ? 'VERIFIED' : 'PENDING';
       await client.query(
