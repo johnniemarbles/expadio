@@ -1,9 +1,40 @@
-.status { display: inline-flex; align-items: center; gap: 7px; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--theme-neutral); flex: none; }
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--theme-neutral);
+  flex: none;
+}
+
 .info .dot { background: var(--theme-info); }
 .success .dot { background: var(--theme-success); }
 .warning .dot { background: var(--theme-warning); }
 .danger .dot { background: var(--theme-danger); }
-.status[data-live='true'] .dot { animation: statusPulse 2.1s ease-in-out infinite; }
-@keyframes statusPulse { 0%,100% { opacity: .55; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.08); } }
-@media (prefers-reduced-motion: reduce) { .status[data-live='true'] .dot { animation: none; } }
+
+.status[data-live='true'] .dot {
+  animation: statusPulse calc(var(--theme-motion-data) * 3) var(--theme-easing) infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: .55;
+    transform: scale(.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status[data-live='true'] .dot {
+    animation: none;
+  }
+}
