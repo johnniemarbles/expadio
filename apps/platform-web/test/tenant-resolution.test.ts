@@ -50,7 +50,9 @@ test("tenant resolution verifies membership rather than trusting the header", ()
   assert.match(requestContext, /TENANT_ACCESS_DENIED/);
 });
 
-test("SSR API subrequests rederive workspace selection through query selectors", () => {
+test("SSR API subrequests only preserve originally explicit workspace selectors", () => {
+  assert.match(liveAdapter, /tenantSource === 'query'/);
+  assert.match(liveAdapter, /organizationSource === 'query'/);
   assert.match(liveAdapter, /searchParams\.set\('account', tenantId\)/);
   assert.match(liveAdapter, /searchParams\.set\('org', organizationId\)/);
   assert.doesNotMatch(
@@ -67,4 +69,17 @@ test("cookie recovery prefers the persisted tenant before an org-only fallback",
   assert.ok(tenantFallback >= 0);
   assert.ok(organizationOnlyFallback >= 0);
   assert.ok(tenantFallback < organizationOnlyFallback);
+});
+
+test("cookie-derived SSR workspace headers remain recoverable instead of becoming explicit selectors", () => {
+  assert.match(liveAdapter, /tenantSource = incoming\.get\('x-expadio-tenant-source'\)/);
+  assert.match(liveAdapter, /organizationSource = incoming\.get\('x-expadio-organization-source'\)/);
+  assert.match(
+    liveAdapter,
+    /tenantId[\s\S]*tenantSource === 'query'[\s\S]*searchParams\.set\('account', tenantId\)/,
+  );
+  assert.match(
+    liveAdapter,
+    /organizationId[\s\S]*organizationSource === 'query'[\s\S]*searchParams\.set\('org', organizationId\)/,
+  );
 });
