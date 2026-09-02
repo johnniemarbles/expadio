@@ -241,6 +241,11 @@ export async function POST(request: Request) {
     const organizationId = context.organizationId;
     const body = await request.json() as Record<string, unknown>;
     const action = requiredString(body.action, 'action');
+    const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
+    const requireIdempotencyKey = () => {
+      if (idempotencyKey === '') throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_REQUIRED');
+      return idempotencyKey;
+    };
 
     const result = await withTenantTransaction(context, async (client) => {
       const enterprise = await client.query<{ readonly enterprise_id: string }>(
@@ -308,6 +313,7 @@ export async function POST(request: Request) {
             governingLawCountryCode: optionalString(body.governingLawCountryCode)?.toUpperCase() ?? null,
             governingLawSubdivisionCode: optionalString(body.governingLawSubdivisionCode),
             createdBySubjectId: context.subjectId,
+            idempotencyKey: requireIdempotencyKey(),
           });
         }
 
@@ -348,6 +354,7 @@ export async function POST(request: Request) {
             effectiveFrom: optionalString(body.effectiveFrom) ?? undefined,
             effectiveUntil: optionalString(body.effectiveUntil),
             requestedBySubjectId: context.subjectId,
+            idempotencyKey: requireIdempotencyKey(),
           });
         }
 
@@ -379,6 +386,7 @@ export async function POST(request: Request) {
             actorSubjectId: context.subjectId,
             grantId: optionalString(body.grantId) ?? undefined,
             evidenceRefs: stringArray(body.evidenceRefs, 'evidenceRefs'),
+            idempotencyKey: requireIdempotencyKey(),
           });
         }
 
