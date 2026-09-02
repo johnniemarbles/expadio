@@ -189,6 +189,72 @@ export async function GET(request: Request) {
         [context.tenantId, allowedIds],
       );
 
+      const perspectiveRows = await client.query<{
+        perspective: string;
+        entity_type: string;
+        entity_id: string;
+        display_name: string | null;
+        edge_path: unknown[];
+        effective_from: Date | string;
+        provenance_source: string;
+        confidence: string | number;
+      }>(
+        `WITH requested_perspectives(perspective) AS (
+           VALUES
+             ('GOVERNANCE'::text),
+             ('OWNERSHIP_LEGAL'::text),
+             ('COMMERCIAL'::text),
+             ('TERRITORY_JURISDICTION'::text),
+             ('OPERATIONAL'::text)
+         ),
+         projected AS (
+           SELECT
+             requested.perspective,
+             projection.entity_type,
+             projection.entity_id,
+             projection.edge_path,
+             projection.effective_from,
+             projection.provenance_source,
+             projection.confidence,
+             jsonb_array_length(projection.edge_path) AS path_depth
+           FROM requested_perspectives requested
+           CROSS JOIN LATERAL platform.project_entity_perspective(
+             $1::uuid,
+             'OPERATING_UNIT',
+             $2::text,
+             requested.perspective,
+             now()
+           ) projection
+         )
+         SELECT DISTINCT ON (
+           projected.perspective,
+           projected.entity_type,
+           projected.entity_id
+         )
+           projected.perspective,
+           projected.entity_type,
+           projected.entity_id,
+           node.display_name,
+           projected.edge_path,
+           projected.effective_from,
+           projected.provenance_source,
+           projected.confidence
+         FROM projected
+         LEFT JOIN platform.entity_registry_nodes node
+           ON node.tenant_id = $1::uuid
+          AND node.node_type = projected.entity_type
+          AND node.entity_key = projected.entity_id
+          AND node.status = 'ACTIVE'
+          AND node.valid_until IS NULL
+         ORDER BY
+           projected.perspective,
+           projected.entity_type,
+           projected.entity_id,
+           projected.path_depth ASC,
+           projected.effective_from DESC`,
+        [context.tenantId, context.organizationId],
+      );
+
       const pending = await client.query<{
         enterprise_change_request_id: string;
         operation: string;
@@ -221,6 +287,30 @@ export async function GET(request: Request) {
           state: row.state,
           completionPercent: Number(row.completion_percent),
           blockingOpenRequirements: Number(row.blocking_open_requirements),
+        })),
+        perspectives: [
+          'GOVERNANCE',
+          'OWNERSHIP_LEGAL',
+          'COMMERCIAL',
+          'TERRITORY_JURISDICTION',
+          'OPERATIONAL',
+        ].map((perspective) => ({
+          perspective,
+          nodes: perspectiveRows.rows
+            .filter((row) => row.perspective === perspective)
+            .map((row) => ({
+              entityType: row.entity_type,
+              entityId: row.entity_id,
+              displayName: row.display_name,
+              edgePath: row.edge_path,
+              pathDepth: Array.isArray(row.edge_path) ? row.edge_path.length : 0,
+              effectiveFrom:
+                row.effective_from instanceof Date
+                  ? row.effective_from.toISOString()
+                  : new Date(row.effective_from).toISOString(),
+              provenanceSource: row.provenance_source,
+              confidence: Number(row.confidence),
+            })),
         })),
         pendingChangeRequests: pending.rows.map((row) => ({
           ...row,
