@@ -1,5 +1,5 @@
-import { BrandEnterpriseProfileOnboarding } from '../../../../components/BrandEnterpriseProfileOnboarding';
-import { resolveBrandContext } from '../../../../lib/brand-context';
+import { BrandEnterpriseProfileOnboarding } from '../../../../../components/BrandEnterpriseProfileOnboarding';
+import { resolveBrandContext } from '../../../../../lib/brand-context';
 
 export const dynamic = 'force-dynamic';
 
