@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../workflows/page.module.css';
+import { PageHeader } from '@expadio/ui';
 import { fetchApi } from '../../../lib/live-adapter';
 import { DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
@@ -18,13 +18,11 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
 
   return (
     <>
-      <section className={styles.pageHeading} aria-labelledby="page-title">
-        <div>
-          <p className={styles.eyebrow}>Decision Fabric</p>
-          <h1 id="page-title">Access Requests</h1>
-          <p>A fourth governed process on the same engine: request a system entitlement, route it to a security reviewer, and grant it — the approval gated by role and separation of duties, every step traced.</p>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Decision Fabric"
+        title="Access Requests"
+        description="Request a system entitlement, route it to a security reviewer, and grant it through the same governed engine — approval gated by role and separation of duties, with every step traced."
+      />
 
       <AccessRequestsClient initial={rows} queryString={q} />
     </>
