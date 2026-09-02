@@ -47,3 +47,13 @@ test('legacy migration reconciliation stops at the execution-artifacts sentinel 
   assert.match(migrate, /platform\.execution_artifacts/);
   assert.doesNotMatch(migrate, /for \(const file of files\) \{\s*await client\.query\('INSERT INTO public\.schema_migrations/);
 });
+
+
+test('audit provenance enforces tenant-organization integrity and organization-scoped RLS', () => {
+  assert.match(migration, /FOREIGN KEY \(organization_id, tenant_id\)[\s\S]*REFERENCES platform\.organizations\(organization_id, tenant_id\)/);
+  assert.match(migration, /CREATE POLICY agent_runs_select[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
+  assert.match(migration, /CREATE POLICY agent_run_events_select[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
+  assert.match(migration, /CREATE POLICY sensitive_read_events_select[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
+  assert.match(migration, /CREATE POLICY agent_runs_insert[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
+  assert.match(migration, /CREATE POLICY sensitive_read_events_insert[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
+});
