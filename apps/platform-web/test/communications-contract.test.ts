@@ -51,6 +51,10 @@ const tracesPanel = readFileSync(
   new URL("../app/(shell)/communications/TracesPanel.tsx", import.meta.url),
   "utf8",
 );
+const tracesPanelStyles = readFileSync(
+  new URL("../app/(shell)/communications/TracesPanel.module.css", import.meta.url),
+  "utf8",
+);
 const templateComposerModal = readFileSync(
   new URL("../app/(shell)/communications/TemplateComposerModal.tsx", import.meta.url),
   "utf8",
@@ -220,6 +224,22 @@ test("decision traces tab surfaces the trace explorer", () => {
   assert.match(dashboard, /setActiveTab\("traces"\)/);
   assert.match(tracesPanel, /\/api\/communications\/traces/);
   assert.match(tracesPanel, /\/api\/communications\/traces\/\$\{encodeURIComponent\(traceId\)\}/);
+});
+
+test("traces panel uses governed dashboard styling primitives", () => {
+  assert.match(tracesPanel, /TracesPanel\.module\.css/);
+  assert.match(tracesPanel, /traceStyles\.filters/);
+  assert.match(tracesPanel, /outcomeClass/);
+  assert.match(tracesPanel, /verdictClass/);
+  assert.match(tracesPanel, /traceStyles\.backdrop/);
+  assert.match(tracesPanelStyles, /var\(--theme-primary\)/);
+  assert.match(tracesPanelStyles, /var\(--theme-border\)/);
+  assert.match(tracesPanelStyles, /var\(--theme-danger\)/);
+  assert.doesNotMatch(tracesPanel, /React\.CSSProperties/);
+  assert.doesNotMatch(tracesPanel, /style=\{/);
+  assert.doesNotMatch(tracesPanel, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(tracesPanelStyles, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(tracesPanelStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
 });
 
 test("template authoring lifecycle is wired end to end", () => {
