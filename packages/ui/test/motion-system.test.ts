@@ -49,3 +49,39 @@ test('shared motion tokens do not target CSS module class-name substrings', () =
   assert.match(source, /\.expadioMotionRowIn/u);
   assert.match(source, /\.expadioMotionTab/u);
 });
+
+
+test('governed theme emits the complete runtime motion token set', () => {
+  const source = readUiSource('src/theme.ts');
+  const governed = readUiSource('src/governed-theme.ts');
+
+  for (const token of [
+    '--theme-motion-instant',
+    '--theme-motion-fast',
+    '--theme-motion-normal',
+    '--theme-motion-slow',
+    '--theme-motion-panel',
+    '--theme-motion-data',
+    '--theme-motion-distance-micro',
+    '--theme-motion-distance-small',
+    '--theme-motion-distance-panel',
+    '--theme-easing',
+    '--theme-easing-emphasis',
+    '--theme-easing-linear',
+  ]) {
+    assert.match(source, new RegExp(token));
+  }
+
+  for (const field of [
+    'instant',
+    'panel',
+    'data',
+    'distanceMicro',
+    'distanceSmall',
+    'distancePanel',
+    'easingEmphasis',
+    'easingLinear',
+  ]) {
+    assert.match(governed, new RegExp(`'${field}'`));
+  }
+});
