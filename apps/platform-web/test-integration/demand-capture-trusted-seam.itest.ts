@@ -65,7 +65,7 @@ async function captureLead(c: pg.PoolClient, input: {
   return (await c.query(
     `INSERT INTO platform.lead_capture_leads
        (tenant_id, organization_id, source_id, title, email, stage, raw_payload)
-     VALUES ($1, $2, $3, $4, 'trusted@example.test', $5, jsonb_build_object('marker',$6))
+     VALUES ($1, $2, $3, $4, 'trusted@example.test', $5, jsonb_build_object('marker',$6::text))
      RETURNING capture_lead_id`,
     [input.tenantId, input.organizationId, input.sourceId, input.title, input.stage, input.layerPayload],
   )).rows[0].capture_lead_id as string;
