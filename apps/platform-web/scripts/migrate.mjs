@@ -41,8 +41,13 @@ async function runMigrations() {
         console.log("Database has the latest schema sentinel. Backfilling schema_migrations...");
         const migrationsDir = path.resolve(__dirname, '../../../infra/db/migrations');
         const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+        const reconciliationCeiling = '0100_execution_artifacts.sql';
         for (const file of files) {
-          await client.query('INSERT INTO public.schema_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING', [file]);
+          if (file > reconciliationCeiling) break;
+          await client.query(
+            'INSERT INTO public.schema_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING',
+            [file],
+          );
         }
       } else if (sentinel.early_sentinel) {
         throw new Error(
