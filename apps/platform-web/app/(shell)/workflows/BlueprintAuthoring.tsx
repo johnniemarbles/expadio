@@ -23,11 +23,11 @@ function apiError(data: unknown, fallback: string): string {
 
 const badge = (state: string): React.CSSProperties => {
   const map: Record<string, string> = {
-    ACTIVE: 'var(--theme-primary)', DRAFT: 'var(--theme-neutral)', IN_REVIEW: 'var(--theme-warning)', SUPERSEDED: '#94a3b8', ARCHIVED: '#94a3b8',
+    ACTIVE: 'var(--theme-primary)', DRAFT: 'var(--theme-neutral)', IN_REVIEW: 'var(--theme-warning)', SUPERSEDED: 'var(--theme-neutral)', ARCHIVED: 'var(--theme-neutral)',
   };
   return {
     display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-    color: '#fff', background: map[state] ?? 'var(--theme-neutral)',
+    color: 'var(--theme-text-inverse)', background: map[state] ?? 'var(--theme-neutral)',
   };
 };
 
@@ -83,7 +83,7 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
               key={b.blueprintKey}
               onClick={() => clone(b.blueprintKey)}
               disabled={busy !== null}
-              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--line, #cbd5e1)', background: '#fff', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--line, #cbd5e1)', background: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
             >
               {busy === `clone:${b.blueprintKey}` ? 'Cloning…' : `Customize "${b.blueprintKey}"`}
             </button>
@@ -120,7 +120,7 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
                     <button
                       onClick={() => publish(b.blueprintKey, b.version)}
                       disabled={busy !== null}
-                      style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--theme-primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
                     >
                       {busy === `publish:${b.blueprintKey}:${b.version}` ? 'Publishing…' : 'Publish'}
                     </button>
