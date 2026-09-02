@@ -125,7 +125,10 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(result, {
+    // Keep credentialRef as the canonical custody contract while exposing the
+    // legacy `reference` alias consumed by the provider-registration modal.
+    // Neither field contains credential material; both are opaque vault refs.
+    return NextResponse.json({ ...result, reference: result.credentialRef }, {
       status: 201,
       headers: { 'Cache-Control': 'no-store' },
     });
