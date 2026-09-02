@@ -17,6 +17,7 @@ on:
       - 'apps/platform-web/app/api/**'
       - 'apps/platform-web/lib/**'
       - 'apps/platform-web/test-integration/**'
+      - 'apps/platform-web/scripts/seed-demo.ts'
       - 'apps/platform-web/package.json'
       - 'apps/platform-web/tsconfig.json'
       - 'packages/**'
@@ -66,6 +67,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '22.16.0'
+          package-manager-cache: false
 
       - name: Enable pnpm
         shell: bash
