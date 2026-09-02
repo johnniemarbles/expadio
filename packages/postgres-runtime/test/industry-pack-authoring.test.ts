@@ -66,9 +66,9 @@ test('updateDraft uses revision as an optimistic concurrency predicate', async (
 
   const result = await new PostgresIndustryPackVersionRepository(client).updateDraft({
     scope: { type: 'TENANT', tenantId: row.tenant_id },
-    identity: { verticalKey: 'dentex', version: 2 },
+    identity: { verticalKey: 'acme-corp', version: 2 },
     expectedRevision: 1,
-    definition: DENTEX_PACK,
+    definition: ACME_CORP_PACK,
     updatedBySubjectId: 'editor',
   });
 
@@ -85,9 +85,9 @@ test('updateDraft fails closed when the exact draft revision does not match', as
   await assert.rejects(
     new PostgresIndustryPackVersionRepository(client).updateDraft({
       scope: { type: 'TENANT', tenantId: row.tenant_id },
-      identity: { verticalKey: 'dentex', version: 2 },
+      identity: { verticalKey: 'acme-corp', version: 2 },
       expectedRevision: 9,
-      definition: DENTEX_PACK,
+      definition: ACME_CORP_PACK,
       updatedBySubjectId: 'editor',
     }),
     /INDUSTRY_PACK_DRAFT_UPDATE_CONFLICT/,
@@ -103,11 +103,11 @@ test('findByIdentity keeps platform scope exact', async () => {
 
   const result = await new PostgresIndustryPackVersionRepository(client).findByIdentity({
     scope: { type: 'PLATFORM' },
-    identity: { verticalKey: 'dentex', version: 2 },
+    identity: { verticalKey: 'acme-corp', version: 2 },
   });
 
   assert.deepEqual(result?.scope, { type: 'PLATFORM' });
-  assert.deepEqual(client.calls[0]?.values, [null, 'dentex', 2]);
+  assert.deepEqual(client.calls[0]?.values, [null, 'acme-corp', 2]);
   assert.match(client.calls[0]?.text ?? '', /\$1::uuid IS NULL AND tenant_id IS NULL/);
 });
 
@@ -120,7 +120,7 @@ test('listVersions preserves descending database version order', async () => {
 
   const result = await new PostgresIndustryPackVersionRepository(client).listVersions({
     scope: { type: 'TENANT', tenantId: row.tenant_id },
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
   });
 
   assert.deepEqual(result.map((item) => item.identity.version), [2, 1]);
@@ -144,11 +144,11 @@ test('transitionLifecycle updates lifecycle metadata only when the expected stat
 
   const repository = new PostgresIndustryPackVersionRepository(client);
   const current = {
-    identity: { verticalKey: 'dentex', version: 2 },
+    identity: { verticalKey: 'acme-corp', version: 2 },
     scope: { type: 'TENANT' as const, tenantId: row.tenant_id },
     source: 'TENANT_AUTHORED' as const,
     state: 'DRAFT' as const,
-    definition: DENTEX_PACK,
+    definition: ACME_CORP_PACK,
     revision: 1,
     createdBySubjectId: 'author',
     createdAt: '2026-08-29T18:00:00.000Z',
@@ -187,14 +187,14 @@ test('transitionLifecycle fails closed on a stale expected state', async () => {
   await assert.rejects(
     repository.transitionLifecycle({
       scope: { type: 'TENANT', tenantId: row.tenant_id },
-      identity: { verticalKey: 'dentex', version: 2 },
+      identity: { verticalKey: 'acme-corp', version: 2 },
       expectedState: 'DRAFT',
       next: {
-        identity: { verticalKey: 'dentex', version: 2 },
+        identity: { verticalKey: 'acme-corp', version: 2 },
         scope: { type: 'TENANT', tenantId: row.tenant_id },
         source: 'TENANT_AUTHORED',
         state: 'IN_REVIEW',
-        definition: DENTEX_PACK,
+        definition: ACME_CORP_PACK,
         revision: 1,
         createdBySubjectId: 'author',
         createdAt: '2026-08-29T18:00:00.000Z',

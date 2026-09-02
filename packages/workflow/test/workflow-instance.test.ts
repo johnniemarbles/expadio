@@ -44,7 +44,7 @@ test('workflow instance pins exact blueprint scope and revision', () => {
   assert.equal(instance.subject.type, 'lead-case');
   assert.deepEqual(instance.industryPackProvenance, {
     runtimeSource: 'TENANT_PUBLISHED',
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
     version: 7,
   });
 });
