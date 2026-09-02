@@ -43,14 +43,16 @@ implements SensitiveReadAuditRepository {
     validateSensitiveReadAuditEvent(event);
     const result = await this.#client.query(
       `INSERT INTO platform.sensitive_read_events (
-         event_id, request_id, tenant_id, requested_by_subject_id,
+         event_id, request_id, tenant_id, organization_id, requested_by_subject_id,
          resource_type, resource_id, purpose, legal_basis,
          authorization_decision_id, authorization_reason_key, outcome,
          result_reference, classifications, source_references,
          failure_reason_key, requested_at, recorded_at,
          correlation_id, evidence_refs
        ) VALUES (
-         $1::uuid, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10,
+         $1::uuid, $2, $3::uuid,
+         NULLIF(current_setting('app.organization_id', true), '')::uuid,
+         $4, $5, $6, $7, $8, $9, $10,
          $11, $12, $13::text[], $14::text[], $15,
          $16::timestamptz, $17::timestamptz, $18::uuid, $19::text[]
        ) ON CONFLICT DO NOTHING`,
