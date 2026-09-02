@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
-import {
-  communicationChannelMetadata,
-  type CommunicationChannel,
-  type CommunicationSuppressionReason,
-} from '@expadio/communication';
 import { PostgresCommunicationSuppressionRepository } from '@expadio/postgres-runtime/suppression';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const REASONS: readonly CommunicationSuppressionReason[] = [
+type SuppressionChannel = 'email' | 'sms' | 'whatsapp' | 'voice' | 'push' | 'rcs';
+type SuppressionReason = 'BOUNCE' | 'COMPLAINT' | 'OPT_OUT' | 'LEGAL_HOLD' | 'UNSUBSCRIBE';
+
+const REASONS: readonly SuppressionReason[] = [
   'BOUNCE', 'COMPLAINT', 'OPT_OUT', 'LEGAL_HOLD', 'UNSUBSCRIBE',
 ];
-const CHANNELS: readonly CommunicationChannel[] = ['email', 'sms', 'whatsapp', 'voice', 'push', 'rcs'];
+const CHANNELS: readonly SuppressionChannel[] = ['email', 'sms', 'whatsapp', 'voice', 'push', 'rcs'];
 
 export async function GET(request: Request) {
   try {
@@ -68,12 +66,12 @@ export async function POST(request: Request) {
     const context = await resolveBrandContext();
     const body = await request.json();
     const recipientKey = typeof body.recipientKey === 'string' ? body.recipientKey.trim() : '';
-    const channel = typeof body.channel === 'string' ? body.channel.trim().toLowerCase() as CommunicationChannel : null;
-    const reason = typeof body.reason === 'string' ? body.reason.trim().toUpperCase() as CommunicationSuppressionReason : null;
+    const channel = typeof body.channel === 'string' ? body.channel.trim().toLowerCase() as SuppressionChannel : null;
+    const reason = typeof body.reason === 'string' ? body.reason.trim().toUpperCase() as SuppressionReason : null;
     const validUntil = typeof body.validUntil === 'string' && body.validUntil.trim() ? body.validUntil.trim() : undefined;
 
     if (!recipientKey) return NextResponse.json({ error: 'recipientKey is required.' }, { status: 400 });
-    if (!channel || !CHANNELS.includes(channel) || !communicationChannelMetadata(channel).supportsSuppression) {
+    if (!channel || !CHANNELS.includes(channel)) {
       return NextResponse.json({ error: 'Unsupported suppression channel.' }, { status: 400 });
     }
     if (!reason || !REASONS.includes(reason)) {
