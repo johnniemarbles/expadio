@@ -11,6 +11,7 @@ const decisionRoute = read('../app/api/vendors/[id]/workflow/decision/route.ts')
 const migration = read('../../../infra/db/migrations/0053_vendor_onboarding.sql');
 const approvalMigration = read('../../../infra/db/migrations/0054_vendor_onboarding_approval.sql');
 const client = read('../app/(shell)/vendors/VendorsClient.tsx');
+const clientStyles = read('../app/(shell)/vendors/VendorsClient.module.css');
 const nav = read('../app/api/workspaces/route.ts');
 
 test('the vendors list/create route is governed and RLS-scoped', () => {
@@ -63,6 +64,23 @@ test('the Vendors surface can register, start, screen, approve and activate', ()
   assert.match(client, /Approve &amp; activate/);
   assert.match(client, /approveAndActivate/);
   assert.match(nav, /href: '\/vendors'/);
+});
+
+test('the Vendors surface uses governed dashboard styling primitives', () => {
+  assert.match(client, /InlineErrorBanner/);
+  assert.match(client, /VendorsClient\.module\.css/);
+  assert.match(client, /styles\.grid/);
+  assert.match(client, /styles\.panel/);
+  assert.match(client, /statusClass/);
+  assert.doesNotMatch(client, /React\.CSSProperties/);
+  assert.doesNotMatch(client, /style=\{/);
+  assert.doesNotMatch(client, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(clientStyles, /#[0-9a-fA-F]{3,8}/);
+  // Forbid CSS variable fallbacks like var(--token, fallback) while allowing valid color-mix() commas.
+  assert.doesNotMatch(clientStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
+  assert.match(clientStyles, /var\(--theme-primary\)/);
+  assert.match(clientStyles, /var\(--theme-border\)/);
+  assert.match(clientStyles, /var\(--theme-danger\)/);
 });
 
 test('v2 adds a governed decision stage and the vendor decision route captures it', () => {
