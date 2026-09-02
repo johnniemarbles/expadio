@@ -3,7 +3,7 @@ import styles from './MotionActivity.module.css';
 
 export type MotionActivityState = 'idle' | 'pending' | 'processing' | 'success' | 'warning' | 'failure';
 
-export interface MotionActivityProps extends HTMLAttributes<HTMLDivElement> {
+export interface MotionActivityProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   state: MotionActivityState;
   title: ReactNode;
   detail?: ReactNode;
