@@ -38,8 +38,8 @@ const ageColor = (iso: string): string => {
   return 'var(--theme-neutral)';
 };
 
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--theme-text-secondary)', background: 'var(--theme-surface-muted)', border: '1px solid var(--line, #e2e8f0)', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
+const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--theme-border)', borderRadius: 8, fontSize: 13 };
+const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--theme-text-secondary)', background: 'var(--theme-surface-muted)', border: '1px solid var(--theme-border)', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
 
 export function PendingReviewsClient({ initial, verticalKey = null }: { initial: PendingReview[]; verticalKey?: string | null }) {
   const pack = findIndustryPack(verticalKey);
