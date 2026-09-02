@@ -217,11 +217,14 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
       </section>
 
       {error && (
-        <InlineErrorBanner
-          title="Vendor action blocked"
-          message={error}
-          action={authHint ? { label: 'Grant approval authority', href: `/authority${queryString}` } : undefined}
-        />
+        <>
+          <InlineErrorBanner error={{ code: 'VENDOR_ACTION_BLOCKED', message: error }} />
+          {authHint && (
+            <p className={styles.remediation}>
+              This decision requires WORKFLOW_AUTHORITY. <a className={styles.link} href={`/authority${queryString}`}>Grant approval authority →</a>
+            </p>
+          )}
+        </>
       )}
 
       <section className={styles.panel} aria-labelledby="vendor-list-title">
