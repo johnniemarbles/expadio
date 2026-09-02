@@ -65,6 +65,67 @@ export async function GET(request: Request) {
         allowedSet.has(item.organizationId)
       );
 
+      const visibleAppointmentIds = visibleAppointments.map((item) => item.appointmentId);
+      const appointmentTerritories = visibleAppointmentIds.length === 0
+        ? { rows: [] as Array<{
+            enterprise_appointment_id: string;
+            territory_id: string;
+            territory_name: string;
+            exclusive: boolean;
+          }> }
+        : await client.query<{
+            enterprise_appointment_id: string;
+            territory_id: string;
+            territory_name: string;
+            exclusive: boolean;
+          }>(
+            `SELECT scope.enterprise_appointment_id, scope.territory_id,
+                    territory.name AS territory_name, scope.exclusive
+               FROM platform.enterprise_appointment_territories scope
+               JOIN platform.enterprise_territories territory
+                 ON territory.tenant_id = scope.tenant_id
+                AND territory.territory_id = scope.territory_id
+              WHERE scope.tenant_id = $1::uuid
+                AND scope.enterprise_appointment_id = ANY($2::uuid[])
+              ORDER BY scope.enterprise_appointment_id, territory.name`,
+            [context.tenantId, visibleAppointmentIds],
+          );
+
+      const visibleActivationIds = visibleJurisdictions
+        .map((item) => item.workflowActivationId)
+        .filter((value): value is string => value !== null);
+      const activationVerifications = visibleActivationIds.length === 0
+        ? { rows: [] as Array<{
+            activation_id: string;
+            state: string;
+            verified_at: Date | string;
+          }> }
+        : await client.query<{
+            activation_id: string;
+            state: string;
+            verified_at: Date | string;
+          }>(
+            `SELECT DISTINCT ON (activation_id)
+                    activation_id, state, verified_at
+               FROM platform.workflow_activation_verifications
+              WHERE tenant_id = $1::uuid
+                AND activation_id = ANY($2::uuid[])
+              ORDER BY activation_id, verified_at DESC, verification_id DESC`,
+            [context.tenantId, visibleActivationIds],
+          );
+      const verificationByActivation = new Map(
+        activationVerifications.rows.map((row) => [
+          row.activation_id,
+          {
+            state: row.state,
+            verifiedAt:
+              row.verified_at instanceof Date
+                ? row.verified_at.toISOString()
+                : new Date(row.verified_at).toISOString(),
+          },
+        ]),
+      );
+
       const legalEntities = await client.query<{
         legal_entity_id: string;
         legal_name: string;
@@ -159,8 +220,23 @@ export async function GET(request: Request) {
         portfolio: {
           territories: portfolio.territories,
           agreements: visibleAgreements,
-          appointments: visibleAppointments,
-          jurisdictions: visibleJurisdictions,
+          appointments: visibleAppointments.map((item) => ({
+            ...item,
+            territories: appointmentTerritories.rows
+              .filter((scopeRow) => scopeRow.enterprise_appointment_id === item.appointmentId)
+              .map((scopeRow) => ({
+                territoryId: scopeRow.territory_id,
+                name: scopeRow.territory_name,
+                exclusive: scopeRow.exclusive,
+              })),
+          })),
+          jurisdictions: visibleJurisdictions.map((item) => ({
+            ...item,
+            verification:
+              item.workflowActivationId === null
+                ? null
+                : verificationByActivation.get(item.workflowActivationId) ?? null,
+          })),
         },
       };
     });
