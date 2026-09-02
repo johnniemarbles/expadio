@@ -125,37 +125,43 @@ export async function POST(request: Request) {
         return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
       }
 
-      if (isDefault) {
-        await client.query(
-          `UPDATE platform.communication_sender_identities
-              SET is_default = false, updated_at = now()
-            WHERE tenant_id = $1::uuid
-              AND scope = 'TENANT'
-              AND channel = 'email'
-              AND is_default = true
-              AND status = 'ACTIVE'`,
-          [effectiveContext.tenantId],
+      await client.query('BEGIN');
+      try {
+        if (isDefault) {
+          await client.query(
+            `UPDATE platform.communication_sender_identities
+                SET is_default = false, updated_at = now()
+              WHERE tenant_id = $1::uuid
+                AND scope = 'TENANT'
+                AND channel = 'email'
+                AND is_default = true
+                AND status = 'ACTIVE'`,
+            [effectiveContext.tenantId],
+          );
+        }
+
+        const insertResult = await client.query(
+          `INSERT INTO platform.communication_sender_identities
+             (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
+           VALUES
+             ($1, NULL, 'TENANT', 'email', $2, $3, $4::text[], $5, 'PENDING', 'ACTIVE')
+           ON CONFLICT (tenant_id, channel, lower(address)) WHERE scope = 'TENANT'
+           DO UPDATE SET
+             display_name = EXCLUDED.display_name,
+             purposes = EXCLUDED.purposes,
+             is_default = EXCLUDED.is_default,
+             verification_status = platform.communication_sender_identities.verification_status,
+             status = 'ACTIVE',
+             updated_at = NOW()
+           RETURNING sender_id, address, purposes, is_default, verification_status, status, created_at`,
+          [effectiveContext.tenantId, rawAddress, displayName, purposes, isDefault]
         );
+        await client.query('COMMIT');
+        return NextResponse.json({ success: true, sender: insertResult.rows[0] });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
       }
-
-      const insertResult = await client.query(
-        `INSERT INTO platform.communication_sender_identities
-           (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
-         VALUES
-           ($1, NULL, 'TENANT', 'email', $2, $3, $4::text[], $5, 'PENDING', 'ACTIVE')
-         ON CONFLICT (tenant_id, channel, lower(address)) WHERE scope = 'TENANT'
-         DO UPDATE SET
-           display_name = EXCLUDED.display_name,
-           purposes = EXCLUDED.purposes,
-           is_default = EXCLUDED.is_default,
-           verification_status = platform.communication_sender_identities.verification_status,
-           status = 'ACTIVE',
-           updated_at = NOW()
-         RETURNING sender_id, address, purposes, is_default, verification_status, status, created_at`,
-        [effectiveContext.tenantId, rawAddress, displayName, purposes, isDefault]
-      );
-
-      return NextResponse.json({ success: true, sender: insertResult.rows[0] });
     });
   } catch (err: any) {
     if (err.denied) { const { body, status } = deniedResponse(err); return NextResponse.json(body, { status }); }
