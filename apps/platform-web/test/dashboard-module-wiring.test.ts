@@ -10,7 +10,7 @@ test('Platform navigation exposes tenant modules and Brand handoff', () => {
   assert.match(workspaces, /Tenant Apps & Modules/);
   assert.match(workspaces, /href: '\/modules'/);
   assert.match(shell, /new URL\('\/handoff'/);
-  assert.match(shell, /<a className=\{styles\.audiencePill\} href=\{brandHref\}>/);
+  assert.match(shell, /Open Brand Workspace/);
 });
 
 test('Platform module dashboard reads existing module catalog and activation API', () => {

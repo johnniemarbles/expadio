@@ -112,8 +112,31 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
             }));
         },
       },
+      ...(brandHref
+        ? [
+            {
+              id: "brand_handoff",
+              label: "External Applications",
+              search: (query: string) => {
+                if (!query || "brand".includes(query) || "studio".includes(query)) {
+                  return [
+                    {
+                      id: "brand_app",
+                      label: "Open Brand Workspace",
+                      short: "⊞",
+                      group: "External Applications",
+                      description: "Handoff to brand workspace",
+                      href: brandHref,
+                    },
+                  ];
+                }
+                return [];
+              },
+            },
+          ]
+        : []),
     ];
-  }, [selectableOrganizations, currentAccount, workspaceContext.accounts]);
+  }, [selectableOrganizations, currentAccount, workspaceContext.accounts, brandHref]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -230,28 +253,6 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
       <header className={styles.topbar}>
         <button type="button" ref={mobileMenuRef} className={styles.mobileMenu} onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-expanded={mobileOpen}><span aria-hidden="true">☰</span></button>
         
-        {/* Audience Selector Pills */}
-        <div className={styles.audiencePills} role="tablist" aria-label="Audience Scope">
-          {brandHref ? (
-            <a className={styles.audiencePill} href={brandHref}>
-              <span className={styles.pillIcon}>⊞</span> Brand
-            </a>
-          ) : (
-            <button type="button" className={styles.audiencePill} disabled title="Configure EXPADIO_BRAND_APP_URL to enable Brand handoff">
-              <span className={styles.pillIcon}>⊞</span> Brand
-            </button>
-          )}
-          <button type="button" className={[styles.audiencePill, styles.audiencePillActive].join(" ")}>
-            <span className={styles.pillIcon}>❖</span> Platform
-          </button>
-          <button type="button" className={styles.audiencePill}>
-            <span className={styles.pillIcon}>⎇</span> Portal
-          </button>
-          <button type="button" className={styles.audiencePill}>
-            Plan
-          </button>
-        </div>
-
         {/* Global Search Button */}
         <button
           type="button"
@@ -272,7 +273,93 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
           <ThemeModeControl />
 
           <span className={styles.sourceContext}><SourceBadge source={overview.source}/></span>
-          <div ref={notificationAreaRef} className={styles.notificationArea}><button type="button" ref={notificationButtonRef} className={styles.iconButton} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notification-panel" onClick={() => { setNotificationsOpen((value) => !value); setAccountOpen(false); }}><span aria-hidden="true">◎</span></button>{notificationsOpen && <div id="notification-panel" className={styles.notificationPanel} role="region" aria-label="Notifications status"><strong>Notifications not connected</strong><span>Live alerts will appear after the notification adapter is available.</span></div>}</div>
+          <div ref={notificationAreaRef} className={styles.notificationArea}>
+            <button
+              type="button"
+              ref={notificationButtonRef}
+              className={styles.iconButton}
+              aria-label={`Notifications (${overview.reviews.length} pending)`}
+              aria-expanded={notificationsOpen}
+              aria-controls="notification-panel"
+              onClick={() => {
+                setNotificationsOpen((value) => !value);
+                setAccountOpen(false);
+              }}
+            >
+              <span aria-hidden="true">◎</span>
+              {overview.reviews.length > 0 && (
+                <span className={styles.notificationBadge}>{overview.reviews.length}</span>
+              )}
+            </button>
+            {notificationsOpen && (
+              <div id="notification-panel" className={styles.notificationPanel} role="region" aria-label="Notifications center">
+                <div className={styles.notificationHeader}>
+                  <span>Notifications &amp; Alerts</span>
+                  <span style={{ fontSize: '11px', color: 'var(--theme-text-muted)', fontWeight: 500 }}>
+                    {overview.reviews.length} pending reviews
+                  </span>
+                </div>
+                {overview.reviews.length === 0 && overview.activity.length === 0 ? (
+                  <div className={styles.notificationEmpty}>No pending alerts or notifications.</div>
+                ) : (
+                  <div className={styles.notificationList}>
+                    {overview.reviews.map((rev) => (
+                      <Link
+                        key={rev.id}
+                        href={href("/governance")}
+                        className={styles.notificationItem}
+                        onClick={() => setNotificationsOpen(false)}
+                      >
+                        <div className={styles.notificationItemTitle}>
+                          <span>{rev.title}</span>
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontWeight: 700,
+                              background:
+                                rev.risk === "High"
+                                  ? "color-mix(in srgb, var(--theme-danger, #ef4444) 15%, transparent)"
+                                  : rev.risk === "Medium"
+                                  ? "color-mix(in srgb, var(--theme-warning, #f59e0b) 15%, transparent)"
+                                  : "color-mix(in srgb, var(--theme-success, #10b981) 15%, transparent)",
+                              color:
+                                rev.risk === "High"
+                                  ? "var(--theme-danger, #ef4444)"
+                                  : rev.risk === "Medium"
+                                  ? "var(--theme-warning, #f59e0b)"
+                                  : "var(--theme-success, #10b981)",
+                            }}
+                          >
+                            {rev.risk} Risk
+                          </span>
+                        </div>
+                        <div className={styles.notificationItemMeta}>
+                          Requested by {rev.requestedBy} • {rev.age}
+                        </div>
+                      </Link>
+                    ))}
+                    {overview.activity.slice(0, 3).map((act) => (
+                      <Link
+                        key={act.id}
+                        href={href("/audit")}
+                        className={styles.notificationItem}
+                        onClick={() => setNotificationsOpen(false)}
+                      >
+                        <div className={styles.notificationItemTitle}>
+                          <span>{act.actor} {act.action} {act.target}</span>
+                        </div>
+                        <div className={styles.notificationItemMeta}>
+                          {act.timeLabel ?? act.time}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <div className={styles.content}>{children}</div>
