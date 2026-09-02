@@ -26,7 +26,10 @@ test('Brand sender purposes exclude system and require address-domain ownership'
   assert.match(collection, /addressMatch\[1\]\?\.toLowerCase\(\) !== domain/);
 });
 
-test('Brand retires rather than deletes organization sender evidence', () => {
+test('Brand retirement validates identifiers and preserves sender evidence', () => {
+  assert.match(item, /UUID_RE\.test\(senderId\)/);
+  assert.match(item, /senderId must be a valid UUID/);
+  assert.match(item, /status: 400/);
   assert.match(item, /SET status = 'INACTIVE', is_default = false/);
   assert.doesNotMatch(item, /DELETE FROM platform\.communication_sender_identities/);
 });
