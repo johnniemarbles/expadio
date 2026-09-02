@@ -46,7 +46,6 @@ function isSecretReference(value: unknown): value is string {
 export async function GET() {
   try {
     const context = await resolveRequestContext();
-
     const connectors = await withTenantClient(context, async (client) => {
       const result = await client.query(
         `SELECT
@@ -75,7 +74,6 @@ export async function GET() {
          ORDER BY c.priority, c.connector_key`,
         [context.tenantId],
       );
-
       return result.rows.map((row): ConnectorListItem => ({
         connectorKey: row.connector_key,
         providerType: row.provider_type,
@@ -97,7 +95,6 @@ export async function GET() {
         runtimeSupported: executableCommunicationProvider(row.provider_key, row.provider_type) !== null,
       }));
     });
-
     return NextResponse.json(connectors);
   } catch (error) {
     const { body, status } = deniedResponse(error);
@@ -159,10 +156,19 @@ export async function POST(request: Request) {
     if (!['PLATFORM_MANAGED', 'DELEGATED', 'CUSTOMER_REFERENCED', 'CUSTOMER_EGRESS'].includes(custodyMode)) {
       return NextResponse.json({ error: 'Unknown custody mode.' }, { status: 400 });
     }
+    if (custodyMode === 'CUSTOMER_EGRESS') {
+      return NextResponse.json(
+        {
+          error: 'Customer-egress execution is not implemented for the governed Resend/Twilio adapters. Use managed/reference credential custody.',
+          reasonKey: 'CUSTODY_RUNTIME_NOT_IMPLEMENTED',
+        },
+        { status: 409 },
+      );
+    }
     if (!['HOLD_AND_RETRY', 'FALLBACK_TRANSACTIONAL', 'REFUSE_IMMEDIATELY'].includes(failurePolicy)) {
       return NextResponse.json({ error: 'Unknown failure policy.' }, { status: 400 });
     }
-    if (custodyMode !== 'CUSTOMER_EGRESS' && !isSecretReference(credentialRef)) {
+    if (!isSecretReference(credentialRef)) {
       return NextResponse.json(
         {
           error: 'credentialRef must be an external secret reference (kms://, vault://, secret:// or provider-secret://). Use POST /custody/credentials to obtain one.',
@@ -184,7 +190,6 @@ export async function POST(request: Request) {
                      ownership_scope, region, priority, enabled, health, created_at`,
           [connectorKey, providerType, providerKey, ownershipScope, null, region, priority],
         );
-
         const connectorId = connector.rows[0].connector_id;
         const capability = await client.query(
           `SELECT capability_id FROM platform.capabilities
@@ -199,32 +204,28 @@ export async function POST(request: Request) {
            VALUES ($1, $2)`,
           [connectorId, capability.rows[0].capability_id],
         );
-
-        if (custodyMode !== 'CUSTOMER_EGRESS') {
-          await client.query(
-            `INSERT INTO platform.connector_credentials
-               (connector_id, credential_ref, key_version, custody_mode, fingerprint,
-                state, probe_status, probe_checked_at, probe_warnings,
-                detected_capabilities, failure_policy, hold_window_seconds,
-                external_secret_arn, external_assume_role_arn, rotated_at)
-             VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 'VALID', now(), $6::jsonb,
-                     $7::text[], $8, $9, $10, $11, now())`,
-            [
-              connectorId,
-              credentialRef,
-              typeof body.keyVersion === 'string' ? body.keyVersion.trim() || null : null,
-              custodyMode,
-              fingerprint,
-              JSON.stringify(Array.isArray(body.probeWarnings) ? body.probeWarnings : []),
-              Array.isArray(body.detectedCapabilities) ? body.detectedCapabilities : [],
-              failurePolicy,
-              Number.isInteger(body.holdWindowSeconds) ? body.holdWindowSeconds : 900,
-              custodyMode === 'CUSTOMER_REFERENCED' ? body.externalSecretArn ?? null : null,
-              custodyMode === 'CUSTOMER_REFERENCED' ? body.externalAssumeRoleArn ?? null : null,
-            ],
-          );
-        }
-
+        await client.query(
+          `INSERT INTO platform.connector_credentials
+             (connector_id, credential_ref, key_version, custody_mode, fingerprint,
+              state, probe_status, probe_checked_at, probe_warnings,
+              detected_capabilities, failure_policy, hold_window_seconds,
+              external_secret_arn, external_assume_role_arn, rotated_at)
+           VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 'VALID', now(), $6::jsonb,
+                   $7::text[], $8, $9, $10, $11, now())`,
+          [
+            connectorId,
+            credentialRef,
+            typeof body.keyVersion === 'string' ? body.keyVersion.trim() || null : null,
+            custodyMode,
+            fingerprint,
+            JSON.stringify(Array.isArray(body.probeWarnings) ? body.probeWarnings : []),
+            Array.isArray(body.detectedCapabilities) ? body.detectedCapabilities : [],
+            failurePolicy,
+            Number.isInteger(body.holdWindowSeconds) ? body.holdWindowSeconds : 900,
+            custodyMode === 'CUSTOMER_REFERENCED' ? body.externalSecretArn ?? null : null,
+            custodyMode === 'CUSTOMER_REFERENCED' ? body.externalAssumeRoleArn ?? null : null,
+          ],
+        );
         await client.query('COMMIT');
         return connector.rows[0];
       } catch (error) {
