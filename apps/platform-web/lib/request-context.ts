@@ -25,9 +25,8 @@ export interface ResolvedRequestContext {
   readonly issuer?: string | null;
   readonly tenantId: string;
   readonly organizationId: string | null;
-  readonly platformScope: boolean;
   /** Set on the pooled client before any query, so RLS actually applies. */
-  readonly applyTo: (client: { query: (sql: string, params?: unknown[]) => Promise<unknown> }) => Promise<void>;
+  readonly applyTo: (client: { query: (sql: string, params?: unknown[]) => Promise<unknown> }, local?: boolean) => Promise<void>;
 }
 
 export class ContextDenied extends Error {
@@ -178,14 +177,13 @@ export async function resolveRequestContext(request?: Request): Promise<Resolved
     issuer: effective.issuer ?? null,
     tenantId,
     organizationId,
-    platformScope: headerList.get('x-expadio-scope') === 'PLATFORM',
-    applyTo: async (client) => {
+    applyTo: async (client, local = true) => {
       // RLS is enforced at the data layer, not in application code (§4.4).
       // Setting this is what makes platform.current_tenant_id() resolve.
-      await client.query('SELECT set_config($1, $2, true)', ['app.tenant_id', tenantId]);
-      await client.query('SELECT set_config($1, $2, true)', ['app.subject_id', userId]);
-      await client.query('SELECT set_config($1, $2, true)', ['app.issuer', effective.issuer ?? '']);
-      await client.query('SELECT set_config($1, $2, true)', ['app.organization_id', organizationId ?? '']);
+      await client.query('SELECT set_config($1, $2, $3)', ['app.tenant_id', tenantId, local]);
+      await client.query('SELECT set_config($1, $2, $3)', ['app.subject_id', userId, local]);
+      await client.query('SELECT set_config($1, $2, $3)', ['app.issuer', effective.issuer ?? '', local]);
+      await client.query('SELECT set_config($1, $2, $3)', ['app.organization_id', organizationId ?? '', local]);
     },
   };
 }
@@ -196,11 +194,20 @@ export async function withTenantClient<T>(
   work: (client: import('pg').PoolClient) => Promise<T>,
 ): Promise<T> {
   const client = await dbPool.connect();
+  let reusable = true;
   try {
-    await context.applyTo(client);
+    await context.applyTo(client, false);
     return await work(client);
   } finally {
-    client.release();
+    try {
+      for (const setting of ['app.tenant_id','app.subject_id','app.issuer','app.organization_id','app.platform_admin']) {
+        await client.query(`RESET ${setting}`);
+      }
+    } catch (error) {
+      reusable = false;
+      client.release(error as Error);
+    }
+    if (reusable) client.release();
   }
 }
 

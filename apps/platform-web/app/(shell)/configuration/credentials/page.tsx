@@ -1,65 +1,21 @@
-import React from 'react';
 import styles from '../../page.module.css';
-import { fetchApi } from '../../../../lib/live-adapter';
-import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
-import { isDenied } from '@expadio/ui/contracts';
-import { requestedOrganizationId, type RouteSearchParams } from '../../../../lib/request-context';
-import { RotateForm } from './RotateForm';
+import { EmptyState } from '@expadio/ui';
 
-export default async function CredentialsPage({ searchParams }: { searchParams: RouteSearchParams }) {
-  const credentials = await fetchApi<any[]>('/api/configuration/credentials');
-  
-  if (isDenied(credentials)) return <DeniedState result={credentials} />;
-
+export default function CredentialsPage() {
   return (
     <>
       <section className={styles.pageHeading} aria-labelledby="page-title">
         <div>
-          <p className={styles.eyebrow}>Platform Admin</p>
-          <h1 id="page-title">Credentials & Secrets</h1>
-          <p>Manage, inject, and audit lifecycle rotations for provider credentials (OpenAI, AWS, DB).</p>
+          <p className={styles.eyebrow}>Platform Administration</p>
+          <h1 id="page-title">Credential Custody</h1>
+          <p>Provider secrets are accepted only through the governed wrapping, validation, vault and rotation lifecycle.</p>
         </div>
       </section>
-
-      <RotateForm />
-
-      <section className={styles.panel} aria-labelledby="creds-title">
-        <div className={styles.panelHeading}>
-          <div>
-            <h2 id="creds-title">Credential Rotation History</h2>
-          </div>
-        </div>
-        
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Rotation ID</th>
-                <th>Credential Name</th>
-                <th>Status</th>
-                <th>Rotated At</th>
-                <th>Correlation ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {credentials.map((cred) => (
-                <tr key={cred.rotation_id}>
-                  <td><span className={styles.code}>{cred.rotation_id}</span></td>
-                  <td><strong>{cred.credential_name}</strong></td>
-                  <td>
-                    <StatePill state={cred.status === 'SUCCESS' ? 'Published' : cred.status === 'FAILED' ? 'Draft' : 'Review'} />
-                  </td>
-                  <td className={styles.muted}>{new Date(cred.rotated_at).toLocaleString()}</td>
-                  <td><span className={styles.code}>{cred.correlation_id}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {credentials.length === 0 && (
-            <EmptyState title="No rotation history" description="No credential rotations have been audited yet." />
-          )}
-        </div>
-      </section>
+      <EmptyState
+        title="Legacy credential form retired"
+        description="Raw API keys and provider tokens are no longer accepted by the configuration route."
+        primaryAction={{ label: 'Open Provider Infrastructure', href: '/communications?tab=providers' }}
+      />
     </>
   );
 }

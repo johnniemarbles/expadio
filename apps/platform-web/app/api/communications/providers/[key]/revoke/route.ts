@@ -8,8 +8,10 @@ import {
   resolveRequestContext,
   requireStepUp,
   withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../../lib/request-context';
+import { hasPlatformAdministrationRole } from '../../../../../../lib/governance-authz';
 
 /**
  * Design spec §2.6 — revocation, provable rather than merely performed.
@@ -35,6 +37,16 @@ export async function POST(
   try {
     const context = await resolveRequestContext();
     await requireStepUp();
+    const platformAuthorized = await withTenantTransaction(
+      context,
+      (client) => hasPlatformAdministrationRole(client, context.subjectId),
+    );
+    if (!platformAuthorized) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'PLATFORM_ADMIN_REQUIRED', message: 'Only Platform Administration can revoke provider credentials.' },
+        { status: 403 },
+      );
+    }
 
     const connectorKey = decodeURIComponent((await params).key);
     const body = await request.json().catch(() => ({}));
@@ -44,13 +56,14 @@ export async function POST(
     const attestation = await withTenantClient(context, async (client) => {
       await client.query('BEGIN');
       try {
+        await client.query("SELECT set_config('app.platform_admin', 'true', true)");
         const connector = await client.query(
           `SELECT c.connector_id, c.connector_key, c.ownership_scope, c.tenant_id
              FROM platform.connectors c
             WHERE c.connector_key = $1
               AND (c.tenant_id = $2::uuid OR (c.tenant_id IS NULL AND $3::boolean))
             FOR UPDATE`,
-          [connectorKey, context.tenantId, context.platformScope],
+          [connectorKey, context.tenantId, true],
         );
 
         if (connector.rows.length === 0) {

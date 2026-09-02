@@ -10,10 +10,9 @@ import { CommandPalette, type SearchProvider } from "./CommandPalette";
 
 const GROUP_ORDER = new Map([
   ["Workspace", 0],
-  ["Growth", 1],
-  ["Decision Fabric", 2],
-  ["Agent Intelligence", 3],
-  ["Administration", 4],
+  ["Infrastructure", 1],
+  ["Governance", 2],
+  ["Administration", 3],
 ]);
 
 function matchesSection(pathname: string, section: WorkspaceSection) {
