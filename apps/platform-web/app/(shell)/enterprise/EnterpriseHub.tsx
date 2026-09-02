@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import styles from './enterprise.module.css';
+import { GraphCompatibilityStatus } from './GraphCompatibilityStatus';
 
 type Tab =
   | 'overview'
@@ -358,6 +359,7 @@ export function EnterpriseHub({
 
       {tab === 'perspectives' && (
         <div className={styles.stack}>
+          <GraphCompatibilityStatus suffix={suffix} />
           <section className={styles.panel}>
             <header>
               <div>
