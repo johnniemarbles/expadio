@@ -15,29 +15,29 @@ type AgreementRow = CrmAgreement & { accountName: string | null };
 
 const AGREEMENT_STATUSES: AgreementStatus[] = ["DRAFT", "ACTIVE", "EXPIRED", "CANCELLED"];
 const AGREEMENT_TONE: Record<string, { fg: string; bg: string }> = {
-  DRAFT: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
-  ACTIVE: { fg: "var(--theme-success)", bg: "#dcfce7" },
-  EXPIRED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
-  CANCELLED: { fg: "#991b1b", bg: "#fee2e2" },
+  DRAFT: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },
+  ACTIVE: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
+  EXPIRED: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
+  CANCELLED: { fg: "var(--theme-danger)", bg: "#fee2e2" },
 };
 
 const CASE_STATUSES: CaseStatus[] = ["OPEN", "PENDING", "RESOLVED", "CLOSED"];
 const CASE_PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 const CASE_STATUS_TONE: Record<string, { fg: string; bg: string }> = {
   OPEN: { fg: "#3730a3", bg: "#e0e7ff" },
-  PENDING: { fg: "var(--theme-warning)", bg: "#fef3c7" },
-  RESOLVED: { fg: "var(--theme-success)", bg: "#dcfce7" },
-  CLOSED: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
+  PENDING: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
+  RESOLVED: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
+  CLOSED: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },
 };
-const PRIORITY_TONE: Record<string, string> = { URGENT: "var(--theme-danger)", HIGH: "#c2410c", NORMAL: "var(--theme-text-secondary)", LOW: "#94a3b8" };
+const PRIORITY_TONE: Record<string, string> = { URGENT: "var(--theme-danger)", HIGH: "var(--theme-warning)", NORMAL: "var(--theme-text-secondary)", LOW: "var(--theme-neutral)" };
 
 const LEAD_STAGES: LeadStage[] = ["NEW", "QUALIFIED", "PROPOSAL", "WON", "LOST"];
 const LEAD_TONE: Record<string, { fg: string; bg: string }> = {
-  NEW: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
-  QUALIFIED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
+  NEW: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },
+  QUALIFIED: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
   PROPOSAL: { fg: "#3730a3", bg: "#e0e7ff" },
-  WON: { fg: "var(--theme-success)", bg: "#dcfce7" },
-  LOST: { fg: "#991b1b", bg: "#fee2e2" },
+  WON: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
+  LOST: { fg: "var(--theme-danger)", bg: "#fee2e2" },
 };
 
 function money(minor: number | null, currency: string): string {
@@ -47,11 +47,11 @@ function money(minor: number | null, currency: string): string {
 
 const STAGES = ["PROSPECT", "LEAD", "OPPORTUNITY", "CUSTOMER", "CHURNED"] as const;
 const STAGE_TONE: Record<string, { fg: string; bg: string }> = {
-  PROSPECT: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
-  LEAD: { fg: "var(--theme-warning)", bg: "#fef3c7" },
+  PROSPECT: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },
+  LEAD: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
   OPPORTUNITY: { fg: "#3730a3", bg: "#e0e7ff" },
-  CUSTOMER: { fg: "var(--theme-success)", bg: "#dcfce7" },
-  CHURNED: { fg: "#991b1b", bg: "#fee2e2" },
+  CUSTOMER: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
+  CHURNED: { fg: "var(--theme-danger)", bg: "#fee2e2" },
 };
 
 interface CrmClientProps {
@@ -333,7 +333,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               <summary style={{ cursor: "pointer", color: "var(--ink-500, #64748b)" }}>What each pack configures</summary>
               <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
                 {packCatalog.map((p) => (
-                  <div key={p.verticalKey} style={{ border: `1px solid ${p.verticalKey === verticalKey ? "var(--brand, #4f46e5)" : "var(--line, #e2e8f0)"}`, borderRadius: 8, padding: "8px 10px" }}>
+                  <div key={p.verticalKey} style={{ border: `1px solid ${p.verticalKey === verticalKey ? "var(--brand, var(--theme-primary))" : "var(--line, #e2e8f0)"}`, borderRadius: 8, padding: "8px 10px" }}>
                     <div style={{ fontWeight: 800 }}>{p.label}{p.verticalKey === verticalKey ? " · active" : ""}</div>
                     <div style={{ marginTop: 2 }}><span style={{ color: "var(--ink-500, #64748b)" }}>Entities:</span> {p.entities.account} · {p.entities.contact} · {p.entities.lead} · {p.entities.case} · {p.entities.agreement}</div>
                     <div><span style={{ color: "var(--ink-500, #64748b)" }}>{p.workType}:</span> {p.stages.map((s) => s.label).join(" → ")}</div>
@@ -344,7 +344,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
             </details>
           )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.account.singular)}</button>
+            <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.account.singular)}</button>
             <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.contact.singular)}</button>
             <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.lead.singular)}</button>
             <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.case.singular)}</button>
@@ -364,7 +364,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
 
       <div style={{ display: "flex", gap: 6, borderBottom: "1px solid var(--line, #e2e8f0)" }}>
         {(["accounts", "contacts", "leads", "cases", "agreements"] as const).map((t) => (
-          <button key={t} type="button" onClick={() => setTab(t)} style={{ padding: "8px 14px", border: 0, background: "transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: tab === t ? "var(--brand, #4f46e5)" : "var(--ink-500, #64748b)", borderBottom: tab === t ? "2px solid var(--brand, #4f46e5)" : "2px solid transparent" }}>
+          <button key={t} type="button" onClick={() => setTab(t)} style={{ padding: "8px 14px", border: 0, background: "transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: tab === t ? "var(--brand, var(--theme-primary))" : "var(--ink-500, #64748b)", borderBottom: tab === t ? "2px solid var(--brand, var(--theme-primary))" : "2px solid transparent" }}>
             {t === "accounts" ? vocab.account.plural : t === "contacts" ? vocab.contact.plural : t === "leads" ? vocab.lead.plural : t === "cases" ? vocab.case.plural : vocab.agreement.plural}
           </button>
         ))}
@@ -377,7 +377,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               {accounts.map((a) => {
                 const tone = STAGE_TONE[a.lifecycleStage] ?? STAGE_TONE.PROSPECT;
                 return (
-                  <tr key={a.accountId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                  <tr key={a.accountId} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
                     <td style={td}><strong>{a.name}</strong></td>
                     <td style={td}>{a.domain ?? "—"}</td>
                     <td style={td}>{a.industry ?? "—"}</td>
@@ -396,7 +396,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           {contacts.length > 0 ? (
             <Table head={[vocab.contact.singular, "Email", "Phone", "Title", vocab.account.singular]}>
               {contacts.map((c) => (
-                <tr key={c.contactId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                <tr key={c.contactId} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
                   <td style={td}><strong>{c.fullName}</strong></td>
                   <td style={td}>{c.email ?? "—"}</td>
                   <td style={td}>{c.phone ?? "—"}</td>
@@ -417,7 +417,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               {leads.map((l) => {
                 const tone = LEAD_TONE[l.stage] ?? LEAD_TONE.NEW;
                 return (
-                  <tr key={l.leadId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                  <tr key={l.leadId} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
                     <td style={td}><strong>{l.title}</strong></td>
                     <td style={td}>{l.accountName ?? "—"}</td>
                     <td style={td}>{money(l.amountMinorUnits, l.currency)}</td>
@@ -430,7 +430,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                             type="button"
                             onClick={() => setConvertTarget(l)}
                             title={`Close-won this ${lc(vocab.lead.singular)} and turn it into a customer ${lc(vocab.account.singular)}`}
-                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--theme-success)", color: "white", fontWeight: 700, cursor: "pointer" }}
+                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: "pointer" }}
                           >
                             Convert →
                           </button>
@@ -468,7 +468,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               {cases.map((c) => {
                 const tone = CASE_STATUS_TONE[c.status] ?? CASE_STATUS_TONE.OPEN;
                 return (
-                  <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                  <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
                     <td style={td}>
                       <strong>{c.subject}</strong>
                       <CaseAttrChips fields={caseSchema.fields} attributes={c.attributes} />
@@ -519,7 +519,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                 const tone = AGREEMENT_TONE[g.status] ?? AGREEMENT_TONE.DRAFT;
                 const term = g.startsOn || g.endsOn ? `${g.startsOn ?? "…"} → ${g.endsOn ?? "…"}` : "—";
                 return (
-                  <tr key={g.agreementId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
+                  <tr key={g.agreementId} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
                     <td style={td}><strong>{g.title}</strong></td>
                     <td style={td}>{g.accountName ?? "—"}</td>
                     <td style={td}>{money(g.valueMinorUnits, g.currency)}</td>
@@ -621,7 +621,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   onAssign: (stageKey: string, participantKey: string) => void;
   onTrace: () => void;
 }) {
-  const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
+  const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
   const traceBtn = (
     <button type="button" onClick={onTrace} title="View this case's governed workflow trace" style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)", background: "transparent", color: "var(--ink-600, #475569)", fontWeight: 700, cursor: "pointer" }}>Trace</button>
   );
@@ -635,7 +635,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   if (!wf) {
     return (
       <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-        <button type="button" disabled={busy} onClick={onLoad} style={{ ...btn, background: "transparent", color: "var(--brand, #4f46e5)", border: "1px solid var(--line, #cbd5e1)" }} title="Load the workflow's stages">
+        <button type="button" disabled={busy} onClick={onLoad} style={{ ...btn, background: "transparent", color: "var(--brand, var(--theme-primary))", border: "1px solid var(--line, #cbd5e1)" }} title="Load the workflow's stages">
           {busy ? "Loading…" : `Stage: ${stageLabel(stage)} ▾`}
         </button>
         {traceBtn}
@@ -645,7 +645,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   if (wf.state === "COMPLETED") {
     return (
       <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "#dcfce7" }} title={`Completed at ${stage} · revision ${wf.revision}`}>✓ Completed · {stageLabel(stage)}</span>
+        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }} title={`Completed at ${stage} · revision ${wf.revision}`}>✓ Completed · {stageLabel(stage)}</span>
         {traceBtn}
       </div>
     );
@@ -664,14 +664,14 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
           onChange={(e) => { const v = e.target.value; if (v) { const [sk, pk] = v.split("::"); onAssign(sk, pk); } }}
           aria-label="Assign a required participant"
           title="A stage requires a participant before it can be entered. Assign yourself to a slot."
-          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #c2410c", color: "#c2410c", fontWeight: 700 }}
+          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-warning)", color: "var(--theme-warning)", fontWeight: 700 }}
         >
           <option value="">Assign…</option>
           {unmet.map((u) => <option key={`${u.stageKey}::${u.participantKey}`} value={`${u.stageKey}::${u.participantKey}`}>Me → {stageLabel(u.stageKey)}: {u.participantKey}</option>)}
         </select>
       )}
       {wf.currentDecision && (
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "#dcfce7" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
+        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
       )}
       {gated ? (
         <select
@@ -680,7 +680,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
           onChange={(e) => { if (e.target.value) onDecide(e.target.value); }}
           aria-label={`Record decision for ${c.subject}`}
           title="This stage is gated — record a decision to unlock advancing. Four-eyes: whoever advanced the case into this stage cannot approve it."
-          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #c2410c", color: "#c2410c", fontWeight: 700 }}
+          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-warning)", color: "var(--theme-warning)", fontWeight: 700 }}
         >
           <option value="">Decide…</option>
           {(cur?.decisionOutcomes ?? []).map((o) => <option key={o} value={o}>{outcomeLabel(o)}</option>)}
@@ -713,7 +713,7 @@ function CaseAttrChips({ fields, attributes }: { fields: readonly CaseField[]; a
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
       {filled.map((f) => (
-        <span key={f.key} title={f.label} style={{ display: "inline-flex", gap: 4, fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "var(--surface-2, #f1f5f9)", color: "var(--ink-600, #475569)" }}>
+        <span key={f.key} title={f.label} style={{ display: "inline-flex", gap: 4, fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "var(--theme-surface-muted)", color: "var(--ink-600, #475569)" }}>
           <span style={{ color: "var(--ink-500, #64748b)" }}>{f.label}:</span>
           <span style={{ fontWeight: 700 }}>{attrs[f.key]}</span>
         </span>
@@ -794,7 +794,7 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
       {entries !== null && entries.length > 0 && (
         <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8, maxHeight: 360, overflowY: "auto" }}>
           {entries.map((e, i) => (
-            <li key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${e.kind === "DECISION" ? "var(--theme-success)" : "#4f46e5"}`, paddingLeft: 10 }}>
+            <li key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${e.kind === "DECISION" ? "var(--theme-success)" : "var(--theme-primary)"}`, paddingLeft: 10 }}>
               <span style={{ fontSize: 10, color: "var(--ink-500, #64748b)", minWidth: 132 }}>{new Date(e.at).toLocaleString()}</span>
               <span style={{ fontSize: 13 }}>
                 {e.kind === "TRANSITION" ? (
@@ -804,13 +804,13 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
                   </>
                 ) : (
                   <>
-                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "var(--theme-success)", background: "#dcfce7" }}>DECISION</span>{" "}
+                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }}>DECISION</span>{" "}
                     <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
                     <span style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}> · {e.bySubjectId}</span>
                     {e.evidenceRefs && e.evidenceRefs.length > 0 && (
                       <span style={{ display: "block", marginTop: 2 }}>
                         {e.evidenceRefs.map((ref) => (
-                          <code key={ref} style={{ fontSize: 10, color: "var(--ink-500, #64748b)", background: "var(--surface-2, #f1f5f9)", padding: "1px 5px", borderRadius: 4, marginRight: 4 }}>{ref}</code>
+                          <code key={ref} style={{ fontSize: 10, color: "var(--ink-500, #64748b)", background: "var(--theme-surface-muted)", padding: "1px 5px", borderRadius: 4, marginRight: 4 }}>{ref}</code>
                         ))}
                       </span>
                     )}
@@ -855,7 +855,7 @@ function Empty({ title, desc }: { title: string; desc: string }) {
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(520px, 100%)", background: "var(--surface, #fff)", borderRadius: 16, padding: 24, display: "grid", gap: 12 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(520px, 100%)", background: "var(--surface, var(--theme-text-inverse))", borderRadius: 16, padding: 24, display: "grid", gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
         {children}
       </div>
@@ -901,7 +901,7 @@ function AccountModal({ vocab, queryString, onClose, onCreated }: { vocab: CrmVo
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.account.singular.toLowerCase()}`}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.account.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -951,7 +951,7 @@ function ContactModal({ accounts, vocab, queryString, onClose, onCreated }: { ac
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.contact.singular.toLowerCase()}`}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.contact.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -1007,7 +1007,7 @@ function LeadModal({ accounts, vocab, queryString, onClose, onCreated }: { accou
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.lead.singular.toLowerCase()}`}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.lead.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -1066,7 +1066,7 @@ function AgreementModal({ accounts, vocab, queryString, onClose, onCreated }: { 
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.agreement.singular.toLowerCase()}`}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.agreement.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -1114,7 +1114,7 @@ function ConvertModal({ lead, vocab, queryString, onClose, onConverted }: { lead
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-success)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
         </div>
       </form>
     </Modal>
@@ -1182,7 +1182,7 @@ function CaseModal({ accounts, vocab, fields, queryString, onClose, onCreated }:
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.case.singular.toLowerCase()}`}</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.case.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
