@@ -113,6 +113,7 @@ export interface EnterpriseAppointment {
     | 'SUBMITTED'
     | 'UNDER_REVIEW'
     | 'APPROVED'
+    | 'REJECTED'
     | 'RIGHTS_PENDING'
     | 'ACTIVE'
     | 'SUSPENDED'
@@ -983,6 +984,105 @@ export async function submitEnterpriseAppointment(
     actorSubjectId: input.submittedBySubjectId,
     correlationId: input.correlationId,
     payload: { workflowInstanceId: input.workflowInstanceId },
+  });
+  return appointment(row);
+}
+
+export async function markEnterpriseAppointmentUnderReview(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly appointmentId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<EnterpriseAppointment> {
+  const current = await loadAppointment(client, input.tenantId, input.appointmentId, true);
+  if (current.state === 'UNDER_REVIEW') return current;
+  if (current.state !== 'SUBMITTED' || !current.workflowInstanceId) {
+    throw new Error('ENTERPRISE_APPOINTMENT_NOT_REVIEWABLE');
+  }
+  const stage = await client.query<{ readonly current_stage_key: string | null }>(
+    `SELECT current_stage_key
+       FROM platform.workflow_instances
+      WHERE tenant_id = $1::uuid
+        AND instance_id = $2::uuid`,
+    [input.tenantId, current.workflowInstanceId],
+  );
+  if (stage.rows[0]?.current_stage_key !== 'COMMERCIAL_REVIEW') {
+    throw new Error('ENTERPRISE_APPOINTMENT_REVIEW_STAGE_REQUIRED');
+  }
+  const result = await client.query<AppointmentRow>(
+    `UPDATE platform.enterprise_appointments
+        SET state = 'UNDER_REVIEW', updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND enterprise_appointment_id = $2::uuid
+      RETURNING ${APPOINTMENT_SELECT}`,
+    [input.tenantId, input.appointmentId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('ENTERPRISE_APPOINTMENT_UPDATE_FAILED');
+  await appendEnterpriseEvent(client, {
+    tenantId: input.tenantId,
+    aggregateType: 'enterprise.appointment',
+    aggregateId: input.appointmentId,
+    eventType: 'enterprise.appointment.review_started',
+    actorSubjectId: input.actorSubjectId,
+    correlationId: input.correlationId,
+    payload: { workflowInstanceId: current.workflowInstanceId },
+  });
+  return appointment(row);
+}
+
+export async function rejectEnterpriseAppointmentFromWorkflow(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly appointmentId: string;
+    readonly rejectedBySubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<EnterpriseAppointment> {
+  const current = await loadAppointment(client, input.tenantId, input.appointmentId, true);
+  if (current.state === 'REJECTED') return current;
+  if (!current.workflowInstanceId) throw new Error('ENTERPRISE_APPOINTMENT_WORKFLOW_REQUIRED');
+  const decision = await client.query<{
+    readonly decision_id: string;
+    readonly decided_by_subject_id: string;
+  }>(
+    `SELECT decision_id, decided_by_subject_id
+       FROM platform.workflow_stage_decisions
+      WHERE tenant_id = $1::uuid
+        AND instance_id = $2::uuid
+        AND work_type_key = 'enterprise.commercial-appointment'
+        AND stage_key = 'COMMERCIAL_REVIEW'
+        AND outcome = 'REJECT'
+      ORDER BY decided_at DESC
+      LIMIT 1`,
+    [input.tenantId, current.workflowInstanceId],
+  );
+  const rowDecision = decision.rows[0];
+  if (!rowDecision || rowDecision.decided_by_subject_id !== input.rejectedBySubjectId) {
+    throw new Error('ENTERPRISE_APPOINTMENT_REJECTED_DECISION_REQUIRED');
+  }
+  const result = await client.query<AppointmentRow>(
+    `UPDATE platform.enterprise_appointments
+        SET state = 'REJECTED', updated_at = now()
+      WHERE tenant_id = $1::uuid
+        AND enterprise_appointment_id = $2::uuid
+      RETURNING ${APPOINTMENT_SELECT}`,
+    [input.tenantId, input.appointmentId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('ENTERPRISE_APPOINTMENT_UPDATE_FAILED');
+  await appendEnterpriseEvent(client, {
+    tenantId: input.tenantId,
+    aggregateType: 'enterprise.appointment',
+    aggregateId: input.appointmentId,
+    eventType: 'enterprise.appointment.rejected',
+    actorSubjectId: input.rejectedBySubjectId,
+    correlationId: input.correlationId,
+    payload: { decisionId: rowDecision.decision_id },
   });
   return appointment(row);
 }
