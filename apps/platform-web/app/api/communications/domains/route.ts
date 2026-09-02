@@ -1,38 +1,14 @@
 import { NextResponse } from "next/server";
 import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../lib/request-context";
 import { expectedDnsRecords } from "../../../../lib/dns-records";
+import { requireCommunicationDomainAdmin } from "../../../../lib/communication-domain-admin";
 import type { DeniedResult } from '@expadio/ui/contracts';
 
-const ADMIN_ROLES = ['PLATFORM_SUPER_ADMIN', 'PLATFORM_ADMIN', 'TENANT_OWNER', 'TENANT_ADMIN'];
 const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const ADDRESS_RE = /^[^\s@]+@([^\s@]+)$/;
 const TENANT_PURPOSES = ['transactional', 'marketing'] as const;
 
 type TenantPurpose = (typeof TENANT_PURPOSES)[number];
-
-async function requireDomainAdmin(
-  client: { query: (text: string, values?: readonly unknown[]) => Promise<{ rows: unknown[] }> },
-  subjectId: string,
-  tenantId: string,
-) {
-  const role = await client.query(
-    `SELECT 1
-       FROM platform.authorization_assignments assignment
-       JOIN platform.authorization_roles role ON role.role_id = assignment.role_id
-      WHERE assignment.subject_id = $1
-        AND assignment.status = 'ACTIVE'
-        AND role.status = 'ACTIVE'
-        AND role.role_key = ANY($2::text[])
-        AND (assignment.valid_until IS NULL OR assignment.valid_until > now())
-        AND (
-          role.ownership_scope = 'PLATFORM'
-          OR (role.ownership_scope = 'TENANT' AND role.tenant_id = $3::uuid)
-        )
-      LIMIT 1`,
-    [subjectId, ADMIN_ROLES, tenantId],
-  );
-  return role.rows.length > 0;
-}
 
 export interface DomainRecord {
   senderId: string;
@@ -145,7 +121,7 @@ export async function POST(request: Request) {
     }
 
     return await withTenantClient(effectiveContext, async (client) => {
-      if (!(await requireDomainAdmin(client, effectiveContext.subjectId, effectiveContext.tenantId))) {
+      if (!(await requireCommunicationDomainAdmin(client, effectiveContext.subjectId, effectiveContext.tenantId))) {
         return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
       }
 
@@ -172,11 +148,7 @@ export async function POST(request: Request) {
            display_name = EXCLUDED.display_name,
            purposes = EXCLUDED.purposes,
            is_default = EXCLUDED.is_default,
-           verification_status = CASE
-             WHEN platform.communication_sender_identities.address = EXCLUDED.address
-               THEN platform.communication_sender_identities.verification_status
-             ELSE 'PENDING'
-           END,
+           verification_status = platform.communication_sender_identities.verification_status,
            status = 'ACTIVE',
            updated_at = NOW()
          RETURNING sender_id, address, purposes, is_default, verification_status, status, created_at`,
