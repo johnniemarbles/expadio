@@ -69,5 +69,9 @@ test('Organizations workspace exposes a real Enterprise Hub commercial surface',
   assert.match(hub,/Move to review/);
   assert.match(hub,/Issue rights/);
   assert.match(hub,/Verify controls & activate/);
+  assert.match(hub,/window\.prompt\('Enter the executed-agreement evidence reference\.'/);
+  assert.match(hub,/window\.confirm\('Confirm all five activation controls are satisfied/);
+  assert.doesNotMatch(hub,/ui:agreement:/);
+  assert.doesNotMatch(hub,/ui:jurisdiction:/);
   assert.match(hub,/Separate from CRM\/customer agreements/);
 });
