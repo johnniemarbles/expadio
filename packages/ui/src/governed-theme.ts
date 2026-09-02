@@ -103,7 +103,11 @@ export function isExpadioThemeDefinition(value: unknown): value is ExpadioThemeD
   if (!validStringSection(value.material, [
     'shadowSubtle','shadowCard','shadowElevated','blur','translucency','borderGlow',
   ])) return false;
-  if (!validStringSection(value.motion, ['fast','normal','slow','easing'])) return false;
+  if (!validStringSection(value.motion, [
+    'instant','fast','normal','slow','panel','data',
+    'distanceMicro','distanceSmall','distancePanel',
+    'easing','easingEmphasis','easingLinear',
+  ])) return false;
   if (!validStringSection(value.shell, [
     'sidebarWidth','headerHeight','sidebarSurfaceLight','sidebarSurfaceDark',
     'navigationActiveLight','navigationActiveDark','commandSurfaceLight','commandSurfaceDark',
