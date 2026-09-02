@@ -21,7 +21,7 @@ test('enterprise commercial authority is distinct from CRM customer agreements',
 
 test('territory, appointment and jurisdiction tables are tenant and enterprise constrained',()=>{
   for(const table of ['enterprise_territories','enterprise_commercial_agreements','enterprise_appointments','enterprise_appointment_territories','enterprise_jurisdiction_activations']){
-    assert.match(migration,new RegExp(`ALTER TABLE platform\\.${table} FORCE ROW LEVEL SECURITY`));
+    assert.ok(migration.includes(`ALTER TABLE platform.${table} FORCE ROW LEVEL SECURITY`));
     assert.match(migration,new RegExp(`CREATE POLICY ${table.replace('enterprise_','enterprise_')}.*tenant`, 's'));
   }
   assert.match(migration,/enterprise_territories_reject_cycle/);
