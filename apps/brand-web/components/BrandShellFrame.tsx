@@ -33,6 +33,7 @@ export function BrandShellFrame({
   const pinned=ordered.filter((module)=>module.defaultPinned).slice(0,5);
   const active=ordered.find((module)=>pathname===module.baseRoute||pathname.startsWith(module.baseRoute+'/'))??null;
   const enterpriseActive=pathname==='/enterprise'||pathname.startsWith('/enterprise/');
+  const communicationsActive=pathname==='/communications'||pathname.startsWith('/communications/');
 
   return <div className={styles.shell} data-expadio-theme="brand">
     <aside className={styles.sidebar} aria-label="Brand navigation">
@@ -49,6 +50,7 @@ export function BrandShellFrame({
           className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
           href="/enterprise"
         ><span className={styles.navIcon}>EN</span>Enterprise</Link>
+        <Link className={communicationsActive?styles.navActive:''} href="/communications"><span className={styles.navIcon}>CM</span>Communications</Link>
         <p className={styles.navGroup}>Apps</p>
         {pinned.map((module)=><Link
           key={module.key}
@@ -82,7 +84,9 @@ export function BrandShellFrame({
             ? <><span className={styles.appContextIcon}>{active.iconKey.slice(0,2).toUpperCase()}</span><div><strong>{active.name}</strong><small>{organizationName}</small></div></>
             : enterpriseActive
               ? <><span className={styles.appContextIcon}>EN</span><div><strong>Enterprise</strong><small>{organizationName}</small></div></>
-              : <div><strong>{organizationName}</strong><small>{tenantName}</small></div>}
+              : communicationsActive
+                ? <><span className={styles.appContextIcon}>CM</span><div><strong>Communications</strong><small>{organizationName}</small></div></>
+                : <div><strong>{organizationName}</strong><small>{tenantName}</small></div>}
         </div>
         <div className={styles.topbarActions}>
           {active&&ordered.length>1?<details className={styles.appSwitcher}>
