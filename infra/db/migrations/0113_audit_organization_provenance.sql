@@ -4,16 +4,28 @@ BEGIN;
 -- Existing rows are intentionally NOT backfilled: assigning historical rows
 -- to an organization without recorded evidence would fabricate provenance.
 ALTER TABLE platform.agent_runs
-  ADD COLUMN organization_id uuid
-  REFERENCES platform.organizations(organization_id);
+  ADD COLUMN organization_id uuid;
 
 ALTER TABLE platform.agent_run_events
-  ADD COLUMN organization_id uuid
-  REFERENCES platform.organizations(organization_id);
+  ADD COLUMN organization_id uuid;
 
 ALTER TABLE platform.sensitive_read_events
-  ADD COLUMN organization_id uuid
-  REFERENCES platform.organizations(organization_id);
+  ADD COLUMN organization_id uuid;
+
+ALTER TABLE platform.agent_runs
+  ADD CONSTRAINT agent_runs_organization_tenant_fk
+  FOREIGN KEY (organization_id, tenant_id)
+  REFERENCES platform.organizations(organization_id, tenant_id);
+
+ALTER TABLE platform.agent_run_events
+  ADD CONSTRAINT agent_run_events_organization_tenant_fk
+  FOREIGN KEY (organization_id, tenant_id)
+  REFERENCES platform.organizations(organization_id, tenant_id);
+
+ALTER TABLE platform.sensitive_read_events
+  ADD CONSTRAINT sensitive_read_events_organization_tenant_fk
+  FOREIGN KEY (organization_id, tenant_id)
+  REFERENCES platform.organizations(organization_id, tenant_id);
 
 CREATE OR REPLACE FUNCTION platform.current_organization_id_nullable()
 RETURNS uuid
@@ -71,5 +83,60 @@ CREATE INDEX agent_run_events_tenant_org_time_idx
 
 CREATE INDEX sensitive_read_events_tenant_org_time_idx
   ON platform.sensitive_read_events (tenant_id, organization_id, recorded_at DESC, event_id);
+
+DROP POLICY IF EXISTS agent_runs_select ON platform.agent_runs;
+DROP POLICY IF EXISTS agent_runs_insert ON platform.agent_runs;
+DROP POLICY IF EXISTS agent_run_events_select ON platform.agent_run_events;
+DROP POLICY IF EXISTS agent_run_events_insert ON platform.agent_run_events;
+DROP POLICY IF EXISTS sensitive_read_events_select ON platform.sensitive_read_events;
+DROP POLICY IF EXISTS sensitive_read_events_insert ON platform.sensitive_read_events;
+
+CREATE POLICY agent_runs_select
+  ON platform.agent_runs
+  FOR SELECT
+  USING (
+    tenant_id = platform.current_tenant_id()
+    AND organization_id = platform.current_organization_id_nullable()
+  );
+
+CREATE POLICY agent_runs_insert
+  ON platform.agent_runs
+  FOR INSERT
+  WITH CHECK (
+    tenant_id = platform.current_tenant_id()
+    AND organization_id = platform.current_organization_id_nullable()
+  );
+
+CREATE POLICY agent_run_events_select
+  ON platform.agent_run_events
+  FOR SELECT
+  USING (
+    tenant_id = platform.current_tenant_id()
+    AND organization_id = platform.current_organization_id_nullable()
+  );
+
+CREATE POLICY agent_run_events_insert
+  ON platform.agent_run_events
+  FOR INSERT
+  WITH CHECK (
+    tenant_id = platform.current_tenant_id()
+    AND organization_id = platform.current_organization_id_nullable()
+  );
+
+CREATE POLICY sensitive_read_events_select
+  ON platform.sensitive_read_events
+  FOR SELECT
+  USING (
+    tenant_id = platform.current_tenant_id()
+    AND organization_id = platform.current_organization_id_nullable()
+  );
+
+CREATE POLICY sensitive_read_events_insert
+  ON platform.sensitive_read_events
+  FOR INSERT
+  WITH CHECK (
+    tenant_id = platform.current_tenant_id()
+    AND organization_id = platform.current_organization_id_nullable()
+  );
 
 COMMIT;
