@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BlastRadius } from "@expadio/credential-custody";
+import styles from "./ConnectorActionsModal.module.css";
 
 /**
  * One governed console for a single connector. Surfaces the credential-custody
@@ -54,11 +55,11 @@ interface ConnectorActionsModalProps {
   onChanged: () => void;
 }
 
-const PROBE_COLORS: Record<string, { fg: string; bg: string }> = {
-  VALID: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
-  FAILING: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
-  INVALID: { fg: "var(--theme-danger)", bg: "color-mix(in srgb,var(--theme-danger) 12%,transparent)" },
-};
+function probeClass(status: HealthRecord["probeStatus"]): string {
+  if (status === "VALID") return `${styles.statusBadge} ${styles.statusValid}`;
+  if (status === "FAILING") return `${styles.statusBadge} ${styles.statusFailing}`;
+  return `${styles.statusBadge} ${styles.statusInvalid}`;
+}
 
 export function ConnectorActionsModal({
   isOpen,
@@ -149,38 +150,26 @@ export function ConnectorActionsModal({
     }
   }
 
-  const probe = health ? PROBE_COLORS[health.probeStatus] ?? PROBE_COLORS.VALID : null;
-
   return (
-    <div
-      role="presentation"
-      onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 130, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: "min(720px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", border: "1px solid var(--theme-border)", borderRadius: 16, padding: 28, boxShadow: "0 25px 50px -12px color-mix(in srgb,var(--theme-overlay) 72%,transparent)" }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+    <div role="presentation" onClick={onClose} className={styles.backdrop}>
+      <div onClick={(e) => e.stopPropagation()} className={styles.dialog}>
+        <div className={styles.header}>
           <div>
-            <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--theme-primary)" }}>
-              Governed connector controls
-            </span>
-            <h2 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700 }}>{connectorKey}</h2>
-            <div style={{ fontSize: 12, color: "var(--theme-text-muted)" }}>Ownership: {ownershipScope}</div>
+            <span className={styles.eyebrow}>Governed connector controls</span>
+            <h2 className={styles.title}>{connectorKey}</h2>
+            <div className={styles.meta}>Ownership: {ownershipScope}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ border: "1px solid var(--theme-border)", background: "transparent", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className={styles.closeButton}>✕</button>
         </div>
 
-        {loading && <div style={{ padding: 20, textAlign: "center", color: "var(--theme-text-muted)" }}>Loading governed connector state…</div>}
+        {loading && <div className={styles.loading}>Loading governed connector state…</div>}
 
-        {/* Blast radius */}
-        <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Blast radius</h3>
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Blast radius</h3>
           {radius ? (
             <>
-              <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-700, var(--theme-text-secondary))", lineHeight: 1.5 }}>{radius.statement}</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+              <p className={styles.statement}>{radius.statement}</p>
+              <div className={styles.statGrid}>
                 <Stat label="Tenants" value={radius.tenantCount} />
                 <Stat label="Channels" value={radius.channels.length} />
                 <Stat label="Msgs / 30d" value={radius.messagesLast30Days.toLocaleString("en-US")} />
@@ -188,80 +177,69 @@ export function ConnectorActionsModal({
               </div>
             </>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--theme-text-muted)" }}>No routing or delivery history for this connector yet.</p>
+            <p className={styles.empty}>No routing or delivery history for this connector yet.</p>
           )}
         </section>
 
-        {/* Credential health */}
-        <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 14 }}>Credential health</h3>
-            {probe && (
-              <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: probe.fg, background: probe.bg }}>
-                {health!.probeStatus}
-              </span>
-            )}
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>Credential health</h3>
+            {health && <span className={probeClass(health.probeStatus)}>{health.probeStatus}</span>}
           </div>
           {health ? (
-            <div style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--theme-text-secondary)" }}>
+            <div className={styles.healthBody}>
               <div>Credential state: <strong>{health.credentialState ?? "—"}</strong> · Custody: <strong>{health.custodyMode ?? "—"}</strong></div>
               <div>Last probe: <strong>{health.probeCheckedAt ? new Date(health.probeCheckedAt).toLocaleString() : "not yet probed"}</strong></div>
               {health.probeError && (
-                <div style={{ color: "var(--theme-danger)" }}>Provider error: <span style={{ fontFamily: "monospace" }}>{health.probeError}</span></div>
+                <div className={styles.providerError}>Provider error: <span className={styles.code}>{health.probeError}</span></div>
               )}
               <div>
                 Allocation on this probe — transactional ×{health.allocation.transactionalMultiplier}, bulk ×{health.allocation.bulkMultiplier}
               </div>
-              <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--theme-text-muted)" }}>{health.allocation.note}</div>
+              <div className={styles.note}>{health.allocation.note}</div>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--theme-text-muted)" }}>No credential on record for this connector.</p>
+            <p className={styles.empty}>No credential on record for this connector.</p>
           )}
         </section>
 
-        {/* Attestation history */}
-        <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Revocation attestations</h3>
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Revocation attestations</h3>
           {attestations.length > 0 ? (
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className={styles.attestationList}>
               {attestations.map((a) => (
-                <div key={a.attestation_id} style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: 12, background: "var(--theme-text-muted)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{new Date(a.revoked_at).toLocaleString()}</div>
-                  <p style={{ margin: "6px 0", fontSize: 12, color: "var(--ink-700, var(--theme-text-secondary))", lineHeight: 1.5 }}>{a.attestation_text}</p>
-                  <div style={{ fontSize: 11, color: "var(--theme-text-muted)" }}>
-                    Exposure ≤ {a.max_exposure_seconds}s · rerouted {a.messages_rerouted} · cancelled {a.messages_cancelled} · corr <span style={{ fontFamily: "monospace" }}>{a.correlation_id}</span>
+                <div key={a.attestation_id} className={styles.attestation}>
+                  <div className={styles.attestationTime}>{new Date(a.revoked_at).toLocaleString()}</div>
+                  <p className={styles.attestationText}>{a.attestation_text}</p>
+                  <div className={styles.attestationMeta}>
+                    Exposure ≤ {a.max_exposure_seconds}s · rerouted {a.messages_rerouted} · cancelled {a.messages_cancelled} · corr <span className={styles.code}>{a.correlation_id}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--theme-text-muted)" }}>No revocation has been recorded for this connector.</p>
+            <p className={styles.empty}>No revocation has been recorded for this connector.</p>
           )}
         </section>
 
-        {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
-        {notice && <div style={{ fontSize: 13, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", padding: 10, borderRadius: 8, border: "1px solid color-mix(in srgb,var(--theme-success) 28%,transparent)", marginBottom: 12 }}>✅ {notice}</div>}
+        {error && <div role="alert" className={styles.bannerError}>⚠️ {error}</div>}
+        {notice && <div className={styles.bannerNotice}>✅ {notice}</div>}
 
         {(needsApproval || ownershipScope === "PLATFORM") && (
-          <label style={{ display: "block", fontSize: 12, marginBottom: 12 }}>
+          <label className={styles.approvalLabel}>
             Second-admin approval reference {ownershipScope === "PLATFORM" ? "(required for platform connectors)" : ""}
             <input
               value={approvalRef}
               onChange={(e) => setApprovalRef(e.target.value)}
               placeholder="governance review id"
-              style={{ width: "100%", marginTop: 4, padding: "6px 10px", border: "1px solid var(--theme-border)", borderRadius: 6, fontSize: 12 }}
+              className={styles.approvalInput}
             />
           </label>
         )}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Close</button>
-          <button
-            type="button"
-            onClick={handleRevoke}
-            disabled={revoking}
-            style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-danger)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: revoking ? "not-allowed" : "pointer" }}
-          >
+        <div className={styles.footer}>
+          <button type="button" onClick={onClose} className={styles.secondaryButton}>Close</button>
+          <button type="button" onClick={handleRevoke} disabled={revoking} className={styles.dangerButton}>
             {revoking ? "Revoking…" : "Revoke credential"}
           </button>
         </div>
@@ -272,9 +250,9 @@ export function ConnectorActionsModal({
 
 function Stat({ label, value, danger = false }: { label: string; value: string | number; danger?: boolean }) {
   return (
-    <div style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: "8px 10px" }}>
-      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-muted)" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: danger ? "var(--theme-danger)" : "var(--theme-text-primary)" }}>{value}</div>
+    <div className={styles.stat}>
+      <div className={styles.statLabel}>{label}</div>
+      <div className={danger ? styles.statValueDanger : styles.statValue}>{value}</div>
     </div>
   );
 }
