@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import styles from "./page.module.css";
 import type { DomainRecord } from "../../api/communications/domains/route";
 import { apiError } from "../../../lib/api-error";
+import styles from "./DomainConfigModal.module.css";
 
 interface DomainConfigModalProps {
   isOpen: boolean;
@@ -11,22 +11,56 @@ interface DomainConfigModalProps {
   initialDomain?: string;
 }
 
-interface VerifyCheck { purpose: string; type: string; name: string; ok: boolean; detail: string }
+interface VerifyCheck {
+  purpose: string;
+  type: string;
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
+interface CloudflareResult {
+  ok?: boolean;
+  name?: string;
+  action?: string;
+  detail?: string;
+}
+
+interface ProvisionResult {
+  message?: string;
+  cloudflare?: CloudflareResult[];
+}
+
+const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+function errorMessage(cause: unknown, fallback: string) {
+  return cause instanceof Error ? cause.message : fallback;
+}
+
+function verificationClass(status: string) {
+  if (status === "VERIFIED") return styles.statusVerified;
+  if (status === "REVOKED") return styles.statusRevoked;
+  return styles.statusPending;
+}
+
+function recordStatusClass(status: string) {
+  return status === "VERIFIED" ? `${styles.recordStatus} ${styles.recordStatusVerified}` : styles.recordStatus;
+}
 
 export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.com" }: DomainConfigModalProps) {
   const [domain, setDomain] = useState(initialDomain);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [domains, setDomains] = useState<DomainRecord[]>([]);
-  const [lastProvisionResult, setLastProvisionResult] = useState<any | null>(null);
+  const [lastProvisionResult, setLastProvisionResult] = useState<ProvisionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [verifyResults, setVerifyResults] = useState<Record<string, VerifyCheck[]>>({});
   const [apiToken, setApiToken] = useState("");
   const [adding, setAdding] = useState(false);
 
-  const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-  const domainValid = DOMAIN_RE.test(domain.trim().toLowerCase());
+  const normalizedDomain = domain.trim().toLowerCase();
+  const domainValid = DOMAIN_RE.test(normalizedDomain);
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/communications/domains${window.location.search}`);
@@ -43,42 +77,48 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
   if (!isOpen) return null;
 
   async function handleAutoConfigure() {
-    if (!domainValid) { setError("Enter a valid domain such as mail.example.com."); return; }
+    if (!domainValid) {
+      setError("Enter a valid domain such as mail.example.com.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/communications/domains/cloudflare${window.location.search}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: domain.trim().toLowerCase(), apiToken: apiToken.trim() || undefined }),
+        body: JSON.stringify({ domain: normalizedDomain, apiToken: apiToken.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Failed to configure DNS records"));
       setLastProvisionResult(data);
       await reload();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Failed to configure DNS records"));
     } finally {
       setLoading(false);
     }
   }
 
   async function handleAddManual() {
-    if (!domainValid) { setError("Enter a valid domain such as mail.example.com."); return; }
+    if (!domainValid) {
+      setError("Enter a valid domain such as mail.example.com.");
+      return;
+    }
     setAdding(true);
     setError(null);
     try {
       const res = await fetch(`/api/communications/domains${window.location.search}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: domain.trim().toLowerCase() }),
+        body: JSON.stringify({ domain: normalizedDomain }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Could not add the domain"));
-      setLastProvisionResult({ message: `Added ${domain.trim().toLowerCase()} as PENDING. Add the DNS records below, then Verify.` });
+      setLastProvisionResult({ message: `Added ${normalizedDomain} as PENDING. Add the DNS records below, then Verify.` });
       await reload();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Could not add the domain"));
     } finally {
       setAdding(false);
     }
@@ -95,8 +135,8 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       if (!res.ok) throw new Error(apiError(data, "Verification failed"));
       setVerifyResults((prev) => ({ ...prev, [senderId]: data.checks ?? [] }));
       await reload();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Verification failed"));
     } finally {
       setBusyId(null);
     }
@@ -113,117 +153,61 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Could not retire the domain"));
       await reload();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Could not retire the domain"));
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.6)",
-        backdropFilter: "blur(6px)",
-        display: "grid",
-        placeItems: "center",
-        zIndex: 100,
-        padding: "20px",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "var(--theme-surface-raised)",
-          border: "1px solid var(--theme-border)",
-          borderRadius: "16px",
-          width: "100%",
-          maxWidth: "760px",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          padding: "28px",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+    <div className={styles.backdrop} onClick={onClose}>
+      <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
           <div>
-            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--theme-primary)" }}>
-              DNS &amp; Identity Preflight
-            </span>
-            <h2 style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 700 }}>
-              Sending Domains &amp; DKIM Authentication
-            </h2>
+            <p className={styles.eyebrow}>DNS &amp; Identity Preflight</p>
+            <h2 className={styles.title}>Sending Domains &amp; DKIM Authentication</h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              border: "1px solid var(--theme-border)",
-              background: "transparent",
-              borderRadius: "8px",
-              width: "32px",
-              height: "32px",
-              cursor: "pointer",
-              fontSize: "16px",
-              display: "grid",
-              placeItems: "center",
-            }}
-          >
+          <button type="button" onClick={onClose} className={styles.closeButton} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <p style={{ margin: "0 0 20px", fontSize: "14px", color: "var(--theme-text-secondary)", lineHeight: 1.5 }}>
+        <p className={styles.description}>
           Sending domains require verified DNS records (DKIM selector keys, SPF inbound authorisation, DMARC alignment, and MX routing) before governed email dispatch is permitted.
         </p>
 
-        {/* Action Panel */}
-        <div
-          style={{
-            padding: "18px",
-            border: "1px solid color-mix(in srgb,var(--theme-warning) 28%,transparent)",
-            borderRadius: "12px",
-            background: "color-mix(in srgb,var(--theme-warning) 6%,var(--theme-surface))",
-            marginBottom: "24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          <div style={{ display: "grid", gap: "10px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--theme-warning)", display: "grid", gap: "4px" }}>
+        <div className={styles.actionPanel}>
+          <div className={styles.fieldset}>
+            <label className={styles.label}>
               Sending domain
               <input
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="e.g. mail.yourbrand.com"
-                style={{ padding: "8px 12px", border: `1px solid ${domain && !domainValid ? "var(--theme-danger)" : "var(--theme-warning)"}`, borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
+                className={domain && !domainValid ? styles.inputInvalid : styles.input}
               />
-              {domain && !domainValid && <span style={{ fontSize: "11px", color: "var(--theme-danger)", fontWeight: 500 }}>Enter a valid domain such as mail.example.com.</span>}
+              {domain && !domainValid && <span className={styles.invalidText}>Enter a valid domain such as mail.example.com.</span>}
             </label>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--theme-warning)", display: "grid", gap: "4px" }}>
-              Cloudflare API token <span style={{ fontWeight: 500, color: "var(--theme-warning)aa" }}>(optional if the deployment has one)</span>
+            <label className={styles.label}>
+              Cloudflare API token <span className={styles.optionalText}>(optional if the deployment has one)</span>
               <input
                 type="password"
                 value={apiToken}
                 onChange={(e) => setApiToken(e.target.value)}
                 placeholder="Token with Zone · DNS · Edit for this domain"
                 autoComplete="off"
-                style={{ padding: "8px 12px", border: "1px solid var(--theme-warning)", borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
+                className={styles.input}
               />
-              <span style={{ fontSize: "11px", color: "var(--theme-warning)aa", fontWeight: 500 }}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
+              <span className={styles.helpText}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
             </label>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <div className={styles.actions}>
               <button
                 type="button"
                 onClick={handleAutoConfigure}
                 disabled={loading || adding || !domainValid}
-                className={styles.btnOutlineOrange}
-                style={{ padding: "8px 18px", cursor: loading || !domainValid ? "not-allowed" : "pointer" }}
+                className={styles.primaryButton}
               >
                 {loading ? "Provisioning DNS…" : "⚡ Auto-Configure with Cloudflare"}
               </button>
@@ -231,7 +215,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 type="button"
                 onClick={handleAddManual}
                 disabled={loading || adding || !domainValid}
-                style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid var(--theme-border)", background: "var(--theme-text-inverse)", cursor: adding || !domainValid ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 700 }}
+                className={styles.secondaryButton}
               >
                 {adding ? "Adding…" : "Add without Cloudflare"}
               </button>
@@ -239,18 +223,18 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           </div>
 
           {error && (
-            <div style={{ fontSize: "13px", color: "var(--theme-danger)", background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", padding: "10px", borderRadius: "8px" }}>
+            <div className={styles.alert} role="alert">
               ⚠️ {error}
             </div>
           )}
 
           {lastProvisionResult && (
-            <div style={{ fontSize: "13px", color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", padding: "10px", borderRadius: "8px", border: "1px solid color-mix(in srgb,var(--theme-success) 28%,transparent)" }}>
+            <div className={styles.success}>
               ✅ {lastProvisionResult.message}
               {Array.isArray(lastProvisionResult.cloudflare) && lastProvisionResult.cloudflare.length > 0 && (
-                <div style={{ marginTop: "6px", display: "grid", gap: "2px" }}>
-                  {lastProvisionResult.cloudflare.map((r: any, i: number) => (
-                    <div key={i} style={{ fontSize: "11px", color: r.ok ? "var(--theme-success)" : "var(--theme-danger)", fontFamily: "monospace" }}>
+                <div className={styles.cloudflareList}>
+                  {lastProvisionResult.cloudflare.map((r, i) => (
+                    <div key={i} className={`${styles.checkLine} ${r.ok ? styles.checkGood : styles.checkBad} ${styles.mono}`}>
                       {r.ok ? "✓" : "✗"} {r.name} — {r.action ?? r.detail}
                     </div>
                   ))}
@@ -260,50 +244,26 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           )}
         </div>
 
-        {/* Existing Domains / DNS Records Table */}
-        <h3 style={{ fontSize: "15px", fontWeight: 700, margin: "0 0 12px" }}>
-          Configured Sender Identities &amp; DNS Selectors
-        </h3>
+        <h3 className={styles.sectionTitle}>Configured Sender Identities &amp; DNS Selectors</h3>
 
         {fetching ? (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-muted)" }}>
-            Loading domain configurations...
-          </div>
+          <div className={styles.loading}>Loading domain configurations...</div>
         ) : domains.length > 0 ? (
-          <div style={{ display: "grid", gap: "16px" }}>
+          <div className={styles.domainList}>
             {domains.map((d) => (
-              <div
-                key={d.senderId}
-                style={{
-                  border: "1px solid var(--theme-border)",
-                  borderRadius: "10px",
-                  padding: "16px",
-                  background: "var(--theme-surface-raised)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div key={d.senderId} className={styles.domainCard}>
+                <div className={styles.domainHeader}>
                   <div>
-                    <strong style={{ fontSize: "14px" }}>{d.domain}</strong>
-                    <div style={{ fontSize: "12px", color: "var(--theme-text-muted)" }}>{d.address}</div>
+                    <strong className={styles.domainName}>{d.domain}</strong>
+                    <div className={styles.domainAddress}>{d.address}</div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      style={{
-                        padding: "3px 10px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        color: d.verificationStatus === "VERIFIED" ? "var(--theme-success)" : d.verificationStatus === "REVOKED" ? "var(--theme-danger)" : "var(--theme-warning)",
-                        background: d.verificationStatus === "VERIFIED" ? "color-mix(in srgb,var(--theme-success) 12%,transparent)" : d.verificationStatus === "REVOKED" ? "color-mix(in srgb,var(--theme-danger) 12%,transparent)" : "color-mix(in srgb,var(--theme-warning) 12%,transparent)",
-                      }}
-                    >
-                      {d.verificationStatus}
-                    </span>
+                  <div className={styles.domainActions}>
+                    <span className={verificationClass(d.verificationStatus)}>{d.verificationStatus}</span>
                     <button
                       type="button"
                       onClick={() => handleVerify(d.senderId)}
                       disabled={busyId === d.senderId}
-                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer", fontWeight: 700 }}
+                      className={styles.smallButton}
                     >
                       {busyId === d.senderId ? "…" : "Verify"}
                     </button>
@@ -311,7 +271,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                       type="button"
                       onClick={() => handleRemove(d.senderId, d.domain)}
                       disabled={busyId === d.senderId}
-                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid color-mix(in srgb,var(--theme-danger) 28%,transparent)", background: "transparent", color: "var(--theme-danger)", cursor: "pointer", fontWeight: 700 }}
+                      className={styles.dangerButton}
                     >
                       Remove
                     </button>
@@ -319,37 +279,33 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 </div>
 
                 {verifyResults[d.senderId] && (
-                  <div style={{ marginBottom: "12px", display: "grid", gap: "4px" }}>
+                  <div className={styles.checkList}>
                     {verifyResults[d.senderId].map((c, i) => (
-                      <div key={i} style={{ fontSize: "11px", color: c.ok ? "var(--theme-success)" : "var(--theme-danger)" }}>
+                      <div key={i} className={`${styles.checkLine} ${c.ok ? styles.checkGood : styles.checkBad}`}>
                         {c.ok ? "✅" : "⚠️"} <strong>{c.purpose}</strong> — {c.detail}
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
                     <thead>
-                      <tr style={{ textAlign: "left", color: "var(--theme-text-muted)" }}>
-                        <th style={{ padding: "6px 8px" }}>Record Type</th>
-                        <th style={{ padding: "6px 8px" }}>Host / Selector</th>
-                        <th style={{ padding: "6px 8px" }}>Value</th>
-                        <th style={{ padding: "6px 8px" }}>Status</th>
+                      <tr>
+                        <th>Record Type</th>
+                        <th>Host / Selector</th>
+                        <th>Value</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {d.dnsRecords?.map((r, idx) => (
-                        <tr key={idx} style={{ borderTop: "1px solid var(--line, var(--theme-surface-muted))" }}>
-                          <td style={{ padding: "6px 8px", fontWeight: 700 }}><code>{r.type}</code></td>
-                          <td style={{ padding: "6px 8px", fontFamily: "monospace" }}>{r.name}</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "monospace", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {r.value}
-                          </td>
-                          <td style={{ padding: "6px 8px" }}>
-                            <span style={{ color: r.status === "VERIFIED" ? "var(--theme-success)" : "var(--theme-warning)", fontWeight: 700 }}>
-                              {r.status}
-                            </span>
+                        <tr key={idx}>
+                          <td className={styles.recordType}><code>{r.type}</code></td>
+                          <td className={styles.recordName}>{r.name}</td>
+                          <td className={styles.recordValue}>{r.value}</td>
+                          <td>
+                            <span className={recordStatusClass(r.status)}>{r.status}</span>
                           </td>
                         </tr>
                       ))}
@@ -360,9 +316,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
             ))}
           </div>
         ) : (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-muted)" }}>
-            No sending domains configured. Click Auto-Configure above to register your first sending domain.
-          </div>
+          <div className={styles.empty}>No sending domains configured. Click Auto-Configure above to register your first sending domain.</div>
         )}
       </div>
     </div>
