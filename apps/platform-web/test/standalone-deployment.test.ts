@@ -56,3 +56,20 @@ test('migration runner refuses broad legacy backfill from an early sentinel',()=
   assert.match(migrate,/SCHEMA_MIGRATION_HISTORY_INCOMPLETE/);
   assert.doesNotMatch(migrate,/capCount && capCount > 0/);
 });
+
+
+test('Platform Railway config owns build, start, and healthcheck contract',()=>{
+  const railway=JSON.parse(read('../railway.json'));
+  assert.equal(railway.build.builder,'RAILPACK');
+  assert.equal(railway.build.buildCommand,'pnpm --filter @expadio/platform-web build');
+  assert.equal(railway.deploy.startCommand,'pnpm --filter @expadio/platform-web start');
+  assert.equal(railway.deploy.healthcheckPath,'/api/health');
+  assert.equal(railway.deploy.restartPolicyType,'ON_FAILURE');
+});
+
+test('Platform health endpoint is dependency-free and unauthenticated',()=>{
+  const health=read('../app/api/health/route.ts');
+  assert.match(health,/ok: true/);
+  assert.match(health,/service: 'platform-web'/);
+  assert.doesNotMatch(health,/resolveRequestContext|auth\(|dbPool|DATABASE_URL/);
+});
