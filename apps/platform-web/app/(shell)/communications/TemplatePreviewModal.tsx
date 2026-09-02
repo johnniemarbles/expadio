@@ -258,7 +258,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
             <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Required variables (comma-separated)
               <input value={draft.requiredVariables} onChange={(e) => setDraft({ ...draft, requiredVariables: e.target.value })} placeholder="name, code" style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13 }} />
             </label>
-            {actionError && <div role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>⚠️ {actionError}</div>}
+            {actionError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)" }}>⚠️ {actionError}</div>}
             {actionNotice && <div style={{ fontSize: 12, color: "#15803d" }}>✅ {actionNotice}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button type="button" onClick={() => setEditing(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
@@ -376,7 +376,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Channel: <strong>{template.channel}</strong></div>
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Version: <strong>v{template.version}</strong></div>
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>
-                  Status: <strong style={{ color: template.status === "ACTIVE" ? "#16a34a" : template.status === "DRAFT" ? "#925b0b" : "#64748b" }}>{template.status}</strong>
+                  Status: <strong style={{ color: template.status === "ACTIVE" ? "#16a34a" : template.status === "DRAFT" ? "var(--theme-warning)" : "var(--theme-neutral)" }}>{template.status}</strong>
                 </div>
 
                 <div style={{ marginTop: "16px", display: "grid", gap: "8px" }}>
@@ -420,7 +420,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       {working ? "Working…" : "Clone to brand draft"}
                     </button>
                   )}
-                  {actionError && <div role="alert" style={{ fontSize: "11px", color: "#b91c1c" }}>⚠️ {actionError}</div>}
+                  {actionError && <div role="alert" style={{ fontSize: "11px", color: "var(--theme-danger)" }}>⚠️ {actionError}</div>}
                   {actionNotice && <div style={{ fontSize: "11px", color: "#15803d" }}>✅ {actionNotice}</div>}
                 </div>
               </div>
