@@ -66,6 +66,7 @@ interface RequestRow {
   readonly requested_by_subject_id: string;
   readonly decided_by_subject_id: string | null;
   readonly decision_reason: string | null;
+  readonly correlation_id: string;
   readonly idempotency_key: string;
 }
 
@@ -157,6 +158,7 @@ export async function listEnterpriseProfileConfigurationRequests(
        requested_by_subject_id,
        decided_by_subject_id,
        decision_reason,
+       correlation_id,
        idempotency_key
      FROM platform.enterprise_change_requests
      WHERE tenant_id = $1::uuid
@@ -218,6 +220,7 @@ export async function requestEnterpriseProfileConfiguration(
        requested_by_subject_id,
        decided_by_subject_id,
        decision_reason,
+       correlation_id,
        idempotency_key
      FROM platform.enterprise_change_requests
      WHERE tenant_id = $1::uuid
@@ -267,6 +270,7 @@ export async function requestEnterpriseProfileConfiguration(
        requested_by_subject_id,
        decided_by_subject_id,
        decision_reason,
+       correlation_id,
        idempotency_key`,
     [
       requestId,
@@ -331,6 +335,7 @@ export async function approveEnterpriseProfileConfiguration(
        requested_by_subject_id,
        decided_by_subject_id,
        decision_reason,
+       correlation_id,
        idempotency_key
      FROM platform.enterprise_change_requests
      WHERE tenant_id = $1::uuid
@@ -429,6 +434,7 @@ export async function approveEnterpriseProfileConfiguration(
        requested_by_subject_id,
        decided_by_subject_id,
        decision_reason,
+       correlation_id,
        idempotency_key`,
     [
       input.tenantId,
@@ -451,7 +457,7 @@ export async function approveEnterpriseProfileConfiguration(
       eventVersion: 1,
       occurredAt: new Date(),
       actorSubjectId: input.decidedBySubjectId,
-      correlationId: row.idempotency_key,
+      correlationId: row.correlation_id,
       payload: {
         requestId: input.requestId,
         name: payload.name,
