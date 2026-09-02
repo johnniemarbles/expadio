@@ -6,11 +6,12 @@ const manual = readFileSync(new URL('../app/api/communications/domains/route.ts'
 const cloudflare = readFileSync(new URL('../app/api/communications/domains/cloudflare/route.ts', import.meta.url), 'utf8');
 const guard = readFileSync(new URL('../lib/communication-domain-admin.ts', import.meta.url), 'utf8');
 
-test('sending-domain creation is admin gated and tenant scoped', () => {
+test('sending-domain creation is admin gated, activation-aware and tenant scoped', () => {
   assert.match(manual, /requireCommunicationDomainAdmin/);
   assert.match(cloudflare, /requireCommunicationDomainAdmin/);
   assert.match(guard, /PLATFORM_SUPER_ADMIN/);
   assert.match(guard, /TENANT_ADMIN/);
+  assert.match(guard, /assignment\.valid_from <= now\(\)/);
   assert.match(guard, /role\.ownership_scope = 'TENANT' AND role\.tenant_id = \$3::uuid/);
   assert.match(manual, /Sending-domain administration is required/);
   assert.match(cloudflare, /Sending-domain administration is required/);
@@ -32,8 +33,12 @@ test('sending-domain creation validates domain-address ownership and defaults co
   assert.match(cloudflare, /ARRAY\['transactional'\], false, 'PENDING'/);
 });
 
-test('default sender changes demote the previous active tenant default atomically', () => {
-  assert.match(manual, /SET is_default = false/);
-  assert.match(manual, /scope = 'TENANT'/);
-  assert.match(manual, /is_default = EXCLUDED\.is_default/);
+test('default sender changes demote and replace inside one transaction', () => {
+  const begin = manual.indexOf("client.query('BEGIN')");
+  const demote = manual.indexOf('SET is_default = false');
+  const upsert = manual.indexOf('INSERT INTO platform.communication_sender_identities', demote);
+  const commit = manual.indexOf("client.query('COMMIT')", upsert);
+  assert.ok(begin >= 0 && demote > begin && upsert > demote && commit > upsert);
+  assert.match(manual, /client\.query\('ROLLBACK'\)/);
+  assert.match(manual, /verification_status = platform\.communication_sender_identities\.verification_status/);
 });
