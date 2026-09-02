@@ -1505,53 +1505,53 @@ export async function evaluateOrganizationSetupAutomatedRequirements(
     return { plan, evaluations: [] };
   }
 
-  const [requirements, organization, operatingEntity, setupOwner] = await Promise.all([
-    listOrganizationSetupRequirements(client, {
-      tenantId: input.tenantId,
-      setupPlanId: input.setupPlanId,
-    }),
-    client.query<{
-      readonly name: string;
-      readonly organization_kind: string;
-      readonly parent_organization_id: string | null;
-    }>(
-      `SELECT name, organization_kind, parent_organization_id
-         FROM platform.organizations
-        WHERE tenant_id = $1::uuid
-          AND organization_id = $2::uuid
-        LIMIT 1`,
-      [input.tenantId, plan.organizationId],
-    ),
-    client.query<{
-      readonly organization_legal_entity_binding_id: string;
-      readonly legal_entity_id: string;
-    }>(
-      `SELECT
-         binding.organization_legal_entity_binding_id,
-         binding.legal_entity_id
-       FROM platform.organization_legal_entity_bindings binding
-       JOIN platform.legal_entities legal_entity
-         ON legal_entity.tenant_id = binding.tenant_id
-        AND legal_entity.legal_entity_id = binding.legal_entity_id
-       WHERE binding.tenant_id = $1::uuid
-         AND binding.organization_id = $2::uuid
-         AND binding.binding_role = 'OPERATED_BY'
-         AND binding.status = 'ACTIVE'
-         AND binding.valid_from <= now()
-         AND (binding.valid_until IS NULL OR binding.valid_until > now())
-         AND legal_entity.status = 'VERIFIED'
-       ORDER BY binding.valid_from DESC, binding.organization_legal_entity_binding_id
-       LIMIT 1`,
-      [input.tenantId, plan.organizationId],
-    ),
+  const requirements = await listOrganizationSetupRequirements(client, {
+    tenantId: input.tenantId,
+    setupPlanId: input.setupPlanId,
+  });
+  const organization = await client.query<{
+    readonly name: string;
+    readonly organization_kind: string;
+    readonly parent_organization_id: string | null;
+  }>(
+    `SELECT name, organization_kind, parent_organization_id
+       FROM platform.organizations
+      WHERE tenant_id = $1::uuid
+        AND organization_id = $2::uuid
+      LIMIT 1`,
+    [input.tenantId, plan.organizationId],
+  );
+  const operatingEntity = await client.query<{
+    readonly organization_legal_entity_binding_id: string;
+    readonly legal_entity_id: string;
+  }>(
+    `SELECT
+       binding.organization_legal_entity_binding_id,
+       binding.legal_entity_id
+     FROM platform.organization_legal_entity_bindings binding
+     JOIN platform.legal_entities legal_entity
+       ON legal_entity.tenant_id = binding.tenant_id
+      AND legal_entity.legal_entity_id = binding.legal_entity_id
+     WHERE binding.tenant_id = $1::uuid
+       AND binding.organization_id = $2::uuid
+       AND binding.binding_role = 'OPERATED_BY'
+       AND binding.status = 'ACTIVE'
+       AND binding.valid_from <= now()
+       AND (binding.valid_until IS NULL OR binding.valid_until > now())
+       AND legal_entity.status = 'VERIFIED'
+     ORDER BY binding.valid_from DESC, binding.organization_legal_entity_binding_id
+     LIMIT 1`,
+    [input.tenantId, plan.organizationId],
+  );
+  const setupOwner =
     plan.primaryAdministratorSubjectId === null
-      || plan.primaryAdministratorIssuer === null
-      ? Promise.resolve({ rows: [], rowCount: 0 } as OrganizationSetupSqlResult<{
+    || plan.primaryAdministratorIssuer === null
+      ? ({ rows: [], rowCount: 0 } as OrganizationSetupSqlResult<{
           readonly setup_participant_id: string;
           readonly subject_id: string;
           readonly issuer: string | null;
         }>)
-      : client.query<{
+      : await client.query<{
           readonly setup_participant_id: string;
           readonly subject_id: string;
           readonly issuer: string | null;
@@ -1573,8 +1573,7 @@ export async function evaluateOrganizationSetupAutomatedRequirements(
             plan.primaryAdministratorSubjectId,
             plan.primaryAdministratorIssuer,
           ],
-        ),
-  ]);
+        );
 
   const org = organization.rows[0];
   const binding = operatingEntity.rows[0];
