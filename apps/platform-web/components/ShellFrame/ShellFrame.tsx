@@ -7,12 +7,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
 
+const GROUP_ORDER = new Map([
+  ["Workspace", 0],
+  ["Growth", 1],
+  ["Decision Fabric", 2],
+  ["Agent Intelligence", 3],
+  ["Administration", 4],
+]);
+
 function matchesSection(pathname: string, section: WorkspaceSection) {
   return section.href === "/" ? pathname === "/" : pathname === section.href || pathname.startsWith(section.href + "/");
 }
 
 function sectionDepth(section: WorkspaceSection) {
   return section.href === "/" ? 0 : section.href.split("/").filter(Boolean).length;
+}
+
+function priorityRank(section: WorkspaceSection) {
+  return section.priority === "secondary" ? 1 : 0;
+}
+
+function groupRank(group: string) {
+  return GROUP_ORDER.get(group) ?? 99;
 }
 
 export function ShellFrame({ children, sections, overview, workspaceContext, brandAppOrigin }: { children: React.ReactNode; sections: WorkspaceSection[]; overview: PlatformOverview; workspaceContext: PlatformWorkspaceContext; brandAppOrigin: string | null; }) {
@@ -34,6 +50,21 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   const currentOrganization = allowedOrganizations.find((item) => item.id === searchParams.get("org")) ?? allowedOrganizations[0] ?? overview.organization;
   const selectableOrganizations = allowedOrganizations.length > 0 ? allowedOrganizations : [currentOrganization];
   const currentSection = [...sections].sort((a, b) => sectionDepth(b) - sectionDepth(a)).find((item) => matchesSection(pathname, item)) ?? sections[0];
+  const navGroups = useMemo(() => {
+    const grouped = new Map<string, WorkspaceSection[]>();
+    for (const section of sections) {
+      const group = section.group ?? "Workspace";
+      grouped.set(group, [...(grouped.get(group) ?? []), section]);
+    }
+    return [...grouped.entries()]
+      .sort(([left], [right]) => groupRank(left) - groupRank(right) || left.localeCompare(right))
+      .map(([group, items]) => ({
+        group,
+        items: [...items].sort((left, right) =>
+          priorityRank(left) - priorityRank(right) || sectionDepth(left) - sectionDepth(right) || left.label.localeCompare(right.label),
+        ),
+      }));
+  }, [sections]);
   const brandHref = useMemo(() => {
     if (!brandAppOrigin || !currentAccount || !currentOrganization) return null;
     const url = new URL('/handoff', brandAppOrigin);
@@ -129,7 +160,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   return <div className={styles.appShell} data-expadio-theme="platform">
     <aside ref={sidebarRef} className={[styles.sidebar, mobileOpen ? styles.sidebarOpen : ""].join(" ")} aria-label="Platform navigation">
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
-      <nav className={styles.primaryNav} aria-label="Platform sections"><p className={styles.navLabel}>Workspace</p>{sections.map((section) => <Link href={href(section.href)} className={[styles.navItem, currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</nav>
+      <nav className={styles.primaryNav} aria-label="Platform sections">{navGroups.map(({ group, items }) => <section className={styles.navGroup} key={group} aria-label={group}><p className={styles.navLabel}>{group}</p><div className={styles.navGroupItems}>{items.map((section) => <Link href={href(section.href)} className={[styles.navItem, section.priority === "secondary" ? styles.navItemSecondary : "", currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</div></section>)}</nav>
       <div className={styles.sidebarFoot}>
         <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--theme-success)', boxShadow: '0 0 0 4px color-mix(in srgb,var(--theme-success) 12%,transparent)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
         <div ref={accountAreaRef} className={styles.accountArea} style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
