@@ -19,9 +19,14 @@ test("conversion is a governed, tenant-scoped, atomic transaction", () => {
   assert.match(convertRoute, /ROLLBACK/);
 });
 
-test("conversion promotes/creates a CUSTOMER account and marks the lead WON", () => {
+test("conversion promotes/creates an organization-bound CUSTOMER account and marks the lead WON", () => {
   assert.match(convertRoute, /lifecycle_stage = 'CUSTOMER'/);
-  assert.match(convertRoute, /lifecycle_stage\)\s*\n\s*VALUES \(\$1::uuid, \$2, 'CUSTOMER'\)/);
+  assert.match(convertRoute, /AND organization_id = \$2::uuid/);
+  assert.match(
+    convertRoute,
+    /crm_accounts \(tenant_id, organization_id, name, lifecycle_stage\)\s*\n\s*VALUES \(\$1::uuid, \$2::uuid, \$3, 'CUSTOMER'\)/,
+  );
+  assert.match(convertRoute, /\[context\.tenantId, leadRow\.organization_id, leadRow\.title\.slice\(0, 200\)\]/);
   assert.match(convertRoute, /stage = 'WON'/);
 });
 
