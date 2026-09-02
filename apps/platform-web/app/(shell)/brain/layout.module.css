@@ -29,11 +29,12 @@
   font-weight: 500;
   padding-bottom: 0.75rem;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  transition: color var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
 }
 
 .navLink:hover {
   color: var(--theme-text-primary);
+  transform: translateY(-1px);
 }
 
 .active {
@@ -50,4 +51,14 @@
 
 .nav { overflow-x:auto; padding-bottom:2px; scrollbar-width:thin; }
 .navLink { min-height:44px; display:flex; align-items:center; white-space:nowrap; }
-@media (max-width:780px) { .header { padding:1rem 1rem 0; } .nav { gap:1rem; } .main { padding:1rem; overflow:visible; } }
+
+@media (max-width:780px) {
+  .header { padding:1rem 1rem 0; }
+  .nav { gap:1rem; }
+  .main { padding:1rem; overflow:visible; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink { transition: none; }
+  .navLink:hover { transform: none; }
+}
