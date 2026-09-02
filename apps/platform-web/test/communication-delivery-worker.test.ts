@@ -50,15 +50,27 @@ test('worker claim is lease-safe and provider call is outside the claim transact
   assert.match(worker, /DELIVERY_CLAIMED/);
   assert.match(worker, /claim_token = \$3::uuid[\s\S]*claim_expires_at > \$6::timestamptz/);
   assert.match(worker, /ResendEmailAdapter/);
+  assert.match(worker, /TwilioSmsWhatsappAdapter/);
+  assert.match(worker, /TwilioVoiceAdapter/);
 });
 
-test('worker rechecks compliance and uses governed service credential lease', () => {
+test('worker rechecks compliance and uses governed service credential leases', () => {
   assert.match(worker, /evaluatePersistedCommunicationPreflight/);
   assert.match(worker, /PostgresCommunicationSuppressionRepository/);
   assert.match(worker, /PostgresCommunicationConsentRepository/);
   assert.match(worker, /actorKind: 'service'/);
   assert.match(worker, /createGovernedCredentialLeaseRuntime/);
   assert.match(worker, /governedResendApiTokenProvider/);
+  assert.match(worker, /governedTwilioCredentialsProvider/);
+  assert.doesNotMatch(worker, /delegatedSecretResolver\.resolve/);
+});
+
+test('worker supports only explicit provider/channel/adapter execution tuples', () => {
+  assert.match(worker, /providerKey === 'resend'[\s\S]*providerType === 'email'[\s\S]*adapterKey === 'resend-email-v1'/);
+  assert.match(worker, /providerKey === 'twilio-sms'[\s\S]*providerType === 'sms'[\s\S]*adapterKey === 'twilio-sms-whatsapp-v1'/);
+  assert.match(worker, /providerKey === 'twilio-whatsapp'[\s\S]*providerType === 'whatsapp'[\s\S]*adapterKey === 'twilio-sms-whatsapp-v1'/);
+  assert.match(worker, /providerKey === 'twilio-voice'[\s\S]*providerType === 'voice'[\s\S]*adapterKey === 'twilio-voice-v1'/);
+  assert.match(worker, /DELIVERY_CONNECTOR_UNAVAILABLE/);
 });
 
 test('internal runner is machine authenticated, tenant bound and bounded', () => {
@@ -69,11 +81,11 @@ test('internal runner is machine authenticated, tenant bound and bounded', () =>
   assert.match(route, /RESET app\.tenant_id/);
 });
 
-
 test('provider side effects are heartbeat-protected and acceptance is reconcilable after claim loss', () => {
   assert.match(worker, /renewCommunicationDeliveryClaim/);
   assert.match(worker, /recordCommunicationProviderAttempt/);
   assert.match(worker, /reconcileAcceptedCommunicationProviderAttempt/);
+  assert.match(worker, /providerKey: selected\.providerKey/);
   assert.match(reconciliation, /DELIVERY_CLAIM_RENEWED/);
   assert.match(reconciliation, /PROVIDER_ACCEPTED_RECONCILED/);
   assert.match(reconciliationMigration, /communication_provider_attempts/);
