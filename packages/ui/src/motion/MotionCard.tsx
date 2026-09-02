@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import styles from './MotionCard.module.css';
 
 export interface MotionCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -13,7 +13,7 @@ export function MotionCard({ children, interactive = false, delay = 0, style, cl
     <div
       {...props}
       className={classes}
-      style={{ ...style, '--motion-delay': `${delay}ms` } as React.CSSProperties}
+      style={{ ...style, '--motion-delay': `${delay}ms` } as CSSProperties}
     >
       {children}
     </div>
