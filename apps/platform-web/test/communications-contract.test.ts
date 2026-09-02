@@ -6,6 +6,14 @@ const page = readFileSync(new URL("../app/(shell)/communications/page.tsx", impo
 const providerRoute = readFileSync(new URL("../app/api/communications/providers/route.ts", import.meta.url), "utf8");
 const providerDetailRoute = readFileSync(new URL("../app/api/communications/providers/[key]/route.ts", import.meta.url), "utf8");
 const providerModal = readFileSync(new URL("../app/(shell)/communications/ProviderModal.tsx", import.meta.url), "utf8");
+const domainConfigModal = readFileSync(
+  new URL("../app/(shell)/communications/DomainConfigModal.tsx", import.meta.url),
+  "utf8",
+);
+const domainConfigModalStyles = readFileSync(
+  new URL("../app/(shell)/communications/DomainConfigModal.module.css", import.meta.url),
+  "utf8",
+);
 const dashboard = readFileSync(
   new URL("../app/(shell)/communications/CommunicationsDashboardClient.tsx", import.meta.url),
   "utf8",
@@ -114,6 +122,31 @@ test("connector detail mutations resolve the real tenant, not the demo scaffold"
   assert.match(providerDetailMutationRoute, /withTenantClient/);
   assert.doesNotMatch(providerDetailMutationRoute, /00000000-0000-0000-0000-000000000001/);
   assert.doesNotMatch(providerDetailMutationRoute, /@clerk\/nextjs\/server/);
+});
+
+test("domain config modal surfaces governed DNS endpoints", () => {
+  assert.match(dashboard, /<DomainConfigModal/);
+  assert.match(domainConfigModal, /\/api\/communications\/domains/);
+  assert.match(domainConfigModal, /\/api\/communications\/domains\/cloudflare/);
+  assert.match(domainConfigModal, /\/verify/);
+  assert.match(domainConfigModal, /method:\s*"DELETE"/);
+  assert.match(domainConfigModal, /Retire the sending domain/);
+});
+
+test("domain config modal uses governed dashboard styling primitives", () => {
+  assert.match(domainConfigModal, /DomainConfigModal\.module\.css/);
+  assert.match(domainConfigModal, /styles\.backdrop/);
+  assert.match(domainConfigModal, /styles\.dialog/);
+  assert.match(domainConfigModal, /verificationClass/);
+  assert.match(domainConfigModal, /recordStatusClass/);
+  assert.match(domainConfigModalStyles, /var\(--theme-primary\)/);
+  assert.match(domainConfigModalStyles, /var\(--theme-border\)/);
+  assert.match(domainConfigModalStyles, /var\(--theme-danger\)/);
+  assert.doesNotMatch(domainConfigModal, /React\.CSSProperties/);
+  assert.doesNotMatch(domainConfigModal, /style=\{/);
+  assert.doesNotMatch(domainConfigModal, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(domainConfigModalStyles, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(domainConfigModalStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
 });
 
 test("connector actions surface the governed custody endpoints", () => {
