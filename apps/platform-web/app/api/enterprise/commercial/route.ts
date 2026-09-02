@@ -386,7 +386,6 @@ export async function POST(request: Request) {
             actorSubjectId: context.subjectId,
             grantId: optionalString(body.grantId) ?? undefined,
             evidenceRefs: stringArray(body.evidenceRefs, 'evidenceRefs'),
-            idempotencyKey: requireIdempotencyKey(),
           });
         }
 
@@ -400,6 +399,7 @@ export async function POST(request: Request) {
             requestedBySubjectId: context.subjectId,
             activationId: optionalString(body.activationId) ?? undefined,
             evidenceRefs: stringArray(body.evidenceRefs, 'evidenceRefs'),
+            idempotencyKey: requireIdempotencyKey(),
           });
         }
 
