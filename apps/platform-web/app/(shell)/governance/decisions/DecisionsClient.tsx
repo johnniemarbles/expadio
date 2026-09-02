@@ -25,9 +25,9 @@ export interface GovernedDecision {
 
 const outcomeColor = (o: string): string => {
   const up = o.toUpperCase();
-  if (up.includes('APPROVE')) return '#166534';
-  if (up.includes('REJECT') || up.includes('DENY') || up.includes('RETURN')) return '#b91c1c';
-  return '#475569';
+  if (up.includes('APPROVE')) return 'var(--theme-success)';
+  if (up.includes('REJECT') || up.includes('DENY') || up.includes('RETURN')) return 'var(--theme-danger)';
+  return 'var(--theme-text-secondary)';
 };
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
@@ -69,14 +69,14 @@ export function DecisionsClient({ initial, verticalKey = null, queryString = '' 
               const sep = queryString ? '&' : '?';
               return `${queryString}${workType.trim() !== '' ? `${sep}workType=${encodeURIComponent(workType.trim())}` : ''}`;
             })()}`}
-            style={{ ...inp, textDecoration: 'none', color: '#2563eb', whiteSpace: 'nowrap' }}
+            style={{ ...inp, textDecoration: 'none', color: 'var(--theme-primary)', whiteSpace: 'nowrap' }}
           >
             Download CSV
           </a>
         </div>
       </div>
 
-      {error && <p role="alert" style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
+      {error && <p role="alert" style={{ color: 'var(--theme-danger)', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
