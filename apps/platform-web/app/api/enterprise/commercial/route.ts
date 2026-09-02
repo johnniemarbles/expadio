@@ -88,6 +88,25 @@ export async function GET(request: Request) {
       const enterpriseId = enterprise.rows[0]?.enterprise_id;
       if (!enterpriseId) throw new Error('ENTERPRISE_CONTEXT_REQUIRED');
 
+      const organizations = await client.query(
+        `SELECT organization_id, name, parent_organization_id, organization_kind, status
+           FROM platform.organizations
+          WHERE tenant_id = $1::uuid
+            AND enterprise_id = $2::uuid
+            AND organization_id = ANY($3::uuid[])
+          ORDER BY name, organization_id`,
+        [context.tenantId, enterpriseId, organizationIds],
+      );
+      const legalEntities = await client.query(
+        `SELECT legal_entity_id, legal_name, entity_type,
+                jurisdiction_country_code, jurisdiction_subdivision_code, status
+           FROM platform.legal_entities
+          WHERE tenant_id = $1::uuid
+            AND enterprise_id = $2::uuid
+            AND status = 'VERIFIED'
+          ORDER BY legal_name, legal_entity_id`,
+        [context.tenantId, enterpriseId],
+      );
       const territories = await client.query(
         `SELECT territory_id, parent_territory_id, territory_key, name,
                 territory_kind, country_code, subdivision_code, locality_name, status
@@ -197,6 +216,8 @@ export async function GET(request: Request) {
 
       return {
         enterpriseId,
+        organizations: organizations.rows,
+        legalEntities: legalEntities.rows,
         territories: territories.rows,
         agreements: agreements.rows,
         appointments: appointments.rows,
