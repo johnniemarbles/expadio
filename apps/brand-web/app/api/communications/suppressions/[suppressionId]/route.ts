@@ -5,6 +5,8 @@ import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransa
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ suppressionId: string }> },
@@ -12,6 +14,9 @@ export async function DELETE(
   try {
     const context = await resolveBrandContext();
     const suppressionId = decodeURIComponent((await params).suppressionId);
+    if (!UUID_RE.test(suppressionId)) {
+      return NextResponse.json({ error: 'suppressionId must be a valid UUID.' }, { status: 400 });
+    }
 
     return await withBrandTransaction(context, async (client) => {
       if (!await hasBrandGovernanceForOrganization(client, context.subjectId, context.organizationId)) {
