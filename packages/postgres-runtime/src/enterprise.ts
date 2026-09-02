@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
 import { startOrganizationSetup } from './enterprise-onboarding.ts';
+import { publishGovernedEntityRelationship } from './entity-graph.ts';
 
 export interface EnterpriseSqlResult<Row = Record<string, unknown>> {
   readonly rows: readonly Row[];
@@ -405,6 +406,22 @@ export async function approveCreateOrganizationRequest(
       name,
     ],
   );
+
+  await publishGovernedEntityRelationship(client, {
+    tenantId: input.tenantId,
+    sourceEntityType: 'OPERATING_UNIT',
+    sourceEntityId: organizationId,
+    relationshipKey: 'OPERATIONAL_PARENT',
+    targetEntityType: 'OPERATING_UNIT',
+    targetEntityId: parentOrganizationId,
+    actorSubjectId: input.decidedBySubjectId,
+    provenanceSource: 'SYSTEM',
+    decisionReference: `enterprise-change-request:${input.requestId}`,
+    attributes: {
+      enterpriseId: row.enterprise_id,
+      source: 'enterprise.create-organization.approval',
+    },
+  });
 
   const updated = await client.query<EnterpriseChangeRequestRow>(
     `UPDATE platform.enterprise_change_requests
