@@ -25,7 +25,7 @@ test('the governed-workflows route is a membership read behind RLS', () => {
 test('the oversight surface lists and filters in-flight work', () => {
   assert.match(client, /In-flight work/);
   assert.match(client, /All work types/);
-  assert.match(nav, /href: '\/governance\/workflows'/);
+  assert.doesNotMatch(nav, /href: '\/governance\/workflows'/);
 });
 
 test('in-flight work type and stage speak the active pack language', () => {

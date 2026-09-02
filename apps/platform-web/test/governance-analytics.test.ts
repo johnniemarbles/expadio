@@ -27,7 +27,7 @@ test('the analytics route is a membership read behind RLS and the page links fro
   const page = read('../app/(shell)/governance/analytics/page.tsx');
   assert.match(page, /Approval rate by work type/);
   const nav = read('../app/api/workspaces/route.ts');
-  assert.match(nav, /href: '\/governance\/analytics'/);
+  assert.doesNotMatch(nav, /href: '\/governance\/analytics'/);
   // Pack-aware: the work-type column reads the active vertical's language.
   assert.match(page, /\/api\/tenancy\/vertical/);
   assert.match(page, /resolveWorkTypeLabel\(pack, s\.workTypeKey\)/);

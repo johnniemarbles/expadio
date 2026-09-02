@@ -55,7 +55,7 @@ test('the queue surface lists pending work and links to each vertical', () => {
   assert.match(client, /'vendor\.onboarding': '\/vendors'/);
   assert.match(client, /'expense\.reimbursement': '\/expenses'/);
   assert.match(client, /'access\.request': '\/access-requests'/);
-  assert.match(nav, /href: '\/governance\/queue'/);
+  assert.doesNotMatch(nav, /href: '\/governance\/queue'/);
 });
 
 test('the review queue surface uses governed dashboard styling primitives', () => {

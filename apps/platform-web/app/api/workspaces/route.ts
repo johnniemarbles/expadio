@@ -28,7 +28,6 @@ export async function GET(request: Request) {
       { id: 'platform_comms', label: 'Provider Infrastructure', short: 'PI', href: '/communications', group: 'Infrastructure', priority: 'primary' },
       { id: 'platform_brain', label: 'AI & Brain Governance', short: 'AI', href: '/brain', group: 'Infrastructure', priority: 'primary' },
       { id: 'platform_agents', label: 'Agent Operations', short: 'AO', href: '/agents', group: 'Infrastructure', priority: 'primary' },
-      { id: 'platform_agent_bindings', label: 'Agent Bindings', short: 'AB', href: '/agents/bindings', group: 'Infrastructure', priority: 'secondary' },
       { id: 'platform_usage', label: 'Usage & Metering', short: 'UM', href: '/usage', group: 'Infrastructure', priority: 'secondary' },
       { id: 'platform_data', label: 'Data Pipelines', short: 'DP', href: '/data/pipelines', group: 'Infrastructure', priority: 'secondary' },
       { id: 'platform_context', label: 'Context Engine', short: 'CE', href: '/context-engine', group: 'Infrastructure', priority: 'secondary' },
@@ -36,7 +35,6 @@ export async function GET(request: Request) {
       { id: 'platform_governance', label: 'Governance Center', short: 'GC', href: '/governance', group: 'Governance', priority: 'primary' },
       { id: 'platform_authority', label: 'Platform Authority', short: 'PA', href: '/authority', group: 'Governance', priority: 'secondary' },
       { id: 'platform_workflows', label: 'Workflow Infrastructure', short: 'WI', href: '/workflows', group: 'Governance', priority: 'primary' },
-      { id: 'platform_blueprints', label: 'Master Blueprints', short: 'MB', href: '/workflows/blueprints', group: 'Governance', priority: 'secondary' },
       { id: 'platform_audit', label: 'Audit', short: 'AU', href: '/audit', group: 'Governance', priority: 'secondary' },
 
       { id: 'platform_modules', label: 'Apps & Entitlements', short: 'AE', href: '/modules', group: 'Administration', priority: 'primary' },
@@ -44,7 +42,6 @@ export async function GET(request: Request) {
       { id: 'platform_access_requests', label: 'Access Requests', short: 'AR', href: '/access-requests', group: 'Administration', priority: 'secondary' },
       { id: 'platform_config', label: 'Platform Configuration', short: 'PC', href: '/configuration', group: 'Administration', priority: 'primary' },
       { id: 'platform_appearance', label: 'Theme Governance', short: 'TG', href: '/appearance', group: 'Administration', priority: 'secondary' },
-      { id: 'platform_credentials', label: 'Credential Custody', short: 'CU', href: '/configuration/credentials', group: 'Administration', priority: 'secondary' },
     ];
 
     return NextResponse.json(workspaces, { headers: { 'Cache-Control': 'private, no-store' } });

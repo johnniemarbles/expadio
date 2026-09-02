@@ -4,10 +4,10 @@ import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('Platform navigation exposes tenant modules and Brand handoff', () => {
+test('Platform navigation exposes governed entitlements and Brand handoff', () => {
   const workspaces = read('../app/api/workspaces/route.ts');
   const shell = read('../components/ShellFrame/ShellFrame.tsx');
-  assert.match(workspaces, /Tenant Apps & Modules/);
+  assert.match(workspaces, /Apps & Entitlements/);
   assert.match(workspaces, /href: '\/modules'/);
   assert.match(shell, /new URL\('\/handoff'/);
   assert.match(shell, /Open Brand Workspace/);

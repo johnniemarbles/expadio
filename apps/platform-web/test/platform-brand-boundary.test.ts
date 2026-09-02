@@ -8,7 +8,7 @@ test('Platform navigation contains control-plane surfaces only', () => {
   const route = read('../app/api/workspaces/route.ts');
   assert.match(route, /hasPlatformAdministrationRole/);
   assert.match(route, /PLATFORM_ACCESS_REQUIRED/);
-  for (const href of ['/crm', '/gtm', '/dentex', '/vendors', '/expenses']) {
+  for (const href of ['/crm', '/gtm', '/dentex', '/vendors', '/expenses', '/configuration/credentials', '/agents/bindings', '/workflows/blueprints']) {
     assert.equal(route.includes("href: '" + href + "'"), false);
   }
   assert.match(route, /AI & Brain Governance/);

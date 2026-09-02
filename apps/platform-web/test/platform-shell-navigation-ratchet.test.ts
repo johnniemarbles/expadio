@@ -25,24 +25,25 @@ test('Platform shell keeps secondary navigation visually subordinate', () => {
   assert.match(route, /priority: 'secondary'/);
 });
 
-test('Platform shell preserves legacy oversight destinations while grouping them', () => {
+test('Platform shell exposes control-plane destinations without nested oversight clutter', () => {
+  assert.match(route, /href: '\/authority'/);
+  assert.match(route, /href: '\/governance'/);
   for (const href of [
-    "href: '/authority'",
     "href: '/governance/analytics'",
     "href: '/governance/decisions'",
     "href: '/governance/workflows'",
     "href: '/governance/pending'",
+    "href: '/governance/queue'",
   ]) {
-    assert.match(route, new RegExp(href.replaceAll('/', '\\/')));
+    assert.doesNotMatch(route, new RegExp(href.replaceAll('/', '\\/')));
   }
-  assert.match(route, /group: 'Decision Fabric'/);
+  assert.match(route, /group: 'Governance'/);
 });
-
 test('Platform shell keeps deepest route active before broader parent routes', () => {
   assert.match(shell, /sort\(\(a, b\) => sectionDepth\(b\) - sectionDepth\(a\)\)/);
   assert.match(shell, /matchesSection\(pathname, item\)/);
   assert.match(route, /href: '\/agents'/);
-  assert.match(route, /href: '\/agents\/bindings'/);
+  assert.doesNotMatch(route, /href: '\/agents\/bindings'/);
   assert.match(route, /href: '\/workflows'/);
-  assert.match(route, /href: '\/workflows\/blueprints'/);
+  assert.doesNotMatch(route, /href: '\/workflows\/blueprints'/);
 });

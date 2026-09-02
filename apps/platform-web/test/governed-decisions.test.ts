@@ -28,7 +28,7 @@ test('the oversight surface lists and filters decisions', () => {
   assert.match(client, /Governed decisions/);
   assert.match(client, /All work types/);
   assert.match(client, /Evidence/);
-  assert.match(nav, /href: '\/governance\/decisions'/);
+  assert.doesNotMatch(nav, /href: '\/governance\/decisions'/);
 });
 
 test('the decision log work type and stage speak the active pack language', () => {
