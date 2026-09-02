@@ -76,12 +76,25 @@ export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
         // fresh workspace headers instead of trusting forwarded x-expadio IDs.
         const tenantId = incoming.get('x-expadio-tenant-id');
         const organizationId = incoming.get('x-expadio-organization-id');
-        if (tenantId || organizationId) {
+        const tenantSource = incoming.get('x-expadio-tenant-source');
+        const organizationSource = incoming.get('x-expadio-organization-source');
+        if (
+          (tenantId && tenantSource === 'query')
+          || (organizationId && organizationSource === 'query')
+        ) {
           const scopedUrl = new URL(url);
-          if (tenantId && !scopedUrl.searchParams.has('account')) {
+          if (
+            tenantId
+            && tenantSource === 'query'
+            && !scopedUrl.searchParams.has('account')
+          ) {
             scopedUrl.searchParams.set('account', tenantId);
           }
-          if (organizationId && !scopedUrl.searchParams.has('org')) {
+          if (
+            organizationId
+            && organizationSource === 'query'
+            && !scopedUrl.searchParams.has('org')
+          ) {
             scopedUrl.searchParams.set('org', organizationId);
           }
           url = scopedUrl.toString();
