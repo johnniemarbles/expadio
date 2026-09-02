@@ -13,7 +13,16 @@ test('Brand suppression management is organization scoped and governance gated',
   assert.match(item, /hasBrandGovernanceForOrganization/);
 });
 
+test('Brand suppression register supports status filtering and reachable pagination', () => {
+  assert.match(collection, /status = url\.searchParams\.get\('status'\)/);
+  assert.match(collection, /page = Math\.max/);
+  assert.match(collection, /LIMIT \$4 OFFSET \$5/);
+  assert.match(collection, /hasMore/);
+});
+
 test('Brand can revoke only active suppressions owned by the selected organization', () => {
+  assert.match(item, /UUID_RE\.test\(suppressionId\)/);
+  assert.match(item, /status: 400/);
   assert.match(item, /suppression_id = \$1::uuid/);
   assert.match(item, /tenant_id = \$2::uuid/);
   assert.match(item, /organization_id = \$3::uuid/);
