@@ -193,7 +193,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
     >
       <div
         style={{
-          background: "var(--surface, var(--theme-text-inverse)fff)",
+          background: "var(--theme-surface-raised)",
           border: "1px solid var(--theme-border)",
           borderRadius: "16px",
           width: "100%",
@@ -284,7 +284,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       fontSize: "11px",
                       fontWeight: 700,
                       cursor: "pointer",
-                      background: previewMode === "rendered" ? "var(--theme-text-inverse)" : "transparent",
+                      background: previewMode === "rendered" ? "var(--theme-surface-muted)" : "transparent",
                       color: previewMode === "rendered" ? "var(--theme-text-primary)" : "var(--theme-text-muted)",
                       boxShadow: previewMode === "rendered" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
                     }}
@@ -301,7 +301,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       fontSize: "11px",
                       fontWeight: 700,
                       cursor: "pointer",
-                      background: previewMode === "source" ? "var(--theme-text-inverse)" : "transparent",
+                      background: previewMode === "source" ? "var(--theme-surface-muted)" : "transparent",
                       color: previewMode === "source" ? "var(--theme-text-primary)" : "var(--theme-text-muted)",
                       boxShadow: previewMode === "source" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
                     }}
@@ -323,14 +323,14 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                   color: previewMode === "rendered" ? "var(--theme-text-primary)" : "var(--theme-text-muted)",
                   fontFamily: previewMode === "source" ? "monospace" : "inherit",
                   fontSize: previewMode === "source" ? "12px" : "14px",
-                  var(--theme-text-inverse)Space: previewMode === "source" ? "pre-wrap" : "normal",
+                  whiteSpace: previewMode === "source" ? "pre-wrap" : "normal",
                 }}
               >
                 {previewMode === "rendered" ? (
                   template.contentFormat === "HTML" ? (
                     <div dangerouslySetInnerHTML={{ __html: getRenderedContent(template.body) }} />
                   ) : (
-                    <div style={{ var(--theme-text-inverse)Space: "pre-wrap", lineHeight: 1.6 }}>{getRenderedContent(template.body)}</div>
+                    <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{getRenderedContent(template.body)}</div>
                   )
                 ) : (
                   template.body
