@@ -33,13 +33,13 @@ const sinceLabel = (iso: string): string => {
 
 const ageColor = (iso: string): string => {
   const h = (Date.now() - new Date(iso).getTime()) / 3_600_000;
-  if (h >= 72) return '#b91c1c';
-  if (h >= 24) return '#b45309';
-  return '#64748b';
+  if (h >= 72) return 'var(--theme-danger)';
+  if (h >= 24) return 'var(--theme-warning)';
+  return 'var(--theme-neutral)';
 };
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#475569', background: 'var(--surface-2, #f1f5f9)', border: '1px solid var(--line, #e2e8f0)', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
+const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--theme-text-secondary)', background: 'var(--surface-2, #f1f5f9)', border: '1px solid var(--line, #e2e8f0)', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
 
 export function PendingReviewsClient({ initial, verticalKey = null }: { initial: PendingReview[]; verticalKey?: string | null }) {
   const pack = findIndustryPack(verticalKey);
@@ -76,7 +76,7 @@ export function PendingReviewsClient({ initial, verticalKey = null }: { initial:
               if (assignee.trim() !== '') p.set('assignee', assignee.trim());
               return p.toString() ? `?${p.toString()}` : '';
             })()}`}
-            style={{ ...inp, textDecoration: 'none', color: '#2563eb', whiteSpace: 'nowrap' }}
+            style={{ ...inp, textDecoration: 'none', color: 'var(--theme-primary)', whiteSpace: 'nowrap' }}
           >
             Download CSV
           </a>
@@ -84,7 +84,7 @@ export function PendingReviewsClient({ initial, verticalKey = null }: { initial:
       </div>
 
       {rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+        <p style={{ fontSize: 13, color: 'var(--theme-neutral)', margin: '4px 0 0' }}>
           No governed work is waiting on a named reviewer right now.
         </p>
       ) : (
