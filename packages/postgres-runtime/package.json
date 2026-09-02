@@ -62,6 +62,7 @@
     "./theme-configuration": "./src/theme-configuration.ts",
     "./personal-appearance": "./src/personal-appearance.ts",
     "./enterprise": "./src/enterprise.ts",
+    "./enterprise-profile": "./src/enterprise-profile.ts",
     "./enterprise-onboarding": "./src/enterprise-onboarding.ts",
     "./enterprise-legal": "./src/enterprise-legal.ts",
     "./enterprise-commercial": "./src/enterprise-commercial.ts"
