@@ -149,6 +149,133 @@ BEGIN
 END;
 $$;
 
+DO $
+DECLARE
+  item record;
+BEGIN
+  FOR item IN
+    SELECT
+      child.tenant_id,
+      child.organization_id AS source_id,
+      child.parent_organization_id AS target_id
+    FROM platform.organizations child
+    JOIN platform.organizations parent
+      ON parent.tenant_id = child.tenant_id
+     AND parent.organization_id = child.parent_organization_id
+    WHERE child.parent_organization_id IS NOT NULL
+      AND child.status NOT IN ('SUSPENDED','CLOSED')
+      AND parent.status NOT IN ('SUSPENDED','CLOSED')
+  LOOP
+    PERFORM platform.create_governed_entity_relationship(
+      item.tenant_id,
+      'OPERATING_UNIT',
+      item.source_id::text,
+      'OPERATIONAL_PARENT',
+      'OPERATING_UNIT',
+      item.target_id::text,
+      'enterprise-graph-backfill',
+      'SYSTEM',
+      now(),
+      NULL,
+      NULL,
+      'backfill:organization-parent',
+      jsonb_build_object('source', 'platform.organizations')
+    );
+  END LOOP;
+
+  FOR item IN
+    SELECT DISTINCT ON (binding.tenant_id, binding.organization_id)
+      binding.tenant_id,
+      binding.organization_id AS source_id,
+      binding.legal_entity_id AS target_id,
+      binding.organization_legal_entity_binding_id AS binding_id,
+      binding.valid_from
+    FROM platform.organization_legal_entity_bindings binding
+    JOIN platform.organizations organization
+      ON organization.tenant_id = binding.tenant_id
+     AND organization.organization_id = binding.organization_id
+    JOIN platform.legal_entities legal_entity
+      ON legal_entity.tenant_id = binding.tenant_id
+     AND legal_entity.legal_entity_id = binding.legal_entity_id
+    WHERE binding.binding_role = 'OPERATED_BY'
+      AND binding.status = 'ACTIVE'
+      AND binding.valid_from <= now()
+      AND (binding.valid_until IS NULL OR binding.valid_until > now())
+      AND organization.status NOT IN ('SUSPENDED','CLOSED')
+      AND legal_entity.status = 'VERIFIED'
+      AND legal_entity.valid_from <= now()
+      AND (legal_entity.valid_until IS NULL OR legal_entity.valid_until > now())
+    ORDER BY
+      binding.tenant_id,
+      binding.organization_id,
+      binding.valid_from DESC,
+      binding.organization_legal_entity_binding_id DESC
+  LOOP
+    PERFORM platform.create_governed_entity_relationship(
+      item.tenant_id,
+      'OPERATING_UNIT',
+      item.source_id::text,
+      'OPERATED_BY',
+      'LEGAL_ENTITY',
+      item.target_id::text,
+      'enterprise-graph-backfill',
+      'SYSTEM',
+      item.valid_from,
+      NULL,
+      NULL,
+      'backfill:organization-operating-entity',
+      jsonb_build_object(
+        'source', 'platform.organization_legal_entity_bindings',
+        'bindingId', item.binding_id
+      )
+    );
+  END LOOP;
+
+  FOR item IN
+    SELECT
+      activation.tenant_id,
+      activation.organization_id AS source_id,
+      activation.territory_id AS target_id,
+      activation.enterprise_jurisdiction_activation_id AS activation_id,
+      activation.workflow_activation_id,
+      activation.activated_at
+    FROM platform.enterprise_jurisdiction_activations activation
+    JOIN platform.organizations organization
+      ON organization.tenant_id = activation.tenant_id
+     AND organization.organization_id = activation.organization_id
+    JOIN platform.enterprise_territories territory
+      ON territory.tenant_id = activation.tenant_id
+     AND territory.territory_id = activation.territory_id
+    WHERE activation.state = 'ACTIVE'
+      AND activation.activated_at IS NOT NULL
+      AND organization.status NOT IN ('SUSPENDED','CLOSED')
+      AND territory.status = 'ACTIVE'
+  LOOP
+    PERFORM platform.create_governed_entity_relationship(
+      item.tenant_id,
+      'OPERATING_UNIT',
+      item.source_id::text,
+      'TERRITORIAL_JURISDICTION',
+      'LOCATION',
+      item.target_id::text,
+      'enterprise-graph-backfill',
+      'SYSTEM',
+      item.activated_at,
+      NULL,
+      NULL,
+      CASE
+        WHEN item.workflow_activation_id IS NULL THEN 'backfill:jurisdiction-activation'
+        ELSE 'workflow-activation:' || item.workflow_activation_id::text
+      END,
+      jsonb_build_object(
+        'source', 'platform.enterprise_jurisdiction_activations',
+        'jurisdictionActivationId', item.activation_id
+      )
+    );
+  END LOOP;
+END;
+$;
+
 COMMENT ON FUNCTION platform.create_governed_entity_relationship IS
   'Creates or idempotently reuses a catalog-validated, registry-anchored, effective-dated relationship with advisory-lock cardinality enforcement.';
 
