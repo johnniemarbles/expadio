@@ -4,6 +4,7 @@ import test from "node:test";
 
 const middleware = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const requestContext = readFileSync(new URL("../lib/request-context.ts", import.meta.url), "utf8");
+const liveAdapter = readFileSync(new URL("../lib/live-adapter.ts", import.meta.url), "utf8");
 
 test("middleware propagates the shell's workspace selection into tenant headers", () => {
   // The active workspace arrives as ?account=<tenantId>&org=<organizationId>.
@@ -47,4 +48,23 @@ test("tenant resolution verifies membership rather than trusting the header", ()
   assert.match(requestContext, /authenticateAndResolveContext/);
   // A membership failure resolves to a denial, not another tenant's data.
   assert.match(requestContext, /TENANT_ACCESS_DENIED/);
+});
+
+test("SSR API subrequests rederive workspace selection through query selectors", () => {
+  assert.match(liveAdapter, /searchParams\.set\('account', tenantId\)/);
+  assert.match(liveAdapter, /searchParams\.set\('org', organizationId\)/);
+  assert.doesNotMatch(
+    liveAdapter,
+    /forwarded\.set\('x-expadio-tenant-id'|forwarded\.set\('x-expadio-organization-id'/,
+  );
+});
+
+test("cookie recovery prefers the persisted tenant before an org-only fallback", () => {
+  const tenantFallback = requestContext.indexOf("membership.tenantId === requestedTenant");
+  const organizationOnlyFallback = requestContext.lastIndexOf(
+    "membership.organizationId === requestedOrganization",
+  );
+  assert.ok(tenantFallback >= 0);
+  assert.ok(organizationOnlyFallback >= 0);
+  assert.ok(tenantFallback < organizationOnlyFallback);
 });
