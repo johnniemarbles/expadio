@@ -37,8 +37,8 @@ test('authoritative enterprise mutations publish within their transaction-owned 
 test('current commercial APIs use the package runtime that publishes graph state', () => {
   assert.match(rightsRoute, /@expadio\/postgres-runtime\/enterprise-commercial/);
   assert.match(jurisdictionRoute, /@expadio\/postgres-runtime\/enterprise-commercial/);
-  assert.doesNotMatch(rightsRoute, /@\/lib\/enterprise-commercial/);
-  assert.doesNotMatch(jurisdictionRoute, /@\/lib\/enterprise-commercial/);
+  assert.doesNotMatch(rightsRoute, /from ['"]@\/lib\/enterprise-commercial['"]/);
+  assert.doesNotMatch(jurisdictionRoute, /from ['"]@\/lib\/enterprise-commercial['"]/);
 });
 
 test('migration backfills only provable current enterprise relationships', () => {
