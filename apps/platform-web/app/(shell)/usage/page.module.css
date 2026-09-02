@@ -1,16 +1,16 @@
 .pageHeading { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:18px; }
-.eyebrow { margin:0 0 7px; color:var(--brand); text-transform:uppercase; letter-spacing:.11em; font-size:11px; font-weight:800; }
+.eyebrow { margin:0 0 7px; color:var(--theme-primary); text-transform:uppercase; letter-spacing:.11em; font-size:11px; font-weight:800; }
 .pageHeading h1 { font-size:clamp(26px,3vw,35px); line-height:1.08; letter-spacing:-.035em; margin:0 0 8px; }
-.pageHeading p:last-child { margin:0; color:var(--ink-600); font-size:14px; line-height:1.5; }
+.pageHeading p:last-child { margin:0; color:var(--theme-text-secondary); font-size:14px; line-height:1.5; }
 
-.panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); overflow:hidden; margin-bottom:16px; }
-.panelHeading { min-height:70px; padding:17px 19px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--line); }
+.panel { background:var(--theme-surface); border:1px solid var(--theme-border); border-radius:12px; box-shadow:var(--shadow-lg); overflow:hidden; margin-bottom:16px; }
+.panelHeading { min-height:70px; padding:17px 19px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--theme-border); }
 .panelHeading h2 { margin:0; font-size:16px; letter-spacing:-.012em; }
 
 .tableWrap { width: 100%; overflow-x: auto; }
 .table { width: 100%; min-width: 600px; border-collapse: collapse; text-align: left; }
-.table th { padding: 14px 19px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink-500); font-weight: 500; white-space: nowrap; }
-.table td { padding: 14px 19px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: middle; }
+.table th { padding: 14px 19px; border-bottom: 1px solid var(--theme-border); font-size: 13px; color: var(--theme-text-muted); font-weight: 500; white-space: nowrap; }
+.table td { padding: 14px 19px; border-bottom: 1px solid var(--theme-border); font-size: 14px; vertical-align: middle; }
 .table tr:last-child td { border-bottom: none; }
-.muted { color: var(--ink-500); font-size: 13px; }
-.code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; background: var(--line); padding: 2px 6px; border-radius: 4px; }
+.muted { color: var(--theme-text-muted); font-size: 13px; }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; background: var(--theme-border); padding: 2px 6px; border-radius: 4px; }
