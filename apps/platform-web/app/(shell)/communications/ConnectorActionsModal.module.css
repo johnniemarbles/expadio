@@ -7,6 +7,7 @@
   padding: 20px;
   background: color-mix(in srgb, var(--theme-overlay) 70%, transparent);
   backdrop-filter: blur(6px);
+  animation: connectorBackdropIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .dialog {
@@ -19,6 +20,7 @@
   box-shadow: var(--theme-shadow-elevated);
   color: var(--theme-text-primary);
   padding: 28px;
+  animation: connectorDialogIn var(--theme-motion-panel) var(--theme-easing-emphasis) both;
 }
 
 .header,
@@ -64,6 +66,7 @@
   border-radius: var(--theme-radius-control);
   cursor: pointer;
   font: inherit;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), opacity var(--theme-motion-fast) var(--theme-easing);
 }
 
 .closeButton {
@@ -74,9 +77,22 @@
   font-size: 16px;
 }
 
+.closeButton:hover,
+.secondaryButton:hover,
+.dangerButton:not(:disabled):hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.closeButton:active,
+.secondaryButton:active,
+.dangerButton:not(:disabled):active {
+  transform: translateY(var(--theme-motion-distance-micro));
+}
+
 .loading {
   padding: 20px;
   text-align: center;
+  animation: connectorFadeIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .section,
@@ -85,11 +101,20 @@
   border: 1px solid var(--theme-border);
   border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
 }
 
 .section {
   padding: 16px;
   margin-bottom: 16px;
+  animation: connectorSectionIn var(--theme-motion-panel) var(--theme-easing) both;
+}
+
+.section:hover,
+.stat:hover,
+.attestation:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+  border-color: color-mix(in srgb, var(--theme-primary) 20%, var(--theme-border));
 }
 
 .sectionTitle {
@@ -119,7 +144,12 @@
 
 .stat {
   padding: 8px 10px;
+  animation: connectorSectionIn var(--theme-motion-panel) var(--theme-easing) both;
 }
+
+.statGrid .stat:nth-child(2) { animation-delay: 30ms; }
+.statGrid .stat:nth-child(3) { animation-delay: 60ms; }
+.statGrid .stat:nth-child(4) { animation-delay: 90ms; }
 
 .statLabel {
   color: var(--theme-text-muted);
@@ -132,6 +162,7 @@
   color: var(--theme-text-primary);
   font-size: 18px;
   font-weight: 850;
+  transition: color var(--theme-motion-fast) var(--theme-easing);
 }
 
 .statValueDanger,
@@ -145,6 +176,7 @@
   font-size: 11px;
   font-weight: 850;
   padding: 3px 10px;
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing), color var(--theme-motion-fast) var(--theme-easing);
 }
 
 .statusValid {
@@ -184,6 +216,7 @@
 
 .attestation {
   padding: 12px;
+  animation: connectorSectionIn var(--theme-motion-panel) var(--theme-easing) both;
 }
 
 .attestationTime {
@@ -199,6 +232,7 @@
   font-size: 13px;
   margin-bottom: 12px;
   padding: 10px;
+  animation: connectorBannerIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .bannerError {
@@ -229,6 +263,12 @@
   color: var(--theme-text-primary);
   font: inherit;
   padding: 6px 10px;
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+}
+
+.approvalInput:focus {
+  border-color: color-mix(in srgb, var(--theme-primary) 45%, var(--theme-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 10%, transparent);
 }
 
 .footer {
@@ -267,6 +307,31 @@
   outline-offset: 2px;
 }
 
+@keyframes connectorBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes connectorDialogIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-panel)) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes connectorFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes connectorBannerIn {
+  from { opacity: 0; transform: translateY(calc(var(--theme-motion-distance-small) * -1)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes connectorSectionIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 700px) {
   .dialog {
     padding: 20px;
@@ -281,4 +346,10 @@
   .statGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,.dialog,.loading,.section,.stat,.attestation,.bannerError,.bannerNotice { animation: none; }
+  .closeButton,.secondaryButton,.dangerButton,.section,.stat,.attestation,.statValue,.statusBadge,.approvalInput { transition: none; }
+  .closeButton:hover,.closeButton:active,.secondaryButton:hover,.secondaryButton:active,.dangerButton:not(:disabled):hover,.dangerButton:not(:disabled):active,.section:hover,.stat:hover,.attestation:hover { transform: none; }
 }
