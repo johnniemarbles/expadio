@@ -10,6 +10,7 @@ test('Brand Learning operational sections use tenant-admin guarded write boundar
     '../app/api/learning/programs/route.ts',
     '../app/api/learning/competency-frameworks/route.ts',
     '../app/api/learning/assignment-rules/route.ts',
+    '../app/api/learning/question-banks/route.ts',
   ]) {
     const source = read(route);
     assert.match(source, /hasLearningAdmin/);
@@ -29,10 +30,12 @@ test('Brand Learning section UI exposes real create workflows instead of read-on
   assert.match(panel, /\/api\/learning\/programs/);
   assert.match(panel, /\/api\/learning\/competency-frameworks/);
   assert.match(panel, /\/api\/learning\/assignment-rules/);
+  assert.match(panel, /\/api\/learning\/question-banks/);
   assert.match(panel, /Create assessment draft/);
   assert.match(panel, /Create program draft/);
   assert.match(panel, /Create competency framework/);
   assert.match(panel, /Create assignment rule/);
+  assert.match(panel, /Create question bank/);
 });
 
 test('Assignment rules only target tenant-visible published course or program options', () => {
