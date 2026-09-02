@@ -43,6 +43,10 @@ export function BrandShellFrame({
       <nav className={styles.globalNav}>
         <p className={styles.navGroup}>Workspace</p>
         <Link className={pathname==='/'?styles.navActive:''} href="/">Home</Link>
+        <Link
+          className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
+          href="/enterprise"
+        ><span className={styles.navIcon}>EN</span>Enterprise</Link>
         <p className={styles.navGroup}>Apps</p>
         {pinned.map((module)=><Link
           key={module.key}
