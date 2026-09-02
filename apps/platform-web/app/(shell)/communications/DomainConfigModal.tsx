@@ -137,7 +137,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       <div
         style={{
           background: "var(--surface, var(--theme-text-inverse)fff)",
-          border: "1px solid var(--line, #e2e8f0)",
+          border: "1px solid var(--theme-border)",
           borderRadius: "16px",
           width: "100%",
           maxWidth: "760px",
@@ -150,7 +150,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
           <div>
-            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--brand, var(--theme-primary))" }}>
+            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--theme-primary)" }}>
               DNS &amp; Identity Preflight
             </span>
             <h2 style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 700 }}>
@@ -161,7 +161,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
             type="button"
             onClick={onClose}
             style={{
-              border: "1px solid var(--line, #e2e8f0)",
+              border: "1px solid var(--theme-border)",
               background: "transparent",
               borderRadius: "8px",
               width: "32px",
@@ -176,7 +176,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           </button>
         </div>
 
-        <p style={{ margin: "0 0 20px", fontSize: "14px", color: "var(--ink-600, #475569)", lineHeight: 1.5 }}>
+        <p style={{ margin: "0 0 20px", fontSize: "14px", color: "var(--theme-text-secondary)", lineHeight: 1.5 }}>
           Sending domains require verified DNS records (DKIM selector keys, SPF inbound authorisation, DMARC alignment, and MX routing) before governed email dispatch is permitted.
         </p>
 
@@ -201,7 +201,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="e.g. mail.yourbrand.com"
-                style={{ padding: "8px 12px", border: `1px solid ${domain && !domainValid ? "#f87171" : "#fdba74"}`, borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
+                style={{ padding: "8px 12px", border: `1px solid ${domain && !domainValid ? "var(--theme-danger)" : "var(--theme-warning)"}`, borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
               />
               {domain && !domainValid && <span style={{ fontSize: "11px", color: "var(--theme-danger)", fontWeight: 500 }}>Enter a valid domain such as mail.example.com.</span>}
             </label>
@@ -213,7 +213,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 onChange={(e) => setApiToken(e.target.value)}
                 placeholder="Token with Zone · DNS · Edit for this domain"
                 autoComplete="off"
-                style={{ padding: "8px 12px", border: "1px solid #fdba74", borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
+                style={{ padding: "8px 12px", border: "1px solid var(--theme-warning)", borderRadius: "8px", fontSize: "13px", outline: "none", background: "var(--theme-text-inverse)" }}
               />
               <span style={{ fontSize: "11px", color: "#9a3412aa", fontWeight: 500 }}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
             </label>
@@ -231,7 +231,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 type="button"
                 onClick={handleAddManual}
                 disabled={loading || adding || !domainValid}
-                style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid #cbd5e1", background: "var(--theme-text-inverse)", cursor: adding || !domainValid ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 700 }}
+                style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid var(--theme-border)", background: "var(--theme-text-inverse)", cursor: adding || !domainValid ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 700 }}
               >
                 {adding ? "Adding…" : "Add without Cloudflare"}
               </button>
@@ -245,7 +245,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           )}
 
           {lastProvisionResult && (
-            <div style={{ fontSize: "13px", color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", padding: "10px", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
+            <div style={{ fontSize: "13px", color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", padding: "10px", borderRadius: "8px", border: "1px solid color-mix(in srgb,var(--theme-success) 28%,transparent)" }}>
               ✅ {lastProvisionResult.message}
               {Array.isArray(lastProvisionResult.cloudflare) && lastProvisionResult.cloudflare.length > 0 && (
                 <div style={{ marginTop: "6px", display: "grid", gap: "2px" }}>
@@ -266,7 +266,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
         </h3>
 
         {fetching ? (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--ink-500, #64748b)" }}>
+          <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-muted)" }}>
             Loading domain configurations...
           </div>
         ) : domains.length > 0 ? (
@@ -275,7 +275,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
               <div
                 key={d.senderId}
                 style={{
-                  border: "1px solid var(--line, #e2e8f0)",
+                  border: "1px solid var(--theme-border)",
                   borderRadius: "10px",
                   padding: "16px",
                   background: "var(--surface, var(--theme-text-inverse)fff)",
@@ -284,7 +284,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                   <div>
                     <strong style={{ fontSize: "14px" }}>{d.domain}</strong>
-                    <div style={{ fontSize: "12px", color: "var(--ink-500, #64748b)" }}>{d.address}</div>
+                    <div style={{ fontSize: "12px", color: "var(--theme-text-muted)" }}>{d.address}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span
@@ -294,7 +294,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                         fontSize: "11px",
                         fontWeight: 800,
                         color: d.verificationStatus === "VERIFIED" ? "var(--theme-success)" : d.verificationStatus === "REVOKED" ? "var(--theme-danger)" : "var(--theme-warning)",
-                        background: d.verificationStatus === "VERIFIED" ? "color-mix(in srgb,var(--theme-success) 12%,transparent)" : d.verificationStatus === "REVOKED" ? "#fee2e2" : "color-mix(in srgb,var(--theme-warning) 12%,transparent)",
+                        background: d.verificationStatus === "VERIFIED" ? "color-mix(in srgb,var(--theme-success) 12%,transparent)" : d.verificationStatus === "REVOKED" ? "color-mix(in srgb,var(--theme-danger) 12%,transparent)" : "color-mix(in srgb,var(--theme-warning) 12%,transparent)",
                       }}
                     >
                       {d.verificationStatus}
@@ -303,7 +303,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                       type="button"
                       onClick={() => handleVerify(d.senderId)}
                       disabled={busyId === d.senderId}
-                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer", fontWeight: 700 }}
+                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer", fontWeight: 700 }}
                     >
                       {busyId === d.senderId ? "…" : "Verify"}
                     </button>
@@ -331,7 +331,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>
                     <thead>
-                      <tr style={{ textAlign: "left", color: "var(--ink-500, #64748b)" }}>
+                      <tr style={{ textAlign: "left", color: "var(--theme-text-muted)" }}>
                         <th style={{ padding: "6px 8px" }}>Record Type</th>
                         <th style={{ padding: "6px 8px" }}>Host / Selector</th>
                         <th style={{ padding: "6px 8px" }}>Value</th>
@@ -347,7 +347,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                             {r.value}
                           </td>
                           <td style={{ padding: "6px 8px" }}>
-                            <span style={{ color: r.status === "VERIFIED" ? "var(--theme-success)" : "#ca8a04", fontWeight: 700 }}>
+                            <span style={{ color: r.status === "VERIFIED" ? "var(--theme-success)" : "var(--theme-warning)", fontWeight: 700 }}>
                               {r.status}
                             </span>
                           </td>
@@ -360,7 +360,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
             ))}
           </div>
         ) : (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--ink-500, #64748b)" }}>
+          <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-muted)" }}>
             No sending domains configured. Click Auto-Configure above to register your first sending domain.
           </div>
         )}
