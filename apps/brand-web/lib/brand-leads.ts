@@ -88,15 +88,8 @@ export async function createBrandLead(
      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, 'manual', '{}'::jsonb, $7)
      RETURNING lead_id, title, stage, amount_minor_units, currency, source,
                created_at, updated_at, NULL::text AS account_name`,
-    [
-      input.tenantId,
-      input.organizationId,
-      validated.title,
-      validated.stage,
-      validated.amountMinorUnits,
-      validated.currency,
-      input.actorSubjectId,
-    ],
+    [input.tenantId, input.organizationId, validated.title, validated.stage,
+      validated.amountMinorUnits, validated.currency, input.actorSubjectId],
   );
   return toSummary(inserted.rows[0]);
 }
@@ -115,4 +108,53 @@ export async function updateBrandLeadStage(
     [input.leadId, selectedStage],
   );
   return updated.rows[0] ? toSummary(updated.rows[0]) : null;
+}
+
+export async function convertBrandLeadToCustomer(
+  client: pg.PoolClient,
+  input: { readonly tenantId: string; readonly organizationId: string; readonly leadId: string },
+): Promise<{ readonly leadId: string; readonly accountId: string } | null> {
+  const leadResult = await client.query<{
+    lead_id: string; organization_id: string; account_id: string | null; title: string; stage: BrandLeadStage;
+  }>(
+    `SELECT lead_id, organization_id, account_id, title, stage
+       FROM platform.crm_leads
+      WHERE lead_id = $1::uuid
+      FOR UPDATE`,
+    [input.leadId],
+  );
+  const lead = leadResult.rows[0];
+  if (!lead) return null;
+  if (lead.organization_id !== input.organizationId) throw new Error('LEAD_SCOPE_MISMATCH');
+  if (lead.stage === 'LOST') throw new Error('LOST_LEAD_CANNOT_CONVERT');
+
+  let accountId = lead.account_id;
+  if (accountId) {
+    const promoted = await client.query<{ account_id: string }>(
+      `UPDATE platform.crm_accounts
+          SET lifecycle_stage = 'CUSTOMER', updated_at = now()
+        WHERE account_id = $1::uuid
+          AND organization_id = $2::uuid
+        RETURNING account_id`,
+      [accountId, input.organizationId],
+    );
+    if (!promoted.rows[0]) throw new Error('ACCOUNT_SCOPE_MISMATCH');
+  } else {
+    const created = await client.query<{ account_id: string }>(
+      `INSERT INTO platform.crm_accounts (tenant_id, organization_id, name, lifecycle_stage)
+       VALUES ($1::uuid, $2::uuid, $3, 'CUSTOMER')
+       RETURNING account_id`,
+      [input.tenantId, input.organizationId, lead.title.slice(0, 200)],
+    );
+    accountId = created.rows[0]?.account_id ?? null;
+  }
+  if (!accountId) throw new Error('CUSTOMER_ACCOUNT_CREATION_FAILED');
+
+  await client.query(
+    `UPDATE platform.crm_leads
+        SET account_id = $2::uuid, stage = 'WON', updated_at = now()
+      WHERE lead_id = $1::uuid`,
+    [input.leadId, accountId],
+  );
+  return { leadId: input.leadId, accountId };
 }
