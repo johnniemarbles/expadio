@@ -355,7 +355,7 @@ test('required assessment gates course completion and assessment pass releases i
       `SELECT count(*) AS count
          FROM platform.domain_events
         WHERE tenant_id = $1::uuid
-          AND aggregate_id = $2::uuid
+          AND aggregate_id = $2
           AND event_type = 'learning.course.completed'`,
       [tenantId, assigned.enrollment.enrollmentId],
     );
