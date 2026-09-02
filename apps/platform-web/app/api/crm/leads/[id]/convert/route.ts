@@ -20,9 +20,9 @@ import type { WorkflowIndustryPackProvenance } from '@expadio/workflow';
  * onboarding Case is opened against the new customer so the work of delivering
  * has a home.
  *
- * Governed and tenant-scoped: reads/writes run under RLS, and mutation requires
- * a governing role. The whole conversion is one transaction — partial funnels
- * are worse than none, so either every step lands or none does.
+ * Governed and organization/subtree-scoped: reads/writes run under RLS, and
+ * mutation requires a governing role. The whole conversion is one transaction —
+ * partial funnels are worse than none, so either every step lands or none does.
  */
 
 export const runtime = 'nodejs';
@@ -79,15 +79,16 @@ export async function POST(
         return { forbidden: true } as const;
       }
 
-      // Re-apply the tenant GUC inside an explicit transaction so RLS holds for
+      // Re-apply request GUCs inside an explicit transaction so RLS holds for
       // every step and the multi-write conversion is atomic.
       await client.query('BEGIN');
       try {
         await context.applyTo(client);
 
         const leadRes = await client.query(
-          `SELECT lead_id, tenant_id, account_id, contact_id, title, stage,
-                  amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at
+          `SELECT lead_id, tenant_id, organization_id, account_id, contact_id, title, stage,
+                  amount_minor_units, currency, source, raw_payload, owner_subject_id,
+                  capture_lead_id, capture_layer_id, created_at, updated_at
              FROM platform.crm_leads
             WHERE lead_id = $1::uuid
             FOR UPDATE`,
@@ -110,26 +111,31 @@ export async function POST(
           conversionActorSubjectId: context.subjectId,
         });
 
-        // Resolve the customer account: reuse the lead's account if present
-        // (promoting it to CUSTOMER), else create one named after the lead.
+        // Resolve the customer account: reuse the lead's organization-bound account
+        // when present, otherwise create the customer in the Lead's organization.
         let accountRow;
         if (leadRow.account_id) {
           const promoted = await client.query(
             `UPDATE platform.crm_accounts
                 SET lifecycle_stage = 'CUSTOMER', updated_at = now()
               WHERE account_id = $1::uuid
+                AND organization_id = $2::uuid
               RETURNING account_id, tenant_id, organization_id, name, domain, industry,
                         lifecycle_stage, status, created_at, updated_at`,
-            [leadRow.account_id],
+            [leadRow.account_id, leadRow.organization_id],
           );
+          if (promoted.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return { accountScopeMismatch: true } as const;
+          }
           accountRow = promoted.rows[0];
         } else {
           const created = await client.query(
-            `INSERT INTO platform.crm_accounts (tenant_id, name, lifecycle_stage)
-             VALUES ($1::uuid, $2, 'CUSTOMER')
+            `INSERT INTO platform.crm_accounts (tenant_id, organization_id, name, lifecycle_stage)
+             VALUES ($1::uuid, $2::uuid, $3, 'CUSTOMER')
              RETURNING account_id, tenant_id, organization_id, name, domain, industry,
                        lifecycle_stage, status, created_at, updated_at`,
-            [context.tenantId, leadRow.title.slice(0, 200)],
+            [context.tenantId, leadRow.organization_id, leadRow.title.slice(0, 200)],
           );
           accountRow = created.rows[0];
         }
@@ -138,8 +144,9 @@ export async function POST(
           `UPDATE platform.crm_leads
               SET stage = 'WON', account_id = $2::uuid, updated_at = now()
             WHERE lead_id = $1::uuid
-            RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
-                      amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at`,
+            RETURNING lead_id, tenant_id, organization_id, account_id, contact_id, title, stage,
+                      amount_minor_units, currency, source, raw_payload, owner_subject_id,
+                      capture_lead_id, capture_layer_id, created_at, updated_at`,
           [leadId, accountRow.account_id],
         );
 
@@ -260,6 +267,9 @@ export async function POST(
     }
     if ('lost' in result) {
       return NextResponse.json({ error: 'A lost lead cannot be converted. Reopen it first.' }, { status: 409 });
+    }
+    if ('accountScopeMismatch' in result) {
+      return NextResponse.json({ error: 'The linked account is outside this lead organization.' }, { status: 409 });
     }
     if ('invalidCaseAttributes' in result) {
       const errors = result.errors ?? [];

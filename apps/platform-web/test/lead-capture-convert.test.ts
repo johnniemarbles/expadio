@@ -16,6 +16,7 @@ const customerConvert = read('../app/api/crm/leads/[id]/convert/route.ts');
 const writer = read('../lib/lead-capture-convert.ts');
 const leadDomain = read('../../../packages/lead/src/index.ts');
 const migration = read('../../../infra/db/migrations/0087_lead_capture_convert_seam.sql');
+const organizationScopeMigration = read('../../../infra/db/migrations/0123_crm_lead_organization_scope.sql');
 const customerConvertSource = customerConvert;
 
 const context = {
@@ -26,13 +27,15 @@ const context = {
   applyTo: async () => undefined,
 };
 
-test('from-capture is a governed tenant write and does not delete capture', () => {
+test('from-capture is a governed organization write and does not delete capture', () => {
   assert.match(fromCapture, /resolveRequestContext\(request\)/);
+  assert.match(fromCapture, /ORGANIZATION_CONTEXT_REQUIRED/);
   assert.match(fromCapture, /withTenantTransaction/);
   assert.match(fromCapture, /hasCrmWriteRole/);
   assert.match(fromCapture, /buildCaptureConvertWrite/);
   assert.match(fromCapture, /capturePreserved: true/);
   assert.match(fromCapture, /deleteCapture: false/);
+  assert.match(writer, /organization_id/);
   assert.match(writer, /ON CONFLICT \(tenant_id, capture_lead_id\)/);
   assert.doesNotMatch(fromCapture, /LAB_TRUSTED_HEADERS/);
   assert.doesNotMatch(fromCapture, /\/brand\/leads/);
@@ -55,29 +58,33 @@ test('domain mapper and provenance columns stay on the 5-stage CRM', () => {
   assert.doesNotMatch(migration, /CREATE TABLE lead_mgmt/);
 });
 
-test('P16 rejects body tenant / brand / layer claims', () => {
+test('P16 rejects body tenant / brand / organization / layer claims', () => {
   assert.throws(() => rejectCaptureBodyScope({ tenantId: 'forged' }), CaptureScopeRejected);
   assert.throws(() => rejectCaptureBodyScope({ brandId: 'b1' }), CaptureScopeRejected);
+  assert.throws(() => rejectCaptureBodyScope({ organizationId: context.organizationId }), CaptureScopeRejected);
   assert.throws(() => rejectCaptureBodyScope({ layerId: 'in' }), CaptureScopeRejected);
+  assert.throws(() => rejectCaptureBodyScope({ captureLayerId: 'in-tn-u1' }), CaptureScopeRejected);
   rejectCaptureBodyScope({ captureLeadId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', captureStage: 'NEW_ENQUIRY' });
 });
 
-test('writer principal comes from gateway context, not the body', () => {
+test('writer principal comes from trusted request context, not the body', () => {
   const principal = principalFromResolvedContext(context);
   assert.equal(principal.tenantId, context.tenantId);
+  assert.equal(principal.organizationId, context.organizationId);
   const write = buildCaptureConvertWrite(
     {
       captureLeadId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
       captureStage: 'APPLICATION_STARTED',
       email: 'ada@brand.com',
-      captureLayerId: 'in-tn-u1',
     },
     context,
   );
   assert.equal(write.principal.tenantId, context.tenantId);
+  assert.equal(write.principal.organizationId, context.organizationId);
   assert.equal(write.deleteCapture, false);
   assert.equal(write.input.source, 'web_form');
   assert.equal(write.input.stage, 'PROPOSAL');
+  assert.equal(write.input.captureLayerId, null);
   assert.throws(
     () => buildCaptureConvertWrite({ tenantId: 'forged', captureLeadId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', captureStage: 'NEW_ENQUIRY' }, context),
     CaptureScopeRejected,
@@ -86,4 +93,15 @@ test('writer principal comes from gateway context, not the body', () => {
     () => buildCaptureConvertWrite({ captureLeadId: 'nope', captureStage: 'NEW_ENQUIRY' }, context),
     LeadValidationError,
   );
+});
+
+test('Lead RLS uses enterprise subject grants plus selected organization subtree', () => {
+  assert.match(organizationScopeMigration, /ADD COLUMN IF NOT EXISTS organization_id uuid/);
+  assert.match(organizationScopeMigration, /current_subject_can_access_organization/);
+  assert.match(organizationScopeMigration, /organization_closure/);
+  assert.match(organizationScopeMigration, /current_organization_id\(\)/);
+  assert.match(organizationScopeMigration, /crm_leads_organization_isolation/);
+  assert.match(organizationScopeMigration, /organization_id IS NOT NULL/);
+  assert.match(organizationScopeMigration, /crm_leads_account_organization_fk/);
+  assert.match(organizationScopeMigration, /Never derived from capture_layer_id/);
 });

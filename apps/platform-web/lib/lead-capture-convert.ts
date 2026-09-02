@@ -17,7 +17,7 @@ import type { ResolvedRequestContext } from './request-context';
 export class CaptureScopeRejected extends Error {
   readonly field: string;
   constructor(field: string) {
-    super(`${field} is not accepted on the convert body. Tenant and layer come from the gateway principal.`);
+    super(`${field} is not accepted on the convert body. Tenant, organization, and layer scope come from trusted server context.`);
     this.name = 'CaptureScopeRejected';
     this.field = field;
   }
@@ -36,11 +36,11 @@ export function principalFromResolvedContext(context: ResolvedRequestContext): {
   };
 }
 
-/** P16 — body may not choose tenant / brand / layer. */
+/** P16 — body may not choose tenant / brand / organization / capture layer. */
 export function rejectCaptureBodyScope(body: unknown): void {
   if (body == null || typeof body !== 'object' || Array.isArray(body)) return;
   const record = body as Record<string, unknown>;
-  for (const field of ['tenantId', 'brandId', 'layerId'] as const) {
+  for (const field of ['tenantId', 'brandId', 'organizationId', 'layerId', 'captureLayerId'] as const) {
     if (record[field] !== undefined && record[field] !== null && record[field] !== '') {
       throw new CaptureScopeRejected(field);
     }
@@ -71,7 +71,6 @@ export function snapshotFromConvertBody(
     title: typeof record.title === 'string' ? record.title : undefined,
     email: typeof record.email === 'string' ? record.email : undefined,
     captureStage,
-    captureLayerId: typeof record.captureLayerId === 'string' ? record.captureLayerId : undefined,
     contactId: typeof record.contactId === 'string' ? record.contactId : undefined,
     accountId: typeof record.accountId === 'string' ? record.accountId : undefined,
     rawPayload,
@@ -80,17 +79,16 @@ export function snapshotFromConvertBody(
 
 export const UPSERT_CAPTURE_CRM_LEAD_SQL = `
 INSERT INTO platform.crm_leads
-  (tenant_id, account_id, contact_id, title, stage, amount_minor_units, currency,
+  (tenant_id, organization_id, account_id, contact_id, title, stage, amount_minor_units, currency,
    source, raw_payload, owner_subject_id, capture_lead_id, capture_layer_id)
 VALUES
-  ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11::uuid, $12)
+  ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12::uuid, NULL)
 ON CONFLICT (tenant_id, capture_lead_id) WHERE capture_lead_id IS NOT NULL
 DO UPDATE SET
   stage = EXCLUDED.stage,
   raw_payload = EXCLUDED.raw_payload,
-  capture_layer_id = COALESCE(EXCLUDED.capture_layer_id, platform.crm_leads.capture_layer_id),
   updated_at = now()
-RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
+RETURNING lead_id, tenant_id, organization_id, account_id, contact_id, title, stage,
           amount_minor_units, currency, source, raw_payload, owner_subject_id,
           capture_lead_id, capture_layer_id, created_at, updated_at,
           (xmax = 0) AS inserted
@@ -98,11 +96,13 @@ RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
 
 export function captureConvertBindParams(
   tenantId: string,
+  organizationId: string,
   ownerSubjectId: string,
   input: ValidatedLeadInput,
 ): unknown[] {
   return [
     tenantId,
+    organizationId,
     input.accountId,
     input.contactId,
     input.title,
@@ -113,7 +113,6 @@ export function captureConvertBindParams(
     JSON.stringify(input.rawPayload),
     ownerSubjectId,
     input.captureLeadId,
-    input.captureLayerId,
   ];
 }
 
@@ -139,6 +138,7 @@ export function buildCaptureConvertWrite(
 export function toCaptureCrmLead(row: {
   lead_id: string;
   tenant_id: string;
+  organization_id: string;
   account_id?: string | null;
   contact_id?: string | null;
   title: string;
@@ -152,11 +152,12 @@ export function toCaptureCrmLead(row: {
   capture_layer_id?: string | null;
   created_at: string | Date;
   updated_at: string | Date;
-}): CrmLead {
+}): CrmLead & { organizationId: string } {
   const payload = row.raw_payload;
   return {
     leadId: row.lead_id,
     tenantId: row.tenant_id,
+    organizationId: row.organization_id,
     accountId: row.account_id ?? null,
     contactId: row.contact_id ?? null,
     title: row.title,
