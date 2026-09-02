@@ -14,6 +14,7 @@ import type { PostgresClient } from './index.ts';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
 import { requireTenantModuleOperational } from './product-module.ts';
 import { reconcileLearningEnrollmentCompletion } from './learning-enrollment.ts';
+import { reconcileLearningProgramsForEvidence } from './learning-program-certification.ts';
 
 const KEY = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1207,6 +1208,16 @@ export async function submitMyAssessmentAttempt(
       enrollmentId: attempt.enrollment_id,
       actorSubjectId: input.subjectId,
       correlationId: input.correlationId,
+    });
+  }
+
+  if (passed) {
+    await reconcileLearningProgramsForEvidence(client, {
+      tenantId: input.tenantId,
+      learnerId: attempt.learner_id,
+      actorSubjectId: input.subjectId,
+      correlationId: input.correlationId,
+      assessmentVersionId: attempt.assessment_version_id,
     });
   }
 
