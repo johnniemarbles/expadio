@@ -8,6 +8,41 @@ INSERT INTO platform.tenants (
   'Entity Perspective Tenant'
 );
 
+INSERT INTO platform.entity_registry_nodes (
+  tenant_id, node_type, entity_key, display_name, status,
+  attributes, provenance_source, created_by_subject_id
+) VALUES
+  (
+    '58100000-0000-0000-0000-000000000001',
+    'OPERATING_UNIT',
+    'operating-unit:ca',
+    'Canada Operating Unit',
+    'ACTIVE',
+    '{}'::jsonb,
+    'SYSTEM',
+    'perspective-smoke'
+  ),
+  (
+    '58100000-0000-0000-0000-000000000001',
+    'LEGAL_ENTITY',
+    'legal-entity:global-hq',
+    'Global HQ Legal Entity',
+    'ACTIVE',
+    '{}'::jsonb,
+    'SYSTEM',
+    'perspective-smoke'
+  ),
+  (
+    '58100000-0000-0000-0000-000000000001',
+    'LOCATION',
+    'territory:ca',
+    'Canada Territory',
+    'ACTIVE',
+    '{}'::jsonb,
+    'SYSTEM',
+    'perspective-smoke'
+  );
+
 DO $$
 DECLARE
   perspective_count integer;
