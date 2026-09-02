@@ -7,10 +7,11 @@ import { requireCommunicationDomainAdmin } from "../../../../../lib/communicatio
 /**
  * Sending-domain auto-configuration (design: no fabricated VERIFIED).
  *
- * The caller is authorized before any Cloudflare request or token use. DNS
- * requirements are provisioned only when a transient/deployment token is
- * available; provider-issued DKIM remains untouched. The resulting tenant
- * sender stays PENDING and transactional-only until explicit DNS verification.
+ * The caller and existing sender state are checked before any Cloudflare token
+ * or provider call. DNS requirements are provisioned only when a transient or
+ * deployment token is available; provider-issued DKIM remains untouched. The
+ * resulting tenant sender stays PENDING and transactional-only until explicit
+ * DNS + provider verification.
  */
 
 export const runtime = "nodejs";
@@ -27,14 +28,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Enter a valid domain such as mail.example.com." }, { status: 400 });
     }
 
-    const authorized = await withTenantClient(context, (client) =>
-      requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId),
-    );
-    if (!authorized) {
+    const address = `notifications@${domain}`;
+    const preflight = await withTenantClient(context, async (client) => {
+      if (!(await requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId))) {
+        return { authorized: false as const, suspended: false };
+      }
+      const existing = await client.query<{ status: string }>(
+        `SELECT status
+           FROM platform.communication_sender_identities
+          WHERE tenant_id = $1::uuid
+            AND scope = 'TENANT'
+            AND channel = 'email'
+            AND lower(address) = lower($2)
+          LIMIT 1`,
+        [context.tenantId, address],
+      );
+      return {
+        authorized: true as const,
+        suspended: existing.rows[0]?.status === 'SUSPENDED',
+      };
+    });
+    if (!preflight.authorized) {
       return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
     }
+    if (preflight.suspended) {
+      return NextResponse.json(
+        { error: 'This sender is suspended and can only be restored through Platform governance.' },
+        { status: 409 },
+      );
+    }
 
-    const address = `notifications@${domain}`;
     const records = expectedDnsRecords(domain);
     const token = (typeof body.apiToken === "string" && body.apiToken.trim()) || process.env.CLOUDFLARE_API_TOKEN || "";
 
@@ -67,26 +90,35 @@ export async function POST(request: Request) {
     }
 
     const sender = await withTenantClient(context, async (client) => {
+      if (!(await requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId))) {
+        return null;
+      }
       const result = await client.query(
         `INSERT INTO platform.communication_sender_identities
            (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
          VALUES ($1, NULL, 'TENANT', 'email', $2, 'Tenant Sender', ARRAY['transactional'], false, 'PENDING', 'ACTIVE')
          ON CONFLICT (tenant_id, channel, lower(address)) WHERE scope = 'TENANT'
          DO UPDATE SET
-           status = 'ACTIVE',
+           status = CASE
+             WHEN platform.communication_sender_identities.status = 'INACTIVE' THEN 'ACTIVE'
+             ELSE platform.communication_sender_identities.status
+           END,
            purposes = ARRAY['transactional'],
            is_default = false,
            verification_status = platform.communication_sender_identities.verification_status,
            updated_at = now()
-         RETURNING sender_id, address, purposes, is_default, verification_status, updated_at`,
+         RETURNING sender_id, address, purposes, is_default, verification_status, status, updated_at`,
         [context.tenantId, address],
       );
       return result.rows[0];
     });
+    if (sender === null) {
+      return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
+    }
 
     const message = provisioned
-      ? `Configured ${results?.length ?? 0} verifiable DNS records in Cloudflare zone ${zoneName}. Give DNS a moment to propagate, then Verify.`
-      : `Generated DNS requirements for ${domain}. Paste a Cloudflare API token to auto-configure verifiable records, or add them to your DNS and Verify.`;
+      ? `Configured ${results?.length ?? 0} verifiable DNS records in Cloudflare zone ${zoneName}. Add/verify the provider-issued records too, then Verify.`
+      : `Generated DNS requirements for ${domain}. Add the provider-issued records in your email provider, then Verify.`;
 
     return NextResponse.json({
       success: true,
