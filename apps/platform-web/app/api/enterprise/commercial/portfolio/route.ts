@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listEnterpriseCommercialPortfolio } from '@expadio/postgres-runtime/enterprise-commercial';
+import { listEnterpriseOwnershipInterests } from '@expadio/postgres-runtime/enterprise-ownership';
 import {
   deniedResponse,
   resolveRequestContext,
@@ -174,6 +175,14 @@ export async function GET(request: Request) {
         [context.tenantId, scope.enterpriseId, allowedIds],
       );
 
+      const visibleLegalEntityIds = legalEntities.rows.map(
+        (row) => row.legal_entity_id,
+      );
+      const ownershipInterests = await listEnterpriseOwnershipInterests(client, {
+        tenantId: context.tenantId,
+        legalEntityIds: visibleLegalEntityIds,
+      });
+
       const setup = await client.query<{
         organization_id: string;
         state: string;
@@ -282,6 +291,7 @@ export async function GET(request: Request) {
         scope,
         organizations: allowed.rows,
         legalEntities: legalEntities.rows,
+        ownershipInterests,
         setupReadiness: setup.rows.map((row) => ({
           organizationId: row.organization_id,
           state: row.state,
