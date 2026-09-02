@@ -6,6 +6,7 @@ import styles from './enterprise.module.css';
 type Tab =
   | 'overview'
   | 'structure'
+  | 'perspectives'
   | 'legal'
   | 'commercial'
   | 'jurisdictions'
@@ -32,6 +33,24 @@ export interface EnterpriseHubData {
     jurisdiction_country_code: string;
     status: string;
     organization_ids: string[];
+  }>;
+  perspectives: Array<{
+    perspective:
+      | 'GOVERNANCE'
+      | 'OWNERSHIP_LEGAL'
+      | 'COMMERCIAL'
+      | 'TERRITORY_JURISDICTION'
+      | 'OPERATIONAL';
+    nodes: Array<{
+      entityType: string;
+      entityId: string;
+      displayName: string | null;
+      edgePath: unknown[];
+      pathDepth: number;
+      effectiveFrom: string;
+      provenanceSource: string;
+      confidence: number;
+    }>;
   }>;
   setupReadiness: Array<{
     organizationId: string;
@@ -109,6 +128,7 @@ export interface EnterpriseHubData {
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'structure', label: 'Structure' },
+  { key: 'perspectives', label: 'Perspectives' },
   { key: 'legal', label: 'Legal Entities' },
   { key: 'commercial', label: 'Commercial Network' },
   { key: 'jurisdictions', label: 'Jurisdictions' },
@@ -332,6 +352,65 @@ export function EnterpriseHub({
                 </p>
               </div>
             </article>
+          </section>
+        </div>
+      )}
+
+      {tab === 'perspectives' && (
+        <div className={styles.stack}>
+          <section className={styles.panel}>
+            <header>
+              <div>
+                <span>Five-perspective graph</span>
+                <h2>Enterprise relationship projections</h2>
+              </div>
+              <small>
+                Read-only, effective-dated views rooted at the currently authorized governing organization.
+              </small>
+            </header>
+            <div className={styles.perspectiveGrid}>
+              {data.perspectives.map((projection) => (
+                <article className={styles.perspectiveCard} key={projection.perspective}>
+                  <header>
+                    <div>
+                      <span>{readable(projection.perspective)}</span>
+                      <strong>{projection.nodes.length}</strong>
+                    </div>
+                    <small>reachable entities</small>
+                  </header>
+                  <div className={styles.perspectiveNodes}>
+                    {projection.nodes.map((node) => (
+                      <div
+                        className={styles.perspectiveNode}
+                        key={projection.perspective + ':' + node.entityType + ':' + node.entityId}
+                      >
+                        <div>
+                          <strong>{node.displayName ?? node.entityId}</strong>
+                          <small>
+                            {readable(node.entityType)}
+                            {' · '}
+                            {node.pathDepth} edge{node.pathDepth === 1 ? '' : 's'}
+                          </small>
+                        </div>
+                        <div className={styles.perspectiveEvidence}>
+                          <span>{readable(node.provenanceSource)}</span>
+                          <span>{Math.round(node.confidence * 100)}% confidence</span>
+                        </div>
+                      </div>
+                    ))}
+                    {projection.nodes.length === 0 ? (
+                      <p className={styles.perspectiveEmpty}>
+                        No governed relationships are currently reachable in this perspective.
+                      </p>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className={styles.perspectiveFootnote}>
+              Unclassified legacy relationships are excluded. Each result uses the shortest explainable
+              governed path from the active organization and preserves effective-date provenance.
+            </div>
           </section>
         </div>
       )}
