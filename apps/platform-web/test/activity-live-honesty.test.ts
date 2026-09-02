@@ -7,6 +7,8 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 const activity = read('../app/api/activity/route.ts');
 const auditPage = read('../app/(shell)/audit/page.tsx');
 const sessions = read('../app/api/sessions/route.ts');
+const agentRuns = read('../app/api/agent/runs/route.ts');
+const overview = read('../app/api/overview/route.ts');
 const migrate = read('../scripts/migrate.mjs');
 const migration = read('../../../infra/db/migrations/0113_audit_organization_provenance.sql');
 
@@ -56,4 +58,20 @@ test('audit provenance enforces tenant-organization integrity and organization-s
   assert.match(migration, /CREATE POLICY sensitive_read_events_select[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
   assert.match(migration, /CREATE POLICY agent_runs_insert[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
   assert.match(migration, /CREATE POLICY sensitive_read_events_insert[\s\S]*organization_id = platform\.current_organization_id_nullable\(\)/);
+});
+
+
+test('future audit rows cannot omit organization provenance', () => {
+  assert.match(migration, /agent_runs_organization_required[\s\S]*CHECK \(organization_id IS NOT NULL\) NOT VALID/);
+  assert.match(migration, /agent_run_events_organization_required[\s\S]*CHECK \(organization_id IS NOT NULL\) NOT VALID/);
+  assert.match(migration, /sensitive_read_events_organization_required[\s\S]*CHECK \(organization_id IS NOT NULL\) NOT VALID/);
+});
+
+test('agent run consumers bind live organization context and expose no synthetic fallback', () => {
+  assert.match(agentRuns, /resolveRequestContext\(request\)/);
+  assert.match(agentRuns, /withTenantTransaction\(context/);
+  assert.match(agentRuns, /r\.organization_id = \$2/);
+  assert.doesNotMatch(agentRuns, /run_live_/);
+  assert.match(overview, /withTenantTransaction\(effectiveContext/);
+  assert.match(overview, /organization_id = \$2/);
 });
