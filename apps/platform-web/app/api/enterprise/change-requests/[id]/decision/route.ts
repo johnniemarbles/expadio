@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { approveCreateOrganizationRequest } from '@expadio/postgres-runtime/enterprise';
+import { decideEnterpriseOwnershipChange } from '@expadio/postgres-runtime/enterprise-ownership';
 import {
   deniedResponse,
   resolveRequestContext,
@@ -25,9 +26,15 @@ export async function POST(
     }
 
     const body = await request.json();
-    if (body.action !== 'APPROVE') {
+    const action =
+      body.action === 'APPROVE'
+        ? 'APPROVE'
+        : body.action === 'REJECT'
+          ? 'REJECT'
+          : null;
+    if (!action) {
       return NextResponse.json(
-        { error: 'Only APPROVE is implemented in this foundation slice.' },
+        { error: 'Action must be APPROVE or REJECT.' },
         { status: 400 },
       );
     }
@@ -37,18 +44,52 @@ export async function POST(
       if (!(await hasGovernanceWriteRoleForOrganization(client, context.subjectId, context.organizationId!))) {
         return { forbidden: true } as const;
       }
-      return approveCreateOrganizationRequest(client, {
-        tenantId: context.tenantId,
-        requestId: id,
-        approverOrganizationId: context.organizationId!,
-        decidedBySubjectId: context.subjectId,
-        decisionReason:
-          typeof body.reason === 'string' && body.reason.trim() !== ''
-            ? body.reason.trim()
-            : null,
-        allowSelfApproval: false,
-        decidedByIssuer: context.issuer ?? null,
-      });
+
+      const requestType = await client.query<{ operation: string }>(
+        `SELECT operation
+           FROM platform.enterprise_change_requests
+          WHERE tenant_id = $1::uuid
+            AND enterprise_change_request_id = $2::uuid
+          LIMIT 1`,
+        [context.tenantId, id],
+      );
+      const operation = requestType.rows[0]?.operation;
+      if (!operation) throw new Error('ENTERPRISE_CHANGE_REQUEST_NOT_FOUND');
+
+      const decisionReason =
+        typeof body.reason === 'string' && body.reason.trim() !== ''
+          ? body.reason.trim()
+          : null;
+
+      if (operation === 'CHANGE_OWNERSHIP') {
+        return {
+          ownership: await decideEnterpriseOwnershipChange(client, {
+            tenantId: context.tenantId,
+            requestId: id,
+            approverOrganizationId: context.organizationId!,
+            decidedBySubjectId: context.subjectId,
+            action,
+            decisionReason,
+          }),
+        } as const;
+      }
+
+      if (operation === 'CREATE_ORGANIZATION') {
+        if (action !== 'APPROVE') {
+          throw new Error('ENTERPRISE_CHANGE_REQUEST_REJECTION_UNSUPPORTED');
+        }
+        return approveCreateOrganizationRequest(client, {
+          tenantId: context.tenantId,
+          requestId: id,
+          approverOrganizationId: context.organizationId!,
+          decidedBySubjectId: context.subjectId,
+          decisionReason,
+          allowSelfApproval: false,
+          decidedByIssuer: context.issuer ?? null,
+        });
+      }
+
+      throw new Error('ENTERPRISE_CHANGE_REQUEST_OPERATION_UNSUPPORTED');
     });
 
     if ('forbidden' in outcome) {
@@ -71,6 +112,9 @@ export async function POST(
       'ENTERPRISE_APPROVER_SCOPE_MISMATCH',
       'ENTERPRISE_SEPARATION_OF_DUTIES_REQUIRED',
       'ENTERPRISE_CHANGE_REQUEST_PAYLOAD_INVALID',
+      'ENTERPRISE_CHANGE_REQUEST_REJECTION_UNSUPPORTED',
+      'ENTERPRISE_OWNERSHIP_INTEREST_NOT_FOUND',
+      'ENTERPRISE_OWNERSHIP_INTEREST_NOT_PENDING',
     ]);
     if (known.has(error?.message)) {
       const status =
