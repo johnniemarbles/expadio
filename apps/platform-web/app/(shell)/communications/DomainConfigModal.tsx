@@ -203,7 +203,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 placeholder="e.g. mail.yourbrand.com"
                 style={{ padding: "8px 12px", border: `1px solid ${domain && !domainValid ? "#f87171" : "#fdba74"}`, borderRadius: "8px", fontSize: "13px", outline: "none", background: "white" }}
               />
-              {domain && !domainValid && <span style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 500 }}>Enter a valid domain such as mail.example.com.</span>}
+              {domain && !domainValid && <span style={{ fontSize: "11px", color: "var(--theme-danger)", fontWeight: 500 }}>Enter a valid domain such as mail.example.com.</span>}
             </label>
             <label style={{ fontSize: "12px", fontWeight: 700, color: "#9a3412", display: "grid", gap: "4px" }}>
               Cloudflare API token <span style={{ fontWeight: 500, color: "#9a3412aa" }}>(optional if the deployment has one)</span>
@@ -239,7 +239,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
           </div>
 
           {error && (
-            <div style={{ fontSize: "13px", color: "#b91c1c", background: "#fef2f2", padding: "10px", borderRadius: "8px" }}>
+            <div style={{ fontSize: "13px", color: "var(--theme-danger)", background: "#fef2f2", padding: "10px", borderRadius: "8px" }}>
               ⚠️ {error}
             </div>
           )}
@@ -250,7 +250,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
               {Array.isArray(lastProvisionResult.cloudflare) && lastProvisionResult.cloudflare.length > 0 && (
                 <div style={{ marginTop: "6px", display: "grid", gap: "2px" }}>
                   {lastProvisionResult.cloudflare.map((r: any, i: number) => (
-                    <div key={i} style={{ fontSize: "11px", color: r.ok ? "#15803d" : "#b91c1c", fontFamily: "monospace" }}>
+                    <div key={i} style={{ fontSize: "11px", color: r.ok ? "#15803d" : "var(--theme-danger)", fontFamily: "monospace" }}>
                       {r.ok ? "✓" : "✗"} {r.name} — {r.action ?? r.detail}
                     </div>
                   ))}
@@ -293,7 +293,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                         borderRadius: "999px",
                         fontSize: "11px",
                         fontWeight: 800,
-                        color: d.verificationStatus === "VERIFIED" ? "#166534" : d.verificationStatus === "REVOKED" ? "#991b1b" : "#925b0b",
+                        color: d.verificationStatus === "VERIFIED" ? "var(--theme-success)" : d.verificationStatus === "REVOKED" ? "#991b1b" : "var(--theme-warning)",
                         background: d.verificationStatus === "VERIFIED" ? "#dcfce7" : d.verificationStatus === "REVOKED" ? "#fee2e2" : "#fef3c7",
                       }}
                     >
@@ -311,7 +311,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                       type="button"
                       onClick={() => handleRemove(d.senderId, d.domain)}
                       disabled={busyId === d.senderId}
-                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid #fecaca", background: "transparent", color: "#b91c1c", cursor: "pointer", fontWeight: 700 }}
+                      style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "6px", border: "1px solid #fecaca", background: "transparent", color: "var(--theme-danger)", cursor: "pointer", fontWeight: 700 }}
                     >
                       Remove
                     </button>
@@ -321,7 +321,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                 {verifyResults[d.senderId] && (
                   <div style={{ marginBottom: "12px", display: "grid", gap: "4px" }}>
                     {verifyResults[d.senderId].map((c, i) => (
-                      <div key={i} style={{ fontSize: "11px", color: c.ok ? "#166534" : "#b91c1c" }}>
+                      <div key={i} style={{ fontSize: "11px", color: c.ok ? "var(--theme-success)" : "var(--theme-danger)" }}>
                         {c.ok ? "✅" : "⚠️"} <strong>{c.purpose}</strong> — {c.detail}
                       </div>
                     ))}
