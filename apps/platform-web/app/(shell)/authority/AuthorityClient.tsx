@@ -40,9 +40,6 @@ const ceiling = (g: AuthorityGrant): string => {
   }
 };
 
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: '#0f766e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
-
 export function AuthorityClient({ queryString = '' }: { queryString?: string }) {
   const [subjectId, setSubjectId] = useState('');
   const [dimensionKey, setDimensionKey] = useState('monetary.approval');
@@ -102,29 +99,29 @@ export function AuthorityClient({ queryString = '' }: { queryString?: string }) 
     <>
       <section className={styles.panel} aria-labelledby="grant-title">
         <div className={styles.panelHeading}><div><p className={styles.eyebrow}>Governance</p><h2 id="grant-title">Grant approval authority</h2></div></div>
-        <div style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
-          <input style={inp} placeholder="Subject id (who gets the authority)" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} aria-label="Subject id" />
-          <input style={inp} placeholder="Dimension" value={dimensionKey} onChange={(e) => setDimensionKey(e.target.value)} aria-label="Dimension key" />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input style={{ ...inp, flex: 1 }} placeholder="Ceiling amount (blank = unlimited)" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Ceiling amount" />
-            <input style={{ ...inp, width: 90 }} placeholder="USD" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} aria-label="Currency" maxLength={3} />
+        <div className={styles.formGrid}>
+          <input className={styles.field} placeholder="Subject id (who gets the authority)" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} aria-label="Subject id" />
+          <input className={styles.field} placeholder="Dimension" value={dimensionKey} onChange={(e) => setDimensionKey(e.target.value)} aria-label="Dimension key" />
+          <div className={styles.formRow}>
+            <input className={[styles.field, styles.fieldGrow].join(' ')} placeholder="Ceiling amount (blank = unlimited)" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Ceiling amount" />
+            <input className={[styles.field, styles.fieldCurrency].join(' ')} placeholder="USD" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} aria-label="Currency" maxLength={3} />
           </div>
-          <input style={inp} placeholder="Organization id (optional — scopes the grant)" value={scopeOrg} onChange={(e) => setScopeOrg(e.target.value)} aria-label="Organization scope id" />
-          <div><button style={btn} onClick={grant} disabled={busy || subjectId.trim() === ''}>{busy ? 'Granting…' : 'Grant authority'}</button></div>
+          <input className={styles.field} placeholder="Organization id (optional — scopes the grant)" value={scopeOrg} onChange={(e) => setScopeOrg(e.target.value)} aria-label="Organization scope id" />
+          <div><button className={styles.button} onClick={grant} disabled={busy || subjectId.trim() === ''}>{busy ? 'Granting…' : 'Grant authority'}</button></div>
         </div>
-        {error && <p role="alert" style={{ color: '#b91c1c', fontSize: 13, margin: '10px 0 0' }}>{error}</p>}
-        {notice && <p style={{ color: '#0f766e', fontSize: 13, margin: '10px 0 0' }}>{notice}</p>}
+        {error && <p role="alert" className={[styles.inlineAlert, styles.inlineAlertDanger].join(' ')}>{error}</p>}
+        {notice && <p className={[styles.inlineAlert, styles.inlineNotice].join(' ')}>{notice}</p>}
       </section>
 
-      <section className={styles.panel} aria-labelledby="lookup-title" style={{ marginTop: 16 }}>
+      <section className={styles.panel} aria-labelledby="lookup-title">
         <div className={styles.panelHeading}>
           <div><p className={styles.eyebrow}>Inspect</p><h2 id="lookup-title">A subject's grants</h2></div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input style={inp} placeholder="Subject id" value={lookupId} onChange={(e) => setLookupId(e.target.value)} aria-label="Lookup subject id" />
-            <button style={btn} onClick={() => lookup(lookupId)} disabled={lookupId.trim() === ''}>Look up</button>
+          <div className={styles.toolbar}>
+            <input className={styles.field} placeholder="Subject id" value={lookupId} onChange={(e) => setLookupId(e.target.value)} aria-label="Lookup subject id" />
+            <button className={styles.button} onClick={() => lookup(lookupId)} disabled={lookupId.trim() === ''}>Look up</button>
           </div>
         </div>
-        {grants !== null && grants.length === 0 && <p className={styles.muted} style={{ padding: 8 }}>This subject holds no authority grants.</p>}
+        {grants !== null && grants.length === 0 && <p className={styles.emptyRow}>This subject holds no authority grants.</p>}
         {grants !== null && grants.length > 0 && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
