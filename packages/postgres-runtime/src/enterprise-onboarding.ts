@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
+import { publishGovernedEntityRelationship } from './entity-graph.ts';
 
 export interface OrganizationSetupSqlResult<Row = Record<string, unknown>> {
   readonly rows: readonly Row[];
@@ -1436,6 +1437,22 @@ export async function assignOrganizationOperatingEntity(
       input.actorSubjectId,
     ],
   );
+
+  await publishGovernedEntityRelationship(client, {
+    tenantId: input.tenantId,
+    sourceEntityType: 'OPERATING_UNIT',
+    sourceEntityId: plan.organizationId,
+    relationshipKey: 'OPERATED_BY',
+    targetEntityType: 'LEGAL_ENTITY',
+    targetEntityId: input.legalEntityId,
+    actorSubjectId: input.actorSubjectId,
+    provenanceSource: 'SYSTEM',
+    decisionReference: `organization-setup:${input.setupPlanId}`,
+    attributes: {
+      bindingId,
+      source: 'enterprise.organization-setup.operating-entity',
+    },
+  });
 
   const setupEvent = await appendSetupEvent(client, {
     tenantId: input.tenantId,

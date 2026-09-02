@@ -13,6 +13,7 @@ import { PostgresWorkflowActivationBlueprintProvider } from './workflow-activati
 import { PostgresWorkflowActivationVerificationRepository } from './workflow-activation-verification.ts';
 import { PostgresWorkflowRightsGrantRepository } from './workflow-rights.ts';
 import { PostgresWorkflowRightsProfileProvider } from './workflow-rights-profile.ts';
+import { publishGovernedEntityRelationship } from './entity-graph.ts';
 
 export type EnterpriseTerritoryKind =
   | 'GLOBAL'
@@ -1700,6 +1701,23 @@ export async function activateEnterpriseJurisdiction(
   );
   const row = updated.rows[0];
   if (!row) throw new Error('ENTERPRISE_JURISDICTION_UPDATE_FAILED');
+  await publishGovernedEntityRelationship(client, {
+    tenantId: input.tenantId,
+    sourceEntityType: 'OPERATING_UNIT',
+    sourceEntityId: current.organizationId,
+    relationshipKey: 'TERRITORIAL_JURISDICTION',
+    targetEntityType: 'LOCATION',
+    targetEntityId: current.territoryId,
+    actorSubjectId: input.activatedBySubjectId,
+    provenanceSource: 'SYSTEM',
+    decisionReference: `workflow-activation:${current.workflowActivationId}`,
+    attributes: {
+      jurisdictionActivationId: input.jurisdictionActivationId,
+      evidenceRefs: evidence,
+      source: 'enterprise.jurisdiction.activation',
+    },
+  });
+
   await appendEnterpriseEvent(client, {
     tenantId: input.tenantId,
     aggregateType: 'enterprise.jurisdiction-activation',
