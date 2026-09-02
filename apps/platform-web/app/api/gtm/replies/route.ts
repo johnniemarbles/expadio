@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { OUTBOUND_GTM_LEAD_SOURCE } from '@expadio/lead';
-import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
+import { ContextDenied, resolveRequestContext, withTenantClient, withTenantTransaction, deniedResponse } from '../../../../lib/request-context';
 import { hasGovernanceWriteRole } from '../../../../lib/governance-authz';
 import { isReplyClass, shouldConvertReplyToLead } from '../../../../lib/gtm-communication';
 import { classifyReplyBody } from '../../../../lib/gtm-engines';
@@ -42,6 +42,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    if (!context.organizationId) {
+      throw new ContextDenied('ORGANIZATION_CONTEXT_REQUIRED', 'Select an organization workspace to ingest a reply.', 403);
+    }
     const body = await request.json();
     const brandId = typeof body?.brandId === 'string' ? body.brandId : null;
     const fromEmail = typeof body?.fromEmail === 'string' ? body.fromEmail.trim() : '';
@@ -66,7 +69,10 @@ export async function POST(request: Request) {
           ? clientClass
           : 'unknown';
 
-    const result = await withTenantClient(context, async (client) => {
+    // Observation and optional Lead are one transaction. If the Lead cannot be
+    // created under organization RLS, the observation rolls back too: no orphan
+    // reply records and no duplicate observations on retry.
+    const result = await withTenantTransaction(context, async (client) => {
       if (!(await hasGovernanceWriteRole(client, context.subjectId))) {
         return { forbidden: true } as const;
       }
@@ -94,11 +100,12 @@ export async function POST(request: Request) {
       if (shouldConvertReplyToLead(proposedClass)) {
         const lead = await client.query(
           `INSERT INTO platform.crm_leads
-             (tenant_id, title, stage, source, raw_payload, owner_subject_id)
-           VALUES ($1::uuid, $2, 'NEW', $3, $4::jsonb, $5)
+             (tenant_id, organization_id, title, stage, source, raw_payload, owner_subject_id)
+           VALUES ($1::uuid, $2::uuid, $3, 'NEW', $4, $5::jsonb, $6)
            RETURNING lead_id`,
           [
             context.tenantId,
+            context.organizationId,
             `Warm reply — ${fromEmail}`.slice(0, 200),
             OUTBOUND_GTM_LEAD_SOURCE,
             JSON.stringify(payload),
