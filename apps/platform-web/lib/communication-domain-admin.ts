@@ -18,6 +18,7 @@ export async function requireCommunicationDomainAdmin(
         AND assignment.status = 'ACTIVE'
         AND role.status = 'ACTIVE'
         AND role.role_key = ANY($2::text[])
+        AND assignment.valid_from <= now()
         AND (assignment.valid_until IS NULL OR assignment.valid_until > now())
         AND (
           role.ownership_scope = 'PLATFORM'
