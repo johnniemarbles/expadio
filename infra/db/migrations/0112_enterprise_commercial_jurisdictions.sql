@@ -159,6 +159,7 @@ CREATE TABLE platform.enterprise_commercial_agreements (
   execution_evidence_refs text[] NOT NULL DEFAULT '{}',
   source_change_request_id uuid,
   workflow_instance_id uuid,
+  idempotency_key text NOT NULL CHECK (btrim(idempotency_key) <> ''),
   created_by_subject_id text NOT NULL CHECK (btrim(created_by_subject_id) <> ''),
   approved_by_subject_id text,
   approved_at timestamptz,
@@ -167,6 +168,7 @@ CREATE TABLE platform.enterprise_commercial_agreements (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (enterprise_commercial_agreement_id, tenant_id),
   UNIQUE (enterprise_commercial_agreement_id, tenant_id, enterprise_id),
+  UNIQUE (tenant_id, idempotency_key),
   FOREIGN KEY (enterprise_id, tenant_id)
     REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
     ON DELETE RESTRICT,
@@ -245,6 +247,7 @@ CREATE TABLE platform.enterprise_appointments (
   source_change_request_id uuid,
   workflow_instance_id uuid,
   workflow_rights_grant_id uuid,
+  idempotency_key text NOT NULL CHECK (btrim(idempotency_key) <> ''),
   effective_from timestamptz,
   effective_until timestamptz,
   requested_by_subject_id text NOT NULL CHECK (btrim(requested_by_subject_id) <> ''),
@@ -255,6 +258,7 @@ CREATE TABLE platform.enterprise_appointments (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (enterprise_appointment_id, tenant_id),
   UNIQUE (enterprise_appointment_id, tenant_id, enterprise_id),
+  UNIQUE (tenant_id, idempotency_key),
   FOREIGN KEY (enterprise_id, tenant_id)
     REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
     ON DELETE RESTRICT,
@@ -349,6 +353,7 @@ CREATE TABLE platform.enterprise_jurisdiction_activations (
   territory_id uuid NOT NULL,
   source_change_request_id uuid,
   workflow_activation_id uuid,
+  idempotency_key text NOT NULL CHECK (btrim(idempotency_key) <> ''),
   state text NOT NULL DEFAULT 'PLANNING' CHECK (state IN (
     'PLANNING','ACTIVATION_REVIEW','APPROVED','ACTIVE','SUSPENDED','REVOKED'
   )),
@@ -362,6 +367,7 @@ CREATE TABLE platform.enterprise_jurisdiction_activations (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (enterprise_jurisdiction_activation_id, tenant_id),
   UNIQUE (enterprise_jurisdiction_activation_id, tenant_id, enterprise_id),
+  UNIQUE (tenant_id, idempotency_key),
   FOREIGN KEY (enterprise_id, tenant_id)
     REFERENCES platform.enterprise_profiles(enterprise_id, tenant_id)
     ON DELETE RESTRICT,
@@ -574,7 +580,9 @@ DECLARE
   verified_activation_count integer;
   territory_link_count integer;
 BEGIN
-  IF NEW.state <> 'ACTIVE' OR OLD.state IS NOT DISTINCT FROM 'ACTIVE' THEN
+  IF NEW.state <> 'ACTIVE'
+     OR (TG_OP = 'UPDATE' AND OLD.state IS NOT DISTINCT FROM 'ACTIVE')
+  THEN
     RETURN NEW;
   END IF;
 
