@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { LeadValidationError } from '@expadio/lead';
-import { resolveRequestContext, withTenantTransaction, deniedResponse } from '../../../../../lib/request-context';
+import { ContextDenied, resolveRequestContext, withTenantTransaction, deniedResponse } from '../../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../../lib/crm-authz';
 import {
   CaptureScopeRejected,
@@ -22,6 +22,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    if (!context.organizationId) {
+      throw new ContextDenied('ORGANIZATION_CONTEXT_REQUIRED', 'Select an organization workspace to convert a capture lead.', 403);
+    }
     let body: unknown = {};
     try {
       body = await request.json();
@@ -49,6 +52,7 @@ export async function POST(request: Request) {
       try {
         const upserted = await client.query(UPSERT_CAPTURE_CRM_LEAD_SQL, captureConvertBindParams(
           write.principal.tenantId,
+          context.organizationId!,
           context.subjectId,
           write.input,
         ));
@@ -73,7 +77,7 @@ export async function POST(request: Request) {
       );
     }
     if ('badRef' in result) {
-      return NextResponse.json({ error: 'The linked account or contact does not exist in this workspace.' }, { status: 400 });
+      return NextResponse.json({ error: 'The linked account or contact does not exist in this organization workspace.' }, { status: 400 });
     }
     return NextResponse.json(
       {
