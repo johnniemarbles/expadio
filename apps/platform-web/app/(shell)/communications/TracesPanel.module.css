@@ -4,6 +4,7 @@
   align-items: flex-end;
   gap: 10px;
   margin-bottom: 16px;
+  animation: traceFadeIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .field {
@@ -22,10 +23,25 @@
   font: inherit;
   font-size: 13px;
   padding: 6px 10px;
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+}
+
+.control:focus {
+  border-color: color-mix(in srgb,var(--theme-primary) 45%,var(--theme-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb,var(--theme-primary) 10%,transparent);
 }
 
 .filterButton {
   cursor: pointer;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), opacity var(--theme-motion-fast) var(--theme-easing);
+}
+
+.filterButton:not(:disabled):hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.filterButton:not(:disabled):active {
+  transform: translateY(var(--theme-motion-distance-micro));
 }
 
 .alert {
@@ -36,6 +52,7 @@
   font-size: 13px;
   margin-bottom: 12px;
   padding: 10px;
+  animation: traceBannerIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .loading,
@@ -43,6 +60,7 @@
   color: var(--theme-text-muted);
   padding: 20px;
   text-align: center;
+  animation: traceFadeIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .outcomePill {
@@ -52,6 +70,7 @@
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 800;
+  transition: background var(--theme-motion-fast) var(--theme-easing), color var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
 }
 
 .outcomeSent {
@@ -93,11 +112,24 @@
   color: var(--theme-text-primary);
   cursor: pointer;
   font-weight: 700;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing);
 }
 
 .inspectButton {
   font-size: 11px;
   padding: 2px 8px;
+}
+
+.inspectButton:hover,
+.closeButton:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+  border-color: color-mix(in srgb,var(--theme-primary) 28%,var(--theme-border));
+  background: color-mix(in srgb,var(--theme-primary) 6%,transparent);
+}
+
+.inspectButton:active,
+.closeButton:active {
+  transform: translateY(var(--theme-motion-distance-micro));
 }
 
 .closeButton {
@@ -117,6 +149,7 @@
   padding: 20px;
   background: color-mix(in srgb,var(--theme-overlay) 68%,transparent);
   backdrop-filter: blur(6px);
+  animation: traceBackdropIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .dialog {
@@ -128,6 +161,7 @@
   background: var(--theme-surface-raised);
   box-shadow: var(--theme-shadow-floating);
   padding: 28px;
+  animation: traceDialogIn var(--theme-motion-panel) var(--theme-easing-emphasis) both;
 }
 
 .detailHeader {
@@ -176,7 +210,20 @@
   border: 1px solid var(--theme-border);
   border-radius: 8px;
   padding: 12px;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+  animation: traceCardIn var(--theme-motion-panel) var(--theme-easing) both;
 }
+
+.gateCard:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+  border-color: color-mix(in srgb,var(--theme-primary) 22%,var(--theme-border));
+}
+
+.gateList .gateCard:nth-child(2) { animation-delay: 35ms; }
+.gateList .gateCard:nth-child(3) { animation-delay: 70ms; }
+.gateList .gateCard:nth-child(4) { animation-delay: 105ms; }
+.gateList .gateCard:nth-child(5) { animation-delay: 140ms; }
+.gateList .gateCard:nth-child(6) { animation-delay: 175ms; }
 
 .gateHeader {
   display: flex;
@@ -192,6 +239,7 @@
 .verdict {
   font-size: 11px;
   font-weight: 800;
+  transition: color var(--theme-motion-fast) var(--theme-easing);
 }
 
 .verdictPass {
@@ -221,6 +269,11 @@
 .remediationLink {
   color: var(--theme-primary);
   margin-left: 6px;
+  transition: color var(--theme-motion-fast) var(--theme-easing), text-decoration-color var(--theme-motion-fast) var(--theme-easing);
+}
+
+.remediationLink:hover {
+  color: color-mix(in srgb,var(--theme-primary) 78%,var(--theme-text-primary));
 }
 
 .connectorGrid {
@@ -228,6 +281,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   font-size: 12px;
+  animation: traceFadeIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .connectorHeading {
@@ -247,8 +301,39 @@
   margin-bottom: 4px;
 }
 
+@keyframes traceFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes traceBannerIn {
+  from { opacity: 0; transform: translateY(calc(var(--theme-motion-distance-small) * -1)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes traceBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes traceDialogIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-panel)) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes traceCardIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 720px) {
   .connectorGrid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filters,.alert,.loading,.empty,.backdrop,.dialog,.gateCard,.connectorGrid { animation: none; }
+  .control,.filterButton,.outcomePill,.inspectButton,.closeButton,.gateCard,.verdict,.remediationLink { transition: none; }
+  .filterButton:not(:disabled):hover,.filterButton:not(:disabled):active,.inspectButton:hover,.inspectButton:active,.closeButton:hover,.closeButton:active,.gateCard:hover { transform: none; }
 }

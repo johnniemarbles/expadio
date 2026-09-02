@@ -1,0 +1,75 @@
+.banner {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: var(--theme-radius-control);
+  animation: recoveryBannerIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+.error {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  color: var(--theme-danger);
+}
+
+.notice {
+  background: color-mix(in srgb, var(--theme-success) 10%, transparent);
+  color: var(--theme-success);
+}
+
+.state {
+  padding: 20px;
+  text-align: center;
+  color: var(--theme-text-muted);
+  animation: recoveryFadeIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+.migrationStatus {
+  color: var(--theme-warning);
+  font-weight: 800;
+  transition: color var(--theme-motion-fast) var(--theme-easing);
+}
+
+.resolveButton {
+  border: 0;
+  border-radius: var(--theme-radius-control);
+  padding: 7px 10px;
+  background: var(--theme-primary);
+  color: var(--theme-text-inverse);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), opacity var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+}
+
+.resolveButton:not(:disabled):hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+  box-shadow: var(--theme-shadow-subtle);
+}
+
+.resolveButton:not(:disabled):active {
+  transform: translateY(var(--theme-motion-distance-micro));
+}
+
+.resolveButton:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+.resolveButton:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-primary) 54%, transparent);
+  outline-offset: 2px;
+}
+
+@keyframes recoveryBannerIn {
+  from { opacity: 0; transform: translateY(calc(var(--theme-motion-distance-small) * -1)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes recoveryFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner,.state { animation: none; }
+  .migrationStatus,.resolveButton { transition: none; }
+  .resolveButton:not(:disabled):hover,.resolveButton:not(:disabled):active { transform: none; }
+}

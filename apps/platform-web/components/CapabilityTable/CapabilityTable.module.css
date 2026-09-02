@@ -2,7 +2,16 @@
 .table { width: 100%; border-collapse: collapse; font-size: var(--text-12); }
 .table th { color: var(--theme-text-muted); background: var(--theme-surface-muted); text-transform: uppercase; letter-spacing: .07em; font-size: var(--text-11); font-weight: 800; text-align: left; padding: 9px 14px; }
 .table td { padding: 12px 14px; border-top: 1px solid var(--theme-border); color: var(--theme-text-primary); white-space: nowrap; }
-.table tbody tr:hover { background: #fbfbfe; }
-.capabilityName { font-weight: 750; }
-.version { margin-left: 6px; color: var(--theme-text-muted); font-size: var(--text-11); }
+.table tbody tr { transition: background var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing); }
+.table tbody tr:hover { background: var(--theme-surface-muted); }
+.table tbody tr:focus-within { background: var(--theme-surface-muted); }
+.capabilityName { font-weight: 750; transition: color var(--theme-motion-fast) var(--theme-easing); }
+.table tbody tr:hover .capabilityName { color: var(--theme-primary); }
+.version { margin-left: 6px; color: var(--theme-text-muted); font-size: var(--text-11); transition: color var(--theme-motion-fast) var(--theme-easing); }
 .muted { color: var(--theme-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .table tbody tr,
+  .capabilityName,
+  .version { transition: none; }
+}

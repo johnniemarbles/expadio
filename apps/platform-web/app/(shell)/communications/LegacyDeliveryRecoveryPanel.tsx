@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
+import recoveryStyles from "./LegacyDeliveryRecoveryPanel.module.css";
 
 interface LegacyDelivery {
   deliveryId: string;
@@ -96,20 +97,20 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
       </div>
 
       {error ? (
-        <div role="alert" style={{ padding: 10, borderRadius: 8, background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", color: "var(--theme-danger)", marginBottom: 12 }}>
+        <div role="alert" className={`${recoveryStyles.banner} ${recoveryStyles.error}`}>
           {error}
         </div>
       ) : null}
       {notice ? (
-        <div style={{ padding: 10, borderRadius: 8, background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", color: "var(--theme-success)", marginBottom: 12 }}>
+        <div className={`${recoveryStyles.banner} ${recoveryStyles.notice}`}>
           {notice}
         </div>
       ) : null}
 
       {loading ? (
-        <div style={{ padding: 20, textAlign: "center", color: "var(--theme-neutral)" }}>Loading recovery queue…</div>
+        <div className={recoveryStyles.state}>Loading recovery queue…</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 20, textAlign: "center", color: "var(--theme-neutral)" }}>
+        <div className={recoveryStyles.state}>
           No legacy PENDING deliveries require migration recovery.
         </div>
       ) : (
@@ -132,7 +133,7 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
                   <td><code>{item.deliveryId}</code></td>
                   <td>{item.channel}</td>
                   <td><code>{item.connectorKey}</code></td>
-                  <td style={{ color: "#92400e", fontWeight: 800 }}>{item.recoveryStatus}</td>
+                  <td className={recoveryStyles.migrationStatus}>{item.recoveryStatus}</td>
                   <td>{new Date(item.requestedAt).toLocaleString()}</td>
                   <td>{item.attemptCount}</td>
                   <td>
@@ -140,15 +141,7 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
                       type="button"
                       disabled={busy !== null}
                       onClick={() => void resolve(item)}
-                      style={{
-                        border: 0,
-                        borderRadius: 8,
-                        padding: "7px 10px",
-                        background: "#7c3aed",
-                        color: "var(--theme-text-inverse)",
-                        fontWeight: 800,
-                        cursor: busy ? "not-allowed" : "pointer",
-                      }}
+                      className={recoveryStyles.resolveButton}
                     >
                       {busy === item.deliveryId ? "Resolving…" : "Cancel legacy row"}
                     </button>

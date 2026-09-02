@@ -1,0 +1,14 @@
+.panel {
+  opacity: 0;
+  transform: translateY(var(--theme-motion-distance-panel));
+  transition: opacity var(--theme-motion-panel) var(--theme-easing), transform var(--theme-motion-panel) var(--theme-easing);
+}
+
+.open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { transition: none; transform: none; }
+}

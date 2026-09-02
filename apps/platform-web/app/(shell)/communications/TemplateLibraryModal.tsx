@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { TemplateCatalogueItem } from "../../api/communications/templates/route";
+import motionStyles from "./TemplateLibraryModal.module.css";
 
 /**
  * The template library operators actually asked for: the whole catalogue with
@@ -42,21 +43,21 @@ export function TemplateLibraryModal({ isOpen, onClose, templates, onOpenTemplat
   if (!isOpen) return null;
 
   return (
-    <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "var(--theme-overlay)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(920px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", border: "1px solid var(--theme-border)", borderRadius: 16, padding: 28 }}>
+    <div role="presentation" onClick={onClose} className={motionStyles.backdrop} style={{ position: "fixed", inset: 0, zIndex: 120, background: "var(--theme-overlay)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className={motionStyles.dialog} style={{ width: "min(920px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", border: "1px solid var(--theme-border)", borderRadius: 16, padding: 28 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
             <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--theme-primary)" }}>Communications / Templates</span>
             <h2 style={{ margin: "4px 0 0", fontSize: 20 }}>Template library</h2>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--theme-text-muted)" }}>{templates.length} templates. Open one to preview, version, publish or clone.</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className={motionStyles.headerActions} style={{ display: "flex", gap: 8 }}>
             <button type="button" onClick={onNewTemplate} style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid var(--theme-primary)", background: "transparent", color: "var(--theme-primary)", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>+ New template</button>
             <button type="button" onClick={onClose} aria-label="Close" style={{ border: "1px solid var(--theme-border)", background: "transparent", borderRadius: 8, width: 34, height: 34, cursor: "pointer" }}>✕</button>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        <div className={motionStyles.toolbar} style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search trigger key…" style={{ flex: "1 1 240px", padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13 }} />
           <select value={channel} onChange={(e) => setChannel(e.target.value)} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13 }}>
             <option value="">All channels</option>
@@ -85,7 +86,7 @@ export function TemplateLibraryModal({ isOpen, onClose, templates, onOpenTemplat
               </thead>
               <tbody>
                 {filtered.map((t) => (
-                  <tr key={`${t.triggerKey}-${t.scope}`} style={{ borderTop: "1px solid var(--theme-border)" }}>
+                  <tr key={`${t.triggerKey}-${t.scope}`} className={motionStyles.row} style={{ borderTop: "1px solid var(--theme-border)" }}>
                     <td style={{ padding: "8px", fontWeight: 600 }}>{t.triggerKey}</td>
                     <td style={{ padding: "8px" }}>{t.channels.map((c) => <span key={c} style={{ display: "inline-block", padding: "1px 6px", marginRight: 4, borderRadius: 999, background: "var(--theme-surface-muted)", color: "var(--theme-text-secondary)", fontSize: 11 }}>{c}</span>)}</td>
                     <td style={{ padding: "8px" }}><span style={{ fontSize: 11, fontWeight: 700, color: t.scope === "PLATFORM" ? "var(--theme-primary)" : "var(--theme-secondary)" }}>{t.scope}</span></td>
@@ -93,7 +94,7 @@ export function TemplateLibraryModal({ isOpen, onClose, templates, onOpenTemplat
                     <td style={{ padding: "8px" }}>{t.draftCount}</td>
                     <td style={{ padding: "8px" }}>{t.totalVersions}</td>
                     <td style={{ padding: "8px", textAlign: "right" }}>
-                      <button type="button" onClick={() => onOpenTemplate(t.triggerKey)} style={{ fontSize: 12, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer", fontWeight: 700 }}>Open</button>
+                      <button type="button" className={motionStyles.openButton} onClick={() => onOpenTemplate(t.triggerKey)} style={{ fontSize: 12, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer", fontWeight: 700 }}>Open</button>
                     </td>
                   </tr>
                 ))}
@@ -101,7 +102,7 @@ export function TemplateLibraryModal({ isOpen, onClose, templates, onOpenTemplat
             </table>
           </div>
         ) : (
-          <div style={{ padding: 30, textAlign: "center", color: "var(--theme-text-muted)" }}>
+          <div className={motionStyles.empty} style={{ padding: 30, textAlign: "center", color: "var(--theme-text-muted)" }}>
             {templates.length === 0 ? "No templates yet. Create the first one." : "No templates match these filters."}
           </div>
         )}

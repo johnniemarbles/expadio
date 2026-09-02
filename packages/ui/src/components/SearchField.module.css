@@ -30,6 +30,7 @@
   color: var(--theme-text-muted);
   font-size: var(--text-15);
   pointer-events: none;
+  transition: color var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
 }
 
 .input {
@@ -40,15 +41,32 @@
   font-size: var(--text-15);
   color: var(--theme-text-primary);
   background-color: var(--theme-surface);
-  transition: border-color 0.2s;
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
   font-family: inherit;
 }
 
 .input:focus {
   outline: none;
   box-shadow: var(--ring-focus);
+  transform: translateY(-1px);
+}
+
+.input:focus + .icon,
+.inputWrapper:focus-within .icon {
+  color: var(--theme-primary);
+  transform: scale(1.04);
 }
 
 .input::placeholder {
   color: var(--theme-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon,
+  .input {
+    transition: none;
+  }
+  .input:focus {
+    transform: none;
+  }
 }

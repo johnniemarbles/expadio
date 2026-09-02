@@ -1,0 +1,13 @@
+.list > * { animation: motionListIn var(--theme-motion-normal) var(--theme-easing) both; }
+.list > *:nth-child(1) { animation-delay: 0ms; }
+.list > *:nth-child(2) { animation-delay: calc(var(--motion-stagger) * 1); }
+.list > *:nth-child(3) { animation-delay: calc(var(--motion-stagger) * 2); }
+.list > *:nth-child(4) { animation-delay: calc(var(--motion-stagger) * 3); }
+.list > *:nth-child(5) { animation-delay: calc(var(--motion-stagger) * 4); }
+.list > *:nth-child(6) { animation-delay: calc(var(--motion-stagger) * 5); }
+.list > *:nth-child(7) { animation-delay: calc(var(--motion-stagger) * 6); }
+.list > *:nth-child(8) { animation-delay: calc(var(--motion-stagger) * 7); }
+.list > *:nth-child(9) { animation-delay: calc(var(--motion-stagger) * 8); }
+.list > *:nth-child(10) { animation-delay: calc(var(--motion-stagger) * 9); }
+@keyframes motionListIn { from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .list > * { animation: none; } }
