@@ -55,8 +55,8 @@ interface ConnectorActionsModalProps {
 }
 
 const PROBE_COLORS: Record<string, { fg: string; bg: string }> = {
-  VALID: { fg: "#166534", bg: "#dcfce7" },
-  FAILING: { fg: "#925b0b", bg: "#fef3c7" },
+  VALID: { fg: "var(--theme-success)", bg: "#dcfce7" },
+  FAILING: { fg: "var(--theme-warning)", bg: "#fef3c7" },
   INVALID: { fg: "#991b1b", bg: "#fee2e2" },
 };
 
@@ -207,7 +207,7 @@ export function ConnectorActionsModal({
               <div>Credential state: <strong>{health.credentialState ?? "—"}</strong> · Custody: <strong>{health.custodyMode ?? "—"}</strong></div>
               <div>Last probe: <strong>{health.probeCheckedAt ? new Date(health.probeCheckedAt).toLocaleString() : "not yet probed"}</strong></div>
               {health.probeError && (
-                <div style={{ color: "#b91c1c" }}>Provider error: <span style={{ fontFamily: "monospace" }}>{health.probeError}</span></div>
+                <div style={{ color: "var(--theme-danger)" }}>Provider error: <span style={{ fontFamily: "monospace" }}>{health.probeError}</span></div>
               )}
               <div>
                 Allocation on this probe — transactional ×{health.allocation.transactionalMultiplier}, bulk ×{health.allocation.bulkMultiplier}
@@ -239,7 +239,7 @@ export function ConnectorActionsModal({
           )}
         </section>
 
-        {error && <div role="alert" style={{ fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
+        {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
         {notice && <div style={{ fontSize: 13, color: "#15803d", background: "#f0fdf4", padding: 10, borderRadius: 8, border: "1px solid #bbf7d0", marginBottom: 12 }}>✅ {notice}</div>}
 
         {(needsApproval || ownershipScope === "PLATFORM") && (
@@ -260,7 +260,7 @@ export function ConnectorActionsModal({
             type="button"
             onClick={handleRevoke}
             disabled={revoking}
-            style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "#b91c1c", color: "white", fontWeight: 700, cursor: revoking ? "not-allowed" : "pointer" }}
+            style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-danger)", color: "white", fontWeight: 700, cursor: revoking ? "not-allowed" : "pointer" }}
           >
             {revoking ? "Revoking…" : "Revoke credential"}
           </button>
@@ -274,7 +274,7 @@ function Stat({ label, value, danger = false }: { label: string; value: string |
   return (
     <div style={{ border: "1px solid var(--line, #f1f5f9)", borderRadius: 8, padding: "8px 10px" }}>
       <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-500, #64748b)" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: danger ? "#b91c1c" : "var(--ink-900, #0f172a)" }}>{value}</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: danger ? "var(--theme-danger)" : "var(--ink-900, #0f172a)" }}>{value}</div>
     </div>
   );
 }
