@@ -42,7 +42,7 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: 'var(--surface, #fff)', color: 'var(--ink, #0f172a)', borderRadius: 12, padding: 20, width: 'min(560px, 100%)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}
+        style={{ background: 'var(--surface, var(--theme-text-inverse))', color: 'var(--ink, var(--theme-text-primary))', borderRadius: 12, padding: 20, width: 'min(560px, 100%)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}
       >
         <h3 style={{ margin: 0, fontSize: 15 }}>{title}</h3>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-500, #64748b)' }}>Append-only transitions and immutable decisions, in order. This is the governed audit trail.</p>
@@ -52,7 +52,7 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
         {entries !== null && entries.length > 0 && (
           <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8, overflowY: 'auto' }}>
             {entries.map((e, i) => (
-              <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', borderLeft: `3px solid ${e.kind === 'DECISION' ? 'var(--theme-success)' : '#4f46e5'}`, paddingLeft: 10 }}>
+              <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', borderLeft: `3px solid ${e.kind === 'DECISION' ? 'var(--theme-success)' : 'var(--theme-primary)'}`, paddingLeft: 10 }}>
                 <span style={{ fontSize: 10, color: 'var(--ink-500, #64748b)', minWidth: 132 }}>{new Date(e.at).toLocaleString()}</span>
                 <span style={{ fontSize: 13 }}>
                   {e.kind === 'TRANSITION' ? (
@@ -62,13 +62,13 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
                     </>
                   ) : (
                     <>
-                      <span style={{ padding: '1px 6px', borderRadius: 999, fontSize: 10, fontWeight: 800, color: 'var(--theme-success)', background: '#dcfce7' }}>DECISION</span>{' '}
+                      <span style={{ padding: '1px 6px', borderRadius: 999, fontSize: 10, fontWeight: 800, color: 'var(--theme-success)', background: 'color-mix(in srgb,var(--theme-success) 12%,transparent)' }}>DECISION</span>{' '}
                       <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
                       <span style={{ fontSize: 11, color: 'var(--ink-500, #64748b)' }}> · {e.bySubjectId}</span>
                       {e.evidenceRefs && e.evidenceRefs.length > 0 && (
                         <span style={{ display: 'block', marginTop: 2 }}>
                           {e.evidenceRefs.map((ref) => (
-                            <code key={ref} style={{ fontSize: 10, color: 'var(--ink-500, #64748b)', background: 'var(--surface-2, #f1f5f9)', padding: '1px 5px', borderRadius: 4, marginRight: 4 }}>{ref}</code>
+                            <code key={ref} style={{ fontSize: 10, color: 'var(--ink-500, #64748b)', background: 'var(--theme-surface-muted)', padding: '1px 5px', borderRadius: 4, marginRight: 4 }}>{ref}</code>
                           ))}
                         </span>
                       )}
