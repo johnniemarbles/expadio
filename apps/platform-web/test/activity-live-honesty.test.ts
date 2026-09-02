@@ -4,6 +4,9 @@ import test from 'node:test';
 
 const route = readFileSync(new URL('../app/api/activity/route.ts', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../app/(shell)/audit/page.tsx', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../../../infra/db/migrations/0113_audit_organization_provenance.sql', import.meta.url), 'utf8');
+const agentRepository = readFileSync(new URL('../../../packages/postgres-runtime/src/agent-run.ts', import.meta.url), 'utf8');
+const sensitiveReadRepository = readFileSync(new URL('../../../packages/postgres-runtime/src/sensitive-read-event.ts', import.meta.url), 'utf8');
 
 test('activity route resolves the live authorized workspace instead of a demo fixture', () => {
   assert.match(route, /resolveRequestContext\(request\)/);
@@ -29,4 +32,13 @@ test('empty audit scope stays empty and never invents evidence', () => {
 test('database and scope failures remain explicit denials', () => {
   assert.match(route, /deniedResponse\(error\)/);
   assert.match(route, /Activity evidence is incomplete/);
+});
+
+
+test('organization provenance is forward-only and never guessed for historical evidence', () => {
+  assert.match(migration, /ADD COLUMN organization_id/);
+  assert.doesNotMatch(migration, /UPDATE platform\.agent_runs|UPDATE platform\.agent_run_events|UPDATE platform\.sensitive_read_events/);
+  assert.match(agentRepository, /current_setting\('app\.organization_id', true\)/);
+  assert.match(agentRepository, /SELECT organization_id[\s\S]*FROM platform\.agent_runs/);
+  assert.match(sensitiveReadRepository, /current_setting\('app\.organization_id', true\)/);
 });
