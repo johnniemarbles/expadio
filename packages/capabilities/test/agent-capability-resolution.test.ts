@@ -62,13 +62,13 @@ const query = {
   kind: 'SKILL' as const,
   key: 'source-verify',
   tenantId: 'tenant-1',
-  verticalKeys: ['dentex'],
+  verticalKeys: ['acme-corp'],
   effectiveAt: '2026-08-26T00:00:00.000Z',
 };
 
 test('prefers tenant scope before vertical and platform scope', async () => {
   const platform = manifest();
-  const vertical = manifest({ scope: { kind: 'VERTICAL', verticalKey: 'dentex' } });
+  const vertical = manifest({ scope: { kind: 'VERTICAL', verticalKey: 'acme-corp' } });
   const tenant = manifest({ scope: { kind: 'TENANT', tenantId: 'tenant-1' } });
   const resolver = new PublishedAgentCapabilityResolver(
     repository([platform, vertical, tenant]),

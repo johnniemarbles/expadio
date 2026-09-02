@@ -47,13 +47,13 @@ test('allowed policy resolves a durable intent without executing a capability', 
   if (!resolved.matched || !resolved.allowed) throw new Error('expected allowed intent');
 
   assert.equal(resolved.intent.executorClass, 'COMMUNICATE');
-  assert.equal(resolved.intent.actionKey, 'patient.follow_up');
+  assert.equal(resolved.intent.actionKey, 'client.follow_up');
   assert.equal(resolved.intent.sourceEventId, event.eventId);
   assert.equal(resolved.intent.causationId, event.eventId);
   assert.equal(resolved.intent.correlationId, event.correlationId);
   assert.equal(
     resolved.intent.idempotencyKey,
-    '11111111-1111-4111-8111-111111111111:dentex.discharge.follow-up:COMMUNICATE',
+    '11111111-1111-4111-8111-111111111111:acme-corp.completed.follow-up:COMMUNICATE',
   );
   assert.deepEqual(resolved.intent.configuration, { channel: 'email' });
 });
@@ -62,18 +62,18 @@ test('denied policy creates no executable intent', () => {
   const resolved = resolveGovernedAction(
     event,
     {
-      ruleKey: 'dentex.discharge.follow-up',
-      eventType: 'Treatment.Discharged',
+      ruleKey: 'acme-corp.completed.follow-up',
+      eventType: 'ServiceRequest.Completed',
       executorClass: 'COMMUNICATE',
-      actionKey: 'patient.follow_up',
+      actionKey: 'client.follow_up',
       enabled: true,
-      policyKeys: ['patient-contactable'],
+      policyKeys: ['client-contactable'],
       configuration: {},
     },
     {
       allowed: false,
-      policyKeys: ['patient-contactable'],
-      evidenceRefs: ['suppression:patient'],
+      policyKeys: ['client-contactable'],
+      evidenceRefs: ['suppression:client'],
       reasonCode: 'SUPPRESSED',
       evaluatedAt: new Date(),
     },
@@ -106,17 +106,17 @@ test('an allowed decision cannot omit a policy required by the rule', () => {
   const resolved = resolveGovernedAction(
     event,
     {
-      ruleKey: 'dentex.discharge.follow-up',
-      eventType: 'Treatment.Discharged',
+      ruleKey: 'acme-corp.completed.follow-up',
+      eventType: 'ServiceRequest.Completed',
       executorClass: 'COMMUNICATE',
-      actionKey: 'patient.follow_up',
+      actionKey: 'client.follow_up',
       enabled: true,
-      policyKeys: ['patient-contactable', 'quiet-hours'],
+      policyKeys: ['client-contactable', 'quiet-hours'],
       configuration: {},
     },
     {
       allowed: true,
-      policyKeys: ['patient-contactable'],
+      policyKeys: ['client-contactable'],
       evidenceRefs: ['consent:active'],
       reasonCode: 'ALLOWED',
       evaluatedAt: new Date(),
@@ -134,29 +134,29 @@ test('an allowed decision cannot omit a policy required by the rule', () => {
 test('action configuration materializes event and aggregate bindings without JSONPath', () => {
   const materialized = materializeGovernedActionConfiguration(
     {
-      triggerKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+      triggerKey: { kind: 'LITERAL', value: 'client.follow_up' },
       recipient: {
-        email: { kind: 'AGGREGATE_FIELD', key: 'patientEmail' },
+        email: { kind: 'AGGREGATE_FIELD', key: 'clientEmail' },
       },
       variables: {
-        patientName: { kind: 'AGGREGATE_FIELD', key: 'patientName' },
+        clientName: { kind: 'AGGREGATE_FIELD', key: 'clientName' },
         stage: { kind: 'EVENT_PAYLOAD', key: 'stage' },
       },
     },
     {
       event,
       aggregateFields: {
-        patientEmail: 'patient@example.test',
-        patientName: 'Jane',
+        clientEmail: 'client@example.test',
+        clientName: 'Jane',
       },
     },
   );
 
   assert.deepEqual(materialized, {
-    triggerKey: 'patient.follow_up',
-    recipient: { email: 'patient@example.test' },
+    triggerKey: 'client.follow_up',
+    recipient: { email: 'client@example.test' },
     variables: {
-      patientName: 'Jane',
+      clientName: 'Jane',
       stage: 'RESOLVED',
     },
   });
@@ -166,14 +166,14 @@ test('required bindings fail closed and top-level keys forbid JSONPath syntax', 
   assert.throws(
     () => materializeGovernedActionConfiguration(
       { email: { kind: 'AGGREGATE_FIELD', key: 'patient.email' } },
-      { event, aggregateFields: { patientEmail: 'patient@example.test' } },
+      { event, aggregateFields: { clientEmail: 'client@example.test' } },
     ),
     /one top-level field key/,
   );
 
   assert.throws(
     () => materializeGovernedActionConfiguration(
-      { email: { kind: 'AGGREGATE_FIELD', key: 'patientEmail' } },
+      { email: { kind: 'AGGREGATE_FIELD', key: 'clientEmail' } },
       { event, aggregateFields: {} },
     ),
     /No value is available/,
