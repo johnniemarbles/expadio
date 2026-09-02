@@ -175,7 +175,7 @@ export function GtmClient() {
           <div>
             <p className={styles.eyebrow}>Demand Generation Control Plane</p>
             <h1 id="gtm-title" className={styles.title}>AutoGTM</h1>
-            <p className={styles.description}>Govern ICPs, sequences, campaigns, meeting requests, prospect observations, and reply ingestion through the workflow and communication-intent path. Interested replies continue into CRM with the real source key <code>outbound_gtm</code>. No message is sent from this surface.</p>
+            <p className={styles.description}>Govern ICPs, sequences, campaigns, meeting requests, prospect observations, and reply ingestion through the workflow and communication-intent path. Approved touches persist a <code>communication.email.send</code> intent through <code>gtm.email</code>; interested replies continue into CRM with the real source key <code>outbound_gtm</code>. No message is sent from this surface.</p>
           </div>
           <button type="button" className={styles.secondaryButton} disabled={busy !== null} onClick={() => void refresh(true)}>Refresh</button>
         </header>
