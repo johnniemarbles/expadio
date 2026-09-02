@@ -141,6 +141,36 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       createdBySubjectId: 'commercial-maker',
       idempotencyKey: 'agreement-dist-ca-001',
     });
+    const agreementReplay = await createEnterpriseCommercialAgreement(c, {
+      tenantId,
+      enterpriseId,
+      title: 'Canada Master Distribution Agreement',
+      agreementKind: 'DISTRIBUTION',
+      agreementNumber: 'DIST-CA-001',
+      grantorLegalEntityId,
+      granteeLegalEntityId,
+      sponsoringOrganizationId: rootOrganizationId,
+      governingLawCountryCode: 'CA',
+      createdBySubjectId: 'commercial-maker',
+      idempotencyKey: 'agreement-dist-ca-001',
+    });
+    assert.equal(agreementReplay.agreementId, agreement.agreementId);
+    await assert.rejects(
+      () => createEnterpriseCommercialAgreement(c, {
+        tenantId,
+        enterpriseId,
+        title: 'Different agreement payload',
+        agreementKind: 'DISTRIBUTION',
+        agreementNumber: 'DIST-CA-001',
+        grantorLegalEntityId,
+        granteeLegalEntityId,
+        sponsoringOrganizationId: rootOrganizationId,
+        governingLawCountryCode: 'CA',
+        createdBySubjectId: 'commercial-maker',
+        idempotencyKey: 'agreement-dist-ca-001',
+      }),
+      /ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT/,
+    );
     await approveAndActivateEnterpriseCommercialAgreement(c, {
       tenantId,
       agreementId: agreement.agreementId,
@@ -162,6 +192,39 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       requestedBySubjectId: 'commercial-maker',
       idempotencyKey: 'appointment-dist-ca-001',
     });
+    const appointmentReplay = await createEnterpriseAppointment(c, {
+      tenantId,
+      enterpriseId,
+      agreementId: agreement.agreementId,
+      grantorOrganizationId: rootOrganizationId,
+      beneficiaryOrganizationId,
+      beneficiaryLegalEntityId: granteeLegalEntityId,
+      appointmentKind: 'DISTRIBUTOR',
+      rightsProfileKey: 'enterprise.channel-partner',
+      requestedRightTypes: ['DISTRIBUTE', 'SELL'],
+      territoryIds: [territoryId],
+      requestedBySubjectId: 'commercial-maker',
+      idempotencyKey: 'appointment-dist-ca-001',
+    });
+    assert.equal(appointmentReplay.appointmentId, appointment.appointmentId);
+    assert.equal(appointmentReplay.workflowInstanceId, appointment.workflowInstanceId);
+    await assert.rejects(
+      () => createEnterpriseAppointment(c, {
+        tenantId,
+        enterpriseId,
+        agreementId: agreement.agreementId,
+        grantorOrganizationId: rootOrganizationId,
+        beneficiaryOrganizationId,
+        beneficiaryLegalEntityId: granteeLegalEntityId,
+        appointmentKind: 'BROKER',
+        rightsProfileKey: 'enterprise.channel-partner',
+        requestedRightTypes: ['SELL', 'DISTRIBUTE'],
+        territoryIds: [territoryId],
+        requestedBySubjectId: 'commercial-maker',
+        idempotencyKey: 'appointment-dist-ca-001',
+      }),
+      /ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT/,
+    );
 
     await moveEnterpriseAppointmentToReview(c, {
       tenantId,
@@ -219,6 +282,17 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       evidenceRefs: ['request:jurisdiction:canada'],
       idempotencyKey: 'jurisdiction-dist-ca-001',
     });
+    const jurisdictionReplay = await startEnterpriseJurisdictionActivation(c, {
+      tenantId,
+      enterpriseId,
+      appointmentId: appointment.appointmentId,
+      territoryId,
+      requestedBySubjectId: 'commercial-approver',
+      evidenceRefs: ['request:jurisdiction:canada'],
+      idempotencyKey: 'jurisdiction-dist-ca-001',
+    });
+    assert.equal(jurisdictionReplay.jurisdictionActivationId, jurisdiction.jurisdictionActivationId);
+    assert.equal(jurisdictionReplay.workflowActivationId, jurisdiction.workflowActivationId);
 
     await assert.rejects(
       () => c.query(
