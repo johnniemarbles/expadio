@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DENTEX_PACK } from '@expadio/industry-packs';
+import { ACME_CORP_PACK } from '@expadio/industry-packs';
 import { PostgresIndustryPackRuntimeResolver } from '../src/industry-pack-runtime.ts';
 import type { PostgresClient, SqlQueryResult } from '../src/index.ts';
 
@@ -22,21 +22,21 @@ test('tenant published pack wins before platform and code baseline', async () =>
   client.responses.push({
     rows: [{
       tenant_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      vertical_key: 'dentex',
+      vertical_key: 'acme-corp',
       version: 7,
-      definition: { ...DENTEX_PACK, label: 'Tenant DENTEX v7' },
+      definition: { ...ACME_CORP_PACK, label: 'Tenant ACME Corp v7' },
     }],
     rowCount: 1,
   });
 
   const result = await new PostgresIndustryPackRuntimeResolver(client).resolve({
     tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    verticalKey: ' DENTEX ',
+    verticalKey: ' ACME-CORP ',
   });
 
-  assert.equal(result.pack?.label, 'Tenant DENTEX v7');
+  assert.equal(result.pack?.label, 'Tenant ACME Corp v7');
   assert.deepEqual(result.provenance, {
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
     version: 7,
     source: 'TENANT_PUBLISHED',
     scope: 'TENANT',
@@ -44,7 +44,7 @@ test('tenant published pack wins before platform and code baseline', async () =>
   assert.equal(client.calls.length, 1);
   assert.deepEqual(client.calls[0]?.values, [
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'dentex',
+    'acme-corp',
   ]);
 });
 
@@ -54,22 +54,22 @@ test('platform published pack is used when tenant has no published override', as
   client.responses.push({
     rows: [{
       tenant_id: null,
-      vertical_key: 'dentex',
+      vertical_key: 'acme-corp',
       version: 3,
-      definition: { ...DENTEX_PACK, label: 'Platform DENTEX v3' },
+      definition: { ...ACME_CORP_PACK, label: 'Platform ACME Corp v3' },
     }],
     rowCount: 1,
   });
 
   const result = await new PostgresIndustryPackRuntimeResolver(client).resolve({
     tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
   });
 
   assert.equal(result.provenance.source, 'PLATFORM_PUBLISHED');
   assert.equal(result.provenance.version, 3);
   assert.equal(client.calls.length, 2);
-  assert.deepEqual(client.calls[1]?.values, [null, 'dentex']);
+  assert.deepEqual(client.calls[1]?.values, [null, 'acme-corp']);
 });
 
 test('registered code baseline remains the final compatibility fallback', async () => {
@@ -79,12 +79,12 @@ test('registered code baseline remains the final compatibility fallback', async 
 
   const result = await new PostgresIndustryPackRuntimeResolver(client).resolve({
     tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
   });
 
-  assert.equal(result.pack?.verticalKey, 'dentex');
+  assert.equal(result.pack?.verticalKey, 'acme-corp');
   assert.deepEqual(result.provenance, {
-    verticalKey: 'dentex',
+    verticalKey: 'acme-corp',
     version: null,
     source: 'CODE_BASELINE',
     scope: 'CODE',

@@ -239,123 +239,114 @@ export interface IndustryPack {
 }
 
 // ---------------------------------------------------------------------------
-// DENTEX — dental practice management.
+// ACME Corp — a generic multi-service business.
+// This pack proves the reskin is pure configuration: different words,
+// different process language, different case data — all over the one neutral
+// engine. Any brand/tenant that onboards to EXPADIO can author an equivalent
+// pack for their own domain vocabulary.
 // ---------------------------------------------------------------------------
 
-const DENTEX_TERMINOLOGY: PresentationTerminologyCatalogue = {
+const ACME_CORP_TERMINOLOGY: PresentationTerminologyCatalogue = {
   defaultLocale: 'en',
   concepts: [
-    { conceptKey: 'crm.account', labels: [{ locale: 'en', singular: 'Practice', plural: 'Practices' }] },
-    { conceptKey: 'crm.contact', labels: [{ locale: 'en', singular: 'Patient', plural: 'Patients' }] },
-    { conceptKey: 'crm.lead', labels: [{ locale: 'en', singular: 'Referral', plural: 'Referrals' }], aliases: ['enquiry'] },
-    { conceptKey: 'crm.case', labels: [{ locale: 'en', singular: 'Treatment', plural: 'Treatments' }] },
-    { conceptKey: 'crm.agreement', labels: [{ locale: 'en', singular: 'Care plan', plural: 'Care plans' }] },
+    { conceptKey: 'crm.account', labels: [{ locale: 'en', singular: 'Client', plural: 'Clients' }] },
+    { conceptKey: 'crm.contact', labels: [{ locale: 'en', singular: 'Contact', plural: 'Contacts' }] },
+    { conceptKey: 'crm.lead', labels: [{ locale: 'en', singular: 'Enquiry', plural: 'Enquiries' }], aliases: ['enquiry'] },
+    { conceptKey: 'crm.case', labels: [{ locale: 'en', singular: 'Service Request', plural: 'Service Requests' }] },
+    { conceptKey: 'crm.agreement', labels: [{ locale: 'en', singular: 'Service Agreement', plural: 'Service Agreements' }] },
   ],
 };
 
-const DENTEX_PROFILE: IndustryProfile = {
-  industryKey: 'dentex',
-  label: 'DENTEX — Dental practice',
+const ACME_CORP_PROFILE: IndustryProfile = {
+  industryKey: 'acme-corp',
+  label: 'ACME Corp — Multi-service business',
   components: [
-    // An IndustryProfile must carry an ONTOLOGY and a TERMINOLOGY foundation.
-    { kind: 'ONTOLOGY', key: 'dentex.crm', version: 1 },
-    { kind: 'TERMINOLOGY', key: 'dentex.crm', version: 1 },
+    { kind: 'ONTOLOGY', key: 'acme-corp.crm', version: 1 },
+    { kind: 'TERMINOLOGY', key: 'acme-corp.crm', version: 1 },
   ],
 };
 
-// The crm.case process is a "Treatment" in a dental practice; its stages read
-// as a course of care rather than a generic ticket lifecycle.
-const DENTEX_CASE_WORKFLOW: CaseWorkflowVocabulary = {
-  workType: 'Treatment',
+const ACME_CORP_CASE_WORKFLOW: CaseWorkflowVocabulary = {
+  workType: 'Service Request',
   stages: {
-    INTAKE: 'Consultation',
-    IN_PROGRESS: 'In treatment',
-    REVIEW: 'Clinical review',
-    RESOLVED: 'Discharged',
+    INTAKE: 'New Request',
+    IN_PROGRESS: 'In Progress',
+    REVIEW: 'Quality Review',
+    RESOLVED: 'Completed',
   },
-  // The clinical review's canonical APPROVE/RETURN, in a clinician's words. The
-  // recorded outcome stays canonical, so the gate and audit trail are unchanged.
   decisionOutcomeLabels: {
-    APPROVE: 'Approve treatment plan',
-    RETURN: 'Send back for revision',
+    APPROVE: 'Approve & Close',
+    RETURN: 'Return for Revision',
   },
   stageGuidance: {
-    INTAKE: 'Assess the patient and agree a treatment plan.',
-    IN_PROGRESS: 'Carry out the planned procedures.',
-    REVIEW: 'A clinician signs off the treatment before discharge.',
-    RESOLVED: 'Patient discharged; care plan on file.',
+    INTAKE: 'Capture the client request and agree scope.',
+    IN_PROGRESS: 'Work the service request.',
+    REVIEW: 'A senior team member reviews before closing.',
+    RESOLVED: 'Request completed and archived.',
   },
 };
 
-// A Treatment carries dental data a generic case does not: which tooth, the
-// procedure, and how urgent — the pack configuring the subject's own fields.
-const DENTEX_CASE_SCHEMA: CaseSchema = {
+const ACME_CORP_CASE_SCHEMA: CaseSchema = {
   version: 1,
   fields: [
-    { key: 'tooth', label: 'Tooth / quadrant', type: 'text' },
-    { key: 'procedureCode', label: 'Procedure code', type: 'text' },
-    { key: 'urgency', label: 'Urgency', type: 'select', options: ['Routine', 'Priority', 'Emergency'], required: true },
+    { key: 'serviceType', label: 'Service type', type: 'select', options: ['Consulting', 'Support', 'Installation', 'Training'], required: true },
+    { key: 'priority', label: 'Priority', type: 'select', options: ['Low', 'Normal', 'High', 'Critical'], required: true },
+    { key: 'referenceCode', label: 'Reference code', type: 'text' },
   ],
 };
 
-// DENTEX now declares process semantics, not only labels. These are expressed
-// entirely in canonical case concepts so the horizontal gate runtime can apply
-// them without a DENTEX branch:
-//   Consultation -> In treatment: a Patient and Practice must be linked.
-//   In treatment -> Clinical review: the performed procedure must be recorded.
-//   Clinical review -> Discharged: clinician approval + Care plan are required.
-const DENTEX_CASE_STAGE_SEMANTICS: CaseWorkflowSemantics = {
+const ACME_CORP_CASE_STAGE_SEMANTICS: CaseWorkflowSemantics = {
   requirements: [
     {
       stageKey: 'INTAKE',
       phase: 'EXIT',
       requiredRelationships: ['crm.contact', 'crm.account'],
-      message: 'A patient and practice must be linked before treatment begins.',
+      message: 'A contact and client must be linked before work begins.',
     },
     {
       stageKey: 'IN_PROGRESS',
       phase: 'EXIT',
-      requiredAttributeKeys: ['procedureCode'],
-      message: 'Record the performed procedure before clinical review.',
+      requiredAttributeKeys: ['serviceType'],
+      message: 'Record the service type before quality review.',
     },
     {
       stageKey: 'REVIEW',
       phase: 'EXIT',
       requiredRelationships: ['crm.agreement'],
       requiredDecisionOutcomes: ['APPROVE'],
-      message: 'Clinical approval and a care plan are required before discharge.',
+      message: 'Senior approval and a service agreement are required before closing.',
     },
   ],
 };
 
-const DENTEX_CASE_LIFECYCLE_EVENTS: readonly CaseLifecycleEventMapping[] = [
-  { stageKey: 'INTAKE', eventType: 'Treatment.ConsultationEntered', eventVersion: 1 },
-  { stageKey: 'IN_PROGRESS', eventType: 'Treatment.InTreatmentEntered', eventVersion: 1 },
-  { stageKey: 'REVIEW', eventType: 'Treatment.ClinicalReviewEntered', eventVersion: 1 },
-  { stageKey: 'RESOLVED', eventType: 'Treatment.Discharged', eventVersion: 1 },
+const ACME_CORP_CASE_LIFECYCLE_EVENTS: readonly CaseLifecycleEventMapping[] = [
+  { stageKey: 'INTAKE', eventType: 'ServiceRequest.NewRequestEntered', eventVersion: 1 },
+  { stageKey: 'IN_PROGRESS', eventType: 'ServiceRequest.InProgressEntered', eventVersion: 1 },
+  { stageKey: 'REVIEW', eventType: 'ServiceRequest.QualityReviewEntered', eventVersion: 1 },
+  { stageKey: 'RESOLVED', eventType: 'ServiceRequest.Completed', eventVersion: 1 },
 ];
 
-const DENTEX_GOVERNED_ACTION_RULES: readonly GovernedActionRule[] = [
+const ACME_CORP_GOVERNED_ACTION_RULES: readonly GovernedActionRule[] = [
   {
-    ruleKey: 'dentex.treatment.discharge.patient-follow-up',
-    eventType: 'Treatment.Discharged',
+    ruleKey: 'acme-corp.service-request.completed.client-follow-up',
+    eventType: 'ServiceRequest.Completed',
     executorClass: 'SCHEDULE',
-    actionKey: 'patient.follow_up.schedule',
+    actionKey: 'client.follow_up.schedule',
     enabled: true,
     policyKeys: [],
     configuration: {
-      delaySeconds: { kind: 'LITERAL', value: 604800 },
+      delaySeconds: { kind: 'LITERAL', value: 259200 },
       target: {
         executorClass: { kind: 'LITERAL', value: 'COMMUNICATE' },
-        actionKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+        actionKey: { kind: 'LITERAL', value: 'client.follow_up' },
         configuration: {
-          triggerKey: { kind: 'LITERAL', value: 'patient.follow_up' },
+          triggerKey: { kind: 'LITERAL', value: 'client.follow_up' },
           recipient: {
             email: { kind: 'AGGREGATE_FIELD', key: 'contactEmail' },
           },
           variables: {
-            patientName: { kind: 'AGGREGATE_FIELD', key: 'contactName' },
-            treatmentSubject: { kind: 'AGGREGATE_FIELD', key: 'subject' },
+            clientName: { kind: 'AGGREGATE_FIELD', key: 'contactName' },
+            requestSubject: { kind: 'AGGREGATE_FIELD', key: 'subject' },
           },
           purpose: { kind: 'LITERAL', value: 'transactional' },
           consentRequired: { kind: 'LITERAL', value: false },
@@ -366,68 +357,46 @@ const DENTEX_GOVERNED_ACTION_RULES: readonly GovernedActionRule[] = [
       },
     },
   },
-  {
-    ruleKey: 'dentex.treatment.discharge.follow-up-review-task',
-    eventType: 'Treatment.Discharged',
-    executorClass: 'CREATE_TASK',
-    actionKey: 'patient.follow_up.review_task',
-    enabled: true,
-    policyKeys: [],
-    configuration: {
-      title: { kind: 'LITERAL', value: 'Review discharged treatment follow-up' },
-      description: {
-        kind: 'LITERAL',
-        value: 'Confirm the patient follow-up is completed and record any required next step.',
-      },
-      assigneeSubjectId: {
-        kind: 'AGGREGATE_FIELD',
-        key: 'ownerSubjectId',
-        required: false,
-      },
-      priority: { kind: 'LITERAL', value: 'NORMAL' },
-    },
-  },
 ];
 
-const DENTEX_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
+const ACME_CORP_RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
   {
-    key: 'provider',
-    label: 'Treating provider',
+    key: 'assigned_agent',
+    label: 'Assigned agent',
     sourceEntityType: 'crm.case',
     targetEntityTypes: ['iam.subject'],
     cardinality: 'ZERO_OR_ONE',
   },
   {
-    key: 'care_plan',
-    label: 'Care plan',
+    key: 'service_agreement',
+    label: 'Service agreement',
     sourceEntityType: 'crm.case',
     targetEntityTypes: ['crm.agreement'],
     cardinality: 'ZERO_OR_ONE',
   },
 ];
 
-export const DENTEX_PACK: IndustryPack = {
-  verticalKey: 'dentex',
-  label: 'DENTEX — Dental practice',
-  profile: DENTEX_PROFILE,
-  terminology: DENTEX_TERMINOLOGY,
-  caseWorkflow: DENTEX_CASE_WORKFLOW,
-  caseSchema: DENTEX_CASE_SCHEMA,
-  caseStageSemantics: DENTEX_CASE_STAGE_SEMANTICS,
-  relationshipDefinitions: DENTEX_RELATIONSHIP_DEFINITIONS,
-  caseLifecycleEvents: DENTEX_CASE_LIFECYCLE_EVENTS,
-  governedActionRules: DENTEX_GOVERNED_ACTION_RULES,
-  // A Treatment concerns a Patient, is performed at a Practice, under a Care plan.
+export const ACME_CORP_PACK: IndustryPack = {
+  verticalKey: 'acme-corp',
+  label: 'ACME Corp — Multi-service business',
+  profile: ACME_CORP_PROFILE,
+  terminology: ACME_CORP_TERMINOLOGY,
+  caseWorkflow: ACME_CORP_CASE_WORKFLOW,
+  caseSchema: ACME_CORP_CASE_SCHEMA,
+  caseStageSemantics: ACME_CORP_CASE_STAGE_SEMANTICS,
+  relationshipDefinitions: ACME_CORP_RELATIONSHIP_DEFINITIONS,
+  caseLifecycleEvents: ACME_CORP_CASE_LIFECYCLE_EVENTS,
+  governedActionRules: ACME_CORP_GOVERNED_ACTION_RULES,
   caseOntologyRoles: {
-    'crm.contact': 'Patient treated',
-    'crm.account': 'Performed at practice',
-    'crm.agreement': 'Governed by care plan',
+    'crm.contact': 'Requested by contact',
+    'crm.account': 'Client account',
+    'crm.agreement': 'Under service agreement',
   },
 };
 
 // ---------------------------------------------------------------------------
 // LEXFLOW — legal matter management. A second pack, to prove the reskin is data,
-// not a DENTEX special case: different words, a different process language, and
+// not a special case: different words, a different process language, and
 // different case data — all configuration over the one neutral engine.
 // ---------------------------------------------------------------------------
 
@@ -475,7 +444,7 @@ const LEXFLOW_CASE_WORKFLOW: CaseWorkflowVocabulary = {
 
 // A Matter carries legal data a generic case does not: the kind of matter, the
 // governing jurisdiction, and the opposing party — the pack configuring its own
-// subject fields, exactly as DENTEX does with different ones.
+// subject fields.
 const LEXFLOW_CASE_SCHEMA: CaseSchema = {
   version: 1,
   fields: [
@@ -504,7 +473,7 @@ export const LEXFLOW_PACK: IndustryPack = {
 // Registry + resolution.
 // ---------------------------------------------------------------------------
 
-export const INDUSTRY_PACKS: readonly IndustryPack[] = [DENTEX_PACK, LEXFLOW_PACK];
+export const INDUSTRY_PACKS: readonly IndustryPack[] = [ACME_CORP_PACK, LEXFLOW_PACK];
 
 export function findIndustryPack(verticalKey: string | null | undefined): IndustryPack | null {
   if (!verticalKey) return null;

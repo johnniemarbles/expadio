@@ -88,7 +88,7 @@ test('Learning event uses shared governed action worker and suspends side effect
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Learning Automation Tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Learning Automation Tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(

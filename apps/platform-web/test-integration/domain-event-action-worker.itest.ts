@@ -29,7 +29,7 @@ async function seedDentexFollowupCase(c: pg.PoolClient) {
 
   await c.query(
     `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-     VALUES ($1::uuid, 'Worker DENTEX tenant', 'dentex')`,
+     VALUES ($1::uuid, 'Worker ACME Corp tenant', 'acme-corp')`,
     [tenantId],
   );
   await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -61,7 +61,7 @@ async function seedDentexFollowupCase(c: pg.PoolClient) {
        'Worker Treatment', 'NORMAL', 'RESOLVED',
        'crm.case', 'RESOLVED', $5,
        '{"urgency":"Routine","procedureCode":"D3310"}'::jsonb,
-       1, 'dentex', NULL, 'CODE_BASELINE'
+       1, 'acme-corp', NULL, 'CODE_BASELINE'
      )`,
     [treatmentId, tenantId, accountId, contactId, actor],
   );
@@ -113,9 +113,9 @@ async function seedDentexFollowupCase(c: pg.PoolClient) {
     fromStageKey: 'REVIEW',
     toStageKey: 'RESOLVED',
     actorSubjectId: actor,
-    correlationId: 'worker-dentex-treatment-journey',
+    correlationId: 'worker-acme-corp-treatment-journey',
     provenance: {
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
       version: null,
       runtimeSource: 'CODE_BASELINE',
     },
@@ -251,7 +251,7 @@ test('worker retries materialization failures without creating an intent', async
     const caseId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Worker missing email tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Worker missing email tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -268,7 +268,7 @@ test('worker retries materialization failures without creating an intent', async
        ) VALUES (
          $1::uuid, $2::uuid, $3::uuid, 'Missing email treatment',
          'NORMAL', 'RESOLVED', 'crm.case', 'RESOLVED',
-         '{"urgency":"Routine"}'::jsonb, 1, 'dentex', 'CODE_BASELINE'
+         '{"urgency":"Routine"}'::jsonb, 1, 'acme-corp', 'CODE_BASELINE'
        )`,
       [caseId, tenantId, contactId],
     );
@@ -280,7 +280,7 @@ test('worker retries materialization failures without creating an intent', async
       toStageKey: 'RESOLVED',
       actorSubjectId: 'reviewer-1',
       correlationId: 'worker-missing-email',
-      provenance: { verticalKey: 'dentex', version: null, runtimeSource: 'CODE_BASELINE' },
+      provenance: { verticalKey: 'acme-corp', version: null, runtimeSource: 'CODE_BASELINE' },
     });
     assert.ok(appended);
 

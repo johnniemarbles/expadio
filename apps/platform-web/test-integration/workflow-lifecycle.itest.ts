@@ -282,7 +282,7 @@ test('workflow start persists the exact Industry Pack provenance governing its C
          industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
        ) VALUES (
          $1::uuid, 'Case', 'crm.case',
-         'dentex', 7, 'TENANT_PUBLISHED'
+         'acme-corp', 7, 'TENANT_PUBLISHED'
        )
        RETURNING case_id`,
       [tenantId],
@@ -317,13 +317,13 @@ test('workflow start persists the exact Industry Pack provenance governing its C
     )).rows[0];
 
     assert.deepEqual(stored, {
-      industry_pack_vertical_key: 'dentex',
+      industry_pack_vertical_key: 'acme-corp',
       industry_pack_version: 7,
       industry_pack_runtime_source: 'TENANT_PUBLISHED',
     });
     assert.deepEqual(started.instance.industryPackProvenance, {
       runtimeSource: 'TENANT_PUBLISHED',
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
       version: 7,
     });
   });

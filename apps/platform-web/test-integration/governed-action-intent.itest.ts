@@ -35,7 +35,7 @@ test('Domain Event resolves to one replay-safe governed Action Intent after poli
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Governed action tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Governed action tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -54,7 +54,7 @@ test('Domain Event resolves to one replay-safe governed Action Intent after poli
           actorSubjectId: actor,
           correlationId,
           causationId: 'workflow-transition',
-          packKey: 'dentex',
+          packKey: 'acme-corp',
           payload: {
             stage: 'RESOLVED',
             patientSubjectId: 'patient-1',
@@ -71,7 +71,7 @@ test('Domain Event resolves to one replay-safe governed Action Intent after poli
     assert.ok(event);
 
     const rule = {
-      ruleKey: 'dentex.discharge.follow-up',
+      ruleKey: 'acme-corp.discharge.follow-up',
       eventType: 'Treatment.Discharged',
       executorClass: 'COMMUNICATE' as const,
       actionKey: 'patient.follow_up',
@@ -120,7 +120,7 @@ test('Domain Event resolves to one replay-safe governed Action Intent after poli
       event,
       {
         ...rule,
-        ruleKey: 'dentex.discharge.sms',
+        ruleKey: 'acme-corp.discharge.sms',
         actionKey: 'patient.follow_up.sms',
       },
       {

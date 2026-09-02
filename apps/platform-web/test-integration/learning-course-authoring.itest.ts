@@ -28,7 +28,7 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
     const tenantId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Learning lifecycle tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Learning lifecycle tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(
@@ -47,7 +47,7 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
     });
     await c.query('COMMIT');
     assert.equal(activation.status, 'ACTIVE');
-    assert.equal(activation.academy.sourceVerticalKey, 'dentex');
+    assert.equal(activation.academy.sourceVerticalKey, 'acme-corp');
 
     await c.query('BEGIN');
     const created = await createLearningCourse(c, {

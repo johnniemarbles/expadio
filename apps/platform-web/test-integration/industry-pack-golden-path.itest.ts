@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
 import {
-  DENTEX_PACK,
+  ACME_CORP_PACK,
   resolveCaseSchema,
   transitionIndustryPackVersion,
   validateCaseAttributes,
@@ -37,8 +37,8 @@ test('Industry Pack golden path publishes, binds, resolves and stamps the same v
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
 
     const authoredDefinition = {
-      ...DENTEX_PACK,
-      label: 'Tenant DENTEX golden',
+      ...ACME_CORP_PACK,
+      label: 'Tenant ACME Corp golden',
       caseSchema: {
         version: 2,
         fields: [
@@ -50,7 +50,7 @@ test('Industry Pack golden path publishes, binds, resolves and stamps the same v
     const versions = new PostgresIndustryPackVersionRepository(c);
     const draft = await versions.createDraft({
       scope: { type: 'TENANT', tenantId },
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
       definition: authoredDefinition,
       createdBySubjectId: 'golden-author',
     });
@@ -85,17 +85,17 @@ test('Industry Pack golden path publishes, binds, resolves and stamps the same v
     assert.equal(published.state, 'PUBLISHED');
 
     await c.query(
-      `UPDATE platform.tenants SET vertical_key = 'dentex' WHERE tenant_id = $1::uuid`,
+      `UPDATE platform.tenants SET vertical_key = 'acme-corp' WHERE tenant_id = $1::uuid`,
       [tenantId],
     );
 
     const runtime = await new PostgresIndustryPackRuntimeResolver(c).resolve({
       tenantId,
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
     });
     assert.equal(runtime.provenance.source, 'TENANT_PUBLISHED');
     assert.equal(runtime.provenance.version, published.identity.version);
-    assert.equal(runtime.pack?.label, 'Tenant DENTEX golden');
+    assert.equal(runtime.pack?.label, 'Tenant ACME Corp golden');
 
     const validated = validateCaseAttributes(
       resolveCaseSchema(runtime.pack),
@@ -124,7 +124,7 @@ test('Industry Pack golden path publishes, binds, resolves and stamps the same v
 
     assert.deepEqual(stored.attributes, { clinicCode: 'CL-9' });
     assert.equal(stored.attributes_schema_version, 2);
-    assert.equal(stored.industry_pack_vertical_key, 'dentex');
+    assert.equal(stored.industry_pack_vertical_key, 'acme-corp');
     assert.equal(stored.industry_pack_version, published.identity.version);
     assert.equal(stored.industry_pack_runtime_source, 'TENANT_PUBLISHED');
   } finally {
@@ -141,14 +141,14 @@ test('authored Pack semantics survive publish and govern the canonical CRM trans
     const tenantId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Pack semantic golden path', 'dentex')`,
+       VALUES ($1::uuid, 'Pack semantic golden path', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
 
     const authoredInput = {
-      ...DENTEX_PACK,
-      label: 'Tenant DENTEX semantic golden',
+      ...ACME_CORP_PACK,
+      label: 'Tenant ACME Corp semantic golden',
       caseSchema: {
         version: 2,
         fields: [
@@ -167,14 +167,14 @@ test('authored Pack semantics survive publish and govern the canonical CRM trans
       },
     } as const;
 
-    const validation = validateIndustryPackDefinition(authoredInput, 'dentex');
+    const validation = validateIndustryPackDefinition(authoredInput, 'acme-corp');
     assert.equal(validation.valid, true);
     if (!validation.valid) throw new Error('authored Pack validation unexpectedly failed');
 
     const versions = new PostgresIndustryPackVersionRepository(c);
     const draft = await versions.createDraft({
       scope: { type: 'TENANT', tenantId },
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
       definition: validation.definition,
       createdBySubjectId: 'semantic-author',
     });
@@ -203,7 +203,7 @@ test('authored Pack semantics survive publish and govern the canonical CRM trans
 
     const runtimePack = await new PostgresIndustryPackRuntimeResolver(c).resolve({
       tenantId,
-      verticalKey: 'dentex',
+      verticalKey: 'acme-corp',
     });
     assert.equal(runtimePack.provenance.source, 'TENANT_PUBLISHED');
     assert.equal(runtimePack.provenance.version, published.identity.version);
@@ -218,7 +218,7 @@ test('authored Pack semantics survive publish and govern the canonical CRM trans
          industry_pack_vertical_key, industry_pack_version, industry_pack_runtime_source
        ) VALUES (
          $1::uuid, 'Semantic treatment', 'crm.case', '{}'::jsonb, 2,
-         'dentex', $2, 'TENANT_PUBLISHED'
+         'acme-corp', $2, 'TENANT_PUBLISHED'
        )
        RETURNING case_id`,
       [tenantId, published.identity.version],
@@ -231,7 +231,7 @@ test('authored Pack semantics survive publish and govern the canonical CRM trans
       blueprintKey: 'crm.case',
       industryPackProvenance: {
         runtimeSource: 'TENANT_PUBLISHED',
-        verticalKey: 'dentex',
+        verticalKey: 'acme-corp',
         version: published.identity.version,
       },
     });

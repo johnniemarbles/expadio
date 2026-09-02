@@ -56,7 +56,7 @@ test('assessment pins course/question versions and grades without leaking answer
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Assessment Tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Assessment Tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(

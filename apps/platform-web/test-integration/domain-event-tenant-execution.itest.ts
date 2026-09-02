@@ -25,7 +25,7 @@ test('tenant execution lease blocks overlap and expired runs become LEASE_LOST',
     const tenantId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Execution lease tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Execution lease tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
@@ -144,7 +144,7 @@ test('disabled tenant execution state refuses a scheduler tick', async () => {
     const tenantId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Disabled execution tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Disabled execution tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);

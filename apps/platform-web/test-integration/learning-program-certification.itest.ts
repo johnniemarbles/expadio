@@ -68,7 +68,7 @@ test('program completion issues one credential and governs lifecycle transitions
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Program Certification Tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Program Certification Tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(

@@ -5,14 +5,14 @@ import type { WorkspaceSection } from "../lib/contracts.ts";
 const mockSections: WorkspaceSection[] = [
   { id: "overview", label: "Overview", href: "/", short: "⌂", group: "Workspace" },
   { id: "capabilities", label: "Capabilities", href: "/capabilities", short: "❖", group: "Workspace" },
-  { id: "dentex", label: "Dental Practice", href: "/dentex", short: "🦷", group: "Growth" },
+  { id: "vendors", label: "Vendor Onboarding", href: "/vendors", short: "🏢", group: "Growth" },
   { id: "governance", label: "Decisions", href: "/governance", short: "⚖", group: "Decision Fabric" },
   { id: "agents", label: "Agent Fleet", href: "/agents", short: "🤖", group: "Agent Intelligence" },
   { id: "appearance", label: "Appearance", href: "/appearance", short: "🎨", group: "Administration" },
 ];
 
 test("CommandPalette search filtering matches label and group case-insensitively", () => {
-  const query = "dent";
+  const query = "vendor";
   const matched = mockSections.filter(
     (s) =>
       s.label.toLowerCase().includes(query) ||
@@ -21,7 +21,7 @@ test("CommandPalette search filtering matches label and group case-insensitively
   );
 
   assert.equal(matched.length, 1);
-  assert.equal(matched[0].id, "dentex");
+  assert.equal(matched[0].id, "vendors");
 });
 
 test("CommandPalette search filtering matches by group name", () => {

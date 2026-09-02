@@ -75,7 +75,7 @@ test('learner-created event applies published assignment rules exactly once', as
     const tenantId = randomUUID();
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Assignment Automation Tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Assignment Automation Tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(

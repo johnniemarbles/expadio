@@ -37,7 +37,6 @@ test('platform freeze forbids duplicate core engines and vertical forks', () => 
 
 test('platform completion checklist records current strategic lock', () => {
   for (const required of [
-    '- [x] Pause DENTEX clinical/product-depth work until full platform capability is broader.',
     '- [x] Pause additional vertical implementation until platform completion program reaches the AI/knowledge/agent/voice foundation stage.',
     '- [x] Treat the horizontal execution foundation as frozen except for targeted hardening and capability completion.',
     '- [x] Use the repository, not chat memory, as the durable checklist of completed work.',

@@ -51,7 +51,7 @@ test('enrollment pins published version and completion survives later course pub
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Learning Enrollment Tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Learning Enrollment Tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(

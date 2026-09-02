@@ -315,11 +315,6 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
           <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--ink-600, #475569)" }}>{vocab.account.plural} and {lc(vocab.contact.plural)} for this workspace, isolated by tenant.</p>
         </div>
         <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
-          {verticalKey === "dentex" ? (
-            <a href="/dentex" style={{ fontSize: 12, fontWeight: 800, color: "var(--brand, #4f46e5)", textDecoration: "none" }}>
-              Open DENTEX Operations →
-            </a>
-          ) : null}
           <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: "var(--ink-600, #475569)" }}>
             Industry pack
             <select
@@ -475,17 +470,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                 return (
                   <tr key={c.caseId} style={{ borderTop: "1px solid var(--line, #f1f5f9)" }}>
                     <td style={td}>
-                      {verticalKey === "dentex" ? (
-                        <a
-                          href={`/dentex/treatments/${encodeURIComponent(c.caseId)}${queryString}`}
-                          style={{ color: "inherit", textDecoration: "none", fontWeight: 800 }}
-                          title="Open the DENTEX Treatment workspace"
-                        >
-                          {c.subject}
-                        </a>
-                      ) : (
-                        <strong>{c.subject}</strong>
-                      )}
+                      <strong>{c.subject}</strong>
                       <CaseAttrChips fields={caseSchema.fields} attributes={c.attributes} />
                     </td>
                     <td style={td}>

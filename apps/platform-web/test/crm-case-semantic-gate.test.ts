@@ -57,13 +57,13 @@ const base = {
   workTypeKey: 'crm.case',
 } as const;
 
-test('DENTEX intake exit blocks from canonical case relationships', async () => {
+test('pack intake exit blocks from canonical case relationships', async () => {
   const { client } = scriptedClient({
     caseRow: {
       attributes: {},
       account_id: null,
       contact_id: '44444444-4444-4444-4444-444444444444',
-      industry_pack_vertical_key: 'dentex',
+      industry_pack_vertical_key: 'acme-corp',
       has_active_agreement: false,
     },
   });
@@ -77,16 +77,16 @@ test('DENTEX intake exit blocks from canonical case relationships', async () => 
   assert.deepEqual(blockers.map((item) => [item.kind, item.code, item.key]), [
     ['EXIT_CONDITION', 'CASE_SEMANTIC_RELATIONSHIP_REQUIRED', 'crm.account'],
   ]);
-  assert.equal(blockers[0]?.message, 'A patient and practice must be linked before treatment begins.');
+  assert.equal(blockers[0]?.message, 'A contact and client must be linked before work begins.');
 });
 
-test('DENTEX review exit uses immutable decision and linked Care Plan facts', async () => {
+test('pack review exit uses immutable decision and linked agreement facts', async () => {
   const { client, calls } = scriptedClient({
     caseRow: {
-      attributes: { procedureCode: 'D2740' },
+      attributes: { serviceType: 'Consulting' },
       account_id: '55555555-5555-5555-5555-555555555555',
       contact_id: '44444444-4444-4444-4444-444444444444',
-      industry_pack_vertical_key: 'dentex',
+      industry_pack_vertical_key: 'acme-corp',
       has_active_agreement: true,
     },
     decisions: { REVIEW: 'APPROVE' },
@@ -101,7 +101,6 @@ test('DENTEX review exit uses immutable decision and linked Care Plan facts', as
   assert.deepEqual(blockers, []);
   const caseQuery = calls.find((call) => call.text.includes('FROM platform.crm_cases c'))?.text ?? '';
   assert.match(caseQuery, /platform\.entity_relationships/);
-  assert.match(caseQuery, /relationship_key = 'care_plan'/);
   assert.match(caseQuery, /target_entity_type = 'crm\.agreement'/);
 });
 

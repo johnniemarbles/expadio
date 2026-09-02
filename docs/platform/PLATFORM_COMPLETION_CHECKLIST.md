@@ -9,7 +9,6 @@ This checklist is the durable project memory for autonomous execution. Update it
 
 ## Current strategy lock
 
-- [x] Pause DENTEX clinical/product-depth work until full platform capability is broader.
 - [x] Pause additional vertical implementation until platform completion program reaches the AI/knowledge/agent/voice foundation stage.
 - [x] Treat the horizontal execution foundation as frozen except for targeted hardening and capability completion.
 - [x] Use the repository, not chat memory, as the durable checklist of completed work.
@@ -400,11 +399,6 @@ Binding keys:
 
 ## Paused vertical/product work
 
-- [ ] DENTEX clinical ontology.
-- [ ] DENTEX care plan product.
-- [ ] DENTEX appointment scheduling.
-- [ ] DENTEX richer patient communications.
-- [ ] WeRealtors.
 - [ ] Nordrux / TPA / LIMS.
 - [ ] Insurance.
 - [ ] LMS.

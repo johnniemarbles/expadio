@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
-import { DENTEX_PACK } from '@expadio/industry-packs';
+import { ACME_CORP_PACK } from '@expadio/industry-packs';
 import { appendCrmCaseLifecycleEvent } from '../lib/crm-case-lifecycle-event';
 
 function pool(): pg.Pool {
@@ -26,16 +26,16 @@ test('case lifecycle event uses pinned Pack version and queues atomically', asyn
 
     await c.query(
       `INSERT INTO platform.tenants (tenant_id, name, vertical_key)
-       VALUES ($1::uuid, 'Pinned lifecycle event tenant', 'dentex')`,
+       VALUES ($1::uuid, 'Pinned lifecycle event tenant', 'acme-corp')`,
       [tenantId],
     );
     await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [tenantId]);
 
     const v2 = {
-      ...DENTEX_PACK,
-      label: 'Tenant DENTEX v2',
+      ...ACME_CORP_PACK,
+      label: 'Tenant ACME Corp v2',
       caseLifecycleEvents: [
-        ...(DENTEX_PACK.caseLifecycleEvents ?? []).filter(
+        ...(ACME_CORP_PACK.caseLifecycleEvents ?? []).filter(
           (mapping) => mapping.stageKey !== 'RESOLVED',
         ),
         {
@@ -47,7 +47,7 @@ test('case lifecycle event uses pinned Pack version and queues atomically', asyn
     };
     const v3 = {
       ...v2,
-      label: 'Tenant DENTEX v3',
+      label: 'Tenant ACME Corp v3',
       caseLifecycleEvents: [
         ...(v2.caseLifecycleEvents ?? []).filter(
           (mapping) => mapping.stageKey !== 'RESOLVED',
@@ -69,7 +69,7 @@ test('case lifecycle event uses pinned Pack version and queues atomically', asyn
            tenant_id, vertical_key, version, source, state, revision, definition,
            created_by_subject_id, updated_by_subject_id
          ) VALUES (
-           $1::uuid, 'dentex', $2, 'TENANT_AUTHORED', $3, 1, $4::jsonb,
+           $1::uuid, 'acme-corp', $2, 'TENANT_AUTHORED', $3, 1, $4::jsonb,
            'itest-author', 'itest-author'
          )`,
         [tenantId, version, state, JSON.stringify(definition)],
@@ -87,7 +87,7 @@ test('case lifecycle event uses pinned Pack version and queues atomically', asyn
         actorSubjectId: 'reviewer-1',
         correlationId: 'journey-1',
         provenance: {
-          verticalKey: 'dentex',
+          verticalKey: 'acme-corp',
           version: 2,
           runtimeSource: 'TENANT_PUBLISHED',
         },
@@ -123,7 +123,7 @@ test('case lifecycle event uses pinned Pack version and queues atomically', asyn
     assert.deepEqual(persisted, {
       event_type: 'TenantTreatment.DischargedV2',
       event_version: 2,
-      pack_key: 'dentex',
+      pack_key: 'acme-corp',
       pack_version: 2,
       payload: {
         workflowInstanceId: instanceId,

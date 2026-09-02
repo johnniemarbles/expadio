@@ -12,7 +12,6 @@ The product strategy is now:
 
 ```text
 Pause vertical expansion
-Pause DENTEX product-depth work
 Protect horizontal primitives
 Complete platform runtime capability
 Resume vertical/product multiplication later
@@ -167,9 +166,7 @@ Allowed work includes:
 
 The following are intentionally paused until platform capability is broader:
 
-- DENTEX clinical product depth
 - second vertical implementation
-- WeRealtors
 - Nordrux / TPA / LIMS vertical depth
 - insurance vertical depth
 - LMS
