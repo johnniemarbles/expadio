@@ -177,7 +177,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
 
   return (
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, #fff)", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>Register provider</h2>
@@ -252,9 +252,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
           </div>
         )}
 
-        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--brand, #4f46e5)" }}>{status}</p>}
+        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--brand, var(--theme-primary))" }}>{status}</p>}
         {warnings.length > 0 && (
-          <div style={{ fontSize: 12, color: "var(--theme-warning)", background: "#fef3c7", padding: 10, borderRadius: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>
             {warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
           </div>
         )}
@@ -262,7 +262,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={() => { reset(); onClose(); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
             {saving ? "Working…" : custodyMode === "DELEGATED" ? "Verify & register" : "Register provider"}
           </button>
         </div>
