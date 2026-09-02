@@ -45,10 +45,12 @@ DECLARE
   changed_count integer;
 BEGIN
   SELECT count(*) INTO visible_count
-    FROM platform.workflow_activation_blueprints;
+    FROM platform.workflow_activation_blueprints
+   WHERE blueprint_key = 'partner-activation'
+     AND version = 1;
 
   IF visible_count <> 2 THEN
-    RAISE EXCEPTION 'tenant A expected platform plus tenant blueprint, got %', visible_count;
+    RAISE EXCEPTION 'tenant A expected platform plus tenant partner-activation blueprint, got %', visible_count;
   END IF;
 
   UPDATE platform.workflow_activation_blueprints
