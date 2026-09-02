@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { activateLearningModule } from '@expadio/postgres-runtime/product-module';
+import { activateSimpleProductModule } from '@expadio/postgres-runtime/simple-product-module-activation';
 import {
   deniedResponse,
   resolveRequestContext,
@@ -42,7 +43,7 @@ export async function POST(
     const context = await resolveRequestContext(request);
     const moduleKey = decodeURIComponent((await params).key).trim().toLowerCase();
 
-    if (moduleKey !== 'learning') {
+    if (moduleKey !== 'learning' && moduleKey !== 'lead-management') {
       return NextResponse.json(
         {
           denied: true,
@@ -58,11 +59,14 @@ export async function POST(
         return { forbidden: true } as const;
       }
 
-      const activation = await activateLearningModule(client, {
+      const common = {
         tenantId: context.tenantId,
         actorSubjectId: context.subjectId,
         correlationId: request.headers.get('x-correlation-id')?.trim() || randomUUID(),
-      });
+      };
+      const activation = moduleKey === 'learning'
+        ? await activateLearningModule(client, common)
+        : await activateSimpleProductModule(client, { ...common, moduleKey: 'lead-management' });
       return { activation } as const;
     });
 
