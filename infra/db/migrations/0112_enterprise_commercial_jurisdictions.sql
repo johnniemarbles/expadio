@@ -2,6 +2,13 @@ BEGIN;
 
 -- Enterprise Commercial Network & Jurisdiction Activation.
 --
+-- Existing enterprise change requests have a globally unique primary key, but
+-- enterprise-owned tables use tenant-qualified foreign keys consistently. Add
+-- the corresponding candidate key before declaring those references.
+ALTER TABLE platform.enterprise_change_requests
+  ADD CONSTRAINT enterprise_change_requests_id_tenant_uq
+  UNIQUE (enterprise_change_request_id, tenant_id);
+
 -- This layer models corporate/commercial authority beneath the tenant security
 -- boundary. It deliberately does NOT reuse platform.crm_agreements: CRM
 -- agreements are customer commitments, whereas these records authorize
