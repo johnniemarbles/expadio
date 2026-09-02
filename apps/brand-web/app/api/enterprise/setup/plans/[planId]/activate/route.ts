@@ -5,7 +5,7 @@ import {
   hasBrandGovernanceForOrganization,
   resolveBrandContext,
   withBrandTransaction,
-} from '../../../../../../lib/brand-context';
+} from '../../../../../../../lib/brand-context';
 
 export async function POST(
   request: Request,
