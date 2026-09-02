@@ -5,8 +5,9 @@ import { requireCommunicationDomainAdmin } from '../../../../../lib/communicatio
 
 /**
  * Retire a sending-domain sender identity without deleting delivery evidence.
- * Tenant identities are governed by tenant/platform communication admins;
- * platform identities remain restricted to Platform Administration.
+ * Tenant and organization identities are governed by tenant/platform
+ * communication admins; platform identities remain restricted to Platform
+ * Administration.
  */
 
 export const runtime = 'nodejs';
@@ -26,14 +27,17 @@ export async function DELETE(
     }
 
     const outcome = await withTenantTransaction(context, async (client) => {
-      const existing = await client.query<{ scope: 'PLATFORM' | 'TENANT'; tenant_id: string | null }>(
+      const existing = await client.query<{
+        scope: 'PLATFORM' | 'TENANT' | 'ORGANIZATION';
+        tenant_id: string | null;
+      }>(
         `SELECT scope, tenant_id
            FROM platform.communication_sender_identities
           WHERE sender_id = $1::uuid
             AND channel = 'email'
             AND (
               scope = 'PLATFORM'
-              OR (scope = 'TENANT' AND tenant_id = $2::uuid)
+              OR (scope IN ('TENANT','ORGANIZATION') AND tenant_id = $2::uuid)
             )
           LIMIT 1`,
         [senderId, context.tenantId],
@@ -60,7 +64,7 @@ export async function DELETE(
             AND channel = 'email'
             AND (
               (scope = 'PLATFORM' AND $3::boolean = true)
-              OR (scope = 'TENANT' AND tenant_id = $2::uuid)
+              OR (scope IN ('TENANT','ORGANIZATION') AND tenant_id = $2::uuid)
             )
           RETURNING sender_id, scope, address, status, verification_status, is_default`,
         [senderId, context.tenantId, sender.scope === 'PLATFORM'],
