@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import {
   resolveRequestContext,
   withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../../lib/request-context';
+import { hasPlatformAdministrationRole } from '../../../../../lib/governance-authz';
 
 /**
  * Design spec §0.2 G5 — un-scaffolding.
@@ -30,24 +32,34 @@ export async function PATCH(
   try {
     const context = await resolveRequestContext(request);
     const connectorKey = decodeURIComponent((await params).key);
+    const platformAuthorized = await withTenantTransaction(
+      context,
+      (client) => hasPlatformAdministrationRole(client, context.subjectId),
+    );
+    if (!platformAuthorized) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'PLATFORM_ADMIN_REQUIRED', message: 'Only Platform Administration can manage providers.' },
+        { status: 403 },
+      );
+    }
 
     const body = await request.json();
     const { enabled, health } = body;
 
     const connector = await withTenantClient(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', false)");
       const result = await client.query(
         `UPDATE platform.connectors
             SET enabled = COALESCE($1, enabled),
                 health = COALESCE($2, health),
                 updated_at = now()
           WHERE connector_key = $3
-            AND (tenant_id IS NULL OR tenant_id = $4::uuid)
+            AND tenant_id IS NULL
           RETURNING connector_key, provider_type, provider_key, health, enabled, updated_at`,
         [
           enabled !== undefined ? Boolean(enabled) : null,
           typeof health === 'string' ? health : null,
           connectorKey,
-          context.tenantId,
         ],
       );
       return result.rows[0] ?? null;
@@ -71,15 +83,26 @@ export async function DELETE(
   try {
     const context = await resolveRequestContext(request);
     const connectorKey = decodeURIComponent((await params).key);
+    const platformAuthorized = await withTenantTransaction(
+      context,
+      (client) => hasPlatformAdministrationRole(client, context.subjectId),
+    );
+    if (!platformAuthorized) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'PLATFORM_ADMIN_REQUIRED', message: 'Only Platform Administration can manage providers.' },
+        { status: 403 },
+      );
+    }
 
     const connector = await withTenantClient(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', false)");
       const result = await client.query(
         `UPDATE platform.connectors
             SET enabled = false, health = 'DEGRADED', updated_at = now()
           WHERE connector_key = $1
-            AND (tenant_id = $2::uuid OR (tenant_id IS NULL AND $3::boolean))
+            AND tenant_id IS NULL
           RETURNING connector_key, enabled, health, updated_at`,
-        [connectorKey, context.tenantId, context.platformScope],
+        [connectorKey],
       );
       return result.rows[0] ?? null;
     });

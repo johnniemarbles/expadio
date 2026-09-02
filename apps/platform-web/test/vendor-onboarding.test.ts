@@ -63,7 +63,7 @@ test('the Vendors surface can register, start, screen, approve and activate', ()
   assert.match(client, /Advance to approval/);
   assert.match(client, /Approve &amp; activate/);
   assert.match(client, /approveAndActivate/);
-  assert.match(nav, /href: '\/vendors'/);
+  assert.doesNotMatch(nav, /href: '\/vendors'/);
 });
 
 test('the Vendors surface uses governed dashboard styling primitives', () => {

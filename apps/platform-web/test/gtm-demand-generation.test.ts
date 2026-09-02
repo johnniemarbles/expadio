@@ -86,7 +86,7 @@ test('console, nav, lead source and review queue know AutoGTM', () => {
   assert.doesNotMatch(client, /gtm-email-lab-v1/);
   assert.doesNotMatch(client, /executeGovernedCommunicateAction/);
   assert.doesNotMatch(client, /proposedClass/);
-  assert.match(nav, /href: '\/gtm'/);
+  assert.doesNotMatch(nav, /href: '\/gtm'/);
   assert.match(lead, /OUTBOUND_GTM_LEAD_SOURCE = 'outbound_gtm'/);
   assert.match(queue, /'gtm\.campaign\.launch': '\/gtm'/);
   assert.match(engines, /scoringMayAutoApprove/);

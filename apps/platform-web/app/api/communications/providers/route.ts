@@ -4,8 +4,10 @@ import {
   resolveRequestContext,
   requireStepUp,
   withTenantClient,
+  withTenantTransaction,
   deniedResponse,
 } from '../../../../lib/request-context';
+import { hasPlatformAdministrationRole } from '../../../../lib/governance-authz';
 
 /**
  * Design spec §0.2 — fixes G4 and G5.
@@ -123,6 +125,16 @@ export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext();
     await requireStepUp();
+    const platformAuthorized = await withTenantTransaction(
+      context,
+      (client) => hasPlatformAdministrationRole(client, context.subjectId),
+    );
+    if (!platformAuthorized) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'PLATFORM_ADMIN_REQUIRED', message: 'Only Platform Administration can configure provider infrastructure.' },
+        { status: 403 },
+      );
+    }
 
     const body = await request.json();
 
@@ -131,10 +143,8 @@ export async function POST(request: Request) {
     const credentialRef = body.credentialRef;
     const fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.trim() : null;
 
-    // G4 — a tenant may now own a connector. PLATFORM ownership additionally
-    // requires platform scope, so a tenant admin cannot create a shared connector.
-    const ownershipScope: 'PLATFORM' | 'TENANT' =
-      body.ownershipScope === 'PLATFORM' && context.platformScope ? 'PLATFORM' : 'TENANT';
+    // Providers are integrated once by Platform Administration; Brands consume entitled capabilities.
+    const ownershipScope: 'PLATFORM' = 'PLATFORM';
 
     const custodyMode = typeof body.custodyMode === 'string' ? body.custodyMode : 'DELEGATED';
     const failurePolicy = typeof body.failurePolicy === 'string' ? body.failurePolicy : 'HOLD_AND_RETRY';
@@ -178,6 +188,7 @@ export async function POST(request: Request) {
     const created = await withTenantClient(context, async (client) => {
       await client.query('BEGIN');
       try {
+        await client.query("SELECT set_config('app.platform_admin', 'true', true)");
         const connector = await client.query(
           `INSERT INTO platform.connectors
              (connector_key, provider_type, provider_key, ownership_scope, tenant_id,
@@ -190,7 +201,7 @@ export async function POST(request: Request) {
             providerType,
             providerKey,
             ownershipScope,
-            ownershipScope === 'TENANT' ? context.tenantId : null,
+            null,
             region,
             priority,
           ],

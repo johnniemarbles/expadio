@@ -54,7 +54,7 @@ test('the Expenses surface can file, review, approve and pay', () => {
   assert.match(client, /Assign manager/);
   assert.match(client, /Approve &amp; pay/);
   assert.match(client, /approveAndPay/);
-  assert.match(nav, /href: '\/expenses'/);
+  assert.doesNotMatch(nav, /href: '\/expenses'/);
 });
 
 test('the expense workflow exposes its governed trace', () => {

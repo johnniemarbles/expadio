@@ -48,5 +48,5 @@ test('the pending-reviews surface shows the load per assignee and links from nav
   assert.match(client, /resolveWorkTypeLabel\(pack, d\.workTypeKey\)/);
   assert.match(client, /resolveStageLabel\(pack, d\.workTypeKey, d\.currentStageKey\)/);
   assert.match(client, /Waiting on/);
-  assert.match(nav, /href: '\/governance\/pending'/);
+  assert.doesNotMatch(nav, /href: '\/governance\/pending'/);
 });

@@ -48,7 +48,7 @@ test('platform health page preserves workspace query context', () => {
 
 test('telemetry command center is discoverable and uses honest live signals', () => {
   assert.match(workspaces, /label: 'Command Center'.*href: '\/'/);
-  assert.match(workspaces, /label: 'Business Overview'.*href: '\/overview'/);
+  assert.match(workspaces, /label: 'Fleet Overview'.*href: '\/overview'/);
   assert.match(landing, /platform-health\/page/);
   assert.match(overview, /BusinessOverviewPage/);
   assert.match(overview, /liveWorkspaceAdapter\.loadOverview/);

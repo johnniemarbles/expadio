@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../lib/request-context';
+import { resolveRequestContext, withTenantClient, withTenantTransaction, deniedResponse } from '../../../../../lib/request-context';
+import { hasPlatformAdministrationRole } from '../../../../../lib/governance-authz';
 
 /**
  * Retire a sending domain. Soft retirement (status INACTIVE, verification
@@ -17,15 +18,27 @@ export async function DELETE(
   try {
     const context = await resolveRequestContext(request);
     const senderId = decodeURIComponent((await params).senderId);
+    const platformAuthorized = await withTenantTransaction(
+      context,
+      (client) => hasPlatformAdministrationRole(client, context.subjectId),
+    );
+    if (!platformAuthorized) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'PLATFORM_ADMIN_REQUIRED', message: 'Only Platform Administration can retire platform senders.' },
+        { status: 403 },
+      );
+    }
 
     const retired = await withTenantClient(context, async (client) => {
+      await client.query("SELECT set_config('app.platform_admin', 'true', false)");
       const result = await client.query(
         `UPDATE platform.communication_sender_identities
             SET status = 'INACTIVE', verification_status = 'REVOKED', updated_at = now()
           WHERE sender_id = $1::uuid
-            AND (tenant_id = $2::uuid OR (scope = 'PLATFORM' AND $3::boolean))
+            AND scope = 'PLATFORM'
+            AND tenant_id IS NULL
           RETURNING sender_id, address, status, verification_status`,
-        [senderId, context.tenantId, context.platformScope],
+        [senderId],
       );
       return result.rows[0] ?? null;
     });
