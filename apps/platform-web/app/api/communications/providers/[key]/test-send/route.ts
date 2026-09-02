@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { DecisionTraceBuilder } from '@expadio/communication';
 import { governedResendApiTokenProvider } from '@expadio/communication/governed-resend-binding';
+import { governedTwilioCredentialsProvider } from '@expadio/communication/governed-twilio-binding';
 import { routePreparedCommunicationDispatch } from '@expadio/communication/dispatch-routing';
 import { prepareCommunicationProviderSendRequest } from '@expadio/communication/provider-send-request';
 import { ResendEmailAdapter } from '@expadio/communication/resend-email-adapter';
+import { TwilioSmsWhatsappAdapter } from '@expadio/communication/twilio-sms-whatsapp-adapter';
+import { TwilioVoiceAdapter } from '@expadio/communication/twilio-voice-adapter';
+import type { CommunicationProviderSendResult } from '@expadio/communication/provider-adapter';
 import type { PreparedCommunicationDispatch } from '@expadio/communication/dispatch';
 import {
   PostgresCommunicationSenderRepository,
@@ -26,12 +30,47 @@ import { delegatedSecretResolver } from '../../../../../../lib/vault-secret-reso
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const CAPABILITY_KEY = 'communication.email.send';
+type TestChannel = 'email' | 'sms' | 'whatsapp' | 'voice';
 
 interface TestSendBody {
   readonly recipient?: unknown;
   readonly idempotencyKey?: unknown;
+  readonly voiceUrl?: unknown;
 }
+
+interface ConnectorMetadataRow {
+  readonly provider_key: string;
+  readonly provider_type: string;
+}
+
+interface ProviderSpec {
+  readonly providerKey: 'resend' | 'twilio-sms' | 'twilio-whatsapp' | 'twilio-voice';
+  readonly providerType: TestChannel;
+  readonly capabilityKey: string;
+}
+
+const PROVIDER_SPECS: Readonly<Record<string, ProviderSpec>> = {
+  resend: {
+    providerKey: 'resend',
+    providerType: 'email',
+    capabilityKey: 'communication.email.send',
+  },
+  'twilio-sms': {
+    providerKey: 'twilio-sms',
+    providerType: 'sms',
+    capabilityKey: 'communication.sms.send',
+  },
+  'twilio-whatsapp': {
+    providerKey: 'twilio-whatsapp',
+    providerType: 'whatsapp',
+    capabilityKey: 'communication.whatsapp.send',
+  },
+  'twilio-voice': {
+    providerKey: 'twilio-voice',
+    providerType: 'voice',
+    capabilityKey: 'communication.voice.dial',
+  },
+};
 
 export async function POST(
   request: Request,
@@ -43,19 +82,12 @@ export async function POST(
 
     const connectorKey = decodeURIComponent((await params).key).trim();
     const body = (await request.json()) as TestSendBody;
-    const recipient = typeof body.recipient === 'string'
-      ? body.recipient.trim().toLowerCase()
-      : '';
+    const recipientInput = typeof body.recipient === 'string' ? body.recipient.trim() : '';
     const idempotencyKey = typeof body.idempotencyKey === 'string'
       ? body.idempotencyKey.trim()
       : '';
+    const voiceUrl = typeof body.voiceUrl === 'string' ? body.voiceUrl.trim() : '';
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(recipient)) {
-      return NextResponse.json(
-        { error: 'A valid test recipient email is required.' },
-        { status: 400 },
-      );
-    }
     if (
       idempotencyKey.length < 8
       || idempotencyKey.length > 256
@@ -70,14 +102,58 @@ export async function POST(
     const requestedAt = new Date().toISOString();
 
     const result = await withTenantTransaction(context, async (client) => {
+      const metadata = await client.query<ConnectorMetadataRow>(
+        `SELECT provider_key, provider_type
+           FROM platform.connectors
+          WHERE connector_key = $2
+            AND (tenant_id IS NULL OR tenant_id = $1::uuid)
+          LIMIT 1`,
+        [context.tenantId, connectorKey],
+      );
+      const metadataRow = metadata.rows[0];
+      if (metadataRow === undefined) {
+        return {
+          status: 404 as const,
+          body: { error: 'Communication connector was not found.' },
+        };
+      }
+
+      const spec = PROVIDER_SPECS[metadataRow.provider_key.trim().toLowerCase()];
+      if (spec === undefined || metadataRow.provider_type !== spec.providerType) {
+        return {
+          status: 400 as const,
+          body: {
+            error: 'This test-send boundary supports Resend email and Twilio SMS, WhatsApp, and Voice connectors only.',
+          },
+        };
+      }
+
+      const recipient = normalizeRecipient(spec.providerType, recipientInput);
+      if (recipient === null) {
+        return {
+          status: 400 as const,
+          body: {
+            error: spec.providerType === 'email'
+              ? 'A valid test recipient email is required.'
+              : 'A valid E.164 test recipient phone number is required.',
+          },
+        };
+      }
+      if (spec.providerType === 'voice' && !isHttpsUrl(voiceUrl)) {
+        return {
+          status: 400 as const,
+          body: { error: 'Twilio Voice test sends require an HTTPS TwiML voiceUrl.' },
+        };
+      }
+
       const providerRegistry = new PostgresProviderRegistryRepository(client);
       const connectors = await providerRegistry.listConnectors(
         context.tenantId,
-        CAPABILITY_KEY,
+        spec.capabilityKey,
       );
       const policy = await providerRegistry.loadRoutingPolicy(
         context.tenantId,
-        CAPABILITY_KEY,
+        spec.capabilityKey,
       );
 
       const selected = connectors.filter(
@@ -85,8 +161,8 @@ export async function POST(
       );
       if (selected.length !== 1) {
         return {
-          status: 404 as const,
-          body: { error: 'Communication connector was not found.' },
+          status: 409 as const,
+          body: { error: 'The connector is not eligible for its configured communication capability.' },
         };
       }
       const selectedConnector = selected[0]!;
@@ -98,19 +174,21 @@ export async function POST(
           : { organizationId: context.organizationId }),
         triggerKey: 'communications.test-send',
         purpose: 'system',
-        channel: 'email',
-        recipient: { email: recipient },
+        channel: spec.providerType,
+        recipient: spec.providerType === 'email' ? { email: recipient } : { phone: recipient },
         recipientKey: recipient,
         idempotencyKey,
         templateScope: 'PLATFORM',
         rendered: {
-          templateId: 'platform-test-send',
+          templateId: `platform-${spec.providerType}-test-send`,
           version: 1,
-          channel: 'email',
+          channel: spec.providerType,
           locale: 'en',
           format: 'TEXT',
-          subject: 'EXPADIO communication test',
-          body: 'Your EXPADIO communication connector completed a governed test send.',
+          ...(spec.providerType === 'email' ? { subject: 'EXPADIO communication test' } : {}),
+          body: spec.providerType === 'voice'
+            ? voiceUrl
+            : 'Your EXPADIO communication connector completed a governed test send.',
           variables: {},
         },
         compliance: {
@@ -121,7 +199,7 @@ export async function POST(
           },
           evaluatedAt: requestedAt,
         },
-        routing: { capabilityKey: CAPABILITY_KEY },
+        routing: { capabilityKey: spec.capabilityKey },
         requestedAt,
       };
 
@@ -134,21 +212,9 @@ export async function POST(
         return {
           status: 409 as const,
           body: {
-            error: 'The selected connector is not currently eligible for email routing.',
+            error: 'The selected connector is not currently eligible for communication routing.',
             reasonCode: routed.reasonCode,
             routeReason: routed.routeReason,
-          },
-        };
-      }
-
-      if (
-        selectedConnector.providerKey !== 'resend'
-        || selectedConnector.providerType !== 'email'
-      ) {
-        return {
-          status: 400 as const,
-          body: {
-            error: 'This test-send boundary currently supports Resend email connectors only.',
           },
         };
       }
@@ -162,7 +228,7 @@ export async function POST(
         return {
           status: 409 as const,
           body: {
-            error: 'Create and verify a tenant sender identity before testing.',
+            error: `Create and verify a ${spec.providerType} sender identity before testing.`,
             reasonCode: senderPrepared.reasonCode,
           },
         };
@@ -182,8 +248,23 @@ export async function POST(
           },
         },
       });
-      const adapter = new ResendEmailAdapter({
-        apiToken: governedResendApiTokenProvider({
+
+      let providerResult: CommunicationProviderSendResult;
+      if (spec.providerKey === 'resend') {
+        const adapter = new ResendEmailAdapter({
+          apiToken: governedResendApiTokenProvider({
+            connector: selectedConnector,
+            credentialRepository,
+            leaseService,
+            secretResolver: delegatedSecretResolver,
+            requestedBySubjectId: context.subjectId,
+            requestId: () => crypto.randomUUID(),
+            correlationId: () => crypto.randomUUID(),
+          }),
+        });
+        providerResult = await adapter.send(senderPrepared.request);
+      } else {
+        const credentials = governedTwilioCredentialsProvider({
           connector: selectedConnector,
           credentialRepository,
           leaseService,
@@ -191,9 +272,12 @@ export async function POST(
           requestedBySubjectId: context.subjectId,
           requestId: () => crypto.randomUUID(),
           correlationId: () => crypto.randomUUID(),
-        }),
-      });
-      const providerResult = await adapter.send(senderPrepared.request);
+        });
+        const adapter = spec.providerKey === 'twilio-voice'
+          ? new TwilioVoiceAdapter({ credentials })
+          : new TwilioSmsWhatsappAdapter({ credentials });
+        providerResult = await adapter.send(senderPrepared.request);
+      }
 
       const traceBuilder = new DecisionTraceBuilder();
       traceBuilder
@@ -206,7 +290,7 @@ export async function POST(
       traceBuilder
         .pass('CONNECTOR_ROUTING', `selected ${connectorKey}`)
         .pass('CREDENTIAL_LEASE', 'authorized, audited, short-lived credential lease issued')
-        .pass('DISPATCH', 'test message handed to Resend');
+        .pass('DISPATCH', `test message handed to ${spec.providerKey}`);
 
       if (providerResult.status === 'ACCEPTED') {
         traceBuilder.pass('OUTCOME_CLASSIFICATION', 'provider accepted test message');
@@ -261,6 +345,8 @@ export async function POST(
         status: providerResult.status === 'ACCEPTED' ? 200 as const : 502 as const,
         body: {
           connectorKey,
+          providerKey: spec.providerKey,
+          channel: spec.providerType,
           traceId: trace.traceId,
           senderScope: senderPrepared.senderScope,
           outcome: providerResult.status,
@@ -282,5 +368,24 @@ export async function POST(
   } catch (error) {
     const { body, status } = deniedResponse(error);
     return NextResponse.json(body, { status });
+  }
+}
+
+function normalizeRecipient(channel: TestChannel, value: string): string | null {
+  if (channel === 'email') {
+    const email = value.trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) ? email : null;
+  }
+
+  const phone = value.startsWith('whatsapp:') ? value.slice('whatsapp:'.length) : value;
+  return /^\+[1-9]\d{7,14}$/u.test(phone) ? phone : null;
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' && parsed.hostname.length > 0;
+  } catch {
+    return false;
   }
 }

@@ -14,8 +14,17 @@ import {
   type SecretResolver,
 } from '@expadio/communication/governed-resend-binding';
 import {
+  governedTwilioCredentialsProvider,
+} from '@expadio/communication/governed-twilio-binding';
+import {
   ResendEmailAdapter,
 } from '@expadio/communication/resend-email-adapter';
+import {
+  TwilioSmsWhatsappAdapter,
+} from '@expadio/communication/twilio-sms-whatsapp-adapter';
+import {
+  TwilioVoiceAdapter,
+} from '@expadio/communication/twilio-voice-adapter';
 import {
   PostgresCommunicationConsentRepository,
 } from '@expadio/postgres-runtime/consent';
@@ -99,6 +108,30 @@ function stableServiceSubject(value: string): string {
     throw new Error('COMMUNICATION_WORKER_SERVICE_SUBJECT_INVALID');
   }
   return normalized;
+}
+
+function isExecutableConnector(input: {
+  readonly providerKey: string;
+  readonly providerType: string;
+  readonly adapterKey: string;
+}): boolean {
+  return (
+    input.providerKey === 'resend'
+    && input.providerType === 'email'
+    && input.adapterKey === 'resend-email-v1'
+  ) || (
+    input.providerKey === 'twilio-sms'
+    && input.providerType === 'sms'
+    && input.adapterKey === 'twilio-sms-whatsapp-v1'
+  ) || (
+    input.providerKey === 'twilio-whatsapp'
+    && input.providerType === 'whatsapp'
+    && input.adapterKey === 'twilio-sms-whatsapp-v1'
+  ) || (
+    input.providerKey === 'twilio-voice'
+    && input.providerType === 'voice'
+    && input.adapterKey === 'twilio-voice-v1'
+  );
 }
 
 export async function claimNextCommunicationDelivery(
@@ -460,15 +493,17 @@ export async function runCommunicationDeliveryWorkerOnce(
     if (
       selected === undefined
       || !selected.enabled
-      || selected.providerKey !== 'resend'
-      || selected.providerType !== 'email'
-      || claim.adapterKey !== 'resend-email-v1'
+      || !isExecutableConnector({
+        providerKey: selected.providerKey,
+        providerType: selected.providerType,
+        adapterKey: claim.adapterKey,
+      })
     ) {
       const status = await rescheduleClaim(client, {
         claim,
         now: input.options.now?.() ?? new Date(),
         reasonCode: 'DELIVERY_CONNECTOR_UNAVAILABLE',
-        reason: 'The queued Resend connector is not currently executable.',
+        reason: 'The queued communication connector is not currently executable.',
         maxAttempts,
       });
       return {
@@ -524,21 +559,51 @@ export async function runCommunicationDeliveryWorkerOnce(
       },
       now: credentialNow,
     });
-    const adapter = new ResendEmailAdapter({
-      apiToken: governedResendApiTokenProvider({
+    const credentialRepository = new PostgresConnectorCredentialRepository(client);
+    const secretResolver = input.options.secretResolver ?? delegatedSecretResolver;
+
+    let adapter: ResendEmailAdapter | TwilioSmsWhatsappAdapter | TwilioVoiceAdapter;
+    if (selected.providerKey === 'resend') {
+      adapter = new ResendEmailAdapter({
+        apiToken: governedResendApiTokenProvider({
+          connector: selected,
+          credentialRepository,
+          leaseService,
+          secretResolver,
+          requestedBySubjectId: serviceSubjectId,
+          requestId: () => randomUUID(),
+          correlationId: () => randomUUID(),
+          now: credentialNow,
+        }),
+        ...(input.options.fetchImpl === undefined
+          ? {}
+          : { fetchImpl: input.options.fetchImpl }),
+      });
+    } else {
+      const credentials = governedTwilioCredentialsProvider({
         connector: selected,
-        credentialRepository: new PostgresConnectorCredentialRepository(client),
+        credentialRepository,
         leaseService,
-        secretResolver: input.options.secretResolver ?? delegatedSecretResolver,
+        secretResolver,
         requestedBySubjectId: serviceSubjectId,
         requestId: () => randomUUID(),
         correlationId: () => randomUUID(),
         now: credentialNow,
-      }),
-      ...(input.options.fetchImpl === undefined
-        ? {}
-        : { fetchImpl: input.options.fetchImpl }),
-    });
+      });
+      adapter = selected.providerKey === 'twilio-voice'
+        ? new TwilioVoiceAdapter({
+            credentials,
+            ...(input.options.fetchImpl === undefined
+              ? {}
+              : { fetchImpl: input.options.fetchImpl }),
+          })
+        : new TwilioSmsWhatsappAdapter({
+            credentials,
+            ...(input.options.fetchImpl === undefined
+              ? {}
+              : { fetchImpl: input.options.fetchImpl }),
+          });
+    }
 
     const providerAttemptAt = input.options.now?.() ?? new Date();
     const renewedUntil = await renewCommunicationDeliveryClaim(client, {
