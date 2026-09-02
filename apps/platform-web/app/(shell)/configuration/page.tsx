@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
-import { DeniedState, StatePill } from '@expadio/ui';
+import { DeniedState, StatusBadge } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { requestedOrganizationId, type RouteSearchParams } from '../../../lib/request-context';
 
@@ -56,7 +56,9 @@ export default async function ConfigurationManagerPage({ searchParams }: { searc
                   <td><strong>{setting.value}</strong></td>
                   <td>{setting.scope}</td>
                   <td>
-                    <StatePill state={setting.overridden ? 'Review' : 'Published'} />
+                    <StatusBadge tone={setting.overridden ? 'warning' : 'positive'}>
+                      {setting.overridden ? 'OVERRIDDEN' : 'EFFECTIVE'}
+                    </StatusBadge>
                   </td>
                 </tr>
               ))}
