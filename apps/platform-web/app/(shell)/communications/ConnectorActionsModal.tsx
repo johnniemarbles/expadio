@@ -57,7 +57,7 @@ interface ConnectorActionsModalProps {
 const PROBE_COLORS: Record<string, { fg: string; bg: string }> = {
   VALID: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
   FAILING: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
-  INVALID: { fg: "var(--theme-danger)", bg: "#fee2e2" },
+  INVALID: { fg: "var(--theme-danger)", bg: "color-mix(in srgb,var(--theme-danger) 12%,transparent)" },
 };
 
 export function ConnectorActionsModal({
@@ -159,27 +159,27 @@ export function ConnectorActionsModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "min(720px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", border: "1px solid var(--line, #e2e8f0)", borderRadius: 16, padding: 28, boxShadow: "0 25px 50px -12px rgba(0,0,0,.25)" }}
+        style={{ width: "min(720px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", border: "1px solid var(--theme-border)", borderRadius: 16, padding: 28, boxShadow: "0 25px 50px -12px color-mix(in srgb,var(--theme-overlay) 72%,transparent)" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div>
-            <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--brand, var(--theme-primary))" }}>
+            <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--theme-primary)" }}>
               Governed connector controls
             </span>
             <h2 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700 }}>{connectorKey}</h2>
-            <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>Ownership: {ownershipScope}</div>
+            <div style={{ fontSize: 12, color: "var(--theme-text-muted)" }}>Ownership: {ownershipScope}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ border: "1px solid var(--line, #e2e8f0)", background: "transparent", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ border: "1px solid var(--theme-border)", background: "transparent", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
-        {loading && <div style={{ padding: 20, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading governed connector state…</div>}
+        {loading && <div style={{ padding: 20, textAlign: "center", color: "var(--theme-text-muted)" }}>Loading governed connector state…</div>}
 
         {/* Blast radius */}
-        <section style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Blast radius</h3>
           {radius ? (
             <>
-              <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-700, #334155)", lineHeight: 1.5 }}>{radius.statement}</p>
+              <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-700, var(--theme-text-secondary))", lineHeight: 1.5 }}>{radius.statement}</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
                 <Stat label="Tenants" value={radius.tenantCount} />
                 <Stat label="Channels" value={radius.channels.length} />
@@ -188,12 +188,12 @@ export function ConnectorActionsModal({
               </div>
             </>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500, #64748b)" }}>No routing or delivery history for this connector yet.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--theme-text-muted)" }}>No routing or delivery history for this connector yet.</p>
           )}
         </section>
 
         {/* Credential health */}
-        <section style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <h3 style={{ margin: 0, fontSize: 14 }}>Credential health</h3>
             {probe && (
@@ -203,7 +203,7 @@ export function ConnectorActionsModal({
             )}
           </div>
           {health ? (
-            <div style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--ink-600, #475569)" }}>
+            <div style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--theme-text-secondary)" }}>
               <div>Credential state: <strong>{health.credentialState ?? "—"}</strong> · Custody: <strong>{health.custodyMode ?? "—"}</strong></div>
               <div>Last probe: <strong>{health.probeCheckedAt ? new Date(health.probeCheckedAt).toLocaleString() : "not yet probed"}</strong></div>
               {health.probeError && (
@@ -212,35 +212,35 @@ export function ConnectorActionsModal({
               <div>
                 Allocation on this probe — transactional ×{health.allocation.transactionalMultiplier}, bulk ×{health.allocation.bulkMultiplier}
               </div>
-              <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--ink-500, #64748b)" }}>{health.allocation.note}</div>
+              <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--theme-text-muted)" }}>{health.allocation.note}</div>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500, #64748b)" }}>No credential on record for this connector.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--theme-text-muted)" }}>No credential on record for this connector.</p>
           )}
         </section>
 
         {/* Attestation history */}
-        <section style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Revocation attestations</h3>
           {attestations.length > 0 ? (
             <div style={{ display: "grid", gap: 10 }}>
               {attestations.map((a) => (
-                <div key={a.attestation_id} style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: 12, background: "#f8fafc" }}>
+                <div key={a.attestation_id} style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: 12, background: "var(--theme-text-muted)" }}>
                   <div style={{ fontSize: 12, fontWeight: 700 }}>{new Date(a.revoked_at).toLocaleString()}</div>
-                  <p style={{ margin: "6px 0", fontSize: 12, color: "var(--ink-700, #334155)", lineHeight: 1.5 }}>{a.attestation_text}</p>
-                  <div style={{ fontSize: 11, color: "var(--ink-500, #64748b)" }}>
+                  <p style={{ margin: "6px 0", fontSize: 12, color: "var(--ink-700, var(--theme-text-secondary))", lineHeight: 1.5 }}>{a.attestation_text}</p>
+                  <div style={{ fontSize: 11, color: "var(--theme-text-muted)" }}>
                     Exposure ≤ {a.max_exposure_seconds}s · rerouted {a.messages_rerouted} · cancelled {a.messages_cancelled} · corr <span style={{ fontFamily: "monospace" }}>{a.correlation_id}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500, #64748b)" }}>No revocation has been recorded for this connector.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--theme-text-muted)" }}>No revocation has been recorded for this connector.</p>
           )}
         </section>
 
         {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
-        {notice && <div style={{ fontSize: 13, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", padding: 10, borderRadius: 8, border: "1px solid #bbf7d0", marginBottom: 12 }}>✅ {notice}</div>}
+        {notice && <div style={{ fontSize: 13, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", padding: 10, borderRadius: 8, border: "1px solid color-mix(in srgb,var(--theme-success) 28%,transparent)", marginBottom: 12 }}>✅ {notice}</div>}
 
         {(needsApproval || ownershipScope === "PLATFORM") && (
           <label style={{ display: "block", fontSize: 12, marginBottom: 12 }}>
@@ -249,13 +249,13 @@ export function ConnectorActionsModal({
               value={approvalRef}
               onChange={(e) => setApprovalRef(e.target.value)}
               placeholder="governance review id"
-              style={{ width: "100%", marginTop: 4, padding: "6px 10px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 6, fontSize: 12 }}
+              style={{ width: "100%", marginTop: 4, padding: "6px 10px", border: "1px solid var(--theme-border)", borderRadius: 6, fontSize: 12 }}
             />
           </label>
         )}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Close</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Close</button>
           <button
             type="button"
             onClick={handleRevoke}
@@ -273,8 +273,8 @@ export function ConnectorActionsModal({
 function Stat({ label, value, danger = false }: { label: string; value: string | number; danger?: boolean }) {
   return (
     <div style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: "8px 10px" }}>
-      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-500, #64748b)" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: danger ? "var(--theme-danger)" : "var(--ink-900, var(--theme-text-primary))" }}>{value}</div>
+      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-muted)" }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: danger ? "var(--theme-danger)" : "var(--theme-text-primary)" }}>{value}</div>
     </div>
   );
 }
