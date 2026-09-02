@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
+import type { PoolClient } from 'pg';
+import { resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!id || !correction || !idempotencyKey) {
       return NextResponse.json({ code: 'INVALID_CORRECTION', message: 'Insight id, correction and idempotencyKey are required.' }, { status: 400 });
     }
-    const result = await withBrandTransaction(context, async (client) => {
+    const result = await withBrandTransaction(context, async (client: PoolClient) => {
       const insight = await client.query(
         `SELECT insight_id, insight_key, statement, confidence, model_name, model_version
            FROM platform.brand_brain_insights
