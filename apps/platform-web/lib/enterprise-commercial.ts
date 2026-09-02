@@ -28,6 +28,7 @@ export interface EnterpriseCommercialAgreementInput {
   readonly governingLawCountryCode?: string | null;
   readonly governingLawSubdivisionCode?: string | null;
   readonly createdBySubjectId: string;
+  readonly idempotencyKey: string;
 }
 
 export interface EnterpriseAppointmentInput {
@@ -50,6 +51,7 @@ export interface EnterpriseAppointmentInput {
   readonly effectiveFrom?: string;
   readonly effectiveUntil?: string | null;
   readonly requestedBySubjectId: string;
+  readonly idempotencyKey: string;
 }
 
 interface AppointmentRow {
@@ -135,10 +137,10 @@ export async function createEnterpriseCommercialAgreement(
        agreement_number, title, agreement_kind,
        grantor_legal_entity_id, grantee_legal_entity_id,
        sponsoring_organization_id, governing_law_country_code,
-       governing_law_subdivision_code, created_by_subject_id
+       governing_law_subdivision_code, idempotency_key, created_by_subject_id
      ) VALUES (
        $1::uuid, $2::uuid, $3::uuid, $4, $5, $6,
-       $7::uuid, $8::uuid, $9::uuid, $10, $11, $12
+       $7::uuid, $8::uuid, $9::uuid, $10, $11, $12, $13
      )`,
     [
       agreementId,
@@ -152,6 +154,7 @@ export async function createEnterpriseCommercialAgreement(
       input.sponsoringOrganizationId,
       input.governingLawCountryCode ?? null,
       input.governingLawSubdivisionCode ?? null,
+      input.idempotencyKey,
       input.createdBySubjectId,
     ],
   );
@@ -294,13 +297,13 @@ export async function createEnterpriseAppointment(
        beneficiary_organization_id, beneficiary_legal_entity_id,
        appointment_kind, rights_profile_key, requested_right_types,
        exclusivity_key, delegation_requested, sub_appointment_requested,
-       channel_keys, product_keys, state, effective_from, effective_until,
-       requested_by_subject_id
+       channel_keys, product_keys, state, idempotency_key,
+       effective_from, effective_until, requested_by_subject_id
      ) VALUES (
        $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid,
        $6::uuid, $7::uuid, $8, $9, $10::text[],
-       $11, $12, $13, $14::text[], $15::text[], 'SUBMITTED',
-       $16::timestamptz, $17::timestamptz, $18
+       $11, $12, $13, $14::text[], $15::text[], 'SUBMITTED', $16,
+       $17::timestamptz, $18::timestamptz, $19
      )`,
     [
       appointmentId,
@@ -318,6 +321,7 @@ export async function createEnterpriseAppointment(
       input.subAppointmentRequested ?? false,
       [...(input.channelKeys ?? [])],
       [...(input.productKeys ?? [])],
+      input.idempotencyKey,
       input.effectiveFrom ?? new Date().toISOString(),
       input.effectiveUntil ?? null,
       input.requestedBySubjectId,
@@ -553,6 +557,7 @@ export async function startEnterpriseJurisdictionActivation(
     readonly requestedBySubjectId: string;
     readonly activationId?: string;
     readonly evidenceRefs: readonly string[];
+    readonly idempotencyKey: string;
   },
 ): Promise<{
   readonly jurisdictionActivationId: string;
@@ -637,10 +642,11 @@ export async function startEnterpriseJurisdictionActivation(
     `INSERT INTO platform.enterprise_jurisdiction_activations (
        enterprise_jurisdiction_activation_id, tenant_id, enterprise_id,
        organization_id, enterprise_appointment_id, territory_id,
-       workflow_activation_id, state, requested_by_subject_id, evidence_refs
+       workflow_activation_id, idempotency_key, state,
+       requested_by_subject_id, evidence_refs
      ) VALUES (
        $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
-       $7::uuid, 'ACTIVATION_REVIEW', $8, $9::text[]
+       $7::uuid, $8, 'ACTIVATION_REVIEW', $9, $10::text[]
      )`,
     [
       jurisdictionActivationId,
@@ -650,6 +656,7 @@ export async function startEnterpriseJurisdictionActivation(
       input.appointmentId,
       input.territoryId,
       activation.activation.activationId,
+      input.idempotencyKey,
       input.requestedBySubjectId,
       [...input.evidenceRefs],
     ],
