@@ -43,10 +43,6 @@ function verificationClass(status: string) {
   return styles.statusPending;
 }
 
-function recordStatusClass(status: string) {
-  return status === "VERIFIED" ? `${styles.recordStatus} ${styles.recordStatusVerified}` : styles.recordStatus;
-}
-
 export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.com" }: DomainConfigModalProps) {
   const [domain, setDomain] = useState(initialDomain);
   const [loading, setLoading] = useState(false);
@@ -168,156 +164,84 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
             <p className={styles.eyebrow}>DNS &amp; Identity Preflight</p>
             <h2 className={styles.title}>Sending Domains &amp; DKIM Authentication</h2>
           </div>
-          <button type="button" onClick={onClose} className={styles.closeButton} aria-label="Close">
-            ✕
-          </button>
+          <button type="button" onClick={onClose} className={styles.closeButton} aria-label="Close">✕</button>
         </div>
 
         <p className={styles.description}>
-          Sending domains require verified DNS records (DKIM selector keys, SPF inbound authorisation, DMARC alignment, and MX routing) before governed email dispatch is permitted.
+          Sending domains require verified DNS records before governed email dispatch is permitted. The table shows required records; live observations appear only after an explicit Verify check.
         </p>
 
         <div className={styles.actionPanel}>
           <div className={styles.fieldset}>
-            <label className={styles.label}>
-              Sending domain
-              <input
-                type="text"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                placeholder="e.g. mail.yourbrand.com"
-                className={domain && !domainValid ? styles.inputInvalid : styles.input}
-              />
+            <label className={styles.label}>Sending domain
+              <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. mail.yourbrand.com" className={domain && !domainValid ? styles.inputInvalid : styles.input} />
               {domain && !domainValid && <span className={styles.invalidText}>Enter a valid domain such as mail.example.com.</span>}
             </label>
-            <label className={styles.label}>
-              Cloudflare API token <span className={styles.optionalText}>(optional if the deployment has one)</span>
-              <input
-                type="password"
-                value={apiToken}
-                onChange={(e) => setApiToken(e.target.value)}
-                placeholder="Token with Zone · DNS · Edit for this domain"
-                autoComplete="off"
-                className={styles.input}
-              />
+            <label className={styles.label}>Cloudflare API token <span className={styles.optionalText}>(optional if the deployment has one)</span>
+              <input type="password" value={apiToken} onChange={(e) => setApiToken(e.target.value)} placeholder="Token with Zone · DNS · Edit for this domain" autoComplete="off" className={styles.input} />
               <span className={styles.helpText}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
             </label>
             <div className={styles.actions}>
-              <button
-                type="button"
-                onClick={handleAutoConfigure}
-                disabled={loading || adding || !domainValid}
-                className={styles.primaryButton}
-              >
-                {loading ? "Provisioning DNS…" : "⚡ Auto-Configure with Cloudflare"}
-              </button>
-              <button
-                type="button"
-                onClick={handleAddManual}
-                disabled={loading || adding || !domainValid}
-                className={styles.secondaryButton}
-              >
-                {adding ? "Adding…" : "Add without Cloudflare"}
-              </button>
+              <button type="button" onClick={handleAutoConfigure} disabled={loading || adding || !domainValid} className={styles.primaryButton}>{loading ? "Provisioning DNS…" : "⚡ Auto-Configure with Cloudflare"}</button>
+              <button type="button" onClick={handleAddManual} disabled={loading || adding || !domainValid} className={styles.secondaryButton}>{adding ? "Adding…" : "Add without Cloudflare"}</button>
             </div>
           </div>
 
-          {error && (
-            <div className={styles.alert} role="alert">
-              ⚠️ {error}
-            </div>
-          )}
-
+          {error && <div className={styles.alert} role="alert">⚠️ {error}</div>}
           {lastProvisionResult && (
             <div className={styles.success}>
               ✅ {lastProvisionResult.message}
               {Array.isArray(lastProvisionResult.cloudflare) && lastProvisionResult.cloudflare.length > 0 && (
                 <div className={styles.cloudflareList}>
-                  {lastProvisionResult.cloudflare.map((r, i) => (
-                    <div key={i} className={`${styles.checkLine} ${r.ok ? styles.checkGood : styles.checkBad} ${styles.mono}`}>
-                      {r.ok ? "✓" : "✗"} {r.name} — {r.action ?? r.detail}
-                    </div>
-                  ))}
+                  {lastProvisionResult.cloudflare.map((r, i) => <div key={i} className={`${styles.checkLine} ${r.ok ? styles.checkGood : styles.checkBad} ${styles.mono}`}>{r.ok ? "✓" : "✗"} {r.name} — {r.action ?? r.detail}</div>)}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <h3 className={styles.sectionTitle}>Configured Sender Identities &amp; DNS Selectors</h3>
-
-        {fetching ? (
-          <div className={styles.loading}>Loading domain configurations...</div>
-        ) : domains.length > 0 ? (
+        <h3 className={styles.sectionTitle}>Configured Sender Identities &amp; DNS Requirements</h3>
+        {fetching ? <div className={styles.loading}>Loading domain configurations...</div> : domains.length > 0 ? (
           <div className={styles.domainList}>
             {domains.map((d) => (
               <div key={d.senderId} className={styles.domainCard}>
                 <div className={styles.domainHeader}>
-                  <div>
-                    <strong className={styles.domainName}>{d.domain}</strong>
-                    <div className={styles.domainAddress}>{d.address}</div>
-                  </div>
+                  <div><strong className={styles.domainName}>{d.domain}</strong><div className={styles.domainAddress}>{d.address}</div></div>
                   <div className={styles.domainActions}>
                     <span className={verificationClass(d.verificationStatus)}>{d.verificationStatus}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleVerify(d.senderId)}
-                      disabled={busyId === d.senderId}
-                      className={styles.smallButton}
-                    >
-                      {busyId === d.senderId ? "…" : "Verify"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(d.senderId, d.domain)}
-                      disabled={busyId === d.senderId}
-                      className={styles.dangerButton}
-                    >
-                      Remove
-                    </button>
+                    <button type="button" onClick={() => handleVerify(d.senderId)} disabled={busyId === d.senderId} className={styles.smallButton}>{busyId === d.senderId ? "…" : "Verify"}</button>
+                    <button type="button" onClick={() => handleRemove(d.senderId, d.domain)} disabled={busyId === d.senderId} className={styles.dangerButton}>Remove</button>
                   </div>
                 </div>
 
                 {verifyResults[d.senderId] && (
                   <div className={styles.checkList}>
-                    {verifyResults[d.senderId].map((c, i) => (
-                      <div key={i} className={`${styles.checkLine} ${c.ok ? styles.checkGood : styles.checkBad}`}>
-                        {c.ok ? "✅" : "⚠️"} <strong>{c.purpose}</strong> — {c.detail}
-                      </div>
-                    ))}
+                    {verifyResults[d.senderId].map((c, i) => <div key={i} className={`${styles.checkLine} ${c.ok ? styles.checkGood : styles.checkBad}`}>{c.ok ? "✅" : "⚠️"} <strong>{c.purpose}</strong> — {c.detail}</div>)}
                   </div>
                 )}
 
                 <div className={styles.tableWrap}>
                   <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Record Type</th>
-                        <th>Host / Selector</th>
-                        <th>Value</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
+                    <thead><tr><th>Record Type</th><th>Host / Selector</th><th>Value</th><th>Verification</th></tr></thead>
                     <tbody>
-                      {d.dnsRecords?.map((r, idx) => (
-                        <tr key={idx}>
-                          <td className={styles.recordType}><code>{r.type}</code></td>
-                          <td className={styles.recordName}>{r.name}</td>
-                          <td className={styles.recordValue}>{r.value}</td>
-                          <td>
-                            <span className={recordStatusClass(r.status)}>{r.status}</span>
-                          </td>
-                        </tr>
-                      ))}
+                      {d.dnsRecords?.map((r, idx) => {
+                        const observation = verifyResults[d.senderId]?.find((check) => check.purpose === r.purpose && check.name === r.name);
+                        return (
+                          <tr key={idx}>
+                            <td className={styles.recordType}><code>{r.type}</code></td>
+                            <td className={styles.recordName}>{r.name}</td>
+                            <td className={styles.recordValue}>{r.value}</td>
+                            <td>{observation ? (observation.ok ? "VERIFIED" : "MISSING") : (r.verifiable ? "NOT CHECKED" : "PROVIDER ISSUED")}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div className={styles.empty}>No sending domains configured. Click Auto-Configure above to register your first sending domain.</div>
-        )}
+        ) : <div className={styles.empty}>No sending domains configured. Click Auto-Configure above to register your first sending domain.</div>}
       </div>
     </div>
   );
