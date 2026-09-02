@@ -52,7 +52,7 @@ export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
     if (!baseUrl && typeof window === 'undefined') {
       throw new Error(`Cannot perform SSR fetch to relative path ${path}. Base URL is empty.`);
     }
-    const url = `${baseUrl}${path}`;
+    let url = `${baseUrl}${path}`;
     
     // Preserve authentication and the workspace context already resolved by
     // Platform proxy.ts. These headers request a scope; API handlers still
@@ -65,13 +65,28 @@ export async function fetchApi<T>(path: string): Promise<AdapterResult<T>> {
         for (const name of [
           'cookie',
           'authorization',
-          'x-expadio-tenant-id',
-          'x-expadio-organization-id',
           'x-expadio-scope',
         ]) {
           const value = incoming.get(name);
           if (value) forwarded.set(name, value);
         }
+
+        // SSR subrequests pass through proxy.ts again. Re-express the trusted
+        // outer-request workspace as query selectors so the proxy can derive
+        // fresh workspace headers instead of trusting forwarded x-expadio IDs.
+        const tenantId = incoming.get('x-expadio-tenant-id');
+        const organizationId = incoming.get('x-expadio-organization-id');
+        if (tenantId || organizationId) {
+          const scopedUrl = new URL(url);
+          if (tenantId && !scopedUrl.searchParams.has('account')) {
+            scopedUrl.searchParams.set('account', tenantId);
+          }
+          if (organizationId && !scopedUrl.searchParams.has('org')) {
+            scopedUrl.searchParams.set('org', organizationId);
+          }
+          url = scopedUrl.toString();
+        }
+
         fetchOptions.headers = forwarded;
       } catch {
         // API auth will return an explicit denial when no request context exists.

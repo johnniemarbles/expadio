@@ -107,8 +107,9 @@ test('request context and shell contain no demo organization fallback or tenant-
     /requestedOrganizationId[\s\S]*00000000-0000-0000-0000-000000000002/,
   );
   assert.match(requestContext, /return context\.organizationId/);
-  assert.match(requestContext, /if \(requestedOrganization\)[\s\S]*if \(!selectedMembership\)[\s\S]*TENANT_ACCESS_DENIED/);
-  assert.match(requestContext, /else if \(requestedTenant\)[\s\S]*if \(!selectedMembership\)[\s\S]*TENANT_ACCESS_DENIED/);
+  assert.match(requestContext, /organizationSelectionSource === 'query'[\s\S]*TENANT_ACCESS_DENIED/);
+  assert.match(requestContext, /tenantSelectionSource === 'query'[\s\S]*tenantMemberships\.length === 0[\s\S]*TENANT_ACCESS_DENIED/);
+  assert.match(requestContext, /\?\? memberships\[0\]/);
   assert.match(contextRoute, /allowedOrganizationIds/);
   assert.match(contextRoute, /organization_id = ANY\(\$2::uuid\[\]\)/);
   assert.match(contextRoute, /parentId: row\.parent_organization_id \?\? null/);
