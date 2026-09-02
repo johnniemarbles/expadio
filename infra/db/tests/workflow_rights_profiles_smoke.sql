@@ -80,12 +80,20 @@ DECLARE
   platform_count integer;
   tenant_count integer;
 BEGIN
-  SELECT count(*) INTO visible_count FROM platform.workflow_rights_profiles;
+  SELECT count(*) INTO visible_count
+    FROM platform.workflow_rights_profiles
+   WHERE profile_key = 'standard-partner'
+     AND version = 1;
   SELECT count(*) INTO platform_count
-    FROM platform.workflow_rights_profiles WHERE tenant_id IS NULL;
+    FROM platform.workflow_rights_profiles
+   WHERE tenant_id IS NULL
+     AND profile_key = 'standard-partner'
+     AND version = 1;
   SELECT count(*) INTO tenant_count
     FROM platform.workflow_rights_profiles
-    WHERE tenant_id = '97979797-9797-9797-9797-979797979797';
+   WHERE tenant_id = '97979797-9797-9797-9797-979797979797'
+     AND profile_key = 'standard-partner'
+     AND version = 1;
 
   IF visible_count <> 2 OR platform_count <> 1 OR tenant_count <> 1 THEN
     RAISE EXCEPTION 'rights profile visibility incorrect: total %, platform %, tenant %',

@@ -32,6 +32,7 @@ export function BrandShellFrame({
   const ordered=[...modules].sort((a,b)=>a.order-b.order||a.name.localeCompare(b.name));
   const pinned=ordered.filter((module)=>module.defaultPinned).slice(0,5);
   const active=ordered.find((module)=>pathname===module.baseRoute||pathname.startsWith(module.baseRoute+'/'))??null;
+  const enterpriseActive=pathname==='/enterprise'||pathname.startsWith('/enterprise/');
 
   return <div className={styles.shell} data-expadio-theme="brand">
     <aside className={styles.sidebar} aria-label="Brand navigation">
@@ -43,6 +44,10 @@ export function BrandShellFrame({
       <nav className={styles.globalNav}>
         <p className={styles.navGroup}>Workspace</p>
         <Link className={pathname==='/'?styles.navActive:''} href="/">Home</Link>
+        <Link
+          className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
+          href="/enterprise"
+        ><span className={styles.navIcon}>EN</span>Enterprise</Link>
         <p className={styles.navGroup}>Apps</p>
         {pinned.map((module)=><Link
           key={module.key}
@@ -72,7 +77,11 @@ export function BrandShellFrame({
     <section className={styles.content}>
       <header className={styles.topbar}>
         <div className={styles.appContext}>
-          {active?<><span className={styles.appContextIcon}>{active.iconKey.slice(0,2).toUpperCase()}</span><div><strong>{active.name}</strong><small>{organizationName}</small></div></>:<div><strong>{organizationName}</strong><small>{tenantName}</small></div>}
+          {active
+            ? <><span className={styles.appContextIcon}>{active.iconKey.slice(0,2).toUpperCase()}</span><div><strong>{active.name}</strong><small>{organizationName}</small></div></>
+            : enterpriseActive
+              ? <><span className={styles.appContextIcon}>EN</span><div><strong>Enterprise</strong><small>{organizationName}</small></div></>
+              : <div><strong>{organizationName}</strong><small>{tenantName}</small></div>}
         </div>
         <div className={styles.topbarActions}>
           {active&&ordered.length>1?<details className={styles.appSwitcher}>

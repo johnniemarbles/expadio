@@ -62,7 +62,8 @@
     "./theme-configuration": "./src/theme-configuration.ts",
     "./personal-appearance": "./src/personal-appearance.ts",
     "./enterprise": "./src/enterprise.ts",
-    "./enterprise-onboarding": "./src/enterprise-onboarding.ts"
+    "./enterprise-onboarding": "./src/enterprise-onboarding.ts",
+    "./enterprise-commercial": "./src/enterprise-commercial.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",

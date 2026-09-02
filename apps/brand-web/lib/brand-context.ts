@@ -69,6 +69,43 @@ export async function hasLearningAdmin(client:pg.PoolClient,subjectId:string):Pr
   return hasBrandAdministrationRole(client,subjectId);
 }
 
+const BRAND_GOVERNANCE_ROLES = [
+  'TENANT_OWNER',
+  'TENANT_ADMIN',
+  'PLATFORM_SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+] as const;
+
+export async function hasBrandGovernanceForOrganization(
+  client: pg.PoolClient,
+  subjectId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const result = await client.query(
+    `SELECT 1
+       FROM platform.authorization_assignments assignment
+       JOIN platform.authorization_roles role
+         ON role.role_id = assignment.role_id
+      WHERE assignment.subject_id = $1
+        AND assignment.status = 'ACTIVE'
+        AND role.status = 'ACTIVE'
+        AND role.role_key = ANY($2::text[])
+        AND assignment.valid_from <= now()
+        AND (assignment.valid_until IS NULL OR assignment.valid_until > now())
+        AND (
+          assignment.organization_id IS NULL
+          OR assignment.organization_id = $3::uuid
+        )
+        AND (
+          assignment.action_organization_ids IS NULL
+          OR $3::uuid = ANY(assignment.action_organization_ids)
+        )
+      LIMIT 1`,
+    [subjectId, BRAND_GOVERNANCE_ROLES, organizationId],
+  );
+  return result.rows.length > 0;
+}
+
 
 
 export type BrandAccessDiagnosticReason =
