@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import motionStyles from './WorkflowTraceModal.module.css';
 
 /**
  * A self-contained trace overlay for a governed workflow subject (vendor,
@@ -38,17 +39,19 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
       aria-modal="true"
       aria-label={title}
       onClick={onClose}
+      className={motionStyles.backdrop}
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 50 }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className={motionStyles.dialog}
         style={{ background: 'var(--theme-surface-raised)', color: 'var(--theme-text-primary)', borderRadius: 12, padding: 20, width: 'min(560px, 100%)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 20px 60px color-mix(in srgb,var(--theme-overlay) 72%,transparent)' }}
       >
         <h3 style={{ margin: 0, fontSize: 15 }}>{title}</h3>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--theme-text-muted)' }}>Append-only transitions and immutable decisions, in order. This is the governed audit trail.</p>
-        {error && <p role="alert" style={{ color: 'var(--theme-danger)', margin: 0, fontSize: 13 }}>{error}</p>}
-        {entries === null && !error && <p style={{ fontSize: 13, color: 'var(--theme-text-muted)' }}>Loading…</p>}
-        {entries !== null && entries.length === 0 && <p style={{ fontSize: 13, color: 'var(--theme-text-muted)' }}>No trace yet — start the workflow and advance it to build a history.</p>}
+        {error && <p role="alert" className={motionStyles.feedback} style={{ color: 'var(--theme-danger)', margin: 0, fontSize: 13 }}>{error}</p>}
+        {entries === null && !error && <p className={motionStyles.feedback} style={{ fontSize: 13, color: 'var(--theme-text-muted)' }}>Loading…</p>}
+        {entries !== null && entries.length === 0 && <p className={motionStyles.feedback} style={{ fontSize: 13, color: 'var(--theme-text-muted)' }}>No trace yet — start the workflow and advance it to build a history.</p>}
         {entries !== null && entries.length > 0 && (
           <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8, overflowY: 'auto' }}>
             {entries.map((e, i) => (
@@ -80,7 +83,7 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
           </ol>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'transparent', color: 'inherit', cursor: 'pointer' }}>Close</button>
+          <button type="button" onClick={onClose} className={motionStyles.closeButton} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'transparent', color: 'inherit', cursor: 'pointer' }}>Close</button>
         </div>
       </div>
     </div>
