@@ -1454,6 +1454,22 @@ export async function assignOrganizationOperatingEntity(
     },
   });
 
+  await publishGovernedEntityRelationship(client, {
+    tenantId: input.tenantId,
+    sourceEntityType: 'OPERATING_UNIT',
+    sourceEntityId: plan.organizationId,
+    relationshipKey: 'LEGAL_IDENTITY',
+    targetEntityType: 'LEGAL_ENTITY',
+    targetEntityId: input.legalEntityId,
+    actorSubjectId: input.actorSubjectId,
+    provenanceSource: 'SYSTEM',
+    decisionReference: `organization-setup:${input.setupPlanId}`,
+    attributes: {
+      bindingId,
+      source: 'enterprise.organization-setup.legal-identity',
+    },
+  });
+
   const setupEvent = await appendSetupEvent(client, {
     tenantId: input.tenantId,
     setupPlanId: input.setupPlanId,
