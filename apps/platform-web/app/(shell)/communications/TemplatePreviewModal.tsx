@@ -193,7 +193,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
     >
       <div
         style={{
-          background: "var(--surface, #ffffff)",
+          background: "var(--surface, var(--theme-text-inverse)fff)",
           border: "1px solid var(--line, #e2e8f0)",
           borderRadius: "16px",
           width: "100%",
@@ -207,7 +207,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
           <div>
-            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--brand, #4f46e5)" }}>
+            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--brand, var(--theme-primary))" }}>
               Template Inspector &amp; Live Variable Preview
             </span>
             <h2 style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 700 }}>
@@ -259,10 +259,10 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
               <input value={draft.requiredVariables} onChange={(e) => setDraft({ ...draft, requiredVariables: e.target.value })} placeholder="name, code" style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13 }} />
             </label>
             {actionError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)" }}>⚠️ {actionError}</div>}
-            {actionNotice && <div style={{ fontSize: 12, color: "#15803d" }}>✅ {actionNotice}</div>}
+            {actionNotice && <div style={{ fontSize: 12, color: "var(--theme-success)" }}>✅ {actionNotice}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button type="button" onClick={() => setEditing(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-              <button type="button" onClick={saveDraft} disabled={working} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: working ? "not-allowed" : "pointer" }}>{working ? "Saving…" : "Save draft"}</button>
+              <button type="button" onClick={saveDraft} disabled={working} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: working ? "not-allowed" : "pointer" }}>{working ? "Saving…" : "Save draft"}</button>
             </div>
           </div>
         ) : template ? (
@@ -273,7 +273,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink-700, #334155)" }}>
                   Subject: <span style={{ fontWeight: 500 }}>{template.subject || "—"}</span>
                 </div>
-                <div style={{ display: "inline-flex", background: "#f1f5f9", borderRadius: "6px", padding: "2px" }}>
+                <div style={{ display: "inline-flex", background: "var(--theme-surface-muted)", borderRadius: "6px", padding: "2px" }}>
                   <button
                     type="button"
                     onClick={() => setPreviewMode("rendered")}
@@ -284,8 +284,8 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       fontSize: "11px",
                       fontWeight: 700,
                       cursor: "pointer",
-                      background: previewMode === "rendered" ? "white" : "transparent",
-                      color: previewMode === "rendered" ? "var(--ink-900, #0f172a)" : "var(--ink-500, #64748b)",
+                      background: previewMode === "rendered" ? "var(--theme-text-inverse)" : "transparent",
+                      color: previewMode === "rendered" ? "var(--ink-900, var(--theme-text-primary))" : "var(--ink-500, #64748b)",
                       boxShadow: previewMode === "rendered" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
                     }}
                   >
@@ -301,8 +301,8 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       fontSize: "11px",
                       fontWeight: 700,
                       cursor: "pointer",
-                      background: previewMode === "source" ? "white" : "transparent",
-                      color: previewMode === "source" ? "var(--ink-900, #0f172a)" : "var(--ink-500, #64748b)",
+                      background: previewMode === "source" ? "var(--theme-text-inverse)" : "transparent",
+                      color: previewMode === "source" ? "var(--ink-900, var(--theme-text-primary))" : "var(--ink-500, #64748b)",
                       boxShadow: previewMode === "source" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
                     }}
                   >
@@ -320,17 +320,17 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                   overflowY: "auto",
                   padding: "16px",
                   background: previewMode === "rendered" ? "#fafafa" : "#1e293b",
-                  color: previewMode === "rendered" ? "#0f172a" : "#f8fafc",
+                  color: previewMode === "rendered" ? "var(--theme-text-primary)" : "#f8fafc",
                   fontFamily: previewMode === "source" ? "monospace" : "inherit",
                   fontSize: previewMode === "source" ? "12px" : "14px",
-                  whiteSpace: previewMode === "source" ? "pre-wrap" : "normal",
+                  var(--theme-text-inverse)Space: previewMode === "source" ? "pre-wrap" : "normal",
                 }}
               >
                 {previewMode === "rendered" ? (
                   template.contentFormat === "HTML" ? (
                     <div dangerouslySetInnerHTML={{ __html: getRenderedContent(template.body) }} />
                   ) : (
-                    <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{getRenderedContent(template.body)}</div>
+                    <div style={{ var(--theme-text-inverse)Space: "pre-wrap", lineHeight: 1.6 }}>{getRenderedContent(template.body)}</div>
                   )
                 ) : (
                   template.body
@@ -347,7 +347,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                 <div style={{ display: "grid", gap: "12px" }}>
                   {template.requiredVariables.map((v) => (
                     <div key={v}>
-                      <label style={{ display: "block", fontSize: "11px", fontFamily: "monospace", color: "var(--brand, #4f46e5)", marginBottom: "4px" }}>
+                      <label style={{ display: "block", fontSize: "11px", fontFamily: "monospace", color: "var(--brand, var(--theme-primary))", marginBottom: "4px" }}>
                         {"{{" + v + "}}"}
                       </label>
                       <input
@@ -376,7 +376,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Channel: <strong>{template.channel}</strong></div>
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>Version: <strong>v{template.version}</strong></div>
                 <div style={{ fontSize: "11px", color: "var(--ink-500, #64748b)", marginTop: "4px" }}>
-                  Status: <strong style={{ color: template.status === "ACTIVE" ? "#16a34a" : template.status === "DRAFT" ? "var(--theme-warning)" : "var(--theme-neutral)" }}>{template.status}</strong>
+                  Status: <strong style={{ color: template.status === "ACTIVE" ? "var(--theme-success)" : template.status === "DRAFT" ? "var(--theme-warning)" : "var(--theme-neutral)" }}>{template.status}</strong>
                 </div>
 
                 <div style={{ marginTop: "16px", display: "grid", gap: "8px" }}>
@@ -385,7 +385,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={publishVersion}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: 0, background: "#16a34a", color: "white", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       {working ? "Working…" : `Publish v${template.version}`}
                     </button>
@@ -395,7 +395,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={startEditing}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, #4f46e5)", background: "transparent", color: "var(--brand, #4f46e5)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, var(--theme-primary))", background: "transparent", color: "var(--brand, var(--theme-primary))", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       Edit draft
                     </button>
@@ -405,7 +405,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={createDraftVersion}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, #4f46e5)", background: "transparent", color: "var(--brand, #4f46e5)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--brand, var(--theme-primary))", background: "transparent", color: "var(--brand, var(--theme-primary))", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       {working ? "Working…" : "Create new draft version"}
                     </button>
@@ -421,7 +421,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                     </button>
                   )}
                   {actionError && <div role="alert" style={{ fontSize: "11px", color: "var(--theme-danger)" }}>⚠️ {actionError}</div>}
-                  {actionNotice && <div style={{ fontSize: "11px", color: "#15803d" }}>✅ {actionNotice}</div>}
+                  {actionNotice && <div style={{ fontSize: "11px", color: "var(--theme-success)" }}>✅ {actionNotice}</div>}
                 </div>
               </div>
             </div>
