@@ -49,8 +49,8 @@ const KIND_TONE: Record<string, { fg: string; bg: string }> = {
   GOVERNED_ACTION: { fg: "#7c2d12", bg: "#ffedd5" },
   GOVERNED_ACTION_ATTEMPT: { fg: "#854d0e", bg: "#fef3c7" },
   SCHEDULED_ACTION: { fg: "#6d28d9", bg: "#ede9fe" },
-  COMMUNICATION_DELIVERY: { fg: "#166534", bg: "#dcfce7" },
-  COMMUNICATION_PROVIDER_ATTEMPT: { fg: "#0f766e", bg: "#ccfbf1" },
+  COMMUNICATION_DELIVERY: { fg: "var(--theme-success)", bg: "#dcfce7" },
+  COMMUNICATION_PROVIDER_ATTEMPT: { fg: "var(--theme-primary)", bg: "#ccfbf1" },
   OPERATIONAL_TASK: { fg: "#334155", bg: "#f1f5f9" },
 };
 
@@ -153,7 +153,7 @@ export function BusinessExecutionTracePanel({ queryString = "" }: BusinessExecut
         </span>
       </div>
 
-      {error && <div role="alert" style={{ fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
+      {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
 
       {entries.length > 0 ? (
         <div className={styles.tableWrap}>
