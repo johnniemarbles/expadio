@@ -38,3 +38,14 @@ test('MotionStatus pulse is governed by motion tokens', () => {
   assert.match(source, /var\(--theme-motion-data\)/u);
   assert.match(source, /var\(--theme-easing\)/u);
 });
+
+
+test('shared motion tokens do not target CSS module class-name substrings', () => {
+  const source = readUiSource('src/tokens/motion.css');
+
+  assert.doesNotMatch(source, /\[class\*=/u);
+  assert.match(source, /\.expadioMotionEnter/u);
+  assert.match(source, /\.expadioMotionPanelIn/u);
+  assert.match(source, /\.expadioMotionRowIn/u);
+  assert.match(source, /\.expadioMotionTab/u);
+});
