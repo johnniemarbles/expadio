@@ -67,9 +67,6 @@ export async function POST(request: Request) {
     }
 
     const sender = await withTenantClient(context, async (client) => {
-      if (!(await requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId))) {
-        return null;
-      }
       const result = await client.query(
         `INSERT INTO platform.communication_sender_identities
            (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
@@ -86,9 +83,6 @@ export async function POST(request: Request) {
       );
       return result.rows[0];
     });
-    if (!sender) {
-      return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
-    }
 
     const message = provisioned
       ? `Configured ${results?.length ?? 0} verifiable DNS records in Cloudflare zone ${zoneName}. Give DNS a moment to propagate, then Verify.`
