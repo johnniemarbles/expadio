@@ -82,6 +82,22 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       [grantorLegalEntityId, granteeLegalEntityId, tenantId, enterpriseId],
     );
 
+    await c.query(
+      `INSERT INTO platform.organization_legal_entity_bindings (
+         organization_legal_entity_binding_id, tenant_id, organization_id,
+         legal_entity_id, binding_role, status, created_by_subject_id
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, $4::uuid,
+         'OPERATED_BY', 'ACTIVE', 'seed'
+       )`,
+      [
+        randomUUID(),
+        tenantId,
+        beneficiaryOrganizationId,
+        granteeLegalEntityId,
+      ],
+    );
+
     const adminRoleId = (
       await c.query<{ role_id: string }>(
         `INSERT INTO platform.authorization_roles (
