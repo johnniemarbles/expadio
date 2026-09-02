@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../lib/brand-context';
@@ -85,8 +86,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   }
 
   const selectedStage = params.stage?.trim().toUpperCase() ?? '';
-  const leads = await withBrandTransaction(context, (client) => listBrandLeads(client, { stage: selectedStage }));
-  const counts = BRAND_LEAD_STAGES.map((stage) => ({ stage, count: leads.filter((lead) => lead.stage === stage).length }));
+  const allLeads = await withBrandTransaction(context, (client) => listBrandLeads(client, {}));
+  const leads = selectedStage === '' ? allLeads : allLeads.filter((lead) => lead.stage === selectedStage);
+  const counts = BRAND_LEAD_STAGES.map((stage) => ({ stage, count: allLeads.filter((lead) => lead.stage === stage).length }));
 
   return <>
     <section className={styles.pageHead}>
@@ -109,7 +111,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
 
     <section className={styles.panel}>
       <div className={styles.panelHead}><h2>Lead inbox</h2><span className={styles.pill}>{selectedStage || 'ALL'} · {leads.length}</span></div>
-      {leads.length === 0 ? <div className={styles.empty}>No leads are visible in this organization scope.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Lead</th><th>Stage</th><th>Value</th><th>Account</th><th>Source</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.leadId}>
+      <div className={styles.panelBody} style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+        <Link className={selectedStage === '' ? styles.button : styles.secondaryButton} href="/leads">All</Link>
+        {BRAND_LEAD_STAGES.map((stage) => <Link key={stage} className={selectedStage === stage ? styles.button : styles.secondaryButton} href={`/leads?stage=${stage}`}>{stage}</Link>)}
+      </div>
+      {leads.length === 0 ? <div className={styles.empty}>No leads are visible for this filter in the selected organization scope.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Lead</th><th>Stage</th><th>Value</th><th>Account</th><th>Source</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.leadId}>
         <td><strong>{lead.title}</strong><br /><small>{new Date(lead.createdAt).toLocaleDateString()}</small></td>
         <td><span className={styles.pill}>{lead.stage}</span></td>
         <td>{lead.amountMinorUnits == null ? '—' : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}</td>
