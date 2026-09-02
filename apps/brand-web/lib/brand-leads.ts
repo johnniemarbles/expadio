@@ -1,10 +1,36 @@
 import type pg from 'pg';
-import { validateLeadInput, validateStage, type LeadStage } from '@expadio/lead';
+
+export const BRAND_LEAD_STAGES = ['NEW', 'QUALIFIED', 'PROPOSAL', 'WON', 'LOST'] as const;
+export type BrandLeadStage = (typeof BRAND_LEAD_STAGES)[number];
+
+function stage(value: unknown): BrandLeadStage {
+  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  if (!BRAND_LEAD_STAGES.includes(normalized as BrandLeadStage)) throw new Error('LEAD_STAGE_INVALID');
+  return normalized as BrandLeadStage;
+}
+
+function manualLeadInput(body: unknown) {
+  const record = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  const title = typeof record.title === 'string' ? record.title.trim() : '';
+  if (title.length < 1 || title.length > 200) throw new Error('LEAD_TITLE_INVALID');
+  const leadStage = record.stage == null || record.stage === '' ? 'NEW' : stage(record.stage);
+  const currency = typeof record.currency === 'string' && record.currency.trim() !== ''
+    ? record.currency.trim().toUpperCase()
+    : 'USD';
+  if (!/^[A-Z]{3}$/.test(currency)) throw new Error('LEAD_CURRENCY_INVALID');
+  let amountMinorUnits: number | null = null;
+  if (record.amountMinorUnits !== undefined && record.amountMinorUnits !== null && record.amountMinorUnits !== '') {
+    const parsed = Number(record.amountMinorUnits);
+    if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error('LEAD_AMOUNT_INVALID');
+    amountMinorUnits = parsed;
+  }
+  return { title, stage: leadStage, currency, amountMinorUnits } as const;
+}
 
 export interface BrandLeadSummary {
   readonly leadId: string;
   readonly title: string;
-  readonly stage: LeadStage;
+  readonly stage: BrandLeadStage;
   readonly amountMinorUnits: number | null;
   readonly currency: string;
   readonly source: string | null;
@@ -31,8 +57,8 @@ export async function listBrandLeads(
   client: pg.PoolClient,
   input: { readonly stage?: string | null },
 ): Promise<readonly BrandLeadSummary[]> {
-  const stage = input.stage?.trim().toUpperCase() ?? '';
-  if (stage !== '') validateStage(stage);
+  const selectedStage = input.stage?.trim().toUpperCase() ?? '';
+  if (selectedStage !== '') stage(selectedStage);
   const result = await client.query(
     `SELECT l.lead_id, l.title, l.stage, l.amount_minor_units, l.currency, l.source,
             l.created_at, l.updated_at, a.name AS account_name
@@ -41,7 +67,7 @@ export async function listBrandLeads(
       WHERE ($1 = '' OR l.stage = $1)
       ORDER BY l.created_at DESC
       LIMIT 200`,
-    [stage],
+    [selectedStage],
   );
   return result.rows.map(toSummary);
 }
@@ -55,11 +81,11 @@ export async function createBrandLead(
     readonly body: unknown;
   },
 ): Promise<BrandLeadSummary> {
-  const validated = validateLeadInput(input.body);
+  const validated = manualLeadInput(input.body);
   const inserted = await client.query(
     `INSERT INTO platform.crm_leads
        (tenant_id, organization_id, title, stage, amount_minor_units, currency, source, raw_payload, owner_subject_id)
-     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, '{}'::jsonb, $8)
+     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, 'manual', '{}'::jsonb, $7)
      RETURNING lead_id, title, stage, amount_minor_units, currency, source,
                created_at, updated_at, NULL::text AS account_name`,
     [
@@ -69,7 +95,6 @@ export async function createBrandLead(
       validated.stage,
       validated.amountMinorUnits,
       validated.currency,
-      validated.source ?? 'manual',
       input.actorSubjectId,
     ],
   );
@@ -80,14 +105,14 @@ export async function updateBrandLeadStage(
   client: pg.PoolClient,
   input: { readonly leadId: string; readonly stage: unknown },
 ): Promise<BrandLeadSummary | null> {
-  const stage = validateStage(input.stage);
+  const selectedStage = stage(input.stage);
   const updated = await client.query(
     `UPDATE platform.crm_leads
         SET stage = $2, updated_at = now()
       WHERE lead_id = $1::uuid
       RETURNING lead_id, title, stage, amount_minor_units, currency, source,
                 created_at, updated_at, NULL::text AS account_name`,
-    [input.leadId, stage],
+    [input.leadId, selectedStage],
   );
   return updated.rows[0] ? toSummary(updated.rows[0]) : null;
 }
