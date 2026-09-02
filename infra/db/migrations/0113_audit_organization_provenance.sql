@@ -27,6 +27,18 @@ ALTER TABLE platform.sensitive_read_events
   FOREIGN KEY (organization_id, tenant_id)
   REFERENCES platform.organizations(organization_id, tenant_id);
 
+ALTER TABLE platform.agent_runs
+  ADD CONSTRAINT agent_runs_organization_required
+  CHECK (organization_id IS NOT NULL) NOT VALID;
+
+ALTER TABLE platform.agent_run_events
+  ADD CONSTRAINT agent_run_events_organization_required
+  CHECK (organization_id IS NOT NULL) NOT VALID;
+
+ALTER TABLE platform.sensitive_read_events
+  ADD CONSTRAINT sensitive_read_events_organization_required
+  CHECK (organization_id IS NOT NULL) NOT VALID;
+
 CREATE OR REPLACE FUNCTION platform.current_organization_id_nullable()
 RETURNS uuid
 LANGUAGE sql
