@@ -8,6 +8,7 @@
   background-color: var(--theme-surface-soft, var(--theme-surface-muted, rgba(0, 0, 0, 0.02)));
   border-radius: var(--theme-card-radius, 12px);
   border: 1px dashed var(--theme-border, var(--theme-border));
+  animation: emptyStateIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .iconWrapper {
@@ -21,6 +22,12 @@
   background: var(--theme-surface, var(--theme-canvas));
   border: 1px solid var(--theme-border, var(--theme-border));
   margin-bottom: 14px;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing);
+}
+
+.container:hover .iconWrapper {
+  transform: translateY(-1px) scale(1.02);
+  border-color: color-mix(in srgb, var(--theme-primary) 18%, var(--theme-border));
 }
 
 .title {
@@ -60,11 +67,17 @@
   text-decoration: none;
   border: 0;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.1s ease;
+  transition: filter var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing);
 }
 
 .primaryButton:hover {
   filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--theme-primary) 16%, transparent);
+}
+
+.primaryButton:active {
+  transform: translateY(0);
 }
 
 .secondaryButton {
@@ -81,9 +94,32 @@
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing);
 }
 
 .secondaryButton:hover {
   background: var(--theme-surface-muted, rgba(0,0,0,0.04));
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--theme-primary) 18%, var(--theme-border));
+}
+
+.secondaryButton:active {
+  transform: translateY(0);
+}
+
+@keyframes emptyStateIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container { animation: none; }
+  .iconWrapper,
+  .primaryButton,
+  .secondaryButton { transition: none; }
+  .container:hover .iconWrapper,
+  .primaryButton:hover,
+  .secondaryButton:hover,
+  .primaryButton:active,
+  .secondaryButton:active { transform: none; }
 }
