@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+const collection = readFileSync(new URL('../app/api/communications/domains/route.ts', import.meta.url), 'utf8');
 const verify = readFileSync(new URL('../app/api/communications/domains/[senderId]/verify/route.ts', import.meta.url), 'utf8');
 const retire = readFileSync(new URL('../app/api/communications/domains/[senderId]/route.ts', import.meta.url), 'utf8');
 
@@ -37,4 +38,13 @@ test('tenant domain retirement is admin gated, soft, and platform-read-only', ()
   assert.match(retire, /is_default = false/);
   assert.doesNotMatch(retire, /scope = 'PLATFORM'/);
   assert.doesNotMatch(retire, /DELETE FROM platform\.communication_sender_identities/);
+});
+
+test('tenant domain collection excludes inherited platform rows and cannot reactivate suspended senders', () => {
+  assert.match(collection, /tenant_id = \$1::uuid/);
+  assert.match(collection, /scope IN \('TENANT', 'ORGANIZATION'\)/);
+  assert.doesNotMatch(collection, /scope = 'PLATFORM' OR tenant_id/);
+  assert.match(collection, /existing\.rows\[0\]\?\.status === 'SUSPENDED'/);
+  assert.match(collection, /can only be restored through Platform governance/);
+  assert.match(collection, /WHEN platform\.communication_sender_identities\.status = 'INACTIVE' THEN 'ACTIVE'/);
 });
