@@ -12,6 +12,7 @@ import {
 import type { PostgresClient } from './index.ts';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
 import { requireTenantModuleOperational } from './product-module.ts';
+import { reconcileLearningProgramsForEvidence } from './learning-program-certification.ts';
 
 interface LearnerRow {
   readonly learner_id: string;
@@ -838,6 +839,14 @@ export async function reconcileLearningEnrollmentCompletion(
         },
         metadata: { source: 'learning.completion-policy' },
       },
+    });
+
+    await reconcileLearningProgramsForEvidence(client, {
+      tenantId: input.tenantId,
+      learnerId: enrollmentRow.learner_id,
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      courseVersionId: enrollmentRow.course_version_id,
     });
   } else {
     await client.query(
