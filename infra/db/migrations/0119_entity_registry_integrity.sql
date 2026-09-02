@@ -127,6 +127,26 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  -- Explicit registry identities may use any stable text key. Prefer an
+  -- existing governed node before attempting canonical UUID-backed discovery.
+  SELECT node.node_id, node.status
+    INTO resolved_node_id, source_status
+    FROM platform.entity_registry_nodes node
+   WHERE node.tenant_id = p_tenant_id
+     AND node.node_type = p_node_type
+     AND node.entity_key = p_entity_key
+     AND node.valid_until IS NULL
+   ORDER BY node.created_at DESC, node.node_id DESC
+   LIMIT 1;
+
+  IF resolved_node_id IS NOT NULL THEN
+    IF source_status <> 'ACTIVE' THEN
+      RAISE EXCEPTION 'ENTITY_REGISTRY_NODE_INACTIVE'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN resolved_node_id;
+  END IF;
+
   CASE p_node_type
     WHEN 'OPERATING_UNIT' THEN
       BEGIN
@@ -198,25 +218,8 @@ BEGIN
       END;
 
     ELSE
-      SELECT node.node_id, node.status
-        INTO resolved_node_id, source_status
-        FROM platform.entity_registry_nodes node
-       WHERE node.tenant_id = p_tenant_id
-         AND node.node_type = p_node_type
-         AND node.entity_key = p_entity_key
-         AND node.valid_until IS NULL
-       ORDER BY node.created_at DESC, node.node_id DESC
-       LIMIT 1;
-
-      IF resolved_node_id IS NULL THEN
-        RAISE EXCEPTION 'ENTITY_REGISTRY_NODE_NOT_FOUND'
-          USING ERRCODE = '23503';
-      END IF;
-      IF source_status <> 'ACTIVE' THEN
-        RAISE EXCEPTION 'ENTITY_REGISTRY_NODE_INACTIVE'
-          USING ERRCODE = '23514';
-      END IF;
-      RETURN resolved_node_id;
+      RAISE EXCEPTION 'ENTITY_REGISTRY_NODE_NOT_FOUND'
+        USING ERRCODE = '23503';
   END CASE;
 
   IF source_display_name IS NULL THEN
