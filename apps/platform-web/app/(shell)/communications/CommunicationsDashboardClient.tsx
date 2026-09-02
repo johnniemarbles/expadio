@@ -185,8 +185,8 @@ export function CommunicationsDashboardClient({
           <h2>Communication fleet overview</h2>
           <p>Health, throughput and risk across this workspace's channels and platform-shared providers.</p>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 10px", borderRadius: 999, background: "#eef2ff", color: "#3730a3" }}>
+        <div className={styles.scopeMeta}>
+          <span className={styles.scopeBadge}>
             Scope: this workspace + platform-shared
           </span>
           <span className={styles.dataTimestamp}>
@@ -378,7 +378,7 @@ export function CommunicationsDashboardClient({
                         <td><code>{item.id}</code></td>
                         <td><code>{item.connectorKey}</code></td>
                         <td><span className={styles.tag}>{item.channel}</span></td>
-                        <td style={{ color: "#b91c1c", fontWeight: 700 }}>{item.state}</td>
+                        <td className={styles.dangerText}>{item.state}</td>
                         <td>{item.reasonCode || "No provider reason supplied"}</td>
                       </tr>
                     ))}
@@ -428,11 +428,11 @@ export function CommunicationsDashboardClient({
                       <tr key={p.connectorKey}>
                         <td><code>{p.connectorKey}</code></td>
                         <td>{(CHANNEL_LABELS[p.providerType.toLowerCase()] || p.providerType).toUpperCase()}</td>
-                        <td><span style={{ color: healthy ? "#166534" : "#b91c1c", fontWeight: 700 }}>{healthy ? p.health : (p.enabled ? p.health : "DISABLED")}</span></td>
+                        <td><span className={healthy ? styles.successText : styles.dangerText}>{healthy ? p.health : (p.enabled ? p.health : "DISABLED")}</span></td>
                         <td>{p.credentialState ?? (p.hasCredential ? "—" : "none")}</td>
-                        <td><span style={{ color: p.probeStatus === "VALID" ? "#166534" : p.probeStatus === "FAILING" ? "#925b0b" : p.probeStatus ? "#b91c1c" : undefined }}>{p.probeStatus ?? "—"}</span></td>
+                        <td><span className={p.probeStatus === "VALID" ? styles.successText : p.probeStatus === "FAILING" ? styles.warningText : p.probeStatus ? styles.dangerText : ""}>{p.probeStatus ?? "—"}</span></td>
                         <td>{stats ? stats.delivered : 0}</td>
-                        <td><span style={{ color: stats && stats.failed > 0 ? "#b91c1c" : undefined }}>{stats ? stats.failed : 0}</span></td>
+                        <td><span className={stats && stats.failed > 0 ? styles.dangerText : ""}>{stats ? stats.failed : 0}</span></td>
                         <td><strong>{stats && stats.deliveryRatePct !== null ? `${stats.deliveryRatePct}%` : "—"}</strong></td>
                       </tr>
                     );
