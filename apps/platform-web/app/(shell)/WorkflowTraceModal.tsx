@@ -46,13 +46,13 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
       >
         <h3 style={{ margin: 0, fontSize: 15 }}>{title}</h3>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-500, #64748b)' }}>Append-only transitions and immutable decisions, in order. This is the governed audit trail.</p>
-        {error && <p role="alert" style={{ color: '#b91c1c', margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: 'var(--theme-danger)', margin: 0, fontSize: 13 }}>{error}</p>}
         {entries === null && !error && <p style={{ fontSize: 13, color: 'var(--ink-500, #64748b)' }}>Loading…</p>}
         {entries !== null && entries.length === 0 && <p style={{ fontSize: 13, color: 'var(--ink-500, #64748b)' }}>No trace yet — start the workflow and advance it to build a history.</p>}
         {entries !== null && entries.length > 0 && (
           <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8, overflowY: 'auto' }}>
             {entries.map((e, i) => (
-              <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', borderLeft: `3px solid ${e.kind === 'DECISION' ? '#166534' : '#4f46e5'}`, paddingLeft: 10 }}>
+              <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', borderLeft: `3px solid ${e.kind === 'DECISION' ? 'var(--theme-success)' : '#4f46e5'}`, paddingLeft: 10 }}>
                 <span style={{ fontSize: 10, color: 'var(--ink-500, #64748b)', minWidth: 132 }}>{new Date(e.at).toLocaleString()}</span>
                 <span style={{ fontSize: 13 }}>
                   {e.kind === 'TRANSITION' ? (
@@ -62,7 +62,7 @@ export function WorkflowTraceModal({ title, historyUrl, onClose }: { title: stri
                     </>
                   ) : (
                     <>
-                      <span style={{ padding: '1px 6px', borderRadius: 999, fontSize: 10, fontWeight: 800, color: '#166534', background: '#dcfce7' }}>DECISION</span>{' '}
+                      <span style={{ padding: '1px 6px', borderRadius: 999, fontSize: 10, fontWeight: 800, color: 'var(--theme-success)', background: '#dcfce7' }}>DECISION</span>{' '}
                       <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
                       <span style={{ fontSize: 11, color: 'var(--ink-500, #64748b)' }}> · {e.bySubjectId}</span>
                       {e.evidenceRefs && e.evidenceRefs.length > 0 && (
