@@ -10,6 +10,8 @@ const requestContext = read('../lib/request-context.ts');
 const contextRoute = read('../app/api/context/route.ts');
 const organizationList = read('../app/api/organizations/list/route.ts');
 const organizationRoute = read('../app/api/organizations/route.ts');
+const shellLayout = read('../app/(shell)/layout.tsx');
+const overviewRoute = read('../app/api/overview/route.ts');
 const decisionRoute = read('../app/api/enterprise/change-requests/[id]/decision/route.ts');
 
 test('enterprise persistence keeps tenant, enterprise, legal entity, and organization distinct', () => {
@@ -113,4 +115,11 @@ test('request context and shell contain no demo organization fallback or tenant-
   assert.doesNotMatch(contextRoute, /parentId: null,/);
   assert.doesNotMatch(organizationRoute, /00000000-0000-0000-0000-00000000000[12]/);
   assert.doesNotMatch(organizationList, /00000000-0000-0000-0000-00000000000[12]/);
+  assert.doesNotMatch(shellLayout, /00000000-0000-0000-0000-00000000000[12]/);
+  assert.match(shellLayout, /requestedOrganizationId\(\)/);
+  assert.match(shellLayout, /loadOverview\(organizationId\)/);
+  assert.doesNotMatch(shellLayout, /fixture workspace could not be initialized/i);
+  assert.doesNotMatch(overviewRoute, /00000000-0000-0000-0000-00000000000[12]/);
+  assert.match(overviewRoute, /const orgId = effectiveContext\.organizationId/);
+  assert.match(overviewRoute, /requestedOrganizationId !== effectiveContext\.organizationId/);
 });

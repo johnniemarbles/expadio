@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { DeniedResult } from '@expadio/ui/contracts';
-import { resolveRequestContext, deniedResponse } from '../../../lib/request-context';
+import { ContextDenied, resolveRequestContext, deniedResponse } from '../../../lib/request-context';
 import { dbPool } from '../../../lib/iam-adapter';
 
 export const runtime = 'nodejs';
@@ -8,15 +8,32 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // Resolves the selected workspace (from ?account/org or the proxy headers)
-    // and verifies membership; a first-time operator is auto-provisioned by the
-    // membership repository, so this no longer hardcodes the demo tenant.
     const effectiveContext = await resolveRequestContext(request);
+    if (!effectiveContext.organizationId) {
+      throw new ContextDenied(
+        'ORGANIZATION_CONTEXT_REQUIRED',
+        'Select an organization workspace to continue.',
+        403,
+      );
+    }
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('organizationId') || effectiveContext.organizationId || '00000000-0000-0000-0000-000000000002';
+    const requestedOrganizationId = searchParams.get('organizationId');
+    if (
+      requestedOrganizationId
+      && requestedOrganizationId !== effectiveContext.organizationId
+    ) {
+      throw new ContextDenied(
+        'TENANT_ACCESS_DENIED',
+        'You do not have access to this workspace.',
+        403,
+      );
+    }
 
-    // Aggregate real metrics from database tables
+    // The membership-resolved context is authoritative. Query parameters may
+    // request that same organization, but cannot select a second organization.
+    const orgId = effectiveContext.organizationId;
+
     const [orgResult, capResult, corrResult, runResult] = await Promise.all([
       dbPool.query(
         'SELECT organization_id, name, status FROM platform.organizations WHERE organization_id = $1 AND tenant_id = $2',
@@ -39,7 +56,6 @@ export async function GET(request: Request) {
     const org = orgResult.rows[0];
     const orgName = org ? org.name : 'Dreamware Platform';
 
-    // Build metrics from aggregated counts
     const activeCount = capResult.rows.find((r: any) => r.state === 'ACTIVE')?.cnt || 0;
     const totalCapabilities = capResult.rows.reduce((sum: number, r: any) => sum + r.cnt, 0);
     const unreviewedCorrections = corrResult.rows[0]?.cnt || 0;
@@ -52,7 +68,6 @@ export async function GET(request: Request) {
       { label: 'System health', value: 'Operational', detail: 'All adapters connected', tone: 'positive' }
     ];
 
-    // Fetch top capabilities
     const topCaps = await dbPool.query(
       `SELECT binding_id, state, resolved_at FROM platform.capability_state WHERE tenant_id = $1 ORDER BY resolved_at DESC LIMIT 3`,
       [effectiveContext.tenantId]
@@ -68,7 +83,7 @@ export async function GET(request: Request) {
     }));
 
     const topReviewsRes = await dbPool.query(
-      `SELECT proposal_reference, proposer_subject_id, created_at FROM platform.company_brain_correction_proposals 
+      `SELECT proposal_reference, proposer_subject_id, created_at FROM platform.company_brain_correction_proposals
        WHERE tenant_id = $1 AND status = 'UNREVIEWED' ORDER BY created_at DESC LIMIT 3`,
       [effectiveContext.tenantId]
     );
@@ -83,7 +98,7 @@ export async function GET(request: Request) {
 
     const topActivityRes = await dbPool.query(
       `SELECT event_id, event_type, event_reference, occurred_at, actor_subject_id, reason
-       FROM platform.agent_run_events 
+       FROM platform.agent_run_events
        WHERE tenant_id = $1 ORDER BY occurred_at DESC LIMIT 3`,
       [effectiveContext.tenantId]
     );
@@ -103,7 +118,7 @@ export async function GET(request: Request) {
       reviews,
       activity
     };
-    
+
     return NextResponse.json(overview);
   } catch (error: any) {
     if (error?.denied) {
