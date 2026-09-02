@@ -1,0 +1,85 @@
+.backdrop {
+  animation: composerBackdropIn var(--theme-motion-fast) var(--theme-easing) both;
+}
+
+.dialog {
+  animation: composerDialogIn var(--theme-motion-panel) var(--theme-easing) both;
+}
+
+.formControls input,
+.formControls select,
+.formControls textarea,
+.actions button {
+  transition:
+    border-color var(--theme-motion-fast) var(--theme-easing),
+    box-shadow var(--theme-motion-fast) var(--theme-easing),
+    transform var(--theme-motion-fast) var(--theme-easing),
+    opacity var(--theme-motion-fast) var(--theme-easing);
+}
+
+.formControls input:focus-visible,
+.formControls select:focus-visible,
+.formControls textarea:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-primary) 55%, var(--theme-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 12%, transparent);
+  outline: none;
+}
+
+.error {
+  animation: composerFeedbackIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+.actions button:not(:disabled):hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.actions button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+@keyframes composerBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes composerDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-small));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes composerFeedbackIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-micro));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .error {
+    animation: none;
+  }
+
+  .formControls input,
+  .formControls select,
+  .formControls textarea,
+  .actions button {
+    transition: none;
+  }
+
+  .actions button:not(:disabled):hover,
+  .actions button:not(:disabled):active {
+    transform: none;
+  }
+}
