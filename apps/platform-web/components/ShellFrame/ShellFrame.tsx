@@ -6,7 +6,7 @@ import { UserButton } from "@clerk/nextjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
-import { CommandPalette } from "./CommandPalette";
+import { CommandPalette, type SearchProvider } from "./CommandPalette";
 
 const GROUP_ORDER = new Map([
   ["Workspace", 0],
@@ -75,6 +75,45 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
     url.searchParams.set('returnTo', '/');
     return url.toString();
   }, [brandAppOrigin, currentAccount, currentOrganization]);
+
+  const searchProviders = useMemo<SearchProvider[]>(() => {
+    return [
+      {
+        id: "organizations",
+        label: "Organizations",
+        search: (query) => {
+          if (!query) return [];
+          return selectableOrganizations
+            .filter((org) => org.name.toLowerCase().includes(query) || org.id.toLowerCase().includes(query))
+            .map((org) => ({
+              id: "org_" + org.id,
+              label: "Switch Org: " + org.name,
+              short: "🏢",
+              group: "Organizations",
+              description: org.level + " level (" + org.id + ")",
+              onSelect: () => replaceContext(currentAccount?.id ?? "account_platform", org.id),
+            }));
+        },
+      },
+      {
+        id: "accounts",
+        label: "Accounts",
+        search: (query) => {
+          if (!query) return [];
+          return workspaceContext.accounts
+            .filter((acc) => acc.name.toLowerCase().includes(query) || acc.role.toLowerCase().includes(query))
+            .map((acc) => ({
+              id: "acc_" + acc.id,
+              label: "Switch Account: " + acc.name,
+              short: "👤",
+              group: "Accounts",
+              description: acc.role,
+              onSelect: () => chooseAccount(acc.id),
+            }));
+        },
+      },
+    ];
+  }, [selectableOrganizations, currentAccount, workspaceContext.accounts]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -176,12 +215,12 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
       <nav className={styles.primaryNav} aria-label="Platform sections">{navGroups.map(({ group, items }) => <section className={styles.navGroup} key={group} aria-label={group}><p className={styles.navLabel}>{group}</p><div className={styles.navGroupItems}>{items.map((section) => <Link href={href(section.href)} className={[styles.navItem, section.priority === "secondary" ? styles.navItemSecondary : "", currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</div></section>)}</nav>
       <div className={styles.sidebarFoot}>
-        <div className={styles.systemStatus}><span className={styles.fixtureLight} style={{ background: 'var(--theme-success)', boxShadow: '0 0 0 4px color-mix(in srgb,var(--theme-success) 12%,transparent)' }}/><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
-        <div ref={accountAreaRef} className={styles.accountArea} style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className={styles.systemStatus}><span className={[styles.fixtureLight, styles.fixtureConnected].join(" ")} /><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
+        <div ref={accountAreaRef} className={styles.userAccountWrapper}>
           <UserButton appearance={{ elements: { userButtonAvatarBox: { width: 32, height: 32 } } }} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <strong style={{ fontSize: '13px', lineHeight: 1.2, fontWeight: 600 }}>My Account</strong>
-            <small style={{ fontSize: '11px', color: 'var(--theme-text-muted)' }}>Manage Identity</small>
+          <div className={styles.userIdentityText}>
+            <strong className={styles.userIdentityTitle}>My Account</strong>
+            <small className={styles.userIdentitySub}>Manage Identity</small>
           </div>
         </div>
       </div>
@@ -195,18 +234,18 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
         <div className={styles.audiencePills} role="tablist" aria-label="Audience Scope">
           {brandHref ? (
             <a className={styles.audiencePill} href={brandHref}>
-              <span style={{ opacity: 0.7 }}>⊞</span> Brand
+              <span className={styles.pillIcon}>⊞</span> Brand
             </a>
           ) : (
             <button type="button" className={styles.audiencePill} disabled title="Configure EXPADIO_BRAND_APP_URL to enable Brand handoff">
-              <span style={{ opacity: 0.7 }}>⊞</span> Brand
+              <span className={styles.pillIcon}>⊞</span> Brand
             </button>
           )}
           <button type="button" className={[styles.audiencePill, styles.audiencePillActive].join(" ")}>
-            <span>🛡️</span> Platform
+            <span className={styles.pillIcon}>❖</span> Platform
           </button>
           <button type="button" className={styles.audiencePill}>
-            <span>🔗</span> Portal
+            <span className={styles.pillIcon}>⎇</span> Portal
           </button>
           <button type="button" className={styles.audiencePill}>
             Plan
@@ -242,6 +281,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
         onClose={() => setCommandOpen(false)}
         sections={sections}
         contextQuery={currentOrganization ? "?org=" + encodeURIComponent(currentOrganization.id) : ""}
+        providers={searchProviders}
       />
     </main>
   </div>;
