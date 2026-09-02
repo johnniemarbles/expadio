@@ -1,0 +1,99 @@
+.backdrop {
+  animation: templateBackdropIn var(--theme-motion-fast) var(--theme-easing) both;
+}
+
+.dialog {
+  animation: templateDialogIn var(--theme-motion-panel) var(--theme-easing-emphasis) both;
+}
+
+.toolbar input,
+.toolbar select,
+.headerActions button,
+.openButton {
+  transition:
+    border-color var(--theme-motion-fast) var(--theme-easing),
+    box-shadow var(--theme-motion-fast) var(--theme-easing),
+    transform var(--theme-motion-fast) var(--theme-easing),
+    background var(--theme-motion-fast) var(--theme-easing);
+}
+
+.toolbar input:focus-visible,
+.toolbar select:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-primary) 55%, var(--theme-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 12%, transparent);
+  outline: none;
+}
+
+.headerActions button:hover,
+.openButton:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.headerActions button:active,
+.openButton:active {
+  transform: translateY(0);
+}
+
+.row {
+  transition:
+    background var(--theme-motion-fast) var(--theme-easing),
+    transform var(--theme-motion-fast) var(--theme-easing);
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--theme-primary) 4%, transparent);
+}
+
+.empty {
+  animation: templateFeedbackIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+@keyframes templateBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes templateDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-panel)) scale(.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes templateFeedbackIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-small));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .empty {
+    animation: none;
+  }
+
+  .toolbar input,
+  .toolbar select,
+  .headerActions button,
+  .openButton,
+  .row {
+    transition: none;
+  }
+
+  .headerActions button:hover,
+  .headerActions button:active,
+  .openButton:hover,
+  .openButton:active {
+    transform: none;
+  }
+}
