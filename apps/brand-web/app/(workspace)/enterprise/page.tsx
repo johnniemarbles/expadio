@@ -30,10 +30,19 @@ export default async function BrandEnterprisePage() {
           </p>
         </div>
         <div className={styles.appActions}>
-          <Link className={styles.button} href="/enterprise/onboard">Onboard organization</Link>
+          <Link className={styles.button} href="/enterprise/onboard/profile">
+            {enterprise.enterpriseConfigurationState === 'CONFIGURED' ? 'Configure enterprise' : 'Onboard enterprise'}
+          </Link>
+          <Link className={styles.secondaryButton} href="/enterprise/onboard">Onboard organization</Link>
           <Link className={styles.secondaryButton} href="/">Back to dashboard</Link>
         </div>
       </section>
+
+      {enterprise.enterpriseConfigurationState === 'BOOTSTRAPPED' ? (
+        <section className={styles.notice}>
+          <strong>Enterprise profile onboarding is incomplete.</strong> The tenant has a bootstrap enterprise profile, but enterprise identity, operating mode, and root authority have not yet completed governed configuration.
+        </section>
+      ) : null}
 
       <section className={styles.grid}>
         <article className={styles.metric}>
@@ -66,7 +75,7 @@ export default async function BrandEnterprisePage() {
             <p className={styles.eyebrow}>Structure</p>
             <h2>Organization hierarchy &amp; setup readiness</h2>
           </div>
-          <span className={styles.pill}>{title(enterprise.enterpriseMode)} enterprise</span>
+          <span className={styles.pill}>{title(enterprise.enterpriseMode)} · {title(enterprise.enterpriseConfigurationState)}</span>
         </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>

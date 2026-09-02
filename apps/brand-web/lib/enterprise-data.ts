@@ -60,6 +60,8 @@ export interface BrandEnterpriseView {
   readonly enterpriseName: string;
   readonly enterpriseMode: string;
   readonly enterpriseStatus: string;
+  readonly enterpriseConfigurationState: 'BOOTSTRAPPED' | 'CONFIGURED';
+  readonly enterpriseRootOrganizationId: string | null;
   readonly selectedOrganizationId: string;
   readonly selectedOrganizationName: string;
   readonly selectedOrganizationKind: string;
@@ -89,6 +91,8 @@ export async function loadBrandEnterpriseView(
     enterprise_name: string;
     enterprise_mode: string;
     enterprise_status: string;
+    enterprise_configuration_state: 'BOOTSTRAPPED' | 'CONFIGURED';
+    enterprise_root_organization_id: string | null;
     organization_name: string;
     organization_kind: string;
     organization_status: string;
@@ -98,6 +102,8 @@ export async function loadBrandEnterpriseView(
        enterprise.name AS enterprise_name,
        enterprise.mode AS enterprise_mode,
        enterprise.status AS enterprise_status,
+       enterprise.configuration_state AS enterprise_configuration_state,
+       enterprise.root_organization_id AS enterprise_root_organization_id,
        organization.name AS organization_name,
        organization.organization_kind,
        organization.status AS organization_status
@@ -352,6 +358,8 @@ export async function loadBrandEnterpriseView(
     enterpriseName: root.enterprise_name,
     enterpriseMode: root.enterprise_mode,
     enterpriseStatus: root.enterprise_status,
+    enterpriseConfigurationState: root.enterprise_configuration_state,
+    enterpriseRootOrganizationId: root.enterprise_root_organization_id,
     selectedOrganizationId: context.organizationId,
     selectedOrganizationName: root.organization_name,
     selectedOrganizationKind: root.organization_kind,
