@@ -15,7 +15,7 @@ export interface PlatformOverview {
   source: { kind: "fixture" | "live"; label: string; capturedAt: string; };
   metrics: PlatformMetric[]; capabilities: CapabilitySummary[]; reviews: ReviewItem[]; activity: ActivityItem[];
 }
-export interface WorkspaceSection { id: string; label: string; short: string; href: string; }
+export interface WorkspaceSection { id: string; label: string; short: string; href: string; group?: string; priority?: "primary" | "secondary"; }
 export interface PlatformWorkspaceAdapter {
   loadOverview(organizationId: string): Promise<AdapterResult<PlatformOverview>>;
   loadWorkspaceContext(): Promise<PlatformWorkspaceContext>;
