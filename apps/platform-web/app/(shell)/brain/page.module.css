@@ -13,13 +13,13 @@
 .sectionTitle {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
   margin: 0;
 }
 
 .card {
-  background-color: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background-color: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-card);
   padding: 1.5rem;
 }
