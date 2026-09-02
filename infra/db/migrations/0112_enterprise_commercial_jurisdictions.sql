@@ -241,7 +241,7 @@ CREATE TABLE platform.enterprise_appointments (
   channel_keys text[] NOT NULL DEFAULT '{}',
   product_keys text[] NOT NULL DEFAULT '{}',
   state text NOT NULL DEFAULT 'DRAFT' CHECK (state IN (
-    'DRAFT','SUBMITTED','UNDER_REVIEW','APPROVED',
+    'DRAFT','SUBMITTED','UNDER_REVIEW','APPROVED','REJECTED',
     'RIGHTS_PENDING','ACTIVE','SUSPENDED','REVOKED','EXPIRED'
   )),
   source_change_request_id uuid,
