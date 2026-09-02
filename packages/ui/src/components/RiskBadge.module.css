@@ -13,18 +13,18 @@
 
 .low {
   background-color: var(--green-soft);
-  color: var(--green);
-  border-color: var(--green);
+  color: var(--theme-success);
+  border-color: var(--theme-success);
 }
 
 .medium {
   background-color: var(--amber-soft);
-  color: var(--amber);
-  border-color: var(--amber);
+  color: var(--theme-warning);
+  border-color: var(--theme-warning);
 }
 
 .high {
   background-color: var(--red-soft);
-  color: var(--red);
-  border-color: var(--red);
+  color: var(--theme-danger);
+  border-color: var(--theme-danger);
 }

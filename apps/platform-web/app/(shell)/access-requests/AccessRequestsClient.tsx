@@ -33,13 +33,12 @@ function apiError(data: unknown, fallback: string): string {
   return fallback;
 }
 
-const badge = (state: string): React.CSSProperties => {
-  const map: Record<string, string> = { GRANTED: '#0f766e', SUBMITTED: '#b45309', REJECTED: '#b91c1c' };
-  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: '#fff', background: map[state] ?? '#64748b' };
+const badgeClass = (state: string): string => {
+  if (state === 'GRANTED') return [styles.statusBadge, styles.statusPositive].join(' ');
+  if (state === 'SUBMITTED') return [styles.statusBadge, styles.statusWarning].join(' ');
+  if (state === 'REJECTED') return [styles.statusBadge, styles.statusDanger].join(' ');
+  return [styles.statusBadge, styles.statusNeutral].join(' ');
 };
-
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: '#0f766e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 
 export function AccessRequestsClient({ initial, queryString = '' }: { initial: AccessRequestRow[]; queryString?: string }) {
   const [rows, setRows] = useState<AccessRequestRow[]>(initial);
@@ -165,17 +164,17 @@ export function AccessRequestsClient({ initial, queryString = '' }: { initial: A
     <section className={styles.panel} aria-labelledby="access-title">
       <div className={styles.panelHeading}>
         <div><p className={styles.eyebrow}>Access</p><h2 id="access-title">Access requests</h2></div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input style={inp} placeholder="Resource (e.g. prod-db:read)" value={resource} onChange={(e) => setResource(e.target.value)} aria-label="Requested resource" />
-          <input style={inp} placeholder="Justification (optional)" value={justification} onChange={(e) => setJustification(e.target.value)} aria-label="Justification" />
-          <button style={btn} onClick={file} disabled={busy !== null || resource.trim() === ''}>{busy === 'file' ? 'Filing…' : 'File request'}</button>
+        <div className={styles.toolbar}>
+          <input className={styles.field} placeholder="Resource (e.g. prod-db:read)" value={resource} onChange={(e) => setResource(e.target.value)} aria-label="Requested resource" />
+          <input className={styles.field} placeholder="Justification (optional)" value={justification} onChange={(e) => setJustification(e.target.value)} aria-label="Justification" />
+          <button className={styles.button} onClick={file} disabled={busy !== null || resource.trim() === ''}>{busy === 'file' ? 'Filing…' : 'File request'}</button>
         </div>
       </div>
 
       {error && (
-        <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>
+        <p role="alert" className={[styles.inlineAlert, styles.inlineAlertDanger].join(' ')}>
           {error}
-          {authHint && <> · <a href={`/authority${queryString}`} style={{ color: '#0f766e', fontWeight: 600 }}>Grant approval authority →</a></>}
+          {authHint && <> · <a href={`/authority${queryString}`} className={styles.inlineLink}>Grant approval authority →</a></>}
         </p>
       )}
 
@@ -188,27 +187,27 @@ export function AccessRequestsClient({ initial, queryString = '' }: { initial: A
               return (
                 <tr key={r.accessRequestId}>
                   <td><strong>{r.resource}</strong>{r.justification ? <><br /><span className={styles.muted}>{r.justification}</span></> : null}</td>
-                  <td><span style={badge(r.status)}>{r.status}</span></td>
+                  <td><span className={badgeClass(r.status)}>{r.status}</span></td>
                   <td>{stage ?? <span className={styles.muted}>—</span>}</td>
                   <td>
-                    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                    <span className={styles.toolbar}>
                       {r.workflowInstanceId === null ? (
-                        <button style={btn} disabled={busy !== null} onClick={() => start(r.accessRequestId)}>Start review</button>
+                        <button className={styles.button} disabled={busy !== null} onClick={() => start(r.accessRequestId)}>Start review</button>
                       ) : stage === 'SUBMITTED' ? (
                         <>
-                          <button style={{ ...btn, background: '#334155' }} disabled={busy !== null} onClick={() => assignReviewer(r.accessRequestId)}>Assign reviewer</button>
-                          <button style={btn} disabled={busy !== null} onClick={() => advance(r.accessRequestId, 'SECURITY_REVIEW')}>Send to review</button>
+                          <button className={[styles.button, styles.buttonSecondary].join(' ')} disabled={busy !== null} onClick={() => assignReviewer(r.accessRequestId)}>Assign reviewer</button>
+                          <button className={styles.button} disabled={busy !== null} onClick={() => advance(r.accessRequestId, 'SECURITY_REVIEW')}>Send to review</button>
                         </>
                       ) : stage === 'SECURITY_REVIEW' ? (
                         <>
-                          <button style={btn} disabled={busy !== null} onClick={() => approveAndGrant(r.accessRequestId)}>Approve &amp; grant</button>
-                          <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(r.accessRequestId)}>Reject</button>
+                          <button className={styles.button} disabled={busy !== null} onClick={() => approveAndGrant(r.accessRequestId)}>Approve &amp; grant</button>
+                          <button className={[styles.button, styles.buttonDanger].join(' ')} disabled={busy !== null} onClick={() => reject(r.accessRequestId)}>Reject</button>
                         </>
                       ) : (
                         <span className={styles.muted}>Granted</span>
                       )}
                       {r.workflowInstanceId !== null && (
-                        <button type="button" style={{ ...btn, background: 'transparent', color: 'var(--ink-600, #475569)', border: '1px solid var(--line, #cbd5e1)' }} onClick={() => setTrace(r)}>Trace</button>
+                        <button type="button" className={[styles.button, styles.buttonGhost].join(' ')} onClick={() => setTrace(r)}>Trace</button>
                       )}
                     </span>
                   </td>
@@ -217,7 +216,7 @@ export function AccessRequestsClient({ initial, queryString = '' }: { initial: A
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <p className={styles.muted} style={{ padding: 16 }}>No access requests yet. File one to begin.</p>}
+        {rows.length === 0 && <p className={styles.emptyRow}>No access requests yet. File one to begin.</p>}
       </div>
 
       {trace && (

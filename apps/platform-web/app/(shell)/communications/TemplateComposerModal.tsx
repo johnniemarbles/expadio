@@ -68,7 +68,7 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 125, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: "min(640px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, #fff)", borderRadius: 16, padding: 28, display: "grid", gap: 12 }}>
         <div>
-          <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "#475569" }}>Platform communications</p>
+          <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>New template</h2>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--ink-500, #64748b)" }}>Created as a DRAFT. Publish it from the template inspector once it is ready.</p>
         </div>
@@ -102,7 +102,7 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
           <input value={requiredVariables} onChange={(e) => setRequiredVariables(e.target.value)} placeholder="name, code" style={inp} />
         </label>
 
-        {error && <p role="alert" style={{ color: "#b91c1c", margin: 0, fontSize: 13 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create draft"}</button>

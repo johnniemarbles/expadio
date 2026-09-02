@@ -6,14 +6,14 @@
 
 .header {
   padding: 1.5rem 2rem 0;
-  border-bottom: 1px solid var(--line);
-  background-color: var(--surface);
+  border-bottom: 1px solid var(--theme-border);
+  background-color: var(--theme-surface);
 }
 
 .title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
   margin: 0 0 1rem;
 }
 
@@ -24,7 +24,7 @@
 
 .navLink {
   text-decoration: none;
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   padding-bottom: 0.75rem;
@@ -33,19 +33,19 @@
 }
 
 .navLink:hover {
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .active {
-  color: var(--brand);
-  border-bottom-color: var(--brand);
+  color: var(--theme-primary);
+  border-bottom-color: var(--theme-primary);
 }
 
 .main {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  background-color: var(--canvas);
+  background-color: var(--theme-canvas);
 }
 
 .nav { overflow-x:auto; padding-bottom:2px; scrollbar-width:thin; }

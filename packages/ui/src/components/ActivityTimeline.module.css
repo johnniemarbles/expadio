@@ -6,7 +6,7 @@
 
 .empty {
   font-size: var(--text-13);
-  color: var(--ink-500);
+  color: var(--theme-text-muted);
   font-style: italic;
 }
 
@@ -28,7 +28,7 @@
   width: 10px;
   height: 10px;
   border-radius: var(--radius-pill);
-  background-color: var(--brand);
+  background-color: var(--theme-primary);
   margin-top: var(--space-6);
   z-index: 1;
 }
@@ -36,7 +36,7 @@
 .line {
   width: 2px;
   flex-grow: 1;
-  background-color: var(--line);
+  background-color: var(--theme-border);
   margin-top: 2px;
 }
 
@@ -48,27 +48,27 @@
 .text {
   margin: 0;
   font-size: var(--text-13);
-  color: var(--ink-800);
+  color: var(--theme-text-primary);
   line-height: var(--leading-normal);
 }
 
 .actor {
   font-weight: var(--weight-semibold);
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .action {
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
 }
 
 .target {
   font-weight: var(--weight-semibold);
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .time {
   font-size: var(--text-11);
-  color: var(--ink-500);
+  color: var(--theme-text-muted);
   display: block;
   margin-top: var(--space-2);
 }

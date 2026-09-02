@@ -1,6 +1,6 @@
 .tableContainer {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -12,20 +12,20 @@
 }
 
 .table th {
-  background: var(--surface-soft);
+  background: var(--theme-surface-muted);
   padding: 0.75rem 1rem;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ink-600);
-  border-bottom: 1px solid var(--line);
+  color: var(--theme-text-secondary);
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .table td {
   padding: 1rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--theme-border);
   font-size: 0.875rem;
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .table tr:last-child td {
@@ -34,7 +34,7 @@
 
 .precedenceCell {
   font-weight: 600;
-  color: var(--brand);
+  color: var(--theme-primary);
 }
 
 .nameCell {
@@ -42,19 +42,19 @@
 }
 
 .kindCell {
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
 }
 
 .digestCell, .dateCell {
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .empty {
   padding: 3rem;
   text-align: center;
-  color: var(--ink-600);
-  background: var(--surface);
-  border: 1px dashed var(--line);
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface);
+  border: 1px dashed var(--theme-border);
   border-radius: 8px;
 }

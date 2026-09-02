@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
+import { resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

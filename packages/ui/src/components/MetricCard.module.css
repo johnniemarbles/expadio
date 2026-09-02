@@ -1,6 +1,6 @@
 .card {
-  background-color: var(--surface);
-  border: 1px solid var(--line);
+  background-color: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: var(--radius-8);
   padding: var(--space-16);
   display: flex;
@@ -16,7 +16,7 @@
 
 .label {
   font-size: var(--text-13);
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
   font-weight: var(--weight-semibold);
 }
 
@@ -35,16 +35,16 @@
 }
 
 .neutral {
-  background-color: var(--ink-500);
+  background-color: var(--theme-text-muted);
 }
 
 .value {
   font-size: var(--text-26);
   font-weight: var(--weight-bold);
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .detail {
   font-size: var(--text-12);
-  color: var(--ink-500);
+  color: var(--theme-text-muted);
 }

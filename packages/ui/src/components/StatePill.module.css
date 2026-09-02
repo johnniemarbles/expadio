@@ -11,16 +11,16 @@
 }
 
 .published {
-  background-color: var(--green-soft);
-  color: var(--green);
+  background-color: color-mix(in srgb,var(--theme-success) 12%,transparent);
+  color: var(--theme-success);
 }
 
 .review {
-  background-color: var(--amber-soft);
-  color: var(--amber);
+  background-color: color-mix(in srgb,var(--theme-warning) 12%,transparent);
+  color: var(--theme-warning);
 }
 
 .draft {
-  background-color: var(--surface-soft);
-  color: var(--ink-600);
+  background-color: var(--theme-surface-muted);
+  color: var(--theme-text-secondary);
 }

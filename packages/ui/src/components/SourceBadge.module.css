@@ -18,30 +18,30 @@
 
 .fixture {
   background-color: var(--amber-soft);
-  color: var(--amber);
-  border-color: var(--amber);
+  color: var(--theme-warning);
+  border-color: var(--theme-warning);
 }
 
 .fixture .dot {
-  background-color: var(--amber);
+  background-color: var(--theme-warning);
 }
 
 .partial {
   background-color: var(--brand-soft);
-  color: var(--brand);
-  border-color: var(--brand);
+  color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .partial .dot {
-  background-color: var(--brand);
+  background-color: var(--theme-primary);
 }
 
 .live {
   background-color: var(--green-soft);
-  color: var(--green);
-  border-color: var(--green);
+  color: var(--theme-success);
+  border-color: var(--theme-success);
 }
 
 .live .dot {
-  background-color: var(--green);
+  background-color: var(--theme-success);
 }
