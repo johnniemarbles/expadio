@@ -134,6 +134,22 @@ test('durable worker executes governed Twilio SMS, WhatsApp, and Voice with prov
          )`,
         [tenantId, scenario.providerType, scenario.sender],
       );
+      await client.query(
+        `INSERT INTO platform.communication_consent_events (
+           tenant_id, recipient_key, channel, purpose, event_type, source,
+           policy_version, evidence_ref, effective_at
+         ) VALUES (
+           $1::uuid, $2, $3, 'transactional', 'GRANTED', 'SYSTEM',
+           'communication-worker-twilio-itest-v1', $4, $5::timestamptz
+         )`,
+        [
+          tenantId,
+          scenario.recipient,
+          scenario.providerType,
+          `itest://communication-consent/${scenario.providerType}`,
+          requestedAt,
+        ],
+      );
 
       const dispatch = {
         tenantId,
