@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiError } from "../../../lib/api-error";
+import motionStyles from "./TemplateComposerModal.module.css";
 
 /**
  * Governed platform template creation (design §6, restored POST /templates).
@@ -65,8 +66,8 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
   }
 
   return (
-    <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 125, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: "min(640px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, #fff)", borderRadius: 16, padding: 28, display: "grid", gap: 12 }}>
+    <div role="presentation" onClick={onClose} className={motionStyles.backdrop} style={{ position: "fixed", inset: 0, zIndex: 125, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className={`${motionStyles.dialog} ${motionStyles.formControls}`} style={{ width: "min(640px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, #fff)", borderRadius: 16, padding: 28, display: "grid", gap: 12 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>New template</h2>
@@ -102,8 +103,8 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
           <input value={requiredVariables} onChange={(e) => setRequiredVariables(e.target.value)} placeholder="name, code" style={inp} />
         </label>
 
-        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+        {error && <p role="alert" className={motionStyles.error} style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
+        <div className={motionStyles.actions} style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, #4f46e5)", color: "white", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create draft"}</button>
         </div>
