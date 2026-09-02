@@ -8,6 +8,10 @@ import {
   ReadinessPortfolio,
   type ReadinessPortfolioItem,
 } from './ReadinessPortfolio';
+import {
+  CommercialNetwork,
+  type CommercialNetworkData,
+} from './CommercialNetwork';
 
 interface OrganizationRow {
   organization_id: string;
@@ -35,13 +39,25 @@ export default async function OrganizationsPage({
   if (typeof org === 'string') query.set('org', org);
   const suffix = query.size > 0 ? '?' + query.toString() : '';
 
-  const [orgs, readiness] = await Promise.all([
+  const [orgs, readiness, commercial] = await Promise.all([
     fetchApi<OrganizationRow[]>('/api/organizations/list' + suffix),
     fetchApi<ReadinessPortfolioResponse>('/api/enterprise/setup/portfolio' + suffix),
+    fetchApi<CommercialNetworkData>('/api/enterprise/commercial' + suffix),
   ]);
 
   if (isDenied(orgs)) return <DeniedState result={orgs} />;
   const readinessItems = isDenied(readiness) ? [] : readiness.items;
+  const commercialData: CommercialNetworkData = isDenied(commercial)
+    ? {
+        enterpriseId: null,
+        organizations: [],
+        legalEntities: [],
+        territories: [],
+        agreements: [],
+        appointments: [],
+        jurisdictions: [],
+      }
+    : commercial;
 
   return (
     <>
@@ -65,6 +81,21 @@ export default async function OrganizationsPage({
           <span className={styles.countBadge}>{readinessItems.length}</span>
         </div>
         <ReadinessPortfolio items={readinessItems} />
+      </section>
+
+      <section className={styles.panel} aria-labelledby="commercial-title" style={{ marginBottom: 16 }}>
+        <div className={styles.panelHeading}>
+          <div>
+            <p className={styles.eyebrow}>Enterprise Hub</p>
+            <h2 id="commercial-title">Commercial network &amp; jurisdictions</h2>
+          </div>
+          <span className={styles.countBadge}>
+            {commercialData.appointments.length + commercialData.jurisdictions.length}
+          </span>
+        </div>
+        <div style={{ padding: 16 }}>
+          <CommercialNetwork data={commercialData} suffix={suffix} />
+        </div>
       </section>
 
       <section
