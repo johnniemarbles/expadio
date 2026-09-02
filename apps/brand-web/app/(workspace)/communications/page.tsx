@@ -1,5 +1,6 @@
 import { loadBrandCommunicationOverview } from '../../../lib/brand-communications';
 import { resolveBrandContext, withBrandTransaction } from '../../../lib/brand-context';
+import { CommunicationsManager } from './CommunicationsManager';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -58,6 +59,8 @@ export default async function BrandCommunicationsPage() {
         </table></div>}
       </article>
     </section>
+
+    <CommunicationsManager />
 
     <section className={styles.card}>
       <div className={styles.cardHeader}><div><p className={styles.eyebrow}>Lifecycle</p><h2>Recent deliveries</h2></div></div>
