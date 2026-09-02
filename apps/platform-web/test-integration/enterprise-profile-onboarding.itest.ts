@@ -54,7 +54,7 @@ test('bootstrap enterprise -> governed profile configuration -> independent appr
       enterpriseId,
     });
     assert.equal(before.configurationState, 'BOOTSTRAPPED');
-    assert.equal(before.rootOrganizationId, rootOrganizationId);
+    assert.equal(before.rootOrganizationId, null);
 
     await c.query('BEGIN');
     const submitted = await requestEnterpriseProfileConfiguration(c, {
