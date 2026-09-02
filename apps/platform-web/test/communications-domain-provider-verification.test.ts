@@ -5,6 +5,7 @@ import test from 'node:test';
 const collection = readFileSync(new URL('../app/api/communications/domains/route.ts', import.meta.url), 'utf8');
 const verify = readFileSync(new URL('../app/api/communications/domains/[senderId]/verify/route.ts', import.meta.url), 'utf8');
 const retire = readFileSync(new URL('../app/api/communications/domains/[senderId]/route.ts', import.meta.url), 'utf8');
+const cloudflare = readFileSync(new URL('../app/api/communications/domains/cloudflare/route.ts', import.meta.url), 'utf8');
 
 test('domain verification is admin gated, UUID validated, and cannot mutate platform senders', () => {
   assert.match(verify, /requireCommunicationDomainAdmin/);
@@ -55,4 +56,14 @@ test('tenant domain collection excludes inherited platform rows and cannot react
   assert.match(collection, /existing\.rows\[0\]\?\.status === 'SUSPENDED'/);
   assert.match(collection, /can only be restored through Platform governance/);
   assert.match(collection, /WHEN platform\.communication_sender_identities\.status = 'INACTIVE' THEN 'ACTIVE'/);
+});
+
+test('Cloudflare path rejects suspension before token use or provider mutation', () => {
+  const preflightIndex = cloudflare.indexOf('const preflight = await withTenantClient');
+  const tokenIndex = cloudflare.indexOf('const token =');
+  const providerIndex = cloudflare.indexOf('findZone(token, domain)');
+  assert.ok(preflightIndex >= 0 && tokenIndex > preflightIndex && providerIndex > preflightIndex);
+  assert.match(cloudflare, /preflight\.suspended/);
+  assert.match(cloudflare, /can only be restored through Platform governance/);
+  assert.match(cloudflare, /WHEN platform\.communication_sender_identities\.status = 'INACTIVE' THEN 'ACTIVE'/);
 });
