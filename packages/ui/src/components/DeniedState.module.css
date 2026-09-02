@@ -24,16 +24,16 @@
 
 .message {
   font-size: var(--text-15);
-  color: var(--ink-800);
+  color: var(--theme-text-primary);
   margin: 0;
 }
 
 .meta {
   margin-top: var(--space-16);
   font-size: var(--text-12);
-  color: var(--ink-500);
+  color: var(--theme-text-muted);
   font-family: monospace;
-  background: var(--surface);
+  background: var(--theme-surface);
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-7);
 }
