@@ -76,7 +76,7 @@ export function PendingReviewsClient({ initial, verticalKey = null }: { initial:
               if (assignee.trim() !== '') p.set('assignee', assignee.trim());
               return p.toString() ? `?${p.toString()}` : '';
             })()}`}
-            style={{ ...inp, textDecoration: 'none', color: 'var(--theme-primary)', var(--theme-text-inverse)Space: 'nowrap' }}
+            style={{ ...inp, textDecoration: 'none', color: 'var(--theme-primary)', whiteSpace: 'nowrap' }}
           >
             Download CSV
           </a>
