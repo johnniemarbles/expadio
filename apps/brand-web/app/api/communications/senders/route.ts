@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const ADDRESS_RE = /^[^\s@]+@([^\s@]+)$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PURPOSES = ['transactional', 'marketing'] as const;
 type Purpose = (typeof PURPOSES)[number];
 
@@ -73,6 +74,22 @@ export async function POST(request: Request) {
       if (!await hasBrandGovernanceForOrganization(client, context.subjectId, context.organizationId)) {
         return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Brand communication administration is required.' }, { status: 403 });
       }
+
+      const existing = await client.query<{ status: string }>(
+        `SELECT status
+           FROM platform.communication_sender_identities
+          WHERE tenant_id = $1::uuid
+            AND organization_id = $2::uuid
+            AND scope = 'ORGANIZATION'
+            AND channel = 'email'
+            AND lower(address) = lower($3)
+          LIMIT 1`,
+        [context.tenantId, context.organizationId, rawAddress],
+      );
+      if (existing.rows[0]?.status === 'SUSPENDED') {
+        return NextResponse.json({ error: 'This sender is suspended and can only be restored through Platform governance.' }, { status: 409 });
+      }
+
       const result = await client.query(
         `INSERT INTO platform.communication_sender_identities
           (scope, tenant_id, organization_id, channel, address, display_name, reply_to,
@@ -83,7 +100,10 @@ export async function POST(request: Request) {
            display_name = EXCLUDED.display_name,
            reply_to = EXCLUDED.reply_to,
            purposes = EXCLUDED.purposes,
-           status = 'ACTIVE',
+           status = CASE
+             WHEN platform.communication_sender_identities.status = 'INACTIVE' THEN 'ACTIVE'
+             ELSE platform.communication_sender_identities.status
+           END,
            verification_status = platform.communication_sender_identities.verification_status,
            updated_at = now()
          RETURNING sender_id, address, display_name, reply_to, purposes, is_default,
@@ -96,5 +116,67 @@ export async function POST(request: Request) {
     if (error?.code === '23505') return NextResponse.json({ error: 'That sender identity conflicts with an existing organization sender.' }, { status: 409 });
     console.error('Brand sender creation failed:', error);
     return NextResponse.json({ error: 'Unable to create organization sender.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const context = await resolveBrandContext();
+    const body = await request.json();
+    const senderId = typeof body.senderId === 'string' ? body.senderId.trim() : '';
+    if (!UUID_RE.test(senderId)) return NextResponse.json({ error: 'senderId must be a valid UUID.' }, { status: 400 });
+    if (body.isDefault !== true) return NextResponse.json({ error: 'Only verified sender promotion is supported.' }, { status: 400 });
+
+    return await withBrandTransaction(context, async (client) => {
+      if (!await hasBrandGovernanceForOrganization(client, context.subjectId, context.organizationId)) {
+        return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Brand communication administration is required.' }, { status: 403 });
+      }
+
+      const target = await client.query<{ verification_status: string; status: string }>(
+        `SELECT verification_status, status
+           FROM platform.communication_sender_identities
+          WHERE sender_id = $1::uuid
+            AND tenant_id = $2::uuid
+            AND organization_id = $3::uuid
+            AND scope = 'ORGANIZATION'
+            AND channel = 'email'
+          FOR UPDATE`,
+        [senderId, context.tenantId, context.organizationId],
+      );
+      if (target.rows.length === 0) return NextResponse.json({ error: 'Organization sender not found.' }, { status: 404 });
+      if (target.rows[0]?.status !== 'ACTIVE' || target.rows[0]?.verification_status !== 'VERIFIED') {
+        return NextResponse.json({ error: 'Only ACTIVE, VERIFIED organization senders can become the default.' }, { status: 409 });
+      }
+
+      await client.query(
+        `UPDATE platform.communication_sender_identities
+            SET is_default = false, updated_at = now()
+          WHERE tenant_id = $1::uuid
+            AND organization_id = $2::uuid
+            AND scope = 'ORGANIZATION'
+            AND channel = 'email'
+            AND is_default = true
+            AND sender_id <> $3::uuid`,
+        [context.tenantId, context.organizationId, senderId],
+      );
+      const promoted = await client.query(
+        `UPDATE platform.communication_sender_identities
+            SET is_default = true, updated_at = now()
+          WHERE sender_id = $1::uuid
+            AND tenant_id = $2::uuid
+            AND organization_id = $3::uuid
+            AND scope = 'ORGANIZATION'
+            AND channel = 'email'
+            AND status = 'ACTIVE'
+            AND verification_status = 'VERIFIED'
+          RETURNING sender_id, address, is_default, verification_status, status, updated_at`,
+        [senderId, context.tenantId, context.organizationId],
+      );
+      if (promoted.rows.length === 0) return NextResponse.json({ error: 'Sender promotion was not applied.' }, { status: 409 });
+      return NextResponse.json({ success: true, sender: promoted.rows[0] });
+    });
+  } catch (error) {
+    console.error('Brand sender promotion failed:', error);
+    return NextResponse.json({ error: 'Unable to promote organization sender.' }, { status: 500 });
   }
 }
