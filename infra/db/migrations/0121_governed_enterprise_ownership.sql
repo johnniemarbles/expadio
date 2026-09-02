@@ -29,6 +29,25 @@ CREATE INDEX IF NOT EXISTS entity_ownership_interests_change_request_idx
   )
   WHERE enterprise_change_request_id IS NOT NULL;
 
+INSERT INTO platform.entity_relationship_definitions (
+  tenant_id,
+  relationship_key,
+  source_node_type,
+  target_node_type,
+  inverse_relationship_key,
+  perspective,
+  cardinality,
+  requires_approval,
+  status,
+  created_by_subject_id
+) VALUES
+  (NULL, 'OWNERSHIP_EQUITY', 'LEGAL_ENTITY', 'LEGAL_ENTITY', 'EQUITY_OWNED_BY', 'OWNERSHIP_LEGAL', 'MANY_TO_MANY', true, 'ACTIVE', 'platform'),
+  (NULL, 'OWNERSHIP_VOTING', 'LEGAL_ENTITY', 'LEGAL_ENTITY', 'VOTING_OWNED_BY', 'OWNERSHIP_LEGAL', 'MANY_TO_MANY', true, 'ACTIVE', 'platform'),
+  (NULL, 'OWNERSHIP_ECONOMIC', 'LEGAL_ENTITY', 'LEGAL_ENTITY', 'ECONOMIC_OWNED_BY', 'OWNERSHIP_LEGAL', 'MANY_TO_MANY', true, 'ACTIVE', 'platform'),
+  (NULL, 'OWNERSHIP_CONTROL', 'LEGAL_ENTITY', 'LEGAL_ENTITY', 'CONTROLLED_BY', 'OWNERSHIP_LEGAL', 'MANY_TO_MANY', true, 'ACTIVE', 'platform'),
+  (NULL, 'OWNERSHIP_BENEFICIAL', 'LEGAL_ENTITY', 'LEGAL_ENTITY', 'BENEFICIALLY_OWNED_BY', 'OWNERSHIP_LEGAL', 'MANY_TO_MANY', true, 'ACTIVE', 'platform')
+ON CONFLICT DO NOTHING;
+
 COMMENT ON TABLE platform.entity_ownership_interests IS
   'Canonical governed ownership/control interests. New enterprise ownership changes use this registry-backed table and enterprise_change_requests; graph authority is published only after approval.';
 
