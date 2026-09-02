@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
+import capacityStyles from "./CapacityPanel.module.css";
 
 /**
  * The operator incident screen (design §0.5 / BEMP §18). Three governed
@@ -58,6 +59,15 @@ interface SpendResponse {
 interface CapacityPanelProps {
   queryString?: string;
 }
+
+const statusClass = (tone: "healthy" | "warning" | "critical") =>
+  `${capacityStyles.statusPill} ${capacityStyles[tone]}`;
+
+const breakerTone = (state: string): "healthy" | "warning" | "critical" => {
+  if (state === "OPEN") return "critical";
+  if (state === "HALF_OPEN") return "warning";
+  return "healthy";
+};
 
 export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
   const [planes, setPlanes] = useState<PlanesResponse | null>(null);
@@ -123,13 +133,13 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
   }
 
   if (loading) {
-    return <div style={{ padding: 24, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading capacity and spend telemetry…</div>;
+    return <div className={capacityStyles.loading}>Loading capacity and spend telemetry…</div>;
   }
 
   return (
-    <div style={{ display: "grid", gap: 20 }}>
-      {error && <div role="alert" style={{ fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 12, borderRadius: 8 }}>⚠️ {error}</div>}
-      {notice && <div style={{ fontSize: 13, color: "#15803d", background: "#f0fdf4", padding: 12, borderRadius: 8, border: "1px solid #bbf7d0" }}>✅ {notice}</div>}
+    <div className={capacityStyles.root}>
+      {error && <div role="alert" className={`${capacityStyles.banner} ${capacityStyles.error}`}>⚠️ {error}</div>}
+      {notice && <div className={`${capacityStyles.banner} ${capacityStyles.notice}`}>✅ {notice}</div>}
 
       {/* Plane partition */}
       <section className={styles.attentionTablePanel}>
@@ -139,32 +149,21 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
             <p>Transactional never waits behind bulk. The floor is never borrowable.</p>
           </div>
           {planes && (
-            <span
-              style={{
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 800,
-                color: planes.partitionHolding ? "#166534" : "#991b1b",
-                background: planes.partitionHolding ? "#dcfce7" : "#fee2e2",
-              }}
-            >
+            <span className={statusClass(planes.partitionHolding ? "healthy" : "critical")}>
               {planes.partitionHolding ? "Partition holding" : "Partition NOT holding"}
             </span>
           )}
         </div>
         {planes ? (
           <>
-            {planes.alert && (
-              <div style={{ margin: "0 0 14px", fontSize: 13, color: "#991b1b", background: "#fef2f2", padding: 12, borderRadius: 8 }}>⚠️ {planes.alert}</div>
-            )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <PlaneCard title="Transactional" tone="#4f46e5" reading={planes.planes.TRANSACTIONAL} />
-              <PlaneCard title="Bulk" tone="#0891b2" reading={planes.planes.BULK} />
+            {planes.alert && <div className={`${capacityStyles.banner} ${capacityStyles.error}`}>⚠️ {planes.alert}</div>}
+            <div className={capacityStyles.planeGrid}>
+              <PlaneCard title="Transactional" tone="transactional" reading={planes.planes.TRANSACTIONAL} />
+              <PlaneCard title="Bulk" tone="bulk" reading={planes.planes.BULK} />
             </div>
           </>
         ) : (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500, #64748b)" }}>No plane budget is configured for this tenant yet.</p>
+          <p className={capacityStyles.empty}>No plane budget is configured for this tenant yet.</p>
         )}
       </section>
 
@@ -209,7 +208,7 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
             </table>
           </div>
         ) : (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500, #64748b)" }}>
+          <p className={capacityStyles.empty}>
             No per-connector bounds set. Consumption this minute — transactional {quota?.consumption.transactional.minuteCount ?? 0}, bulk {quota?.consumption.bulk.minuteCount ?? 0}.
           </p>
         )}
@@ -222,45 +221,31 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
             <h3>Cost breaker</h3>
             <p>The daily spend cap. Enforcement runs inside the dispatch transaction.</p>
           </div>
-          {spend && (
-            <span
-              style={{
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 800,
-                color: spend.state === "OPEN" ? "#991b1b" : spend.state === "HALF_OPEN" ? "#925b0b" : "#166534",
-                background: spend.state === "OPEN" ? "#fee2e2" : spend.state === "HALF_OPEN" ? "#fef3c7" : "#dcfce7",
-              }}
-            >
-              Breaker {spend.state}
-            </span>
-          )}
+          {spend && <span className={statusClass(breakerTone(spend.state))}>Breaker {spend.state}</span>}
         </div>
         {spend && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+          <div className={capacityStyles.statGrid}>
             <MiniStat label="Spent today" value={`$${(spend.spentMinorUnits / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`} />
             <MiniStat label="Daily cap" value={spend.capMinorUnits === null ? "No cap" : `$${(spend.capMinorUnits / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`} />
             <MiniStat label="Utilisation" value={`${spend.utilisationPct}%`} danger={spend.utilisationPct >= 80} />
           </div>
         )}
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <label style={{ fontSize: 12, display: "grid", gap: 4 }}>
+        <div className={capacityStyles.capForm}>
+          <label className={capacityStyles.field}>
             Daily cap (USD, blank = no cap)
             <input
               value={capInput}
               onChange={(e) => setCapInput(e.target.value)}
               placeholder="e.g. 500.00"
               inputMode="decimal"
-              style={{ padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, width: 180 }}
+              className={capacityStyles.input}
             />
           </label>
           <button
             type="button"
             onClick={saveCap}
             disabled={savingCap}
-            className={styles.btnPillDark}
-            style={{ cursor: savingCap ? "not-allowed" : "pointer" }}
+            className={`${styles.btnPillDark} ${capacityStyles.updateButton}`}
           >
             {savingCap ? "Saving…" : "Update cap"}
           </button>
@@ -270,31 +255,28 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
   );
 }
 
-function PlaneCard({ title, tone, reading }: { title: string; tone: string; reading: PlaneReading }) {
+function PlaneCard({ title, tone, reading }: { title: string; tone: "transactional" | "bulk"; reading: PlaneReading }) {
   const usedPct = reading.capacityPerMinute > 0 ? Math.min(100, Math.round((reading.consumedThisMinute / reading.capacityPerMinute) * 100)) : 0;
+  const titleClass = tone === "bulk" ? `${capacityStyles.planeTitle} ${capacityStyles.planeTitleBulk}` : capacityStyles.planeTitle;
   return (
-    <div style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <strong style={{ color: tone }}>{title}</strong>
-        <span style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>{reading.consumedThisMinute}/{reading.capacityPerMinute} per min</span>
+    <div className={capacityStyles.planeCard}>
+      <div className={capacityStyles.planeHead}>
+        <strong className={titleClass}>{title}</strong>
+        <span className={capacityStyles.planeMeta}>{reading.consumedThisMinute}/{reading.capacityPerMinute} per min</span>
       </div>
-      <div style={{ height: 8, borderRadius: 999, background: "#f1f5f9", overflow: "hidden", marginBottom: 8 }}>
-        <div style={{ width: `${usedPct}%`, height: "100%", background: tone }} />
-      </div>
-      <div style={{ fontSize: 12, color: "var(--ink-600, #475569)" }}>{reading.consumedToday.toLocaleString("en-US")} today</div>
-      {reading.floorReserved !== undefined && (
-        <div style={{ fontSize: 11, color: "var(--ink-500, #64748b)", marginTop: 4 }}>Floor reserved: {reading.floorReserved}/min</div>
-      )}
-      {reading.note && <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--ink-500, #64748b)", marginTop: 4 }}>{reading.note}</div>}
+      <meter className={`${capacityStyles.meter} ${tone === "bulk" ? capacityStyles.meterBulk : ""}`} min={0} max={100} value={usedPct} aria-label={`${title} usage ${usedPct}%`} />
+      <div className={capacityStyles.planeDetail}>{reading.consumedToday.toLocaleString("en-US")} today</div>
+      {reading.floorReserved !== undefined && <div className={capacityStyles.planeMeta}>Floor reserved: {reading.floorReserved}/min</div>}
+      {reading.note && <div className={capacityStyles.planeNote}>{reading.note}</div>}
     </div>
   );
 }
 
 function MiniStat({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div style={{ border: "1px solid var(--line, #f1f5f9)", borderRadius: 8, padding: "10px 12px" }}>
-      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-500, #64748b)" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: danger ? "#b91c1c" : "var(--ink-900, #0f172a)" }}>{value}</div>
+    <div className={capacityStyles.miniStat}>
+      <div className={capacityStyles.statLabel}>{label}</div>
+      <div className={danger ? `${capacityStyles.statValue} ${capacityStyles.statDanger}` : capacityStyles.statValue}>{value}</div>
     </div>
   );
 }

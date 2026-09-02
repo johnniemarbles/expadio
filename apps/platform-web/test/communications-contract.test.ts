@@ -31,6 +31,10 @@ const capacityPanel = readFileSync(
   new URL("../app/(shell)/communications/CapacityPanel.tsx", import.meta.url),
   "utf8",
 );
+const capacityPanelStyles = readFileSync(
+  new URL("../app/(shell)/communications/CapacityPanel.module.css", import.meta.url),
+  "utf8",
+);
 const tracesPanel = readFileSync(
   new URL("../app/(shell)/communications/TracesPanel.tsx", import.meta.url),
   "utf8",
@@ -133,6 +137,20 @@ test("capacity tab surfaces planes, quota and the spend breaker", () => {
   // Editing the spend cap is step-up guarded.
   assert.match(capacityPanel, /method:\s*"PATCH"/);
   assert.match(capacityPanel, /x-expadio-reauth-at/);
+});
+
+test("capacity panel uses governed dashboard styling primitives", () => {
+  assert.match(capacityPanel, /CapacityPanel\.module\.css/);
+  assert.match(capacityPanel, /capacityStyles\.root/);
+  assert.match(capacityPanel, /<meter/);
+  assert.match(capacityPanelStyles, /var\(--theme-primary\)/);
+  assert.match(capacityPanelStyles, /var\(--theme-border\)/);
+  assert.match(capacityPanelStyles, /var\(--theme-danger\)/);
+  assert.doesNotMatch(capacityPanel, /React\.CSSProperties/);
+  assert.doesNotMatch(capacityPanel, /style=\{/);
+  assert.doesNotMatch(capacityPanel, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(capacityPanelStyles, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(capacityPanelStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
 });
 
 test("setup completion requires a successful governed test-send trace", () => {
