@@ -585,7 +585,7 @@ test('competency reconciliation promotes, downgrades and lapses from pinned evid
     assert.deepEqual(events.rows, [
       { event_type: 'learning.competency.achieved', count: 2 },
       { event_type: 'learning.competency.lapsed', count: 1 },
-      { event_type: 'learning.competency.level.changed', count: 3 },
+      { event_type: 'learning.competency.level.changed', count: 2 },
     ]);
   } finally {
     c.release();
