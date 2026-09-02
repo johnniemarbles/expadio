@@ -88,6 +88,15 @@ export interface LearningPublishedQuestionSummary {
   readonly prompt: string;
 }
 
+export interface LearningPublishedAssessmentVersionSummary {
+  readonly assessmentId: string;
+  readonly assessmentKey: string;
+  readonly assessmentVersionId: string;
+  readonly version: number;
+  readonly title: string;
+  readonly type: LearningAssessmentType;
+}
+
 export interface LearningAssessmentSummary {
   readonly assessmentId: string;
   readonly assessmentKey: string;
@@ -577,6 +586,43 @@ export async function createLearningAssessment(
     if (error?.code === '23505') throw new Error('LEARNING_ASSESSMENT_KEY_EXISTS');
     throw error;
   }
+}
+
+export async function listLearningPublishedAssessmentVersions(
+  client: PostgresClient,
+  tenantId: string,
+): Promise<readonly LearningPublishedAssessmentVersionSummary[]> {
+  await requireLearning(client, tenantId);
+  const result = await client.query<{
+    readonly assessment_id: string;
+    readonly assessment_key: string;
+    readonly assessment_version_id: string;
+    readonly version: number;
+    readonly title: string;
+    readonly assessment_type: LearningAssessmentType;
+  }>(
+    `SELECT assessment.assessment_id, assessment.assessment_key,
+            version.assessment_version_id, version.version, version.title,
+            version.assessment_type
+       FROM platform.learning_assessments assessment
+       JOIN platform.learning_assessment_versions version
+         ON version.assessment_id = assessment.assessment_id
+        AND version.tenant_id = assessment.tenant_id
+        AND version.version = assessment.current_published_version
+        AND version.state = 'PUBLISHED'
+      WHERE assessment.tenant_id = $1::uuid
+        AND assessment.status = 'ACTIVE'
+      ORDER BY version.title, assessment.assessment_key`,
+    [tenantId],
+  );
+  return result.rows.map((row) => ({
+    assessmentId: row.assessment_id,
+    assessmentKey: row.assessment_key,
+    assessmentVersionId: row.assessment_version_id,
+    version: row.version,
+    title: row.title,
+    type: row.assessment_type,
+  }));
 }
 
 export async function listLearningAssessments(
