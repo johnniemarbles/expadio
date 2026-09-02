@@ -45,11 +45,11 @@ const money = (minor: number, currency: string): string => {
 
 const badge = (state: string): React.CSSProperties => {
   const map: Record<string, string> = { PAID: 'var(--theme-primary)', SUBMITTED: 'var(--theme-warning)', APPROVED: 'var(--theme-primary)', REJECTED: 'var(--theme-danger)' };
-  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: '#fff', background: map[state] ?? 'var(--theme-neutral)' };
+  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: 'var(--theme-text-inverse)', background: map[state] ?? 'var(--theme-neutral)' };
 };
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--theme-primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
+const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 
 export function ExpensesClient({ initialExpenses, queryString = '' }: { initialExpenses: ExpenseRow[]; queryString?: string }) {
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
