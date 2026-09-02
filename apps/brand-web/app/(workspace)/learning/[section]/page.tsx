@@ -1,13 +1,19 @@
 import { notFound } from 'next/navigation';
 import { listLearningCourses, loadLearningCourseVersion } from '@expadio/postgres-runtime/learning';
 import {
+  listLearningPublishedAssessmentVersions,
   listLearningPublishedQuestions,
   listLearningQuestionBanks,
 } from '@expadio/postgres-runtime/learning-assessment';
-import { listLearningPrograms } from '@expadio/postgres-runtime/learning-program-certification';
+import {
+  listLearningPrograms,
+  listLearningPublishedProgramVersions,
+} from '@expadio/postgres-runtime/learning-program-certification';
+import { listLearningLearners } from '@expadio/postgres-runtime/learning-enrollment';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { AssessmentAuthoringPanel } from '../../../../components/AssessmentAuthoringPanel';
 import { LearningSectionAdminPanel } from '../../../../components/LearningSectionAdminPanel';
+import { ProgramAuthoringPanel } from '../../../../components/ProgramAuthoringPanel';
 import {
   hasLearningAdmin,
   resolveBrandContext,
@@ -50,6 +56,9 @@ export default async function LearningSectionPage({ params }: { params: Promise<
         assessmentCourseTargets: [] as readonly { id: string; label: string }[],
         questionBanks: [] as readonly { id: string; label: string }[],
         publishedQuestions: [] as readonly { id: string; label: string; type: string }[],
+        publishedAssessmentVersions: [] as readonly { id: string; label: string }[],
+        publishedPrograms: [] as readonly { id: string; programId: string; label: string }[],
+        learnerTargets: [] as readonly { id: string; label: string }[],
       };
     }
 
@@ -70,20 +79,34 @@ export default async function LearningSectionPage({ params }: { params: Promise<
         assessmentCourseTargets: [] as readonly { id: string; label: string }[],
         questionBanks: [] as readonly { id: string; label: string }[],
         publishedQuestions: [] as readonly { id: string; label: string; type: string }[],
+        publishedAssessmentVersions: [] as readonly { id: string; label: string }[],
+        publishedPrograms: [] as readonly { id: string; programId: string; label: string }[],
+        learnerTargets: [] as readonly { id: string; label: string }[],
       };
     }
 
-    const [courses, programs, questionBanks, publishedQuestions] = await Promise.all([
+    const [
+      courses,
+      programs,
+      questionBanks,
+      publishedQuestions,
+      publishedAssessmentVersions,
+      publishedPrograms,
+      learners,
+    ] = await Promise.all([
       listLearningCourses(client, context.tenantId),
       listLearningPrograms(client, context.tenantId),
       section === 'assessments' ? listLearningQuestionBanks(client, context.tenantId) : Promise.resolve([]),
       section === 'assessments' ? listLearningPublishedQuestions(client, context.tenantId) : Promise.resolve([]),
+      section === 'programs' ? listLearningPublishedAssessmentVersions(client, context.tenantId) : Promise.resolve([]),
+      section === 'programs' ? listLearningPublishedProgramVersions(client, context.tenantId) : Promise.resolve([]),
+      section === 'programs' ? listLearningLearners(client, context.tenantId) : Promise.resolve([]),
     ]);
 
     const publishedCourses = courses.filter(
       (course) => course.status === 'ACTIVE' && course.currentPublishedVersion !== null,
     );
-    const assessmentVersions = section === 'assessments'
+    const assessmentVersions = section === 'assessments' || section === 'programs'
       ? await Promise.all(publishedCourses.map((course) =>
           loadLearningCourseVersion(client, {
             tenantId: context.tenantId,
@@ -120,6 +143,18 @@ export default async function LearningSectionPage({ params }: { params: Promise<
         label: `${question.bankName} · ${question.prompt}`,
         type: question.type,
       })),
+      publishedAssessmentVersions: publishedAssessmentVersions.map((assessment) => ({
+        id: assessment.assessmentVersionId,
+        label: `${assessment.title} · v${assessment.version} · ${assessment.type}`,
+      })),
+      publishedPrograms: publishedPrograms.map((program) => ({
+        id: program.programVersionId,
+        programId: program.programId,
+        label: `${program.title} · v${program.version}`,
+      })),
+      learnerTargets: learners
+        .filter((learner) => learner.status === 'ACTIVE')
+        .map((learner) => ({ id: learner.learnerId, label: learner.fullName })),
     };
   });
 
@@ -146,9 +181,16 @@ export default async function LearningSectionPage({ params }: { params: Promise<
                     questionBanks={data.questionBanks}
                     publishedQuestions={data.publishedQuestions}
                   />
+                ) : section === 'programs' ? (
+                  <ProgramAuthoringPanel
+                    courseVersions={data.assessmentCourseTargets}
+                    assessmentVersions={data.publishedAssessmentVersions}
+                    publishedPrograms={data.publishedPrograms}
+                    learners={data.learnerTargets}
+                  />
                 ) : (
                   <LearningSectionAdminPanel
-                    section={section as 'programs' | 'skills' | 'assignments'}
+                    section={section as 'skills' | 'assignments'}
                     courseTargets={data.courseTargets}
                     programTargets={data.programTargets}
                   />
