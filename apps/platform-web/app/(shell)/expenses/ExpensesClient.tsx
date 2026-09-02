@@ -44,12 +44,12 @@ const money = (minor: number, currency: string): string => {
 };
 
 const badge = (state: string): React.CSSProperties => {
-  const map: Record<string, string> = { PAID: '#0f766e', SUBMITTED: '#b45309', APPROVED: '#2563eb', REJECTED: '#b91c1c' };
-  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: '#fff', background: map[state] ?? '#64748b' };
+  const map: Record<string, string> = { PAID: 'var(--theme-primary)', SUBMITTED: 'var(--theme-warning)', APPROVED: 'var(--theme-primary)', REJECTED: 'var(--theme-danger)' };
+  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: '#fff', background: map[state] ?? 'var(--theme-neutral)' };
 };
 
 const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: '#0f766e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
+const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--theme-primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 
 export function ExpensesClient({ initialExpenses, queryString = '' }: { initialExpenses: ExpenseRow[]; queryString?: string }) {
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -187,9 +187,9 @@ export function ExpensesClient({ initialExpenses, queryString = '' }: { initialE
       </div>
 
       {error && (
-        <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>
+        <p style={{ color: 'var(--theme-danger)', fontSize: 13, margin: '0 0 12px' }}>
           {error}
-          {authHint && <> · <a href={`/authority${queryString}`} style={{ color: '#0f766e', fontWeight: 600 }}>Grant approval authority →</a></>}
+          {authHint && <> · <a href={`/authority${queryString}`} style={{ color: 'var(--theme-primary)', fontWeight: 600 }}>Grant approval authority →</a></>}
         </p>
       )}
 
@@ -217,7 +217,7 @@ export function ExpensesClient({ initialExpenses, queryString = '' }: { initialE
                       ) : stage === 'MANAGER_REVIEW' ? (
                         <>
                           <button style={btn} disabled={busy !== null} onClick={() => approveAndPay(e.expenseId)}>Approve &amp; pay</button>
-                          <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(e.expenseId)}>Reject</button>
+                          <button style={{ ...btn, background: 'var(--theme-danger)' }} disabled={busy !== null} onClick={() => reject(e.expenseId)}>Reject</button>
                         </>
                       ) : (
                         <span className={styles.muted}>Reimbursed</span>
