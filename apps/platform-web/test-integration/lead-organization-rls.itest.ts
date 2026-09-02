@@ -5,6 +5,7 @@ import pg from 'pg';
 
 const APP_ROLE = 'expadio_lead_rls_tester';
 const APP_ROLE_PASSWORD = 'lead_rls_isolation_test';
+const ISSUER = 'https://clerk.expadio.com';
 
 function connectInfo() {
   return {
@@ -61,6 +62,7 @@ async function seedLead(c: pg.PoolClient, tenantId: string, organizationId: stri
 async function setContext(c: pg.PoolClient, input: { tenantId: string; subjectId: string; organizationId: string }): Promise<void> {
   await c.query(`SELECT set_config('app.tenant_id', $1, false)`, [input.tenantId]);
   await c.query(`SELECT set_config('app.subject_id', $1, false)`, [input.subjectId]);
+  await c.query(`SELECT set_config('app.issuer', $1, false)`, [ISSUER]);
   await c.query(`SELECT set_config('app.organization_id', $1, false)`, [input.organizationId]);
 }
 
@@ -84,9 +86,9 @@ test('CRM lead RLS enforces selected organization subtree and tenant isolation u
 
     await suc.query(
       `INSERT INTO platform.memberships
-         (tenant_id, organization_id, subject_id, actor_kind, organization_scope_mode)
-       VALUES ($1, $2, $3, 'user', 'SELF_AND_DESCENDANTS')`,
-      [tenantA, hq, subjectId],
+         (tenant_id, organization_id, subject_id, issuer, actor_kind, organization_scope_mode)
+       VALUES ($1, $2, $3, $4, 'user', 'SELF_AND_DESCENDANTS')`,
+      [tenantA, hq, subjectId, ISSUER],
     );
 
     const hqLead = await seedLead(suc, tenantA, hq, 'HQ lead');
