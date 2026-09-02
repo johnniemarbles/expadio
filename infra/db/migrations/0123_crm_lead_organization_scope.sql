@@ -21,8 +21,17 @@ UPDATE platform.crm_leads AS l
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1
-      FROM pg_constraint
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'crm_accounts_id_tenant_organization_key'
+       AND conrelid = 'platform.crm_accounts'::regclass
+  ) THEN
+    ALTER TABLE platform.crm_accounts
+      ADD CONSTRAINT crm_accounts_id_tenant_organization_key
+      UNIQUE (account_id, tenant_id, organization_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
      WHERE conname = 'crm_leads_organization_tenant_fk'
        AND conrelid = 'platform.crm_leads'::regclass
   ) THEN
@@ -30,6 +39,19 @@ BEGIN
       ADD CONSTRAINT crm_leads_organization_tenant_fk
       FOREIGN KEY (organization_id, tenant_id)
       REFERENCES platform.organizations(organization_id, tenant_id);
+  END IF;
+
+  -- A scoped Lead cannot reference an Account from a sibling organization or an
+  -- unscoped Account. This closes the cross-organization association seam at DB level.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'crm_leads_account_organization_fk'
+       AND conrelid = 'platform.crm_leads'::regclass
+  ) THEN
+    ALTER TABLE platform.crm_leads
+      ADD CONSTRAINT crm_leads_account_organization_fk
+      FOREIGN KEY (account_id, tenant_id, organization_id)
+      REFERENCES platform.crm_accounts(account_id, tenant_id, organization_id);
   END IF;
 END
 $$;
