@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { findIndustryPack, resolveWorkTypeLabel, resolveStageLabel, resolveDecisionOutcomeLabel } from '@expadio/industry-packs';
-import styles from '../../workflows/page.module.css';
+import styles from './ReviewQueueClient.module.css';
 
 /**
  * The reviewer's cross-vertical inbox — every open governed instance waiting on
@@ -52,23 +52,19 @@ const sinceLabel = (iso: string): string => {
   return `${Math.floor(h / 24)}d`;
 };
 
-const ageColor = (iso: string): string => {
+const ageClass = (iso: string): string => {
   const h = (Date.now() - new Date(iso).getTime()) / 3_600_000;
-  if (h >= 72) return '#b91c1c';
-  if (h >= 24) return '#b45309';
-  return '#64748b';
+  if (h >= 72) return styles.waitingStale;
+  if (h >= 24) return styles.waitingAging;
+  return styles.waitingFresh;
 };
 
-const outcomeColor = (o: string): string => {
-  const up = o.toUpperCase();
-  if (up.includes('APPROVE') || up.includes('GRANT')) return '#166534';
-  if (up.includes('REJECT') || up.includes('DENY') || up.includes('RETURN')) return '#b91c1c';
-  return '#475569';
+const outcomeClass = (outcome: string): string => {
+  const up = outcome.toUpperCase();
+  if (up.includes('APPROVE') || up.includes('GRANT')) return styles.outcomePositive;
+  if (up.includes('REJECT') || up.includes('DENY') || up.includes('RETURN')) return styles.outcomeDanger;
+  return styles.outcomeNeutral;
 };
-
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const badge: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 999, padding: '1px 9px', marginLeft: 8, verticalAlign: 'middle' };
-const chip = (color: string): React.CSSProperties => ({ fontSize: 12, fontWeight: 700, color, background: 'transparent', border: `1px solid ${color}`, borderRadius: 6, padding: '3px 9px', cursor: 'pointer' });
 
 const keyOf = (d: ReviewQueueItem) => `${d.workTypeKey}:${d.subjectId}`;
 
@@ -127,22 +123,28 @@ export function ReviewQueueClient({ initial, verticalKey = null }: { initial: Re
 
   return (
     <section className={styles.panel} aria-labelledby="rq-title">
-      <div className={styles.panelHeading}>
-        <div><p className={styles.eyebrow}>Awaiting you</p><h2 id="rq-title">Your review queue{items.length > 0 && <span style={badge}>{items.length}</span>}</h2></div>
-        <select style={inp} value={workType} onChange={(e) => setWorkType(e.target.value)} aria-label="Filter by work type">
+      <div className={styles.header}>
+        <div className={styles.headingBlock}>
+          <p className={styles.eyebrow}>Awaiting you</p>
+          <div className={styles.titleRow}>
+            <h2 id="rq-title" className={styles.title}>Your review queue</h2>
+            {items.length > 0 && <span className={styles.countBadge}>{items.length}</span>}
+          </div>
+        </div>
+        <select className={styles.filter} value={workType} onChange={(e) => setWorkType(e.target.value)} aria-label="Filter by work type">
           <option value="">All work types</option>
           {workTypes.map((wt) => <option key={wt} value={wt}>{resolveWorkTypeLabel(pack, wt)}</option>)}
         </select>
       </div>
 
       {recentlyDone.length > 0 && (
-        <p style={{ fontSize: 13, color: '#166534', margin: '0 0 12px' }}>
+        <p className={styles.notice}>
           Recorded {recentlyDone.length} decision{recentlyDone.length === 1 ? '' : 's'} from the queue.
         </p>
       )}
 
       {rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+        <p className={styles.empty}>
           Nothing is waiting on you right now. Items appear here when a governed process stops on a stage assigned to you.
         </p>
       ) : (
@@ -157,24 +159,32 @@ export function ReviewQueueClient({ initial, verticalKey = null }: { initial: Re
                 return (
                   <tr key={k}>
                     <td title={pack ? d.workTypeKey : undefined}>{resolveWorkTypeLabel(pack, d.workTypeKey)}</td>
-                    <td>{d.subjectLabel ? <>{d.subjectLabel} <span style={{ color: '#94a3b8' }}>· {d.subjectType}</span></> : <>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></>}</td>
+                    <td>
+                      {d.subjectLabel ? (
+                        <>
+                          <strong>{d.subjectLabel}</strong> <span className={styles.subjectType}>· {d.subjectType}</span>
+                        </>
+                      ) : (
+                        <span className={styles.subjectType}>{d.subjectType} · <code>{d.subjectId.slice(0, 8)}</code></span>
+                      )}
+                    </td>
                     <td title={pack ? d.currentStageKey : undefined}>{resolveStageLabel(pack, d.workTypeKey, d.currentStageKey)}</td>
                     <td>{d.participantKey}</td>
-                    <td style={{ color: ageColor(d.waitingSince), fontWeight: 600 }}>{sinceLabel(d.waitingSince)}</td>
+                    <td className={ageClass(d.waitingSince)}>{sinceLabel(d.waitingSince)}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div className={styles.actionGroup}>
                         {act === undefined && (
-                          <button type="button" onClick={() => loadActions(d)} style={chip('#2563eb')}>Act ▾</button>
+                          <button type="button" onClick={() => loadActions(d)} className={styles.actionButton}>Act ▾</button>
                         )}
-                        {act?.status === 'loading' && <span style={{ fontSize: 12, color: '#64748b' }}>Loading…</span>}
-                        {act?.status === 'error' && <span role="alert" style={{ fontSize: 12, color: '#b91c1c' }}>{act.message}</span>}
+                        {act?.status === 'loading' && <span className={styles.loading}>Loading…</span>}
+                        {act?.status === 'error' && <span role="alert" className={styles.error}>{act.message}</span>}
                         {act?.status === 'ready' && act.outcomes.length > 0 && act.outcomes.map((o) => (
-                          <button key={o} type="button" disabled={busy === k} onClick={() => decide(d, o)} style={chip(outcomeColor(o))} title={pack ? o : undefined}>{resolveDecisionOutcomeLabel(pack, o)}</button>
+                          <button key={o} type="button" disabled={busy === k} onClick={() => decide(d, o)} className={`${styles.outcomeButton} ${outcomeClass(o)}`} title={pack ? o : undefined}>{resolveDecisionOutcomeLabel(pack, o)}</button>
                         ))}
                         {act?.status === 'ready' && act.outcomes.length === 0 && (
-                          <span style={{ fontSize: 12, color: '#64748b' }}>{act.other ? 'Open to act' : 'No action'}</span>
+                          <span className={styles.noAction}>{act.other ? 'Open to act' : 'No action'}</span>
                         )}
-                        {href ? <a href={href} style={{ color: '#2563eb', fontSize: 13 }}>Open</a> : null}
+                        {href ? <a href={href} className={styles.openLink}>Open</a> : null}
                       </div>
                     </td>
                   </tr>
