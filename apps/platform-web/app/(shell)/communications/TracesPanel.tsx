@@ -17,19 +17,19 @@ import type { DecisionTrace, TraceOutcome } from "@expadio/communication";
 const OUTCOMES: TraceOutcome[] = ["SENT", "QUEUED", "REFUSED", "THROTTLED", "SUPPRESSED", "CANCELLED", "FAILED"];
 
 const OUTCOME_TONE: Record<string, { fg: string; bg: string }> = {
-  SENT: { fg: "var(--theme-success)", bg: "#dcfce7" },
+  SENT: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
   QUEUED: { fg: "#3730a3", bg: "#e0e7ff" },
-  REFUSED: { fg: "#991b1b", bg: "#fee2e2" },
-  THROTTLED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
-  SUPPRESSED: { fg: "var(--theme-warning)", bg: "#fef3c7" },
-  CANCELLED: { fg: "var(--theme-text-secondary)", bg: "#f1f5f9" },
-  FAILED: { fg: "#991b1b", bg: "#fee2e2" },
+  REFUSED: { fg: "var(--theme-danger)", bg: "#fee2e2" },
+  THROTTLED: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
+  SUPPRESSED: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
+  CANCELLED: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },
+  FAILED: { fg: "var(--theme-danger)", bg: "#fee2e2" },
 };
 
 const VERDICT_TONE: Record<string, string> = {
   PASS: "var(--theme-success)",
   FAIL: "var(--theme-danger)",
-  NOT_EVALUATED: "#94a3b8",
+  NOT_EVALUATED: "var(--theme-neutral)",
 };
 
 interface TracesPanelProps {
@@ -118,7 +118,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
         <button type="button" onClick={() => void load()} className={styles.btnPillDark} style={{ cursor: "pointer" }}>Apply filters</button>
       </div>
 
-      {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
+      {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
 
       {loading ? (
         <div style={{ padding: 20, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading decision traces…</div>
@@ -164,14 +164,14 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
 
       {(selected || detailLoading) && (
         <div role="presentation" onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(760px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, #fff)", border: "1px solid var(--line, #e2e8f0)", borderRadius: 16, padding: 28 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(760px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", border: "1px solid var(--line, #e2e8f0)", borderRadius: 16, padding: 28 }}>
             {detailLoading && !selected ? (
               <div style={{ padding: 30, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading trace…</div>
             ) : selected ? (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
-                    <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--brand, #4f46e5)" }}>Decision trace</span>
+                    <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--brand, var(--theme-primary))" }}>Decision trace</span>
                     <h2 style={{ margin: "4px 0 0", fontSize: 18, fontFamily: "monospace" }}>{selected.traceId}</h2>
                     <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>
                       {selected.kind} · {selected.outcome}{selected.reasonCode ? ` · ${selected.reasonCode}` : ""} · corr {selected.correlationId.slice(0, 8)}…
@@ -183,16 +183,16 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
                 <h4 style={{ margin: "0 0 8px", fontSize: 13, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--ink-500, #64748b)" }}>Enforcement gates</h4>
                 <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
                   {selected.gates.map((g) => (
-                    <div key={`${g.gate}-${g.ordinal}`} style={{ border: "1px solid var(--line, #f1f5f9)", borderRadius: 8, padding: 12 }}>
+                    <div key={`${g.gate}-${g.ordinal}`} style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <strong style={{ fontSize: 13 }}>{g.ordinal}. {g.gate}</strong>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: VERDICT_TONE[g.verdict] ?? "#94a3b8" }}>{g.verdict} · {g.elapsedMs}ms</span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: VERDICT_TONE[g.verdict] ?? "var(--theme-neutral)" }}>{g.verdict} · {g.elapsedMs}ms</span>
                       </div>
                       <div style={{ fontSize: 12, color: "var(--ink-600, #475569)", marginTop: 4 }}>{g.detail}</div>
                       {g.remediation && (
                         <div style={{ fontSize: 12, color: "var(--theme-warning)", marginTop: 6 }}>
                           → {g.remediation}
-                          {g.remediationHref && <a href={g.remediationHref} style={{ marginLeft: 6, color: "var(--brand, #4f46e5)" }}>Fix</a>}
+                          {g.remediationHref && <a href={g.remediationHref} style={{ marginLeft: 6, color: "var(--brand, var(--theme-primary))" }}>Fix</a>}
                         </div>
                       )}
                     </div>
