@@ -8,12 +8,15 @@ CREATE TABLE IF NOT EXISTS platform.genesis_bootstrap_requests (
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
   organization_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (subject_id, COALESCE(issuer, ''), idempotency_key),
+  UNIQUE (request_id),
   UNIQUE (tenant_id),
   FOREIGN KEY (organization_id, tenant_id)
     REFERENCES platform.organizations(organization_id, tenant_id)
     ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX genesis_bootstrap_request_identity_uq
+  ON platform.genesis_bootstrap_requests (subject_id, COALESCE(issuer, ''), idempotency_key);
 
 ALTER TABLE platform.genesis_bootstrap_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.genesis_bootstrap_requests FORCE ROW LEVEL SECURITY;
