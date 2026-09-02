@@ -1,0 +1,35 @@
+name: Dashboard Skill Ratchet
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform-web/**'
+      - 'apps/brand-web/**'
+      - 'packages/ui/**'
+      - 'scripts/check-dashboard-skill-ratchet.mjs'
+      - '.github/workflows/dashboard-skill-ratchet.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-skill-ratchet-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.16.0'
+          package-manager-cache: false
+      - name: Reject new raw dashboard colors
+        env:
+          DASHBOARD_SKILL_RATCHET_BASE_REF: ${{ github.base_ref }}
+        run: node scripts/check-dashboard-skill-ratchet.mjs
