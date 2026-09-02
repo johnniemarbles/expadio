@@ -1,12 +1,21 @@
 import React from 'react';
 import styles from './page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
-import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
+import { DeniedState, EmptyState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { requestedOrganizationId, type RouteSearchParams } from '../../../lib/request-context';
 
+function statusClass(status: string): string {
+  const normalized = status.toUpperCase();
+  if (normalized === 'SUCCEEDED' || normalized === 'COMPLETED') return [styles.statusBadge, styles.statusSuccess].join(' ');
+  if (normalized === 'FAILED' || normalized === 'CANCELLED') return [styles.statusBadge, styles.statusDanger].join(' ');
+  if (normalized === 'RUNNING' || normalized === 'PROCESSING') return [styles.statusBadge, styles.statusLive].join(' ');
+  if (normalized === 'QUEUED' || normalized === 'PENDING') return [styles.statusBadge, styles.statusPending].join(' ');
+  return [styles.statusBadge, styles.statusNeutral].join(' ');
+}
+
 export default async function AgentRunsPage({ searchParams }: { searchParams: RouteSearchParams }) {
-  const orgId = await requestedOrganizationId(searchParams);
+  await requestedOrganizationId(searchParams);
   const runs = await fetchApi<any[]>('/api/agent/runs');
   
   if (isDenied(runs)) return <DeniedState result={runs} />;
@@ -42,10 +51,7 @@ export default async function AgentRunsPage({ searchParams }: { searchParams: Ro
               {runs.map((run) => (
                 <tr key={run.session_id}>
                   <td><span className={styles.code}>{run.session_id}</span></td>
-                  <td>
-                    <StatePill state={run.status === 'SUCCEEDED' ? 'Published' : run.status === 'FAILED' ? 'Draft' : 'Review'} />
-                    {/* Using StatePill with mapped values as a placeholder for actual status styling */}
-                  </td>
+                  <td><span className={statusClass(String(run.status ?? 'UNKNOWN'))}>{String(run.status ?? 'UNKNOWN')}</span></td>
                   <td className={styles.muted}>{new Date(run.created_at).toLocaleString()}</td>
                   <td className={styles.muted}>{new Date(run.updated_at).toLocaleString()}</td>
                 </tr>
