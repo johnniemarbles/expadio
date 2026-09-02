@@ -132,10 +132,22 @@ export async function GET(request: Request) {
         entity_type: string;
         jurisdiction_country_code: string;
         status: string;
+        organization_ids: string[];
       }>(
         `SELECT DISTINCT legal_entity.legal_entity_id, legal_entity.legal_name,
                 legal_entity.entity_type, legal_entity.jurisdiction_country_code,
-                legal_entity.status
+                legal_entity.status,
+                ARRAY(
+                  SELECT DISTINCT binding.organization_id
+                    FROM platform.organization_legal_entity_bindings binding
+                   WHERE binding.tenant_id = legal_entity.tenant_id
+                     AND binding.legal_entity_id = legal_entity.legal_entity_id
+                     AND binding.organization_id = ANY($3::uuid[])
+                     AND binding.status = 'ACTIVE'
+                     AND binding.valid_from <= now()
+                     AND (binding.valid_until IS NULL OR binding.valid_until > now())
+                   ORDER BY binding.organization_id
+                ) AS organization_ids
            FROM platform.legal_entities legal_entity
           WHERE legal_entity.tenant_id = $1::uuid
             AND legal_entity.enterprise_id = $2::uuid
