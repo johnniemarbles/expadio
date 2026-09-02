@@ -6,6 +6,7 @@ import {
 } from '@expadio/postgres-runtime/learning-assessment';
 import { listLearningPrograms } from '@expadio/postgres-runtime/learning-program-certification';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
+import { AssessmentAuthoringPanel } from '../../../../components/AssessmentAuthoringPanel';
 import { LearningSectionAdminPanel } from '../../../../components/LearningSectionAdminPanel';
 import {
   hasLearningAdmin,
@@ -139,14 +140,19 @@ export default async function LearningSectionPage({ params }: { params: Promise<
             <section className={styles.panel}>
               <div className={styles.panelHead}><h2>Administration</h2><span className={styles.pill}>Tenant governed</span></div>
               <div className={styles.panelBody}>
-                <LearningSectionAdminPanel
-                  section={section as 'assessments' | 'programs' | 'skills' | 'assignments'}
-                  courseTargets={data.courseTargets}
-                  programTargets={data.programTargets}
-                  assessmentCourseTargets={data.assessmentCourseTargets}
-                  questionBanks={data.questionBanks}
-                  publishedQuestions={data.publishedQuestions}
-                />
+                {section === 'assessments' ? (
+                  <AssessmentAuthoringPanel
+                    courseVersions={data.assessmentCourseTargets}
+                    questionBanks={data.questionBanks}
+                    publishedQuestions={data.publishedQuestions}
+                  />
+                ) : (
+                  <LearningSectionAdminPanel
+                    section={section as 'programs' | 'skills' | 'assignments'}
+                    courseTargets={data.courseTargets}
+                    programTargets={data.programTargets}
+                  />
+                )}
               </div>
             </section>
           ) : null}
