@@ -7,9 +7,10 @@ import { requireCommunicationDomainAdmin } from '../../../../../../lib/communica
 
 /**
  * DNS verification for an existing email sender identity. Mutation authority is
- * scope-aware: tenant senders require communication-domain administration and
- * platform senders require Platform Administration. Provider-issued DKIM is
- * still a separate evidence gap and is not fabricated by this boundary.
+ * scope-aware: tenant and organization senders require communication-domain
+ * administration and platform senders require Platform Administration.
+ * Retired/suspended identities are never re-verified by this boundary.
+ * Provider-issued DKIM is still a separate evidence gap and is not fabricated.
  */
 
 export const runtime = 'nodejs';
@@ -117,16 +118,17 @@ export async function POST(
     const outcome = await withTenantTransaction(context, async (client) => {
       const senderResult = await client.query<{
         sender_id: string;
-        scope: 'PLATFORM' | 'TENANT';
+        scope: 'PLATFORM' | 'TENANT' | 'ORGANIZATION';
         address: string;
       }>(
         `SELECT sender_id, scope, address
            FROM platform.communication_sender_identities
           WHERE sender_id = $1::uuid
             AND channel = 'email'
+            AND status = 'ACTIVE'
             AND (
               scope = 'PLATFORM'
-              OR (scope = 'TENANT' AND tenant_id = $2::uuid)
+              OR (scope IN ('TENANT','ORGANIZATION') AND tenant_id = $2::uuid)
             )
           LIMIT 1`,
         [senderId, context.tenantId],
@@ -149,17 +151,20 @@ export async function POST(
       const allVerified = checks.length > 0 && checks.every((check) => check.ok);
       const nextStatus = allVerified ? 'VERIFIED' : 'PENDING';
 
-      await client.query(
+      const updated = await client.query(
         `UPDATE platform.communication_sender_identities
             SET verification_status = $2, updated_at = now()
           WHERE sender_id = $1::uuid
             AND channel = 'email'
+            AND status = 'ACTIVE'
             AND (
               (scope = 'PLATFORM' AND $4::boolean = true)
-              OR (scope = 'TENANT' AND tenant_id = $3::uuid)
-            )`,
+              OR (scope IN ('TENANT','ORGANIZATION') AND tenant_id = $3::uuid)
+            )
+          RETURNING sender_id`,
         [senderId, nextStatus, context.tenantId, sender.scope === 'PLATFORM'],
       );
+      if (updated.rows.length === 0) return { kind: 'NOT_FOUND' as const };
 
       return { kind: 'OK' as const, domain, verificationStatus: nextStatus, checks };
     });
@@ -177,7 +182,7 @@ export async function POST(
       );
     }
     if (outcome.kind === 'NOT_FOUND') {
-      return NextResponse.json({ error: 'That sending domain was not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'That active sending domain was not found.' }, { status: 404 });
     }
     return NextResponse.json({
       success: true,
