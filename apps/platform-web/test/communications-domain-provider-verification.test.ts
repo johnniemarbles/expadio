@@ -13,12 +13,20 @@ test('domain verification is admin gated, UUID validated, and cannot mutate plat
   assert.doesNotMatch(verify, /scope = 'PLATFORM' OR tenant_id/);
 });
 
-test('VERIFIED requires both live DNS and governed provider evidence', () => {
+test('VERIFIED requires both live DNS and governed provider evidence from production routing', () => {
   assert.match(verify, /const nextStatus = dnsVerified && provider\.ok \? 'VERIFIED' : 'PENDING'/);
+  assert.match(verify, /routePreparedCommunicationDispatch/);
+  assert.match(verify, /loadRoutingPolicy/);
+  assert.match(verify, /candidate\.connectorKey === routed\.connector\.connectorKey/);
   assert.match(verify, /governedResendApiTokenProvider/);
   assert.match(verify, /https:\/\/api\.resend\.com\/domains/);
   assert.match(verify, /sendingCapability === 'enabled'/);
   assert.match(verify, /providerStatus === 'verified'/);
+});
+
+test('unsupported production-routed email providers cannot produce fake VERIFIED state', () => {
+  assert.match(verify, /provider-side domain evidence is not implemented for that email provider yet/);
+  assert.match(verify, /ok: false/);
 });
 
 test('raw provider credentials are never sourced from environment or request input', () => {
