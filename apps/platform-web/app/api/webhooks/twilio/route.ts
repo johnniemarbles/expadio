@@ -9,6 +9,7 @@ import {
 import { createGovernedCredentialLeaseRuntime } from '@expadio/postgres-runtime/governed-credential-lease-runtime';
 import { dbPool } from '../../../../lib/iam-adapter';
 import { delegatedSecretResolver } from '../../../../lib/vault-secret-resolver';
+import { resolvePlatformSelfOrigin } from '../../../../lib/self-origin';
 import {
   ingestVerifiedCommunicationProviderWebhook,
   type CommunicationWebhookProviderKey,
@@ -37,14 +38,28 @@ function payloadRecord(rawBody: Uint8Array): Record<string, unknown> {
   return payload;
 }
 
+function publicWebhookUrl(request: Request): string {
+  const incoming = new URL(request.url);
+  const origin = resolvePlatformSelfOrigin({
+    railwayPublicDomain: process.env.RAILWAY_PUBLIC_DOMAIN,
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    host: request.headers.get('host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    fallbackPublicUrl: process.env.NEXT_PUBLIC_APP_URL,
+    nodeEnv: process.env.NODE_ENV,
+  });
+  if (origin === null) throw new Error('TWILIO_WEBHOOK_PUBLIC_ORIGIN_UNAVAILABLE');
+  return `${origin}${incoming.pathname}${incoming.search}`;
+}
+
 /**
  * Twilio provider webhook endpoint.
  *
  * Trust boundary:
  * - no browser/user session establishes trust;
  * - tenant + connector are explicit endpoint coordinates;
- * - X-Twilio-Signature is verified against the exact request URL and raw form
- *   payload before callback data may mutate delivery state;
+ * - X-Twilio-Signature is verified against the externally visible Platform URL
+ *   and exact raw form payload before callback data may mutate delivery state;
  * - the Twilio auth token is resolved through the governed credential lease
  *   boundary used by outbound execution, never directly from connector rows or
  *   process environment;
@@ -140,7 +155,7 @@ export async function POST(request: Request) {
         });
         return resolved.authToken;
       },
-      getWebhookUrl: () => request.url,
+      getWebhookUrl: () => publicWebhookUrl(request),
       now: () => receivedAt.toISOString(),
     });
 
