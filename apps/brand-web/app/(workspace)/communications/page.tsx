@@ -23,7 +23,7 @@ export default async function BrandCommunicationsPage() {
       <div>
         <p className={styles.eyebrow}>Brand workspace / Communications</p>
         <h1>Communications</h1>
-        <p>Business-facing delivery health and messaging readiness for {context.organizationName}. Provider credentials, routing controls and platform suppression governance remain Platform-owned.</p>
+        <p>Business-facing delivery health and messaging readiness for {context.organizationName}. Delivery infrastructure and platform suppression governance remain Platform-owned.</p>
       </div>
       <span className={styles.live}>Live snapshot · {new Date(overview.capturedAt).toLocaleString()}</span>
     </header>
@@ -45,7 +45,7 @@ export default async function BrandCommunicationsPage() {
           <div><dt>Pending senders</dt><dd>{overview.readiness.pendingSenders}</dd></div>
           <div><dt>Active suppressions</dt><dd>{overview.readiness.activeSuppressions}</dd></div>
         </dl>
-        <p className={styles.note}>Counts include Platform or tenant defaults where they are eligible for this organization; no provider credential or routing configuration is exposed here.</p>
+        <p className={styles.note}>Counts include Platform or tenant defaults where they are eligible for this organization; infrastructure configuration is not exposed here.</p>
       </article>
 
       <article className={styles.card}>
