@@ -31,6 +31,8 @@ interface ProvisionResult {
   cloudflare?: CloudflareResult[];
 }
 
+type RecordStatus = "VERIFIED" | "MISSING" | "NOT CHECKED" | "PROVIDER ISSUED";
+
 const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
 function errorMessage(cause: unknown, fallback: string) {
@@ -41,6 +43,24 @@ function verificationClass(status: string) {
   if (status === "VERIFIED") return styles.statusVerified;
   if (status === "REVOKED") return styles.statusRevoked;
   return styles.statusPending;
+}
+
+function recordStatusClass(status: RecordStatus) {
+  return status === "VERIFIED"
+    ? `${styles.recordStatus} ${styles.recordStatusVerified}`
+    : styles.recordStatus;
+}
+
+function recordStatus(
+  record: DomainRecord["dnsRecords"][number],
+  checks: VerifyCheck[] | undefined,
+): RecordStatus {
+  if (!record.verifiable) return "PROVIDER ISSUED";
+  const observation = checks?.find(
+    (check) => check.purpose === record.purpose && check.name === record.name,
+  );
+  if (!observation) return "NOT CHECKED";
+  return observation.ok ? "VERIFIED" : "MISSING";
 }
 
 export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.com" }: DomainConfigModalProps) {
@@ -225,13 +245,13 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
                     <thead><tr><th>Record Type</th><th>Host / Selector</th><th>Value</th><th>Verification</th></tr></thead>
                     <tbody>
                       {d.dnsRecords?.map((r, idx) => {
-                        const observation = verifyResults[d.senderId]?.find((check) => check.purpose === r.purpose && check.name === r.name);
+                        const status = recordStatus(r, verifyResults[d.senderId]);
                         return (
                           <tr key={idx}>
                             <td className={styles.recordType}><code>{r.type}</code></td>
                             <td className={styles.recordName}>{r.name}</td>
                             <td className={styles.recordValue}>{r.value}</td>
-                            <td>{observation ? (observation.ok ? "VERIFIED" : "MISSING") : (r.verifiable ? "NOT CHECKED" : "PROVIDER ISSUED")}</td>
+                            <td><span className={recordStatusClass(status)}>{status}</span></td>
                           </tr>
                         );
                       })}
