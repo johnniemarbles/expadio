@@ -97,20 +97,30 @@ test('a LEXFLOW-bound tenant is validated against the legal schema', async () =>
   }
 });
 
-test('a ACME Corp-bound tenant is validated against the dental schema', async () => {
+test('an ACME Corp-bound tenant is validated against its service schema', async () => {
   const p = pool();
   const c = await p.connect();
   try {
     const tenantId = await seedTenant(c, 'acme-corp');
 
-    // ACME Corp's own required field (urgency) governs this tenant's cases.
-    const missing = await bindResolveValidate(c, tenantId, { tooth: 'UR6' });
+    // ACME Corp's required service fields govern this tenant's cases.
+    const missing = await bindResolveValidate(c, tenantId, { referenceCode: 'SR-1' });
     assert.equal(missing.ok, false);
-    assert.match(missing.errors.join(' '), /Urgency is required/);
+    assert.match(missing.errors.join(' '), /Service type is required/);
+    assert.match(missing.errors.join(' '), /Priority is required/);
 
-    const good = await bindResolveValidate(c, tenantId, { tooth: 'UR6', urgency: 'Emergency' });
+    const good = await bindResolveValidate(c, tenantId, {
+      serviceType: 'Consulting',
+      priority: 'High',
+      referenceCode: ' SR-1 ',
+      junk: 'x',
+    });
     assert.equal(good.ok, true);
-    assert.deepEqual(good.attributes, { tooth: 'UR6', urgency: 'Emergency' });
+    assert.deepEqual(good.attributes, {
+      serviceType: 'Consulting',
+      priority: 'High',
+      referenceCode: 'SR-1',
+    });
   } finally {
     c.release();
     await p.end();
