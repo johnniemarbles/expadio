@@ -22,6 +22,13 @@ import {
   startMyAssessmentAttempt,
   submitMyAssessmentAttempt,
 } from '@expadio/postgres-runtime/learning-assessment';
+import {
+  createLearningCertification,
+  createLearningProgram,
+  createLearningProgramEnrollment,
+  publishLearningCertificationVersion,
+  publishLearningProgramVersion,
+} from '@expadio/postgres-runtime/learning-program-certification';
 
 function pool(): pg.Pool {
   return new pg.Pool({
@@ -176,6 +183,59 @@ test('required assessment gates course completion and assessment pass releases i
       correlationId: 'completion-policy-publish-assessment',
     }));
 
+    const program = await tx(c, () => createLearningProgram(c, {
+      tenantId,
+      actorSubjectId: 'learning-admin',
+      programKey: 'compliance.program',
+      draft: {
+        title: 'Compliance program',
+        description: 'Completion policy integration proof.',
+        items: [
+          {
+            type: 'COURSE',
+            courseVersionId: course.version.courseVersionId,
+            assessmentVersionId: null,
+            position: 1,
+            required: true,
+          },
+          {
+            type: 'ASSESSMENT',
+            courseVersionId: null,
+            assessmentVersionId: assessment.assessmentVersionId,
+            position: 2,
+            required: true,
+          },
+        ],
+      },
+    }));
+    await tx(c, () => publishLearningProgramVersion(c, {
+      tenantId,
+      programId: program.programId,
+      version: 1,
+      actorSubjectId: 'learning-admin',
+      correlationId: 'completion-policy-publish-program',
+    }));
+
+    const certification = await tx(c, () => createLearningCertification(c, {
+      tenantId,
+      actorSubjectId: 'learning-admin',
+      certificationKey: 'compliance.credential',
+      draft: {
+        title: 'Compliance credential',
+        description: 'Issued after authoritative completion.',
+        programVersionId: program.programVersionId,
+        validityDays: 365,
+        renewalWindowDays: 30,
+      },
+    }));
+    await tx(c, () => publishLearningCertificationVersion(c, {
+      tenantId,
+      certificationId: certification.certificationId,
+      version: 1,
+      actorSubjectId: 'learning-admin',
+      correlationId: 'completion-policy-publish-certification',
+    }));
+
     const learner = await tx(c, () => createLearningLearner(c, {
       tenantId,
       actorSubjectId: 'learning-admin',
@@ -195,6 +255,16 @@ test('required assessment gates course completion and assessment pass releases i
         courseId: course.courseId,
         sourceType: 'MANUAL',
       },
+    }));
+
+    const programAssigned = await tx(c, () => createLearningProgramEnrollment(c, {
+      tenantId,
+      actorSubjectId: 'learning-admin',
+      correlationId: 'completion-policy-program-enroll',
+      learnerId: learner.learnerId,
+      programId: program.programId,
+      assignmentKey: 'program:' + learner.learnerId,
+      sourceType: 'MANUAL',
     }));
 
     const lessonId = course.version.modules[0]?.lessons[0]?.lessonId;
@@ -257,6 +327,30 @@ test('required assessment gates course completion and assessment pass releases i
     assert.equal(transcript.length, 1);
     assert.equal(transcript[0]?.courseId, course.courseId);
 
+    const programState = await c.query<{
+      status: string;
+      completion_percent: string | number;
+    }>(
+      `SELECT status, completion_percent
+         FROM platform.learning_program_enrollments
+        WHERE tenant_id = $1::uuid
+          AND program_enrollment_id = $2::uuid`,
+      [tenantId, programAssigned.enrollment.programEnrollmentId],
+    );
+    assert.equal(programState.rows[0]?.status, 'COMPLETED');
+    assert.equal(Number(programState.rows[0]?.completion_percent), 100);
+
+    const credentials = await c.query<{ count: string | number }>(
+      `SELECT count(*) AS count
+         FROM platform.learning_credentials
+        WHERE tenant_id = $1::uuid
+          AND learner_id = $2::uuid
+          AND certification_id = $3::uuid
+          AND status = 'ACTIVE'`,
+      [tenantId, learner.learnerId, certification.certificationId],
+    );
+    assert.equal(Number(credentials.rows[0]?.count), 1);
+
     const events = await c.query<{ count: string | number }>(
       `SELECT count(*) AS count
          FROM platform.domain_events
@@ -266,6 +360,20 @@ test('required assessment gates course completion and assessment pass releases i
       [tenantId, assigned.enrollment.enrollmentId],
     );
     assert.equal(Number(events.rows[0]?.count), 1);
+
+    const downstreamEvents = await c.query<{ event_type: string; count: number }>(
+      `SELECT event_type, count(*)::int AS count
+         FROM platform.domain_events
+        WHERE tenant_id = $1::uuid
+          AND event_type IN ('learning.program.completed','learning.credential.issued')
+        GROUP BY event_type
+        ORDER BY event_type`,
+      [tenantId],
+    );
+    assert.deepEqual(downstreamEvents.rows, [
+      { event_type: 'learning.credential.issued', count: 1 },
+      { event_type: 'learning.program.completed', count: 1 },
+    ]);
   } finally {
     c.release();
     await p.end();
