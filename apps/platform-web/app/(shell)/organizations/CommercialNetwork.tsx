@@ -14,7 +14,7 @@ export interface CommercialNetworkData {
 }
 
 async function postCommercial(suffix:string,payload:Record<string,unknown>){
-  const response=await fetch('/api/enterprise/commercial'+suffix,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const response=await fetch('/api/enterprise/commercial'+suffix,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(payload)});
   const body=await response.json().catch(()=>({}));
   if(!response.ok || body?.denied===true) throw new Error(body?.message??body?.reasonKey??'Commercial action failed.');
   return body;
