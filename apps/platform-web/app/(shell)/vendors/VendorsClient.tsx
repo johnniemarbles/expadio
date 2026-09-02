@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import styles from '../workflows/page.module.css';
+import { useMemo, useState } from 'react';
+import { InlineErrorBanner } from '@expadio/ui';
+import styles from './VendorsClient.module.css';
 import { WorkflowTraceModal } from '../WorkflowTraceModal';
 
 /**
@@ -35,13 +36,11 @@ function apiError(data: unknown, fallback: string): string {
   return fallback;
 }
 
-const badge = (state: string): React.CSSProperties => {
-  const map: Record<string, string> = { ACTIVE: '#0f766e', PENDING: '#b45309', SUSPENDED: '#94a3b8', REJECTED: '#b91c1c' };
-  return { display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, color: '#fff', background: map[state] ?? '#64748b' };
-};
-
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
-const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: 'none', background: '#0f766e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
+function statusClass(status: string) {
+  if (status === 'ACTIVE') return `${styles.pill} ${styles.pillHealthy}`;
+  if (status === 'REJECTED' || status === 'SUSPENDED') return `${styles.pill} ${styles.pillCritical}`;
+  return `${styles.pill} ${styles.pillAttention}`;
+}
 
 export function VendorsClient({ initialVendors, queryString = '' }: { initialVendors: VendorRow[]; queryString?: string }) {
   const [vendors, setVendors] = useState<VendorRow[]>(initialVendors);
@@ -52,6 +51,13 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
   const [authHint, setAuthHint] = useState(false);
   const [wf, setWf] = useState<Record<string, WfState>>({});
   const [trace, setTrace] = useState<VendorRow | null>(null);
+
+  const metrics = useMemo(() => {
+    const active = vendors.filter((vendor) => vendor.status === 'ACTIVE').length;
+    const inWorkflow = vendors.filter((vendor) => vendor.workflowInstanceId !== null && vendor.status !== 'ACTIVE').length;
+    const approval = vendors.filter((vendor) => vendor.stageKey === 'APPROVAL').length;
+    return { total: vendors.length, active, inWorkflow, approval };
+  }, [vendors]);
 
   async function reload() {
     const res = await fetch(`/api/vendors${queryString}`);
@@ -168,65 +174,106 @@ export function VendorsClient({ initialVendors, queryString = '' }: { initialVen
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="vendors-title">
-      <div className={styles.panelHeading}>
-        <div><p className={styles.eyebrow}>Onboarding</p><h2 id="vendors-title">Vendors</h2></div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input style={inp} placeholder="Legal name" value={legalName} onChange={(e) => setLegalName(e.target.value)} aria-label="Vendor legal name" />
-          <input style={inp} placeholder="Tax ID (optional)" value={taxId} onChange={(e) => setTaxId(e.target.value)} aria-label="Vendor tax ID" />
-          <button style={btn} onClick={register} disabled={busy !== null || legalName.trim() === ''}>{busy === 'register' ? 'Registering…' : 'Register vendor'}</button>
+    <section className={styles.root} aria-labelledby="vendors-title">
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Decision Fabric vertical</p>
+          <h2 id="vendors-title" className={styles.title}>Vendors</h2>
+          <p className={styles.description}>
+            Register vendor subjects, start governed onboarding, assign the compliance screener, and activate approved vendors through the shared workflow engine.
+          </p>
         </div>
+      </header>
+
+      <div className={styles.grid} aria-label="Vendor onboarding health">
+        <article className={styles.card}><span className={styles.metricLabel}>Total vendors</span><strong className={styles.metricValue}>{metrics.total}</strong><span className={styles.metricDetail}>Registered in this tenant</span></article>
+        <article className={styles.card}><span className={styles.metricLabel}>In workflow</span><strong className={styles.metricValue}>{metrics.inWorkflow}</strong><span className={styles.metricDetail}>Awaiting screening or approval</span></article>
+        <article className={styles.card}><span className={styles.metricLabel}>Approval gate</span><strong className={styles.metricValue}>{metrics.approval}</strong><span className={styles.metricDetail}>Decision required</span></article>
+        <article className={styles.card}><span className={styles.metricLabel}>Active</span><strong className={styles.metricValue}>{metrics.active}</strong><span className={styles.metricDetail}>Ready for business use</span></article>
       </div>
+
+      <section className={styles.panel} aria-labelledby="vendor-register-title">
+        <div className={styles.panelHead}>
+          <div>
+            <p className={styles.eyebrow}>Onboarding intake</p>
+            <h3 id="vendor-register-title">Register vendor</h3>
+          </div>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.formGrid}>
+            <label className={styles.field}>
+              <span>Legal name</span>
+              <input placeholder="Legal name" value={legalName} onChange={(e) => setLegalName(e.target.value)} aria-label="Vendor legal name" />
+            </label>
+            <label className={styles.field}>
+              <span>Tax ID</span>
+              <input placeholder="Tax ID (optional)" value={taxId} onChange={(e) => setTaxId(e.target.value)} aria-label="Vendor tax ID" />
+            </label>
+          </div>
+          <div className={styles.actionRow}>
+            <button className={styles.button} onClick={register} disabled={busy !== null || legalName.trim() === ''}>{busy === 'register' ? 'Registering…' : 'Register vendor'}</button>
+          </div>
+        </div>
+      </section>
 
       {error && (
-        <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 12px' }}>
-          {error}
-          {authHint && <> · <a href={`/authority${queryString}`} style={{ color: '#0f766e', fontWeight: 600 }}>Grant approval authority →</a></>}
-        </p>
+        <InlineErrorBanner
+          title="Vendor action blocked"
+          message={error}
+          action={authHint ? { label: 'Grant approval authority', href: `/authority${queryString}` } : undefined}
+        />
       )}
 
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead><tr><th>Vendor</th><th>Status</th><th>Stage</th><th>Onboarding</th></tr></thead>
-          <tbody>
-            {vendors.map((v) => {
-              const stage = v.stageKey;
-              return (
-                <tr key={v.vendorId}>
-                  <td><strong>{v.legalName}</strong>{v.taxId ? <><br /><span className={styles.muted}>{v.taxId}</span></> : null}</td>
-                  <td><span style={badge(v.status)}>{v.status}</span></td>
-                  <td>{stage ?? <span className={styles.muted}>—</span>}</td>
-                  <td>
-                    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-                      {v.workflowInstanceId === null ? (
-                        <button style={btn} disabled={busy !== null} onClick={() => start(v.vendorId)}>Start onboarding</button>
-                      ) : stage === 'SUBMITTED' ? (
-                        <>
-                          <button style={{ ...btn, background: '#334155' }} disabled={busy !== null} onClick={() => assignScreener(v.vendorId)}>Assign screener</button>
-                          <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'SCREENING')}>Advance to screening</button>
-                        </>
-                      ) : stage === 'SCREENING' ? (
-                        <button style={btn} disabled={busy !== null} onClick={() => advance(v.vendorId, 'APPROVAL')}>Advance to approval</button>
-                      ) : stage === 'APPROVAL' ? (
-                        <>
-                          <button style={btn} disabled={busy !== null} onClick={() => approveAndActivate(v.vendorId)}>Approve &amp; activate</button>
-                          <button style={{ ...btn, background: '#b91c1c' }} disabled={busy !== null} onClick={() => reject(v.vendorId)}>Reject</button>
-                        </>
-                      ) : (
-                        <span className={styles.muted}>Onboarded</span>
-                      )}
-                      {v.workflowInstanceId !== null && (
-                        <button type="button" style={{ ...btn, background: 'transparent', color: 'var(--ink-600, #475569)', border: '1px solid var(--line, #cbd5e1)' }} onClick={() => setTrace(v)}>Trace</button>
-                      )}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {vendors.length === 0 && <p className={styles.muted} style={{ padding: 16 }}>No vendors yet. Register one to begin onboarding.</p>}
-      </div>
+      <section className={styles.panel} aria-labelledby="vendor-list-title">
+        <div className={styles.panelHead}>
+          <div>
+            <p className={styles.eyebrow}>Governed queue</p>
+            <h3 id="vendor-list-title">Vendor onboarding</h3>
+          </div>
+        </div>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead><tr><th>Vendor</th><th>Status</th><th>Stage</th><th>Onboarding</th></tr></thead>
+            <tbody>
+              {vendors.map((v) => {
+                const stage = v.stageKey;
+                return (
+                  <tr key={v.vendorId}>
+                    <td><strong>{v.legalName}</strong>{v.taxId ? <><br /><span className={styles.muted}>{v.taxId}</span></> : null}</td>
+                    <td><span className={statusClass(v.status)}>{v.status}</span></td>
+                    <td>{stage ?? <span className={styles.muted}>—</span>}</td>
+                    <td>
+                      <span className={styles.rowActions}>
+                        {v.workflowInstanceId === null ? (
+                          <button className={styles.button} disabled={busy !== null} onClick={() => start(v.vendorId)}>Start onboarding</button>
+                        ) : stage === 'SUBMITTED' ? (
+                          <>
+                            <button className={styles.secondaryButton} disabled={busy !== null} onClick={() => assignScreener(v.vendorId)}>Assign screener</button>
+                            <button className={styles.button} disabled={busy !== null} onClick={() => advance(v.vendorId, 'SCREENING')}>Advance to screening</button>
+                          </>
+                        ) : stage === 'SCREENING' ? (
+                          <button className={styles.button} disabled={busy !== null} onClick={() => advance(v.vendorId, 'APPROVAL')}>Advance to approval</button>
+                        ) : stage === 'APPROVAL' ? (
+                          <>
+                            <button className={styles.button} disabled={busy !== null} onClick={() => approveAndActivate(v.vendorId)}>Approve &amp; activate</button>
+                            <button className={styles.dangerButton} disabled={busy !== null} onClick={() => reject(v.vendorId)}>Reject</button>
+                          </>
+                        ) : (
+                          <span className={styles.muted}>Onboarded</span>
+                        )}
+                        {v.workflowInstanceId !== null && (
+                          <button type="button" className={styles.secondaryButton} onClick={() => setTrace(v)}>Trace</button>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {vendors.length === 0 && <p className={styles.empty}>No vendors yet. Register one to begin onboarding.</p>}
+        </div>
+      </section>
 
       {trace && (
         <WorkflowTraceModal
