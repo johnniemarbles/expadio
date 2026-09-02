@@ -308,9 +308,44 @@ export async function loadBrandEnterpriseView(
     organizationBindings: row.bindings ?? [],
   }));
 
-  const activeAgreements = agreements.rows.filter((row) => row.state === 'ACTIVE').length;
-  const activeAppointments = appointments.rows.filter((row) => row.state === 'ACTIVE').length;
-  const activeJurisdictions = jurisdictions.rows.filter((row) => row.state === 'ACTIVE').length;
+  const commercialCounts = await client.query<{
+    active_agreements: string | number;
+    active_appointments: string | number;
+    active_jurisdictions: string | number;
+  }>(
+    `SELECT
+       (
+         SELECT count(*)
+           FROM platform.enterprise_commercial_agreements agreement
+          WHERE agreement.tenant_id = $1::uuid
+            AND agreement.enterprise_id = $2::uuid
+            AND agreement.sponsoring_organization_id = ANY($3::uuid[])
+            AND agreement.state = 'ACTIVE'
+       ) AS active_agreements,
+       (
+         SELECT count(*)
+           FROM platform.enterprise_appointments appointment
+          WHERE appointment.tenant_id = $1::uuid
+            AND appointment.enterprise_id = $2::uuid
+            AND (
+              appointment.grantor_organization_id = ANY($3::uuid[])
+              OR appointment.beneficiary_organization_id = ANY($3::uuid[])
+            )
+            AND appointment.state = 'ACTIVE'
+       ) AS active_appointments,
+       (
+         SELECT count(*)
+           FROM platform.enterprise_jurisdiction_activations activation
+          WHERE activation.tenant_id = $1::uuid
+            AND activation.enterprise_id = $2::uuid
+            AND activation.organization_id = ANY($3::uuid[])
+            AND activation.state = 'ACTIVE'
+       ) AS active_jurisdictions`,
+    [context.tenantId, root.enterprise_id, accessibleOrganizationIds],
+  );
+  const activeAgreements = Number(commercialCounts.rows[0]?.active_agreements ?? 0);
+  const activeAppointments = Number(commercialCounts.rows[0]?.active_appointments ?? 0);
+  const activeJurisdictions = Number(commercialCounts.rows[0]?.active_jurisdictions ?? 0);
 
   return {
     enterpriseId: root.enterprise_id,
