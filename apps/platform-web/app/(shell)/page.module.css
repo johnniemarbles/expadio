@@ -3,16 +3,18 @@
 .pageHeading h1 { font-size:clamp(26px,3vw,35px); line-height:1.08; letter-spacing:-.035em; margin:0 0 8px; }
 .pageHeading p:last-child { margin:0; color:var(--ink-600); font-size:14px; line-height:1.5; }
 .metricGrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
-.dashboardGrid { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(285px,.75fr); gap:16px; margin-bottom:16px; }
+.dashboardGrid { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr); gap:16px; margin-bottom:16px; }
 .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); overflow:hidden; }
+.panelWide { grid-column:1 / -1; }
 .panelHeading { min-height:70px; padding:17px 19px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--line); }
 .panelHeading h2 { margin:0; font-size:16px; letter-spacing:-.012em; }
 .panelHeading .eyebrow { margin-bottom:5px; }
-.textButton { border:0; background:transparent; color:var(--brand); font-size:12px; font-weight:750; cursor:pointer; text-decoration:none; }
+.panelBody { padding:18px 20px; color:var(--ink-600); font-size:14px; line-height:1.55; }
+.textButton { border:0; background:transparent; color:var(--brand); font-size:12px; font-weight:750; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:color 0.15s ease; }
 .textButton:hover { color:var(--brand-dark); }
 .countBadge { min-width:26px; height:26px; border-radius:7px; background:var(--brand-soft); color:var(--brand-dark); display:grid; place-items:center; font-size:12px; font-weight:800; }
 .activityPanel { margin-bottom:16px; }
 .panelHeadingResponsive { align-items:stretch; flex-direction:column; }
-@media(max-width:1050px) { .metricGrid { grid-template-columns:repeat(2,1fr); } }
-@media(max-width:780px) { .pageHeading { align-items:stretch; flex-direction:column; } .dashboardGrid { grid-template-columns:1fr; } }
+@media(max-width:1050px) { .metricGrid { grid-template-columns:repeat(2,1fr); } .dashboardGrid { grid-template-columns:1fr; } .panelWide { grid-column:auto; } }
+@media(max-width:780px) { .pageHeading { align-items:stretch; flex-direction:column; } }
 @media(max-width:520px) { .metricGrid { grid-template-columns:1fr; } }
