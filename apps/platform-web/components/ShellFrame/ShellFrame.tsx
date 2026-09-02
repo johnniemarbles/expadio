@@ -7,6 +7,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
 
+function matchesSection(pathname: string, section: WorkspaceSection) {
+  return section.href === "/" ? pathname === "/" : pathname === section.href || pathname.startsWith(section.href + "/");
+}
+
+function sectionDepth(section: WorkspaceSection) {
+  return section.href === "/" ? 0 : section.href.split("/").filter(Boolean).length;
+}
+
 export function ShellFrame({ children, sections, overview, workspaceContext, brandAppOrigin }: { children: React.ReactNode; sections: WorkspaceSection[]; overview: PlatformOverview; workspaceContext: PlatformWorkspaceContext; brandAppOrigin: string | null; }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -25,7 +33,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   const allowedOrganizations = useMemo(() => currentAccount ? workspaceContext.organizations.filter((item) => currentAccount.allowedOrganizationIds.includes(item.id)) : [], [currentAccount, workspaceContext.organizations]);
   const currentOrganization = allowedOrganizations.find((item) => item.id === searchParams.get("org")) ?? allowedOrganizations[0] ?? overview.organization;
   const selectableOrganizations = allowedOrganizations.length > 0 ? allowedOrganizations : [currentOrganization];
-  const currentSection = sections.find((item) => item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/")) ?? sections[0];
+  const currentSection = [...sections].sort((a, b) => sectionDepth(b) - sectionDepth(a)).find((item) => matchesSection(pathname, item)) ?? sections[0];
   const brandHref = useMemo(() => {
     if (!brandAppOrigin || !currentAccount || !currentOrganization) return null;
     const url = new URL('/handoff', brandAppOrigin);
