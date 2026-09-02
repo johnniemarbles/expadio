@@ -107,6 +107,61 @@ export async function createEnterpriseCommercialAgreement(
   client: PoolClient,
   input: EnterpriseCommercialAgreementInput,
 ): Promise<{ readonly agreementId: string }> {
+  const title = input.title.trim();
+  const agreementNumber = input.agreementNumber?.trim() || null;
+  const governingCountry = input.governingLawCountryCode ?? null;
+  const governingSubdivision = input.governingLawSubdivisionCode ?? null;
+
+  const loadReplay = async () => client.query<{
+    readonly enterprise_commercial_agreement_id: string;
+    readonly enterprise_id: string;
+    readonly agreement_number: string | null;
+    readonly title: string;
+    readonly agreement_kind: string;
+    readonly grantor_legal_entity_id: string;
+    readonly grantee_legal_entity_id: string;
+    readonly sponsoring_organization_id: string;
+    readonly governing_law_country_code: string | null;
+    readonly governing_law_subdivision_code: string | null;
+  }>(
+    `SELECT enterprise_commercial_agreement_id, enterprise_id, agreement_number,
+            title, agreement_kind, grantor_legal_entity_id, grantee_legal_entity_id,
+            sponsoring_organization_id, governing_law_country_code,
+            governing_law_subdivision_code
+       FROM platform.enterprise_commercial_agreements
+      WHERE tenant_id = $1::uuid
+        AND idempotency_key = $2
+      LIMIT 1`,
+    [input.tenantId, input.idempotencyKey],
+  );
+
+  const replayMatches = (row: {
+    readonly enterprise_id: string;
+    readonly agreement_number: string | null;
+    readonly title: string;
+    readonly agreement_kind: string;
+    readonly grantor_legal_entity_id: string;
+    readonly grantee_legal_entity_id: string;
+    readonly sponsoring_organization_id: string;
+    readonly governing_law_country_code: string | null;
+    readonly governing_law_subdivision_code: string | null;
+  }) =>
+    row.enterprise_id === input.enterpriseId
+    && row.agreement_number === agreementNumber
+    && row.title === title
+    && row.agreement_kind === input.agreementKind
+    && row.grantor_legal_entity_id === input.grantorLegalEntityId
+    && row.grantee_legal_entity_id === input.granteeLegalEntityId
+    && row.sponsoring_organization_id === input.sponsoringOrganizationId
+    && row.governing_law_country_code === governingCountry
+    && row.governing_law_subdivision_code === governingSubdivision;
+
+  const existing = (await loadReplay()).rows[0];
+  if (existing) {
+    if (!replayMatches(existing)) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
+    return { agreementId: existing.enterprise_commercial_agreement_id };
+  }
+
   const grantor = await client.query(
     `SELECT 1 FROM platform.legal_entities
       WHERE tenant_id = $1::uuid AND enterprise_id = $2::uuid
@@ -131,7 +186,7 @@ export async function createEnterpriseCommercialAgreement(
   if (sponsor.rowCount !== 1) throw new Error('ENTERPRISE_COMMERCIAL_ACTIVE_SPONSOR_REQUIRED');
 
   const agreementId = randomUUID();
-  await client.query(
+  const inserted = await client.query<{ readonly enterprise_commercial_agreement_id: string }>(
     `INSERT INTO platform.enterprise_commercial_agreements (
        enterprise_commercial_agreement_id, tenant_id, enterprise_id,
        agreement_number, title, agreement_kind,
@@ -141,24 +196,32 @@ export async function createEnterpriseCommercialAgreement(
      ) VALUES (
        $1::uuid, $2::uuid, $3::uuid, $4, $5, $6,
        $7::uuid, $8::uuid, $9::uuid, $10, $11, $12, $13
-     )`,
+     )
+     ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+     RETURNING enterprise_commercial_agreement_id`,
     [
       agreementId,
       input.tenantId,
       input.enterpriseId,
-      input.agreementNumber?.trim() || null,
-      input.title.trim(),
+      agreementNumber,
+      title,
       input.agreementKind,
       input.grantorLegalEntityId,
       input.granteeLegalEntityId,
       input.sponsoringOrganizationId,
-      input.governingLawCountryCode ?? null,
-      input.governingLawSubdivisionCode ?? null,
+      governingCountry,
+      governingSubdivision,
       input.idempotencyKey,
       input.createdBySubjectId,
     ],
   );
-  return { agreementId };
+  const created = inserted.rows[0];
+  if (created) return { agreementId: created.enterprise_commercial_agreement_id };
+
+  const replay = (await loadReplay()).rows[0];
+  if (!replay) throw new Error('ENTERPRISE_COMMERCIAL_AGREEMENT_CREATE_FAILED');
+  if (!replayMatches(replay)) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
+  return { agreementId: replay.enterprise_commercial_agreement_id };
 }
 
 export async function approveAndActivateEnterpriseCommercialAgreement(
@@ -216,6 +279,81 @@ export async function createEnterpriseAppointment(
   client: PoolClient,
   input: EnterpriseAppointmentInput,
 ): Promise<{ readonly appointmentId: string; readonly workflowInstanceId: string }> {
+  const requestedRightTypes = [...input.requestedRightTypes];
+  const channelKeys = [...(input.channelKeys ?? [])];
+  const productKeys = [...(input.productKeys ?? [])];
+  const requestedTerritoryIds = [...new Set(input.territoryIds)].sort();
+  const effectiveFrom = input.effectiveFrom ?? null;
+  const effectiveUntil = input.effectiveUntil ?? null;
+
+  const replay = await client.query<{
+    readonly enterprise_appointment_id: string;
+    readonly enterprise_id: string;
+    readonly enterprise_commercial_agreement_id: string;
+    readonly grantor_organization_id: string;
+    readonly beneficiary_organization_id: string;
+    readonly beneficiary_legal_entity_id: string;
+    readonly appointment_kind: string;
+    readonly rights_profile_key: string;
+    readonly requested_right_types: readonly string[];
+    readonly exclusivity_key: string | null;
+    readonly delegation_requested: boolean;
+    readonly sub_appointment_requested: boolean;
+    readonly channel_keys: readonly string[];
+    readonly product_keys: readonly string[];
+    readonly effective_from: Date | string | null;
+    readonly effective_until: Date | string | null;
+    readonly workflow_instance_id: string | null;
+  }>(
+    `SELECT enterprise_appointment_id, enterprise_id,
+            enterprise_commercial_agreement_id, grantor_organization_id,
+            beneficiary_organization_id, beneficiary_legal_entity_id,
+            appointment_kind, rights_profile_key, requested_right_types,
+            exclusivity_key, delegation_requested, sub_appointment_requested,
+            channel_keys, product_keys, effective_from, effective_until,
+            workflow_instance_id
+       FROM platform.enterprise_appointments
+      WHERE tenant_id = $1::uuid
+        AND idempotency_key = $2
+      LIMIT 1`,
+    [input.tenantId, input.idempotencyKey],
+  );
+  const replayRow = replay.rows[0];
+  if (replayRow) {
+    const territoryReplay = await client.query<{ readonly territory_id: string }>(
+      `SELECT territory_id
+         FROM platform.enterprise_appointment_territories
+        WHERE tenant_id = $1::uuid
+          AND enterprise_appointment_id = $2::uuid
+        ORDER BY territory_id`,
+      [input.tenantId, replayRow.enterprise_appointment_id],
+    );
+    const same =
+      replayRow.enterprise_id === input.enterpriseId
+      && replayRow.enterprise_commercial_agreement_id === input.agreementId
+      && replayRow.grantor_organization_id === input.grantorOrganizationId
+      && replayRow.beneficiary_organization_id === input.beneficiaryOrganizationId
+      && replayRow.beneficiary_legal_entity_id === input.beneficiaryLegalEntityId
+      && replayRow.appointment_kind === input.appointmentKind
+      && replayRow.rights_profile_key === input.rightsProfileKey
+      && JSON.stringify([...replayRow.requested_right_types]) === JSON.stringify(requestedRightTypes)
+      && replayRow.exclusivity_key === (input.exclusivityKey?.trim() || null)
+      && replayRow.delegation_requested === (input.delegationRequested ?? false)
+      && replayRow.sub_appointment_requested === (input.subAppointmentRequested ?? false)
+      && JSON.stringify([...replayRow.channel_keys]) === JSON.stringify(channelKeys)
+      && JSON.stringify([...replayRow.product_keys]) === JSON.stringify(productKeys)
+      && (replayRow.effective_until === null ? null : iso(replayRow.effective_until)) ===
+         (effectiveUntil === null ? null : new Date(effectiveUntil).toISOString())
+      && JSON.stringify(territoryReplay.rows.map((row) => row.territory_id).sort()) ===
+         JSON.stringify(requestedTerritoryIds);
+    if (!same) throw new Error('ENTERPRISE_IDEMPOTENCY_KEY_CONFLICT');
+    if (!replayRow.workflow_instance_id) throw new Error('ENTERPRISE_APPOINTMENT_REPLAY_INCOMPLETE');
+    return {
+      appointmentId: replayRow.enterprise_appointment_id,
+      workflowInstanceId: replayRow.workflow_instance_id,
+    };
+  }
+
   const agreement = await client.query<{
     readonly sponsoring_organization_id: string;
     readonly grantee_legal_entity_id: string;
@@ -290,7 +428,7 @@ export async function createEnterpriseAppointment(
   }
 
   const appointmentId = randomUUID();
-  await client.query(
+  const inserted = await client.query<{ readonly enterprise_appointment_id: string }>(
     `INSERT INTO platform.enterprise_appointments (
        enterprise_appointment_id, tenant_id, enterprise_id,
        enterprise_commercial_agreement_id, grantor_organization_id,
@@ -304,7 +442,9 @@ export async function createEnterpriseAppointment(
        $6::uuid, $7::uuid, $8, $9, $10::text[],
        $11, $12, $13, $14::text[], $15::text[], 'SUBMITTED', $16,
        $17::timestamptz, $18::timestamptz, $19
-     )`,
+     )
+     ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+     RETURNING enterprise_appointment_id`,
     [
       appointmentId,
       input.tenantId,
@@ -327,6 +467,9 @@ export async function createEnterpriseAppointment(
       input.requestedBySubjectId,
     ],
   );
+  if (!inserted.rows[0]) {
+    return createEnterpriseAppointment(client, input);
+  }
   for (const territoryId of new Set(input.territoryIds)) {
     await client.query(
       `INSERT INTO platform.enterprise_appointment_territories (
