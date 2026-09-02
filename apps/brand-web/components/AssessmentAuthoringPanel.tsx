@@ -39,6 +39,8 @@ export function AssessmentAuthoringPanel({
   const router = useRouter();
 
   const [bankId, setBankId] = useState(questionBanks[0]?.id ?? '');
+  const [bankKey, setBankKey] = useState('');
+  const [bankName, setBankName] = useState('');
   const [questionKey, setQuestionKey] = useState('');
   const [prompt, setPrompt] = useState('');
   const [questionType, setQuestionType] = useState<'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE'>('SINGLE_CHOICE');
@@ -56,7 +58,7 @@ export function AssessmentAuthoringPanel({
   const [courseVersionId, setCourseVersionId] = useState(courseVersions[0]?.id ?? '');
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>(publishedQuestions[0] ? [publishedQuestions[0].id] : []);
 
-  const [busy, setBusy] = useState<'question' | 'assessment' | null>(null);
+  const [busy, setBusy] = useState<'bank' | 'question' | 'assessment' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -69,6 +71,30 @@ export function AssessmentAuthoringPanel({
     setSelectedQuestions((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
+  }
+
+  async function createQuestionBank(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy('bank');
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch('/api/learning/question-banks', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ bankKey, name: bankName }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? 'Question bank creation failed.');
+      setBankKey('');
+      setBankName('');
+      setNotice('Question bank created. Select it after the workspace refresh.');
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Question bank creation failed.');
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function createAndPublishQuestion(event: React.FormEvent) {
@@ -192,6 +218,14 @@ export function AssessmentAuthoringPanel({
 
   return (
     <div className="adminSplit">
+      <form className="learningForm" onSubmit={(event) => void createQuestionBank(event)}>
+        <h3 className="wide">Question bank</h3>
+        <label>Bank key<input value={bankKey} onChange={(event) => setBankKey(event.target.value.toLowerCase())} pattern="[a-z0-9]+([._-][a-z0-9]+)*" required /></label>
+        <label>Bank name<input value={bankName} onChange={(event) => setBankName(event.target.value)} required /></label>
+        <p className="wide">Reusable versioned question collection for this tenant academy.</p>
+        <div className="wide"><button type="submit" disabled={busy !== null}>{busy === 'bank' ? 'Creating…' : 'Create question bank'}</button></div>
+      </form>
+
       <form className="learningForm" onSubmit={(event) => void createAndPublishQuestion(event)}>
         <h3 className="wide">Question authoring</h3>
         <label>
