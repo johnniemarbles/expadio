@@ -40,6 +40,9 @@ export function LearningSectionAdminPanel({
   const [subjectRequired, setSubjectRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bankKey, setBankKey] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankBusy, setBankBusy] = useState(false);
 
   const targets = useMemo(
     () => targetType === 'COURSE' ? courseTargets : programTargets,
@@ -117,6 +120,28 @@ export function LearningSectionAdminPanel({
     }
   }
 
+  async function createQuestionBank(event: React.FormEvent) {
+    event.preventDefault();
+    setBankBusy(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/learning/question-banks', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ bankKey, name: bankName }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? 'Question bank creation failed.');
+      setBankKey('');
+      setBankName('');
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Question bank creation failed.');
+    } finally {
+      setBankBusy(false);
+    }
+  }
+
   const heading =
     section === 'assessments' ? 'Create assessment draft'
       : section === 'programs' ? 'Create program draft'
@@ -124,6 +149,7 @@ export function LearningSectionAdminPanel({
           : 'Create assignment rule';
 
   return (
+    <>
     <form className="learningForm" onSubmit={(event) => void submit(event)}>
       <h3 className="wide">{heading}</h3>
       <label>
@@ -175,5 +201,15 @@ export function LearningSectionAdminPanel({
       <div className="wide"><button type="submit" disabled={busy || (section === 'assignments' && !targetId)}>{busy ? 'Creating…' : 'Create draft'}</button></div>
       {error ? <div className="aiError wide" role="alert">{error}</div> : null}
     </form>
+    {section === 'assessments' ? (
+      <form className="learningForm" onSubmit={(event) => void createQuestionBank(event)}>
+        <h3 className="wide">Create question bank</h3>
+        <label>Bank key<input value={bankKey} onChange={(event) => setBankKey(event.target.value.toLowerCase())} pattern="[a-z0-9]+([._-][a-z0-9]+)*" required /></label>
+        <label>Bank name<input value={bankName} onChange={(event) => setBankName(event.target.value)} required /></label>
+        <p className="wide">Question banks are reusable across assessments. Questions remain versioned and must be published before an assessment can pin them.</p>
+        <div className="wide"><button type="submit" disabled={bankBusy}>{bankBusy ? 'Creating…' : 'Create question bank'}</button></div>
+      </form>
+    ) : null}
+    </>
   );
 }
