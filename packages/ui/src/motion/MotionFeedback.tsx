@@ -3,7 +3,7 @@ import styles from './MotionFeedback.module.css';
 
 export type MotionFeedbackTone = 'info' | 'success' | 'warning' | 'danger';
 
-export interface MotionFeedbackProps extends HTMLAttributes<HTMLDivElement> {
+export interface MotionFeedbackProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   tone?: MotionFeedbackTone;
   title: ReactNode;
   children?: ReactNode;
