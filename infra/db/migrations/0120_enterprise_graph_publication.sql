@@ -274,7 +274,7 @@ BEGIN
     );
   END LOOP;
 END;
-$;
+$$;
 
 COMMENT ON FUNCTION platform.create_governed_entity_relationship IS
   'Creates or idempotently reuses a catalog-validated, registry-anchored, effective-dated relationship with advisory-lock cardinality enforcement.';
