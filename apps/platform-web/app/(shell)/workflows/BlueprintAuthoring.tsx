@@ -83,7 +83,7 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
               key={b.blueprintKey}
               onClick={() => clone(b.blueprintKey)}
               disabled={busy !== null}
-              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--line, #cbd5e1)', background: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
             >
               {busy === `clone:${b.blueprintKey}` ? 'Cloning…' : `Customize "${b.blueprintKey}"`}
             </button>
