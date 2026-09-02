@@ -139,6 +139,7 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       sponsoringOrganizationId: rootOrganizationId,
       governingLawCountryCode: 'CA',
       createdBySubjectId: 'commercial-maker',
+      idempotencyKey: 'agreement-dist-ca-001',
     });
     await approveAndActivateEnterpriseCommercialAgreement(c, {
       tenantId,
@@ -159,6 +160,7 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       requestedRightTypes: ['SELL', 'DISTRIBUTE'],
       territoryIds: [territoryId],
       requestedBySubjectId: 'commercial-maker',
+      idempotencyKey: 'appointment-dist-ca-001',
     });
 
     await moveEnterpriseAppointmentToReview(c, {
@@ -215,6 +217,7 @@ test('commercial appointment -> rights -> verified jurisdiction activation is go
       territoryId,
       requestedBySubjectId: 'commercial-approver',
       evidenceRefs: ['request:jurisdiction:canada'],
+      idempotencyKey: 'jurisdiction-dist-ca-001',
     });
 
     await assert.rejects(
