@@ -96,12 +96,12 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
       </div>
 
       {error ? (
-        <div role="alert" style={{ padding: 10, borderRadius: 8, background: "#fef2f2", color: "#991b1b", marginBottom: 12 }}>
+        <div role="alert" style={{ padding: 10, borderRadius: 8, background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", color: "var(--theme-danger)", marginBottom: 12 }}>
           {error}
         </div>
       ) : null}
       {notice ? (
-        <div style={{ padding: 10, borderRadius: 8, background: "#f0fdf4", color: "var(--theme-success)", marginBottom: 12 }}>
+        <div style={{ padding: 10, borderRadius: 8, background: "color-mix(in srgb,var(--theme-success) 10%,transparent)", color: "var(--theme-success)", marginBottom: 12 }}>
           {notice}
         </div>
       ) : null}
@@ -145,7 +145,7 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
                         borderRadius: 8,
                         padding: "7px 10px",
                         background: "#7c3aed",
-                        color: "#fff",
+                        color: "var(--theme-text-inverse)",
                         fontWeight: 800,
                         cursor: busy ? "not-allowed" : "pointer",
                       }}
