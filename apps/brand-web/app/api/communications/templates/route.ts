@@ -69,20 +69,30 @@ export async function POST(request: Request) {
       if (!await hasBrandGovernanceForOrganization(client, context.subjectId, context.organizationId)) {
         return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Brand communication administration is required.' }, { status: 403 });
       }
-      const nextVersion = await client.query<{ version: number }>(
-        `SELECT COALESCE(MAX(version), 0)::int + 1 AS version
-           FROM platform.communication_templates
-          WHERE tenant_id = $1::uuid AND organization_id = $2::uuid
-            AND scope = 'ORGANIZATION' AND trigger_key = $3 AND channel = $4 AND lower(locale) = lower($5)`,
+
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtextextended(concat_ws(':', $1, $2, $3, $4, lower($5)), 0))`,
         [context.tenantId, context.organizationId, triggerKey, channel, locale],
       );
+      const current = await client.query<{ template_id: string; version: number }>(
+        `SELECT template_id, version
+           FROM platform.communication_templates
+          WHERE tenant_id = $1::uuid AND organization_id = $2::uuid
+            AND scope = 'ORGANIZATION' AND trigger_key = $3 AND channel = $4 AND lower(locale) = lower($5)
+          ORDER BY version DESC
+          LIMIT 1`,
+        [context.tenantId, context.organizationId, triggerKey, channel, locale],
+      );
+      const templateId = current.rows[0]?.template_id ?? null;
+      const nextVersion = (current.rows[0]?.version ?? 0) + 1;
+
       const inserted = await client.query(
         `INSERT INTO platform.communication_templates
-          (version, scope, tenant_id, organization_id, trigger_key, channel, locale, content_format,
+          (template_id, version, scope, tenant_id, organization_id, trigger_key, channel, locale, content_format,
            subject, title, body, required_variables, default_variables, status)
-         VALUES ($1, 'ORGANIZATION', $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, 'DRAFT')
+         VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, 'ORGANIZATION', $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, 'DRAFT')
          RETURNING template_id, version, trigger_key, channel, locale, content_format, subject, title, status, created_at`,
-        [nextVersion.rows[0]?.version ?? 1, context.tenantId, context.organizationId, triggerKey, channel, locale,
+        [templateId, nextVersion, context.tenantId, context.organizationId, triggerKey, channel, locale,
          contentFormat, subject, title, templateBody, JSON.stringify(requiredVariables), JSON.stringify(defaultVariables)],
       );
       return NextResponse.json({ success: true, template: inserted.rows[0] }, { status: 201 });
