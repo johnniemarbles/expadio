@@ -15,9 +15,17 @@ const REASONS: readonly CommunicationSuppressionReason[] = [
 ];
 const CHANNELS: readonly CommunicationChannel[] = ['email', 'sms', 'whatsapp', 'voice', 'push', 'rcs'];
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const context = await resolveBrandContext();
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status')?.trim().toUpperCase() ?? 'ACTIVE';
+    const page = Math.max(Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1, 1);
+    const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get('limit') ?? '100', 10) || 100, 1), 250);
+    if (!['ACTIVE', 'REVOKED', 'ALL'].includes(status)) {
+      return NextResponse.json({ error: 'Unsupported suppression status filter.' }, { status: 400 });
+    }
+
     return await withBrandTransaction(context, async (client) => {
       const result = await client.query(
         `SELECT suppression_id, recipient_key, channel, reason, status,
@@ -25,21 +33,29 @@ export async function GET() {
            FROM platform.communication_suppressions
           WHERE tenant_id = $1::uuid
             AND organization_id = $2::uuid
-          ORDER BY recorded_at DESC
-          LIMIT 250`,
-        [context.tenantId, context.organizationId],
+            AND ($3::text = 'ALL' OR status = $3)
+          ORDER BY recorded_at DESC, suppression_id DESC
+          LIMIT $4 OFFSET $5`,
+        [context.tenantId, context.organizationId, status, limit + 1, (page - 1) * limit],
       );
-      return NextResponse.json(result.rows.map((row) => ({
-        suppressionId: row.suppression_id,
-        recipientKey: row.recipient_key,
-        channel: row.channel,
-        reason: row.reason,
-        status: row.status,
-        sourceMessageId: row.source_message_id,
-        recordedAt: new Date(row.recorded_at).toISOString(),
-        validUntil: row.valid_until ? new Date(row.valid_until).toISOString() : null,
-        revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
-      })));
+      const hasMore = result.rows.length > limit;
+      const rows = result.rows.slice(0, limit);
+      return NextResponse.json({
+        items: rows.map((row) => ({
+          suppressionId: row.suppression_id,
+          recipientKey: row.recipient_key,
+          channel: row.channel,
+          reason: row.reason,
+          status: row.status,
+          sourceMessageId: row.source_message_id,
+          recordedAt: new Date(row.recorded_at).toISOString(),
+          validUntil: row.valid_until ? new Date(row.valid_until).toISOString() : null,
+          revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
+        })),
+        page,
+        limit,
+        hasMore,
+      });
     });
   } catch (error) {
     console.error('Brand suppression read failed:', error);
