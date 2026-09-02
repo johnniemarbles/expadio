@@ -65,7 +65,8 @@
     "./enterprise-profile": "./src/enterprise-profile.ts",
     "./enterprise-onboarding": "./src/enterprise-onboarding.ts",
     "./enterprise-legal": "./src/enterprise-legal.ts",
-    "./enterprise-commercial": "./src/enterprise-commercial.ts"
+    "./enterprise-commercial": "./src/enterprise-commercial.ts",
+    "./entity-graph": "./src/entity-graph.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",
