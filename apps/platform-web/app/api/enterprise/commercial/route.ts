@@ -83,7 +83,7 @@ export async function GET(request: Request) {
           WHERE tenant_id = $1::uuid
             AND organization_id = $2::uuid
           LIMIT 1`,
-        [context.tenantId, organizationId],
+        [context.tenantId, context.organizationId],
       );
       const enterpriseId = enterprise.rows[0]?.enterprise_id;
       if (!enterpriseId) throw new Error('ENTERPRISE_CONTEXT_REQUIRED');
@@ -237,8 +237,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
-    if (!organizationId) throw new Error('ORGANIZATION_CONTEXT_REQUIRED');
-    const organizationId = organizationId;
+    if (!context.organizationId) throw new Error('ORGANIZATION_CONTEXT_REQUIRED');
+    const organizationId = context.organizationId;
     const body = await request.json() as Record<string, unknown>;
     const action = requiredString(body.action, 'action');
 
