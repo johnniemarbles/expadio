@@ -47,11 +47,11 @@ const KIND_TONE: Record<string, { fg: string; bg: string }> = {
   DOMAIN_EVENT: { fg: "#1d4ed8", bg: "#dbeafe" },
   DOMAIN_EVENT_OUTBOX: { fg: "#3730a3", bg: "#e0e7ff" },
   GOVERNED_ACTION: { fg: "#7c2d12", bg: "#ffedd5" },
-  GOVERNED_ACTION_ATTEMPT: { fg: "#854d0e", bg: "#fef3c7" },
+  GOVERNED_ACTION_ATTEMPT: { fg: "#854d0e", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
   SCHEDULED_ACTION: { fg: "#6d28d9", bg: "#ede9fe" },
-  COMMUNICATION_DELIVERY: { fg: "var(--theme-success)", bg: "#dcfce7" },
-  COMMUNICATION_PROVIDER_ATTEMPT: { fg: "var(--theme-primary)", bg: "#ccfbf1" },
-  OPERATIONAL_TASK: { fg: "#334155", bg: "#f1f5f9" },
+  COMMUNICATION_DELIVERY: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
+  COMMUNICATION_PROVIDER_ATTEMPT: { fg: "var(--theme-primary)", bg: "color-mix(in srgb,var(--theme-primary) 12%,transparent)" },
+  OPERATIONAL_TASK: { fg: "#334155", bg: "var(--theme-surface-muted)" },
 };
 
 function appendQuery(base: string, queryString: string): string {
@@ -153,7 +153,7 @@ export function BusinessExecutionTracePanel({ queryString = "" }: BusinessExecut
         </span>
       </div>
 
-      {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "#fef2f2", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
+      {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
 
       {entries.length > 0 ? (
         <div className={styles.tableWrap}>
@@ -197,10 +197,10 @@ export function BusinessExecutionTracePanel({ queryString = "" }: BusinessExecut
 
       {selected && (
         <div role="presentation" onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(860px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, #fff)", border: "1px solid var(--line, #e2e8f0)", borderRadius: 16, padding: 28 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(860px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", border: "1px solid var(--line, #e2e8f0)", borderRadius: 16, padding: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 16 }}>
               <div>
-                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--brand, #4f46e5)" }}>Execution trace step</span>
+                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--brand, var(--theme-primary))" }}>Execution trace step</span>
                 <h2 style={{ margin: "4px 0 0", fontSize: 18, fontFamily: "monospace" }}>{selected.traceId}</h2>
                 <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>
                   {selected.traceKind} · root {shortId(selected.rootEventId)} · corr {shortId(selected.correlationId)}
@@ -226,7 +226,7 @@ export function BusinessExecutionTracePanel({ queryString = "" }: BusinessExecut
             <div>
               <strong style={{ fontSize: 13 }}>Metadata</strong>
               <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)", margin: "4px 0 8px" }}>{compactMetadata(selected.metadata)}</div>
-              <pre style={{ overflowX: "auto", background: "#0f172a", color: "#e2e8f0", padding: 14, borderRadius: 12, fontSize: 12, lineHeight: 1.5 }}>{JSON.stringify(selected.metadata, null, 2)}</pre>
+              <pre style={{ overflowX: "auto", background: "var(--theme-text-primary)", color: "#e2e8f0", padding: 14, borderRadius: 12, fontSize: 12, lineHeight: 1.5 }}>{JSON.stringify(selected.metadata, null, 2)}</pre>
             </div>
           </div>
         </div>
