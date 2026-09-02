@@ -1057,6 +1057,60 @@ export async function reconcileLearningProgramEnrollment(
   };
 }
 
+export async function reconcileLearningProgramsForEvidence(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly learnerId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+    readonly courseVersionId?: string;
+    readonly assessmentVersionId?: string;
+  },
+): Promise<readonly LearningProgramReconciliation[]> {
+  await requireLearning(client, input.tenantId);
+  stableUuid(input.learnerId, 'learner_id');
+  const courseVersionId = input.courseVersionId === undefined
+    ? null
+    : stableUuid(input.courseVersionId, 'course_version_id');
+  const assessmentVersionId = input.assessmentVersionId === undefined
+    ? null
+    : stableUuid(input.assessmentVersionId, 'assessment_version_id');
+  if (courseVersionId === null && assessmentVersionId === null) {
+    throw new Error('LEARNING_PROGRAM_EVIDENCE_REQUIRED');
+  }
+
+  const affected = await client.query<{ readonly program_enrollment_id: string }>(
+    `SELECT DISTINCT enrollment.program_enrollment_id
+       FROM platform.learning_program_enrollments enrollment
+       JOIN platform.learning_program_items item
+         ON item.program_version_id = enrollment.program_version_id
+        AND item.tenant_id = enrollment.tenant_id
+      WHERE enrollment.tenant_id = $1::uuid
+        AND enrollment.learner_id = $2::uuid
+        AND enrollment.status <> 'CANCELLED'
+        AND (
+          ($3::uuid IS NOT NULL AND item.course_version_id = $3::uuid)
+          OR
+          ($4::uuid IS NOT NULL AND item.assessment_version_id = $4::uuid)
+        )
+      ORDER BY enrollment.program_enrollment_id`,
+    [input.tenantId, input.learnerId, courseVersionId, assessmentVersionId],
+  );
+
+  const reconciled: LearningProgramReconciliation[] = [];
+  for (const row of affected.rows) {
+    reconciled.push(await reconcileLearningProgramEnrollment(client, {
+      tenantId: input.tenantId,
+      programEnrollmentId: row.program_enrollment_id,
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      expectedLearnerId: input.learnerId,
+    }));
+  }
+  return reconciled;
+}
+
 async function issueEligibleCredentials(
   client: PostgresClient,
   input: {
