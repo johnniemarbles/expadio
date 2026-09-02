@@ -22,10 +22,16 @@ test('Twilio webhook route uses explicit tenancy and governed credential resolut
   assert.doesNotMatch(route, /00000000-0000-0000-0000-000000000001/);
 });
 
-test('Twilio webhook route verifies exact raw callback before canonical lifecycle ingestion', () => {
+test('Twilio webhook route verifies raw callback against the externally visible Platform URL', () => {
   assert.match(route, /request\.arrayBuffer\(\)/);
   assert.match(route, /x-twilio-signature/);
-  assert.match(route, /getWebhookUrl:\s*\(\)\s*=>\s*request\.url/);
+  assert.match(route, /resolvePlatformSelfOrigin/);
+  assert.match(route, /RAILWAY_PUBLIC_DOMAIN/);
+  assert.match(route, /x-forwarded-host/);
+  assert.match(route, /x-forwarded-proto/);
+  assert.match(route, /incoming\.pathname/);
+  assert.match(route, /incoming\.search/);
+  assert.match(route, /getWebhookUrl:\s*\(\)\s*=>\s*publicWebhookUrl\(request\)/);
   assert.match(route, /TwilioWebhookNormalizer/);
   assert.match(route, /normalized\.verified/);
   assert.match(route, /ingestVerifiedCommunicationProviderWebhook/);
