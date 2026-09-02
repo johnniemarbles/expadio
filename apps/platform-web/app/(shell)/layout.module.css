@@ -28,7 +28,7 @@
 .accountCard strong,.accountCard small { display:block; }
 .accountCard strong { font-size:12px; }
 .accountCard small { color:var(--theme-text-secondary); font-size:11px; margin-top:3px; }
-.accountMenu { position:absolute; left:0; right:0; bottom:calc(100% + 8px); z-index:50; padding:8px; border:1px solid color-mix(in srgb,var(--theme-text-primary) 14%,transparent); border-radius:11px; background:var(--theme-surface-raised); box-shadow:var(--theme-shadow-elevated); }
+.accountMenu { position:absolute; left:0; right:0; bottom:calc(100% + 8px); z-index:50; padding:8px; border:1px solid color-mix(in srgb,var(--theme-text-primary) 14%,transparent); border-radius:11px; background:var(--theme-surface-raised); box-shadow:var(--theme-shadow-elevated); max-height:min(340px, 80vh); overflow-y:auto; }
 .accountMenu>p { margin:4px 6px 8px; color:var(--theme-text-muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
 .accountMenu>button { width:100%; min-height:48px; padding:7px; border:0; border-radius:8px; display:flex; align-items:center; gap:9px; color:var(--theme-text-primary); background:transparent; text-align:left; cursor:pointer; }
 .accountMenu>button:hover,.accountMenu>button[aria-current="true"] { background:var(--theme-navigation-active); }
@@ -44,8 +44,9 @@
 .audiencePills { display:inline-flex; align-items:center; background:var(--theme-surface-muted); padding:3px; border-radius:999px; border:1px solid var(--line); gap:2px; }
 .audiencePill { padding:5px 12px; border-radius:999px; font-size:12px; font-weight:600; color:var(--ink-600); text-decoration:none; border:0; background:transparent; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
 .audiencePillActive { background:var(--theme-surface); color:var(--theme-text-primary); font-weight:700; box-shadow:var(--theme-shadow-subtle); }
-.searchBar { display:flex; align-items:center; gap:8px; background:var(--theme-surface); border:1px solid var(--line); border-radius:999px; padding:6px 14px; min-width:220px; }
-.searchInput { border:0; background:transparent; font-size:12px; color:var(--ink-800); outline:none; width:100%; }
+.searchBar { display:flex; align-items:center; gap:8px; background:var(--theme-surface); border:1px solid var(--line); border-radius:999px; padding:6px 14px; min-width:220px; cursor:pointer; text-align:left; transition:border-color 0.15s ease, box-shadow 0.15s ease; }
+.searchBar:hover { border-color:var(--theme-primary, var(--brand)); box-shadow:var(--theme-shadow-subtle); }
+.searchInput { border:0; background:transparent; font-size:12px; color:var(--ink-500); width:100%; user-select:none; }
 .searchKbd { padding:2px 5px; border-radius:4px; background:var(--theme-surface-muted); color:var(--theme-text-muted); font-size:10px; font-weight:700; border:1px solid var(--theme-border); white-space:nowrap; }
 .themeToggle { display:inline-flex; align-items:center; background:var(--theme-surface-muted); padding:3px; border-radius:999px; border:1px solid var(--line); gap:2px; }
 .themeBtn { padding:4px 9px; border-radius:999px; font-size:11px; font-weight:600; color:var(--ink-500); border:0; background:transparent; cursor:pointer; display:inline-flex; align-items:center; gap:4px; }

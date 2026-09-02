@@ -6,6 +6,7 @@ import { UserButton } from "@clerk/nextjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../../app/(shell)/layout.module.css";
 import type { PlatformOverview, PlatformWorkspaceContext, WorkspaceSection } from "../../lib/contracts";
+import { CommandPalette } from "./CommandPalette";
 
 const GROUP_ORDER = new Map([
   ["Workspace", 0],
@@ -38,6 +39,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLButtonElement>(null);
@@ -78,7 +80,19 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
     setMobileOpen(false);
     setAccountOpen(false);
     setNotificationsOpen(false);
+    setCommandOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -199,17 +213,19 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
           </button>
         </div>
 
-        {/* Global Search */}
-        <div className={styles.searchBar}>
+        {/* Global Search Button */}
+        <button
+          type="button"
+          className={styles.searchBar}
+          onClick={() => setCommandOpen(true)}
+          aria-label="Open command palette (Cmd+K)"
+        >
           <span style={{ fontSize: '13px', color: 'var(--ink-400)' }}>🔍</span>
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder="Search fleet &amp; connectors..."
-            readOnly
-          />
+          <span className={styles.searchInput} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            Quick jump or search...
+          </span>
           <span className={styles.searchKbd}>⌘K</span>
-        </div>
+        </button>
 
         <div className={styles.topbarActions}>
           <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{selectableOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
@@ -221,6 +237,12 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
         </div>
       </header>
       <div className={styles.content}>{children}</div>
+      <CommandPalette
+        isOpen={commandOpen}
+        onClose={() => setCommandOpen(false)}
+        sections={sections}
+        contextQuery={currentOrganization ? "?org=" + encodeURIComponent(currentOrganization.id) : ""}
+      />
     </main>
   </div>;
 }
