@@ -7,7 +7,7 @@
   text-align: center;
   background-color: var(--theme-surface-soft, var(--theme-surface-muted, rgba(0, 0, 0, 0.02)));
   border-radius: var(--theme-card-radius, 12px);
-  border: 1px dashed var(--theme-border, var(--line));
+  border: 1px dashed var(--theme-border, var(--theme-border));
 }
 
 .iconWrapper {
@@ -17,9 +17,9 @@
   display: grid;
   place-items: center;
   font-size: 20px;
-  color: var(--theme-text-muted, var(--ink-500));
-  background: var(--theme-surface, var(--canvas));
-  border: 1px solid var(--theme-border, var(--line));
+  color: var(--theme-text-muted, var(--theme-text-muted));
+  background: var(--theme-surface, var(--theme-canvas));
+  border: 1px solid var(--theme-border, var(--theme-border));
   margin-bottom: 14px;
 }
 
@@ -33,7 +33,7 @@
 
 .description {
   font-size: 13.5px;
-  color: var(--theme-text-secondary, var(--ink-600));
+  color: var(--theme-text-secondary, var(--theme-text-secondary));
   margin: 0 0 16px 0;
   max-width: 420px;
   line-height: 1.5;
@@ -53,7 +53,7 @@
   min-height: 36px;
   padding: 0 16px;
   border-radius: var(--theme-control-radius, 8px);
-  background: var(--theme-primary, var(--brand));
+  background: var(--theme-primary, var(--theme-primary));
   color: var(--theme-text-inverse, #fff);
   font-size: 13px;
   font-weight: 600;
@@ -74,9 +74,9 @@
   min-height: 36px;
   padding: 0 14px;
   border-radius: var(--theme-control-radius, 8px);
-  background: var(--theme-surface, var(--canvas));
-  color: var(--theme-text-primary, var(--ink-800));
-  border: 1px solid var(--theme-border, var(--line));
+  background: var(--theme-surface, var(--theme-canvas));
+  color: var(--theme-text-primary, var(--theme-text-primary));
+  border: 1px solid var(--theme-border, var(--theme-border));
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
