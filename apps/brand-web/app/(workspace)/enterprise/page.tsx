@@ -29,7 +29,10 @@ export default async function BrandEnterprisePage() {
             commercial authority, and jurisdiction permission.
           </p>
         </div>
-        <Link className={styles.secondaryButton} href="/">Back to dashboard</Link>
+        <div className={styles.appActions}>
+          <Link className={styles.button} href="/enterprise/onboard">Onboard organization</Link>
+          <Link className={styles.secondaryButton} href="/">Back to dashboard</Link>
+        </div>
       </section>
 
       <section className={styles.grid}>
@@ -94,15 +97,19 @@ export default async function BrandEnterprisePage() {
                       : null}
                   </td>
                   <td>
-                    {organization.setupState === 'READY_FOR_ACTIVATION'
-                      && organization.setupPlanId
-                      && organization.organizationId !== enterprise.selectedOrganizationId
-                      ? (
-                        <BrandActivateOrganizationButton
-                          setupPlanId={organization.setupPlanId}
-                          organizationName={organization.name}
-                        />
-                      )
+                    {organization.setupPlanId && organization.organizationId !== enterprise.selectedOrganizationId
+                      ? organization.setupState === 'READY_FOR_ACTIVATION'
+                        ? (
+                          <BrandActivateOrganizationButton
+                            setupPlanId={organization.setupPlanId}
+                            organizationName={organization.name}
+                          />
+                        )
+                        : (
+                          <Link className={styles.secondaryButton} href={'/enterprise/onboard/' + organization.setupPlanId}>
+                            Continue setup
+                          </Link>
+                        )
                       : '—'}
                   </td>
                 </tr>
