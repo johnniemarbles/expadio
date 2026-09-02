@@ -19,11 +19,11 @@ const OUTCOMES: TraceOutcome[] = ["SENT", "QUEUED", "REFUSED", "THROTTLED", "SUP
 const OUTCOME_TONE: Record<string, { fg: string; bg: string }> = {
   SENT: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
   QUEUED: { fg: "#3730a3", bg: "#e0e7ff" },
-  REFUSED: { fg: "var(--theme-danger)", bg: "#fee2e2" },
+  REFUSED: { fg: "var(--theme-danger)", bg: "color-mix(in srgb,var(--theme-danger) 12%,transparent)" },
   THROTTLED: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
   SUPPRESSED: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
   CANCELLED: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },
-  FAILED: { fg: "var(--theme-danger)", bg: "#fee2e2" },
+  FAILED: { fg: "var(--theme-danger)", bg: "color-mix(in srgb,var(--theme-danger) 12%,transparent)" },
 };
 
 const VERDICT_TONE: Record<string, string> = {
@@ -102,18 +102,18 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
         <label style={{ fontSize: 12, display: "grid", gap: 4 }}>
           Outcome
-          <select value={outcome} onChange={(e) => setOutcome(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)", fontSize: 13 }}>
+          <select value={outcome} onChange={(e) => setOutcome(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--theme-border)", fontSize: 13 }}>
             <option value="">All outcomes</option>
             {OUTCOMES.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
         </label>
         <label style={{ fontSize: 12, display: "grid", gap: 4 }}>
           Message id
-          <input value={messageId} onChange={(e) => setMessageId(e.target.value)} placeholder="uuid" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)", fontSize: 13 }} />
+          <input value={messageId} onChange={(e) => setMessageId(e.target.value)} placeholder="uuid" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--theme-border)", fontSize: 13 }} />
         </label>
         <label style={{ fontSize: 12, display: "grid", gap: 4 }}>
           Reason code
-          <input value={reasonCode} onChange={(e) => setReasonCode(e.target.value)} placeholder="e.g. SUPPRESSED_HARD_BOUNCE" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line, #cbd5e1)", fontSize: 13 }} />
+          <input value={reasonCode} onChange={(e) => setReasonCode(e.target.value)} placeholder="e.g. SUPPRESSED_HARD_BOUNCE" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--theme-border)", fontSize: 13 }} />
         </label>
         <button type="button" onClick={() => void load()} className={styles.btnPillDark} style={{ cursor: "pointer" }}>Apply filters</button>
       </div>
@@ -121,7 +121,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
       {error && <div role="alert" style={{ fontSize: 13, color: "var(--theme-danger)", background: "color-mix(in srgb,var(--theme-danger) 10%,transparent)", padding: 10, borderRadius: 8, marginBottom: 12 }}>⚠️ {error}</div>}
 
       {loading ? (
-        <div style={{ padding: 20, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading decision traces…</div>
+        <div style={{ padding: 20, textAlign: "center", color: "var(--theme-text-muted)" }}>Loading decision traces…</div>
       ) : traces.length > 0 ? (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -157,30 +157,30 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
           </table>
         </div>
       ) : (
-        <div style={{ padding: 20, textAlign: "center", color: "var(--ink-500, #64748b)" }}>
+        <div style={{ padding: 20, textAlign: "center", color: "var(--theme-text-muted)" }}>
           No decision traces match these filters. Traces appear as messages are evaluated across live connectors.
         </div>
       )}
 
       {(selected || detailLoading) && (
         <div role="presentation" onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(760px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", border: "1px solid var(--line, #e2e8f0)", borderRadius: 16, padding: 28 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(760px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", border: "1px solid var(--theme-border)", borderRadius: 16, padding: 28 }}>
             {detailLoading && !selected ? (
-              <div style={{ padding: 30, textAlign: "center", color: "var(--ink-500, #64748b)" }}>Loading trace…</div>
+              <div style={{ padding: 30, textAlign: "center", color: "var(--theme-text-muted)" }}>Loading trace…</div>
             ) : selected ? (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
-                    <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--brand, var(--theme-primary))" }}>Decision trace</span>
+                    <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 800, color: "var(--theme-primary)" }}>Decision trace</span>
                     <h2 style={{ margin: "4px 0 0", fontSize: 18, fontFamily: "monospace" }}>{selected.traceId}</h2>
-                    <div style={{ fontSize: 12, color: "var(--ink-500, #64748b)" }}>
+                    <div style={{ fontSize: 12, color: "var(--theme-text-muted)" }}>
                       {selected.kind} · {selected.outcome}{selected.reasonCode ? ` · ${selected.reasonCode}` : ""} · corr {selected.correlationId.slice(0, 8)}…
                     </div>
                   </div>
-                  <button type="button" onClick={() => setSelected(null)} aria-label="Close" style={{ border: "1px solid var(--line, #e2e8f0)", background: "transparent", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
+                  <button type="button" onClick={() => setSelected(null)} aria-label="Close" style={{ border: "1px solid var(--theme-border)", background: "transparent", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
                 </div>
 
-                <h4 style={{ margin: "0 0 8px", fontSize: 13, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--ink-500, #64748b)" }}>Enforcement gates</h4>
+                <h4 style={{ margin: "0 0 8px", fontSize: 13, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--theme-text-muted)" }}>Enforcement gates</h4>
                 <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
                   {selected.gates.map((g) => (
                     <div key={`${g.gate}-${g.ordinal}`} style={{ border: "1px solid var(--line, var(--theme-surface-muted))", borderRadius: 8, padding: 12 }}>
@@ -188,11 +188,11 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
                         <strong style={{ fontSize: 13 }}>{g.ordinal}. {g.gate}</strong>
                         <span style={{ fontSize: 11, fontWeight: 800, color: VERDICT_TONE[g.verdict] ?? "var(--theme-neutral)" }}>{g.verdict} · {g.elapsedMs}ms</span>
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--ink-600, #475569)", marginTop: 4 }}>{g.detail}</div>
+                      <div style={{ fontSize: 12, color: "var(--theme-text-secondary)", marginTop: 4 }}>{g.detail}</div>
                       {g.remediation && (
                         <div style={{ fontSize: 12, color: "var(--theme-warning)", marginTop: 6 }}>
                           → {g.remediation}
-                          {g.remediationHref && <a href={g.remediationHref} style={{ marginLeft: 6, color: "var(--brand, var(--theme-primary))" }}>Fix</a>}
+                          {g.remediationHref && <a href={g.remediationHref} style={{ marginLeft: 6, color: "var(--theme-primary)" }}>Fix</a>}
                         </div>
                       )}
                     </div>
@@ -204,7 +204,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
                     <div style={{ fontWeight: 700, marginBottom: 4 }}>Connectors considered</div>
                     {selected.connectorsConsidered.length > 0
                       ? selected.connectorsConsidered.map((c) => <div key={c} style={{ fontFamily: "monospace" }}>{c}</div>)
-                      : <div style={{ color: "var(--ink-500, #64748b)" }}>none</div>}
+                      : <div style={{ color: "var(--theme-text-muted)" }}>none</div>}
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, marginBottom: 4 }}>Connectors rejected</div>
@@ -214,7 +214,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
                             <span style={{ fontFamily: "monospace" }}>{c}</span>: {reasons.join(", ")}
                           </div>
                         ))
-                      : <div style={{ color: "var(--ink-500, #64748b)" }}>none</div>}
+                      : <div style={{ color: "var(--theme-text-muted)" }}>none</div>}
                   </div>
                 </div>
               </>
