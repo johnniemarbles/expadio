@@ -2,18 +2,15 @@ import { NextResponse } from "next/server";
 import { resolveRequestContext, withTenantClient, deniedResponse } from "../../../../../lib/request-context";
 import { expectedDnsRecords } from "../../../../../lib/dns-records";
 import { findZone, upsertRecord, CloudflareError } from "../../../../../lib/cloudflare";
+import { requireCommunicationDomainAdmin } from "../../../../../lib/communication-domain-admin";
 
 /**
  * Sending-domain auto-configuration (design: no fabricated VERIFIED).
  *
- * Authenticates with Cloudflare using a token supplied by the operator or the
- * deployment env, discovers the zone that owns the domain, and idempotently
- * creates/updates the required SPF, DMARC and return-path MX records. DKIM is
- * left to the sending provider. The sender identity is registered as PENDING;
- * it becomes VERIFIED only once the verify route resolves the records against
- * live DNS. Without a token it returns the records to add manually — it never
- * claims to have provisioned DNS it did not touch. The token is used
- * transiently and never persisted or logged.
+ * The caller is authorized before any Cloudflare request or token use. DNS
+ * requirements are provisioned only when a transient/deployment token is
+ * available; provider-issued DKIM remains untouched. The resulting tenant
+ * sender stays PENDING and transactional-only until explicit DNS verification.
  */
 
 export const runtime = "nodejs";
@@ -30,6 +27,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Enter a valid domain such as mail.example.com." }, { status: 400 });
     }
 
+    const authorized = await withTenantClient(context, (client) =>
+      requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId),
+    );
+    if (!authorized) {
+      return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
+    }
+
     const address = `notifications@${domain}`;
     const records = expectedDnsRecords(domain);
     const token = (typeof body.apiToken === "string" && body.apiToken.trim()) || process.env.CLOUDFLARE_API_TOKEN || "";
@@ -44,9 +48,14 @@ export async function POST(request: Request) {
         zoneName = zone.name;
         results = [];
         for (const record of records) {
-          if (!record.verifiable) continue; // DKIM is provider-issued.
-          const r = await upsertRecord(token, zone.id, { type: record.type, name: record.name, value: record.value, priority: record.priority });
-          results.push(r);
+          if (!record.verifiable) continue;
+          const result = await upsertRecord(token, zone.id, {
+            type: record.type,
+            name: record.name,
+            value: record.value,
+            priority: record.priority,
+          });
+          results.push(result);
         }
         provisioned = true;
       } catch (error) {
@@ -57,23 +66,33 @@ export async function POST(request: Request) {
       }
     }
 
-    // Register (or refresh) the sender identity as PENDING regardless of path.
     const sender = await withTenantClient(context, async (client) => {
+      if (!(await requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId))) {
+        return null;
+      }
       const result = await client.query(
         `INSERT INTO platform.communication_sender_identities
            (tenant_id, organization_id, scope, channel, address, display_name, purposes, is_default, verification_status, status)
-         VALUES ($1, NULL, 'TENANT', 'email', $2, 'Platform Sender', ARRAY['transactional','marketing','system'], true, 'PENDING', 'ACTIVE')
+         VALUES ($1, NULL, 'TENANT', 'email', $2, 'Tenant Sender', ARRAY['transactional'], false, 'PENDING', 'ACTIVE')
          ON CONFLICT (tenant_id, channel, lower(address)) WHERE scope = 'TENANT'
-         DO UPDATE SET status = 'ACTIVE', updated_at = now()
-         RETURNING sender_id, verification_status, updated_at`,
+         DO UPDATE SET
+           status = 'ACTIVE',
+           purposes = ARRAY['transactional'],
+           is_default = false,
+           verification_status = platform.communication_sender_identities.verification_status,
+           updated_at = now()
+         RETURNING sender_id, address, purposes, is_default, verification_status, updated_at`,
         [context.tenantId, address],
       );
       return result.rows[0];
     });
+    if (!sender) {
+      return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
+    }
 
     const message = provisioned
-      ? `Configured ${results?.length ?? 0} DNS records in Cloudflare zone ${zoneName}. Give DNS a moment to propagate, then Verify.`
-      : `Generated ${records.length} DNS records for ${domain}. Paste a Cloudflare API token to auto-configure, or add them to your DNS and Verify.`;
+      ? `Configured ${results?.length ?? 0} verifiable DNS records in Cloudflare zone ${zoneName}. Give DNS a moment to propagate, then Verify.`
+      : `Generated DNS requirements for ${domain}. Paste a Cloudflare API token to auto-configure verifiable records, or add them to your DNS and Verify.`;
 
     return NextResponse.json({
       success: true,
