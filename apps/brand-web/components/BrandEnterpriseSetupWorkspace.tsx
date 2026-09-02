@@ -57,11 +57,11 @@ interface SetupData {
     blockingOpenRequirements: number;
     primaryAdministratorSubjectId: string | null;
   };
-  requirements: Requirement[];
-  participants: Participant[];
-  operatingEntities: OperatingEntity[];
-  verifiedLegalEntities: VerifiedLegalEntity[];
-  legalEntities: LegalEntity[];
+  requirements: readonly Requirement[];
+  participants: readonly Participant[];
+  operatingEntities: readonly OperatingEntity[];
+  verifiedLegalEntities: readonly VerifiedLegalEntity[];
+  legalEntities: readonly LegalEntity[];
 }
 
 export function BrandEnterpriseSetupWorkspace({
