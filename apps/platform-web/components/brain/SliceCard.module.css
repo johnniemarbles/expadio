@@ -1,6 +1,6 @@
 .card {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   padding: 1.5rem;
   display: flex;
@@ -23,14 +23,14 @@
 .purpose {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
   margin: 0;
 }
 
 .tenantScope {
   font-size: 0.75rem;
   font-family: monospace;
-  color: var(--brand);
+  color: var(--theme-primary);
   background: var(--brand-soft);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
@@ -41,8 +41,8 @@
   display: flex;
   gap: 2rem;
   padding: 1rem 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--theme-border);
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .stat {
@@ -54,17 +54,17 @@
 .statValue {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--ink-950);
+  color: var(--theme-text-primary);
 }
 
 .statLabel {
   font-size: 0.75rem;
-  color: var(--ink-600);
+  color: var(--theme-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .footer {
   font-size: 0.875rem;
-  color: var(--ink-500);
+  color: var(--theme-text-muted);
 }
