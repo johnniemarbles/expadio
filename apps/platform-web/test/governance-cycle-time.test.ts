@@ -33,3 +33,20 @@ test('the cycle-time route is a membership read behind RLS and the analytics pag
   assert.match(page, /Time to decision by work type/);
   assert.match(page, /\/api\/governance\/cycle-time/);
 });
+
+test('the governance analytics page uses governed dashboard styling', () => {
+  const page = read('../app/(shell)/governance/analytics/page.tsx');
+  const pageStyles = read('../app/(shell)/governance/analytics/DecisionAnalytics.module.css');
+  assert.match(page, /DecisionAnalytics\.module\.css/);
+  assert.match(page, /<meter/);
+  assert.match(page, /styles\.rateCell/);
+  assert.match(page, /styles\.sectionGap/);
+  assert.doesNotMatch(page, /React\.CSSProperties/);
+  assert.doesNotMatch(page, /style=\{/);
+  assert.doesNotMatch(page, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(pageStyles, /#[0-9a-fA-F]{3,8}/);
+  assert.doesNotMatch(pageStyles, /var\(--[^)\n]+,\s*[^)]+\)/);
+  assert.match(pageStyles, /var\(--theme-success\)/);
+  assert.match(pageStyles, /var\(--theme-warning\)/);
+  assert.match(pageStyles, /var\(--theme-danger\)/);
+});
