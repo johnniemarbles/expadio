@@ -31,13 +31,19 @@ export function contentAssetError(error: unknown): NextResponse {
         message: 'The requested content asset is not available in this state.',
       }, 404);
     }
+    if (/DIGEST_MISMATCH|BYTE_LENGTH_MISMATCH|UPLOAD_LENGTH_MISMATCH/.test(error.message)) {
+      return contentAssetJson({
+        reasonKey: 'CONTENT_ASSET_BINARY_MISMATCH',
+        message: 'The uploaded bytes do not match the registered asset.',
+      }, 400);
+    }
     if (/NOT_PENDING_UPLOAD|INVALID_STATE_TRANSITION|IDEMPOTENCY_CONFLICT/.test(error.message)) {
       return contentAssetJson({
         reasonKey: error.message,
         message: 'The content asset conflicts with its current lifecycle state.',
       }, 409);
     }
-    if (/CONFIGURATION_MISSING|PROVIDER_FAILED|CREDENTIAL_UNAVAILABLE|BUCKET_VERIFICATION_FAILED/.test(error.message)) {
+    if (/CONFIGURATION_MISSING|PROVIDER_FAILED|CREDENTIAL_UNAVAILABLE|BUCKET_VERIFICATION_FAILED|SCAN_RESPONSE_INVALID|SCAN_IDENTITY_MISMATCH|SCAN_VERIFICATION_MISMATCH/.test(error.message)) {
       return contentAssetJson({
         denied: true,
         reasonKey: 'CONTENT_ASSET_SERVICE_UNAVAILABLE',
