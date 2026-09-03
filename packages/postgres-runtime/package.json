@@ -49,6 +49,7 @@
     "./product-module": "./src/product-module.ts",
     "./simple-product-module-activation": "./src/simple-product-module-activation.ts",
     "./learning": "./src/learning.ts",
+    "./content-assets": "./src/content-assets.ts",
     "./learning-enrollment": "./src/learning-enrollment.ts",
     "./learning-assessment": "./src/learning-assessment.ts",
     "./learning-program-certification": "./src/learning-program-certification.ts",
