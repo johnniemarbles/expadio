@@ -14,6 +14,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@expadio/entity": ["packages/entity/src/index.ts"],
       "@expadio/iam": ["packages/iam/src/index.ts"],
       "@expadio/tenancy": ["packages/tenancy/src/index.ts"],
       "@expadio/tenancy-persistence": ["packages/tenancy-persistence/src/index.ts"],
