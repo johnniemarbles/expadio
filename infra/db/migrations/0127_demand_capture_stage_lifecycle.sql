@@ -84,6 +84,7 @@ DECLARE
   reason text := nullif(btrim(current_setting('app.lead_capture_transition_reason', true)), '');
   close_reason text := nullif(btrim(current_setting('app.lead_capture_close_reason', true)), '');
   standard_next text;
+  event_time timestamptz;
 BEGIN
   IF NEW.stage IS NOT DISTINCT FROM OLD.stage THEN
     RETURN NEW;
@@ -102,10 +103,11 @@ BEGIN
     RAISE EXCEPTION 'terminal lead capture stage requires close reason' USING ERRCODE = '23514';
   END IF;
 
-  NEW.stage_entered_at := now();
+  event_time := clock_timestamp();
+  NEW.stage_entered_at := event_time;
   IF NEW.stage IN ('WON','LOST','DISQUALIFIED') THEN
     NEW.close_reason_code := close_reason;
-    NEW.closed_at := now();
+    NEW.closed_at := event_time;
     NEW.status := CASE NEW.stage
       WHEN 'WON' THEN 'CONVERTED'
       WHEN 'LOST' THEN 'LOST'
@@ -119,7 +121,7 @@ BEGIN
     END IF;
   END IF;
   IF NEW.status IS DISTINCT FROM OLD.status THEN
-    NEW.status_entered_at := NEW.stage_entered_at;
+    NEW.status_entered_at := event_time;
   END IF;
   RETURN NEW;
 END;
@@ -180,6 +182,7 @@ AS $$
 DECLARE
   actor text := nullif(btrim(current_setting('app.lead_capture_transition_actor', true)), '');
   reason text := nullif(btrim(current_setting('app.lead_capture_transition_reason', true)), '');
+  required_terminal_status text;
 BEGIN
   IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
     RETURN NEW;
@@ -190,7 +193,18 @@ BEGIN
   IF reason IS NULL THEN
     RAISE EXCEPTION 'lead capture status transition requires reason' USING ERRCODE = '23514';
   END IF;
-  NEW.status_entered_at := now();
+
+  required_terminal_status := CASE NEW.stage
+    WHEN 'WON' THEN 'CONVERTED'
+    WHEN 'LOST' THEN 'LOST'
+    WHEN 'DISQUALIFIED' THEN 'DISQUALIFIED'
+    ELSE NULL
+  END;
+  IF required_terminal_status IS NOT NULL AND NEW.status IS DISTINCT FROM required_terminal_status THEN
+    RAISE EXCEPTION 'terminal lead capture stage requires aligned operational status' USING ERRCODE = '23514';
+  END IF;
+
+  NEW.status_entered_at := clock_timestamp();
   RETURN NEW;
 END;
 $$;
