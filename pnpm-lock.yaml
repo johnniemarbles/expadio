@@ -81,6 +81,9 @@ importers:
       '@expadio/credential-custody':
         specifier: workspace:*
         version: link:../../packages/credential-custody
+      '@expadio/entity':
+        specifier: workspace:*
+        version: link:../../packages/entity
       '@expadio/governed-actions':
         specifier: workspace:*
         version: link:../../packages/governed-actions
@@ -247,6 +250,15 @@ importers:
       '@expadio/tenancy':
         specifier: workspace:*
         version: link:../tenancy
+
+  packages/entity:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.3
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
 
   packages/governed-actions:
     dependencies:
