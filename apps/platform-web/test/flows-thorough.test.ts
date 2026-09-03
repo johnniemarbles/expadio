@@ -47,16 +47,20 @@ test("bootstrap privilege is explicit startup seeding, never request-time IAM mu
 test("domain auto-configure is honest — PENDING, real records, no fabricated success", () => {
   assert.match(cloudflareRoute, /expectedDnsRecords/);
   assert.match(cloudflareRoute, /'PENDING'/);
-  assert.match(cloudflareRoute, /CLOUDFLARE_API_TOKEN/);
+  assert.match(cloudflareRoute, /resolveGovernedCloudflareDnsToken/);
+  assert.doesNotMatch(cloudflareRoute, /CLOUDFLARE_API_TOKEN/);
   // The old stub asserted VERIFIED and a fake "successfully provisioned" line.
   assert.doesNotMatch(cloudflareRoute, /'VERIFIED'/);
   assert.doesNotMatch(cloudflareRoute, /successfully provisioned/);
 });
 
-test("auto-configure really talks to Cloudflare: token, zone discovery, idempotent upsert", () => {
+test("auto-configure really talks to Cloudflare through governed DNS custody", () => {
   const cf = read("../lib/cloudflare.ts");
-  // Token accepted from the UI as well as the deployment env.
-  assert.match(cloudflareRoute, /body\.apiToken/);
+  const governed = read("../lib/governed-cloudflare-dns.ts");
+  assert.doesNotMatch(cloudflareRoute, /body\.apiToken[^\n]*\|\|\s*process\.env/);
+  assert.match(governed, /CLOUDFLARE_DNS_CAPABILITY_KEY/);
+  assert.match(governed, /PostgresProviderRegistryRepository/);
+  assert.match(governed, /createGovernedCredentialLeaseRuntime/);
   assert.match(cloudflareRoute, /findZone/);
   assert.match(cloudflareRoute, /upsertRecord/);
   // Zone is discovered from the domain, and records are upserted (create OR update).
