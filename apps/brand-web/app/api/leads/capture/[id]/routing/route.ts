@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
-import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../../lib/brand-context';
-import { routeDemandCaptureLead } from '../../../../../../../lib/demand-capture-routing';
+import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
+import { routeDemandCaptureLead } from '../../../../../../lib/demand-capture-routing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
