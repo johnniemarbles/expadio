@@ -16,6 +16,7 @@ import type { TemplateCatalogueItem } from "../../api/communications/templates/r
 import type { FleetHealthItem } from "../../api/communications/fleet/route";
 import type { CommunicationOverview } from "../../../lib/communication-contracts";
 import { EmptyState } from "@expadio/ui";
+import { MotionStatus, MotionMetric, MotionCard } from "@expadio/ui";
 import { apiError } from "../../../lib/api-error";
 import { TemplateLibraryModal } from "./TemplateLibraryModal";
 
@@ -158,9 +159,9 @@ export function CommunicationsDashboardClient({
           <h1 className={styles.commandCenterTitle}>Network command center</h1>
         </div>
         <div className={styles.topActionsGroup}>
-          <div className={styles.healthyBadge}>
-            <span className={styles.healthyDot} /> {platformStatus}
-          </div>
+          <MotionStatus live tone={platformStatus === "Healthy" ? "success" : "warning"}>
+            {platformStatus}
+          </MotionStatus>
           <button
             type="button"
             className={styles.btnExport}
@@ -267,21 +268,21 @@ export function CommunicationsDashboardClient({
         <>
           {/* 3 Summary Metrics */}
           <div className={styles.summaryMetricsGrid}>
-            <article className={styles.summaryMetricCard}>
+            <MotionCard className={styles.summaryMetricCard} interactive>
               <span>Configured providers</span>
-              <strong>{formatCount(providers.length)}</strong>
+              <strong><MotionMetric value={providers.length} format={formatCount} /></strong>
               <small>{providers.filter((provider) => provider.enabled).length} enabled</small>
-            </article>
-            <article className={styles.summaryMetricCard}>
+            </MotionCard>
+            <MotionCard className={styles.summaryMetricCard} interactive delay={50}>
               <span>Delivery events</span>
-              <strong>{formatCount(overview.totals.deliveries)}</strong>
+              <strong><MotionMetric value={overview.totals.deliveries} format={formatCount} /></strong>
               <small>{overview.channels.filter((channel) => channel.total > 0).length} active channels</small>
-            </article>
-            <article className={styles.summaryMetricCard}>
+            </MotionCard>
+            <MotionCard className={styles.summaryMetricCard} interactive delay={100}>
               <span>Delivery success rate</span>
-              <strong>{successRate === null ? "—" : `${successRate}%`}</strong>
+              <strong>{successRate === null ? "—" : <><MotionMetric value={successRate} format={(v) => Math.round(v)} />%</>}</strong>
               <small>{overview.totals.failed} failed · {overview.totals.inFlight} in flight</small>
-            </article>
+            </MotionCard>
           </div>
 
           {/* Middle 2-Column Section */}
