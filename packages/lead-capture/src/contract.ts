@@ -22,6 +22,37 @@ export const CAPTURE_TIMESTAMP_HEADER = 'x-expadio-capture-timestamp';
 export const CAPTURE_IDEMPOTENCY_HEADER = 'x-expadio-idempotency-key';
 export const CAPTURE_PUBLISHABLE_KEY_HEADER = 'x-expadio-capture-key';
 
+export function publicCaptureUrl(baseUrl: string, tenantId: string, sourceId: string): string {
+  return `${baseUrl.replace(/\/$/u, '')}/api/lead-capture/public/${encodeURIComponent(sourceId)}?tenantId=${encodeURIComponent(tenantId)}`;
+}
+
+export function publicVerifyUrl(baseUrl: string, tenantId: string, sourceId: string): string {
+  return `${baseUrl.replace(/\/$/u, '')}/api/lead-capture/public/${encodeURIComponent(sourceId)}/verify?tenantId=${encodeURIComponent(tenantId)}`;
+}
+
+export interface BrowserCaptureClientOptions {
+  readonly baseUrl: string;
+  readonly tenantId: string;
+  readonly sourceId: string;
+  readonly publishableKey: string;
+  readonly captureAttribution?: boolean;
+  readonly fetchImpl?: typeof fetch;
+  readonly idempotencyKey?: () => string;
+}
+
+export interface CaptureResult {
+  readonly accepted: boolean;
+  readonly replayed: boolean;
+  readonly captureLeadId: string | null;
+  readonly requiresVerification: boolean;
+}
+
+export interface VerifyResult {
+  readonly verified: boolean;
+  readonly reason?: 'EXPIRED' | 'INVALID' | 'LOCKED';
+  readonly remainingAttempts?: number;
+}
+
 /** Must match MAX_CAPTURE_BODY_BYTES on the server ingress. */
 export const MAX_CAPTURE_BODY_BYTES = 256 * 1024;
 

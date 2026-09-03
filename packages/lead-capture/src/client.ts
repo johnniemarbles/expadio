@@ -1,62 +1,20 @@
-/**
- * Browser capture client — the PUBLIC (Rail B) path.
- *
- * Runs in an untrusted browser: it holds a *publishable* key (not a secret),
- * sends the browser's Origin automatically, and posts a normalized submission to
- * the public ingress. It never chooses tenant/organization/stage — the source
- * resolved from the publishable key does. Pipeline entry is still gated by OTP
- * server-side; a 202 here means "captured", not "qualified".
- */
 import {
   CAPTURE_IDEMPOTENCY_HEADER,
   CAPTURE_PUBLISHABLE_KEY_HEADER,
+  publicCaptureUrl,
+  publicVerifyUrl,
   serializeSubmission,
-  type CaptureAttribution,
-  type CaptureSubmissionInput,
 } from './contract.ts';
 import { normalizeSubmission } from './normalize.ts';
+import type {
+  BrowserCaptureClientOptions,
+  CaptureAttribution,
+  CaptureResult,
+  CaptureSubmissionInput,
+  VerifyResult,
+} from './contract.ts';
 
-export interface CaptureResult {
-  readonly accepted: boolean;
-  readonly replayed: boolean;
-  readonly captureLeadId: string | null;
-  /** True when the server parked the submission awaiting OTP verification. */
-  readonly requiresVerification: boolean;
-}
-
-export interface BrowserCaptureClientOptions {
-  /** Origin of the ingress host, e.g. `https://api.expadio.com`. */
-  readonly baseUrl: string;
-  /** Routing coordinates of the PUBLIC source (public identifiers, not secrets). */
-  readonly tenantId: string;
-  readonly sourceId: string;
-  /** Public browser key, `cpk_...`. Safe to ship in page source. */
-  readonly publishableKey: string;
-  /** Fill missing attribution from the current page. Default true. */
-  readonly captureAttribution?: boolean;
-  readonly fetchImpl?: typeof fetch;
-  readonly idempotencyKey?: () => string;
-}
-
-export interface VerifyResult {
-  readonly verified: boolean;
-  readonly reason?: 'INVALID' | 'EXPIRED' | 'LOCKED';
-  readonly remainingAttempts?: number;
-}
-
-/** Build the PUBLIC ingress / verify URLs from routing coordinates. */
-export function publicCaptureUrl(baseUrl: string, tenantId: string, sourceId: string): string {
-  return `${baseUrl.replace(/\/$/u, '')}/api/lead-capture/public/${encodeURIComponent(sourceId)}?tenantId=${encodeURIComponent(tenantId)}`;
-}
-export function publicVerifyUrl(baseUrl: string, tenantId: string, sourceId: string): string {
-  return `${baseUrl.replace(/\/$/u, '')}/api/lead-capture/public/${encodeURIComponent(sourceId)}/verify?tenantId=${encodeURIComponent(tenantId)}`;
-}
-
-export function newIdempotencyKey(): string {
-  const c = (globalThis as { crypto?: Crypto }).crypto;
-  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
-  // Non-crypto fallback for environments without randomUUID; the server still
-  // enforces per-source uniqueness, so this only needs to be locally unique.
+function newIdempotencyKey(): string {
   return `idmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
@@ -68,19 +26,30 @@ export function pageAttribution(): CaptureAttribution {
   if (!loc) return {};
   const params = new URLSearchParams(loc.search);
   const q = (name: string) => params.get(name) ?? undefined;
-  return {
-    pageUrl: loc.href,
-    referrerUrl: doc?.referrer || undefined,
-    utmSource: q('utm_source'),
-    utmMedium: q('utm_medium'),
-    utmCampaign: q('utm_campaign'),
-    utmTerm: q('utm_term'),
-    utmContent: q('utm_content'),
-    utmId: q('utm_id'),
-    gclid: q('gclid'),
-    fbclid: q('fbclid'),
-    referralCode: q('ref') ?? q('referral_code'),
+
+  const out: Record<string, string> = { pageUrl: loc.href };
+  if (doc?.referrer) out.referrerUrl = doc.referrer;
+
+  const map: Record<string, string> = {
+    utm_source: 'utmSource',
+    utm_medium: 'utmMedium',
+    utm_campaign: 'utmCampaign',
+    utm_term: 'utmTerm',
+    utm_content: 'utmContent',
+    utm_id: 'utmId',
+    gclid: 'gclid',
+    fbclid: 'fbclid',
   };
+
+  for (const [param, key] of Object.entries(map)) {
+    const val = q(param);
+    if (val) out[key] = val;
+  }
+
+  const ref = q('ref') ?? q('referral_code');
+  if (ref) out.referralCode = ref;
+
+  return out as CaptureAttribution;
 }
 
 function mergeAttribution(base: CaptureAttribution, add: CaptureAttribution): CaptureAttribution {
@@ -106,7 +75,10 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
     const attribution = withAttribution
       ? mergeAttribution(input.attribution ?? {}, pageAttribution())
       : input.attribution;
-    const submission = normalizeSubmission({ ...input, attribution });
+    const submission = normalizeSubmission({
+      ...input,
+      ...(attribution !== undefined ? { attribution } : {}),
+    });
     const body = serializeSubmission(submission);
     const response = await doFetch(ingressUrl, {
       method: 'POST',
@@ -117,7 +89,7 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
       },
       body,
     });
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (!response.ok) {
       throw new Error(typeof payload.error === 'string' ? payload.error : `Capture failed (${response.status}).`);
     }
@@ -137,12 +109,15 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
       headers: { 'content-type': 'application/json', [CAPTURE_PUBLISHABLE_KEY_HEADER]: options.publishableKey },
       body: JSON.stringify({ captureLeadId, code }),
     });
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (response.ok && payload.verified === true) return { verified: true };
+    const reason = typeof payload.reason === 'string' ? (payload.reason as VerifyResult['reason']) : undefined;
+    const remainingAttempts =
+      typeof payload.remainingAttempts === 'number' ? payload.remainingAttempts : undefined;
     return {
       verified: false,
-      reason: typeof payload.reason === 'string' ? payload.reason as VerifyResult['reason'] : undefined,
-      remainingAttempts: typeof payload.remainingAttempts === 'number' ? payload.remainingAttempts : undefined,
+      ...(reason !== undefined ? { reason } : {}),
+      ...(remainingAttempts !== undefined ? { remainingAttempts } : {}),
     };
   }
 

@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const sla = read('../../../infra/db/migrations/0141_lead_task_sla.sql');
-const analytics = read('../../../infra/db/migrations/0142_lead_analytics.sql');
+const sla = read('../../../infra/db/migrations/0144_lead_task_sla.sql');
+const analytics = read('../../../infra/db/migrations/0145_lead_analytics.sql');
 
 test('task SLA migration adds priority + escalation with check constraints', () => {
   assert.match(sla, /ADD COLUMN priority text NOT NULL DEFAULT 'MEDIUM'/);

@@ -40,17 +40,26 @@ function collectInput(form: HTMLFormElement): CaptureSubmissionInput {
     const key = el.getAttribute('data-field');
     if (key && el.value.trim() !== '') fields[key] = el.value.trim();
   });
+
+  const firstName = value(form, 'firstName') ?? value(form, 'first_name');
+  const lastName = value(form, 'lastName') ?? value(form, 'last_name');
+  const phone = value(form, 'phone');
+  const companyName = value(form, 'company') ?? value(form, 'organization');
+  const extRef = value(form, 'externalReference');
+  const formId = form.getAttribute('data-form-id') ?? undefined;
+  const formVersion = form.getAttribute('data-form-version') ?? undefined;
+
   return {
     contact: {
       email: value(form, 'email') ?? '',
-      firstName: value(form, 'firstName') ?? value(form, 'first_name'),
-      lastName: value(form, 'lastName') ?? value(form, 'last_name'),
-      phone: value(form, 'phone'),
+      ...(firstName !== undefined ? { firstName } : {}),
+      ...(lastName !== undefined ? { lastName } : {}),
+      ...(phone !== undefined ? { phone } : {}),
     },
-    organization: { name: value(form, 'company') ?? value(form, 'organization') },
-    externalReference: value(form, 'externalReference'),
-    formId: form.getAttribute('data-form-id') ?? undefined,
-    formVersion: form.getAttribute('data-form-version') ?? undefined,
+    ...(companyName !== undefined ? { organization: { name: companyName } } : {}),
+    ...(extRef !== undefined ? { externalReference: extRef } : {}),
+    ...(formId !== undefined ? { formId } : {}),
+    ...(formVersion !== undefined ? { formVersion } : {}),
     fields,
   };
 }

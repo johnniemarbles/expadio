@@ -17,10 +17,13 @@ import {
   CAPTURE_TIMESTAMP_HEADER,
   captureSigningBytes,
   serializeSubmission,
+  type CaptureResult,
   type CaptureSubmissionInput,
 } from './contract.ts';
 import { normalizeSubmission } from './normalize.ts';
-import { newIdempotencyKey, type CaptureResult } from './client.ts';
+function newIdempotencyKey(): string {
+  return `idmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
 
 function bytesFromBase64(base64: string): Uint8Array {
   const g = globalThis as { atob?: (s: string) => string; Buffer?: { from(s: string, enc: string): Uint8Array } };
@@ -107,7 +110,12 @@ export function createServerCaptureClient(options: ServerCaptureClientOptions) {
   async function submit(input: CaptureSubmissionInput): Promise<CaptureResult> {
     const body = serializeSubmission(normalizeSubmission(input));
     const idempotencyKey = nextKey();
-    const headers = await signCaptureBody({ privateKeyPkcs8Pem: options.privateKeyPkcs8Pem, body, idempotencyKey, subtle: options.subtle });
+    const headers = await signCaptureBody({
+      privateKeyPkcs8Pem: options.privateKeyPkcs8Pem,
+      body,
+      idempotencyKey,
+      ...(options.subtle !== undefined ? { subtle: options.subtle } : {}),
+    });
     const response = await doFetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },

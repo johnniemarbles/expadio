@@ -69,7 +69,7 @@ test('delivery routes SMS and WhatsApp through the governed fabric, not the emai
 });
 
 test('SMS and WhatsApp OTP templates are seeded in the migration', () => {
-  const migration = read('../../../infra/db/migrations/0143_lead_capture_otp_sms_template.sql');
+  const migration = read('../../../infra/db/migrations/0146_lead_capture_otp_sms_template.sql');
   assert.match(migration, /'lead-capture\.otp\.sms'/);
   assert.match(migration, /'lead-capture\.otp\.whatsapp'/);
   assert.match(migration, /\{\{code\}\}/);
