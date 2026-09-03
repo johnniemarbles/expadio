@@ -188,12 +188,11 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
           WHERE capture_lead_id=$1 ORDER BY changed_at DESC LIMIT 1`,
         [captureLeadId],
       )).rows[0].stage_history_id as string;
-      await expectRejectedAtSavepoint(
-        c,
-        'tamper_history',
-        () => c.query(`UPDATE platform.lead_capture_stage_history SET reason='tampered' WHERE stage_history_id=$1`, [historyId]),
-        (error: unknown) => String((error as Error).message).includes('append-only'),
+      const tamper = await c.query(
+        `UPDATE platform.lead_capture_stage_history SET reason='tampered' WHERE stage_history_id=$1`,
+        [historyId],
       );
+      assert.equal(tamper.rowCount, 0, 'Brand/app role must have no lifecycle-history mutation path through RLS');
 
       await c.query('ROLLBACK');
     } finally {
