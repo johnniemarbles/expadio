@@ -26,7 +26,7 @@
   background: var(--theme-info);
   transform-origin: left center;
   transition:
-    width var(--theme-motion-data) var(--theme-easing),
+    
     background var(--theme-motion-fast) var(--theme-easing);
 }
 
