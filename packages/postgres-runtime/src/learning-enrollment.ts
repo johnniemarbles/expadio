@@ -66,6 +66,9 @@ interface SelfLessonRow {
   readonly progress_status: 'IN_PROGRESS' | 'COMPLETED' | null;
   readonly progress_percent: string | number | null;
   readonly completed_at: Date | string | null;
+  readonly resume_block_id: string | null;
+  readonly resume_position: number | null;
+  readonly last_viewed_at: Date | string | null;
 }
 
 export interface LearningLearner {
@@ -115,6 +118,13 @@ export interface SelfLearningEnrollment extends LearningEnrollmentSummary {
     readonly progressStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
     readonly progressPercent: number;
     readonly completedAt: string | null;
+    readonly modulePosition: number;
+    readonly position: number;
+    readonly unlocked: boolean;
+    readonly blockedByLessonId: string | null;
+    readonly resumeBlockId: string | null;
+    readonly resumePosition: number | null;
+    readonly lastViewedAt: string | null;
   }[];
 }
 
@@ -445,7 +455,10 @@ export async function listMyLearningEnrollments(
             module.position AS module_position,
             progress.status AS progress_status,
             progress.progress_percent,
-            progress.completed_at
+            progress.completed_at,
+            progress.resume_block_id,
+            progress.resume_position,
+            progress.last_viewed_at
        FROM platform.learning_enrollments e
        JOIN platform.learning_course_modules module
          ON module.course_version_id = e.course_version_id
@@ -475,16 +488,34 @@ export async function listMyLearningEnrollments(
     learner: learner(learnerRow),
     enrollments: enrollments.map((item) => ({
       ...item,
-      lessons: (byEnrollment.get(item.enrollmentId) ?? []).map((row) => ({
-        lessonId: row.lesson_id,
-        lessonKey: row.lesson_key,
-        title: row.title,
-        activityType: row.activity_type,
-        required: row.required,
-        progressStatus: row.progress_status ?? 'NOT_STARTED',
-        progressPercent: number(row.progress_percent),
-        completedAt: nullableIso(row.completed_at),
-      })),
+      lessons: (() => {
+        let blockingRequiredLessonId: string | null = null;
+        return (byEnrollment.get(item.enrollmentId) ?? []).map((row) => {
+          const completed = row.progress_status === 'COMPLETED';
+          const blockedByLessonId = completed ? null : blockingRequiredLessonId;
+          const value = {
+            lessonId: row.lesson_id,
+            lessonKey: row.lesson_key,
+            title: row.title,
+            activityType: row.activity_type,
+            required: row.required,
+            progressStatus: row.progress_status ?? 'NOT_STARTED' as const,
+            progressPercent: number(row.progress_percent),
+            completedAt: nullableIso(row.completed_at),
+            modulePosition: row.module_position,
+            position: row.position,
+            unlocked: blockedByLessonId === null,
+            blockedByLessonId,
+            resumeBlockId: row.resume_block_id,
+            resumePosition: row.resume_position,
+            lastViewedAt: nullableIso(row.last_viewed_at),
+          };
+          if (row.required && !completed && blockingRequiredLessonId === null) {
+            blockingRequiredLessonId = row.lesson_id;
+          }
+          return value;
+        });
+      })(),
     })),
   };
 }
@@ -568,6 +599,34 @@ export async function completeMyLearningLesson(
     [input.tenantId, input.lessonId, enrollmentRow.course_version_id],
   );
   if (lessonResult.rows[0] === undefined) throw new Error('LEARNING_LESSON_NOT_IN_ENROLLMENT');
+
+  const prerequisite = await client.query(
+    `SELECT 1
+       FROM platform.learning_lessons target
+       JOIN platform.learning_course_modules target_module
+         ON target_module.course_module_id = target.course_module_id
+        AND target_module.tenant_id = target.tenant_id
+       JOIN platform.learning_lessons prior
+         ON prior.tenant_id = target.tenant_id
+        AND prior.course_version_id = target.course_version_id
+        AND prior.required = true
+       JOIN platform.learning_course_modules prior_module
+         ON prior_module.course_module_id = prior.course_module_id
+        AND prior_module.tenant_id = prior.tenant_id
+      WHERE target.tenant_id = $1::uuid
+        AND target.lesson_id = $2::uuid
+        AND (prior_module.position, prior.position) < (target_module.position, target.position)
+        AND NOT EXISTS (
+          SELECT 1 FROM platform.learning_lesson_progress progress
+           WHERE progress.tenant_id = $1::uuid
+             AND progress.enrollment_id = $3::uuid
+             AND progress.lesson_id = prior.lesson_id
+             AND progress.status = 'COMPLETED'
+        )
+      LIMIT 1`,
+    [input.tenantId, input.lessonId, input.enrollmentId],
+  );
+  if (prerequisite.rows.length > 0) throw new Error('LEARNING_LESSON_LOCKED');
 
   const now = new Date();
 
@@ -976,4 +1035,94 @@ async function loadEnrollmentByAssignmentKey(
   );
   const row = result.rows[0];
   return row === undefined ? null : enrollment(row);
+}
+
+
+export async function recordMyLearningLessonResume(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly subjectId: string;
+    readonly subjectIssuer: string | null;
+    readonly enrollmentId: string;
+    readonly lessonId: string;
+    readonly blockId: string;
+    readonly position: number;
+  },
+): Promise<{ readonly lessonId: string; readonly blockId: string; readonly position: number }> {
+  await requireLearning(client, input.tenantId);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/.test(input.blockId)) {
+    throw new Error('LEARNING_RESUME_BLOCK_INVALID');
+  }
+  if (!Number.isInteger(input.position) || input.position < 1) {
+    throw new Error('LEARNING_RESUME_POSITION_INVALID');
+  }
+
+  const target = await client.query<{ course_version_id: string }>(
+    `SELECT enrollment.course_version_id
+       FROM platform.learning_enrollments enrollment
+       JOIN platform.learning_learners learner
+         ON learner.learner_id = enrollment.learner_id
+        AND learner.tenant_id = enrollment.tenant_id
+        AND learner.subject_id = $3
+        AND learner.subject_issuer IS NOT DISTINCT FROM $4
+        AND learner.status = 'ACTIVE'
+       JOIN platform.learning_lessons lesson
+         ON lesson.lesson_id = $5::uuid
+        AND lesson.course_version_id = enrollment.course_version_id
+        AND lesson.tenant_id = enrollment.tenant_id
+      WHERE enrollment.tenant_id = $1::uuid
+        AND enrollment.enrollment_id = $2::uuid
+        AND enrollment.status IN ('ASSIGNED','IN_PROGRESS')
+        AND NOT EXISTS (
+          SELECT 1
+            FROM platform.learning_lessons prior
+            JOIN platform.learning_course_modules prior_module
+              ON prior_module.course_module_id = prior.course_module_id
+             AND prior_module.tenant_id = prior.tenant_id
+            JOIN platform.learning_course_modules target_module
+              ON target_module.course_module_id = lesson.course_module_id
+             AND target_module.tenant_id = lesson.tenant_id
+           WHERE prior.tenant_id = enrollment.tenant_id
+             AND prior.course_version_id = enrollment.course_version_id
+             AND prior.required = true
+             AND (prior_module.position, prior.position) < (target_module.position, lesson.position)
+             AND NOT EXISTS (
+               SELECT 1 FROM platform.learning_lesson_progress progress
+                WHERE progress.tenant_id = enrollment.tenant_id
+                  AND progress.enrollment_id = enrollment.enrollment_id
+                  AND progress.lesson_id = prior.lesson_id
+                  AND progress.status = 'COMPLETED'
+             )
+        )`,
+    [input.tenantId, input.enrollmentId, input.subjectId, input.subjectIssuer, input.lessonId],
+  );
+  const row = target.rows[0];
+  if (!row) throw new Error('LEARNING_LESSON_LOCKED');
+
+  await client.query(
+    `INSERT INTO platform.learning_lesson_progress (
+       tenant_id, enrollment_id, course_version_id, lesson_id, status,
+       progress_percent, resume_block_id, resume_position, last_viewed_at,
+       updated_by_subject_id
+     ) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,'IN_PROGRESS',0,$5,$6,now(),$7)
+     ON CONFLICT (enrollment_id, lesson_id) DO UPDATE
+       SET resume_block_id = EXCLUDED.resume_block_id,
+           resume_position = EXCLUDED.resume_position,
+           last_viewed_at = now(),
+           updated_by_subject_id = EXCLUDED.updated_by_subject_id,
+           updated_at = now()
+     WHERE platform.learning_lesson_progress.status <> 'COMPLETED'`,
+    [input.tenantId, input.enrollmentId, row.course_version_id, input.lessonId, input.blockId, input.position, input.subjectId],
+  );
+  await client.query(
+    `UPDATE platform.learning_enrollments
+        SET status = CASE WHEN status = 'ASSIGNED' THEN 'IN_PROGRESS' ELSE status END,
+            started_at = COALESCE(started_at, now()),
+            last_activity_at = now(),
+            updated_at = now()
+      WHERE tenant_id = $1::uuid AND enrollment_id = $2::uuid`,
+    [input.tenantId, input.enrollmentId],
+  );
+  return { lessonId: input.lessonId, blockId: input.blockId, position: input.position };
 }

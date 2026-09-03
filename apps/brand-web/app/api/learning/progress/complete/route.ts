@@ -34,6 +34,6 @@ export async function POST(request: Request) {
     return NextResponse.json(value);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'LEARNING_PROGRESS_FAILED';
-    return NextResponse.json({ error: code }, { status: code === 'LEARNING_ENROLLMENT_NOT_FOUND' ? 404 : 400 });
+    return NextResponse.json({ error: code }, { status: code === 'LEARNING_ENROLLMENT_NOT_FOUND' ? 404 : code === 'LEARNING_LESSON_LOCKED' ? 403 : 400 });
   }
 }
