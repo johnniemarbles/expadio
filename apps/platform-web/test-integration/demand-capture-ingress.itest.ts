@@ -153,10 +153,16 @@ test('signed ingress is source-bound, idempotent and cannot choose organization 
         ),
         (error: unknown) => (error as { code?: string }).code === '23505',
       );
-      await assert.rejects(
-        c.query(`UPDATE platform.lead_capture_submissions SET raw_payload = '{}'::jsonb WHERE submission_id = $1`, [submissionId]),
-        /append-only/,
+
+      // Public ingress has no UPDATE policy at all. RLS therefore makes its own
+      // accepted submission invisible to mutation before the append-only trigger
+      // is even reachable. Business-authorized trigger immutability is covered by
+      // the trusted-seam integration test.
+      const ingressMutation = await c.query(
+        `UPDATE platform.lead_capture_submissions SET raw_payload = '{}'::jsonb WHERE submission_id = $1`,
+        [submissionId],
       );
+      assert.equal(ingressMutation.rowCount, 0, 'public ingress must have no submission mutation path');
       await c.query('ROLLBACK');
     } finally {
       c.release();
