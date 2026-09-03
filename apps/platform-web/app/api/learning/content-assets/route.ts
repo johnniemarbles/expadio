@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         byteLength: body.byteLength as number,
         sha256: body.sha256 as string,
         idempotencyKey: body.idempotencyKey as string,
-        retentionPolicy: body.retentionPolicy as { key: string; version: number },
+        retentionPolicy: policy.retentionPolicy,
         requiredResidencyTags: policy.requiredResidencyTags,
         requiredComplianceTags: policy.requiredComplianceTags,
         correlationId,
