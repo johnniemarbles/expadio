@@ -223,7 +223,8 @@ export async function gradeLearningAssignmentSubmission(
   if (input.outcome === 'RETURNED' && feedback === '') throw new Error('LEARNING_ASSIGNMENT_FEEDBACK_REQUIRED');
   const score = input.outcome === 'GRADED' ? input.scorePoints : undefined;
   if (score === undefined && input.outcome === 'GRADED') throw new Error('LEARNING_ASSIGNMENT_SCORE_REQUIRED');
-  if (score !== undefined && (!Number.isFinite(score) || score < 0 || score > current.maxPoints)) {
+  const maxPoints = Number(current.max_points);
+  if (score !== undefined && (!Number.isFinite(score) || score < 0 || score > maxPoints)) {
     throw new Error('LEARNING_ASSIGNMENT_SCORE_INVALID');
   }
 
@@ -252,7 +253,7 @@ export async function gradeLearningAssignmentSubmission(
     aggregateId: input.submissionId,
     eventType: input.outcome === 'GRADED' ? 'learning.assignment.graded' : 'learning.assignment.returned',
     eventVersion: 1, occurredAt: new Date(), actorSubjectId: input.actorSubjectId,
-    correlationId: input.correlationId, payload: { scorePoints: score ?? null, maxPoints: current.maxPoints },
+    correlationId: input.correlationId, payload: { scorePoints: score ?? null, maxPoints },
     metadata: { source: 'learning.assignment.grading' },
   }});
   if (input.outcome === 'GRADED') {

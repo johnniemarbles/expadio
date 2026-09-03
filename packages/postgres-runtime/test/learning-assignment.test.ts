@@ -31,7 +31,7 @@ test('learner submission binds authenticated identity, enrollment version, lesso
 
 test('manual grading is row locked, bounded and emits durable evidence', () => {
   assert.match(runtime, /FOR UPDATE OF submission/);
-  assert.match(runtime, /score > current\.maxPoints/);
+  assert.match(runtime, /score > maxPoints/);
   assert.match(runtime, /learning_assignment_grade_events/);
   assert.match(runtime, /learning\.assignment\.graded/);
   assert.match(runtime, /learning\.assignment\.returned/);
