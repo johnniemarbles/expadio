@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SearchField } from "@expadio/ui";
+import { SearchField, MotionPanel } from "@expadio/ui";
 import { CapabilityTable } from "../CapabilityTable/CapabilityTable";
 import type { CapabilitySummary } from "../../lib/contracts";
 import styles from "../../app/(shell)/page.module.css";
@@ -10,7 +10,7 @@ export function CapabilityCatalog({ capabilities }: { capabilities: CapabilitySu
   const [query, setQuery] = useState("");
 
   return (
-    <section className={styles.panel} aria-labelledby="capability-catalog-title">
+    <MotionPanel className={styles.panel} aria-labelledby="capability-catalog-title">
       <div className={`${styles.panelHeading} ${styles.panelHeadingResponsive}`}>
         <div>
           <p className={styles.eyebrow}>Published and in progress</p>
@@ -24,6 +24,6 @@ export function CapabilityCatalog({ capabilities }: { capabilities: CapabilitySu
         />
       </div>
       <CapabilityTable capabilities={capabilities} query={query} />
-    </section>
+    </MotionPanel>
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
-import { DeniedState, EmptyState } from '@expadio/ui';
+import { DeniedState, EmptyState, MotionPanel } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { requestedOrganizationId, type RouteSearchParams } from '../../../lib/request-context';
 
@@ -30,7 +30,7 @@ export default async function WorkflowConsolePage({ searchParams }: { searchPara
         </div>
       </section>
 
-      <section className={styles.panel} aria-labelledby="workflows-title">
+      <MotionPanel className={styles.panel} aria-labelledby="workflows-title">
         <div className={styles.panelHeading}>
           <div>
             <h2 id="workflows-title">Active Instances</h2>
