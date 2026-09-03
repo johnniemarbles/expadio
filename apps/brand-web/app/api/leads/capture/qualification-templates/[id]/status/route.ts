@@ -52,12 +52,23 @@ export async function POST(
         if (existing.rows.length > 0) {
           return NextResponse.json({ denied: true, reasonKey: 'QUALIFICATION_TEMPLATE_ACTIVE_CONFLICT', message: 'Retire the current active template version before activating this draft.' }, { status: 409 });
         }
-        await client.query(
-          `UPDATE platform.lead_qualification_templates
-              SET status='ACTIVE', activated_at=clock_timestamp(), retired_at=NULL
-            WHERE tenant_id=$1::uuid AND organization_id=$2::uuid AND qualification_template_id=$3::uuid`,
-          [context.tenantId, context.organizationId, templateId],
-        );
+        try {
+          await client.query(
+            `UPDATE platform.lead_qualification_templates
+                SET status='ACTIVE', activated_at=clock_timestamp(), retired_at=NULL
+              WHERE tenant_id=$1::uuid AND organization_id=$2::uuid AND qualification_template_id=$3::uuid`,
+            [context.tenantId, context.organizationId, templateId],
+          );
+        } catch (error) {
+          if ((error as { code?: string }).code === '23505') {
+            return NextResponse.json({
+              denied: true,
+              reasonKey: 'QUALIFICATION_TEMPLATE_ACTIVE_CONFLICT',
+              message: 'Another qualification template version became active concurrently. Retire it before activating this draft.',
+            }, { status: 409 });
+          }
+          throw error;
+        }
       } else {
         await client.query(
           `UPDATE platform.lead_qualification_templates
