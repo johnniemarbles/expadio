@@ -17,6 +17,10 @@ export async function POST(
   try {
     const context = await resolveRequestContext(request);
     const assetId = requireLearningUuid(decodeURIComponent((await params).id), 'assetId');
+    const authorized = await withTenantTransaction(context, (client) =>
+      hasLearningAuthoringRole(client, context.subjectId),
+    );
+    if (!authorized) return contentAssetForbidden();
     const declared = Number(request.headers.get('content-length'));
     if (!Number.isSafeInteger(declared) || declared < 1 || declared > MAX_ROUTE_BYTES) {
       return contentAssetJson({
