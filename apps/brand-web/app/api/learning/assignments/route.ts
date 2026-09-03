@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import type { PoolClient } from 'pg';
 import { createLearningAssignment } from '@expadio/postgres-runtime/learning-assignment';
-import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
+import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '@/lib/brand-context';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
       || (body.dueAt !== undefined && body.dueAt !== null && typeof body.dueAt !== 'string')) {
       return NextResponse.json({ error: 'LEARNING_ASSIGNMENT_DRAFT_INVALID' }, { status: 400 });
     }
-    const result = await withBrandTransaction(context, async (client) => {
+    const result = await withBrandTransaction(context, async (client: PoolClient) => {
       if (!(await hasLearningAdmin(client, context.subjectId))) throw new Error('LEARNING_ADMIN_REQUIRED');
       return createLearningAssignment(client, {
         tenantId: context.tenantId, courseVersionId: body.courseVersionId as string,
