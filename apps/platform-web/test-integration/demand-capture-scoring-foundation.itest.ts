@@ -41,6 +41,21 @@ async function setContext(c: pg.PoolClient, input: { tenantId: string; organizat
   );
 }
 
+async function expectRejectedAtSavepoint(
+  c: pg.PoolClient,
+  name: string,
+  operation: () => Promise<unknown>,
+  validator: (error: unknown) => boolean,
+) {
+  await c.query(`SAVEPOINT ${name}`);
+  try {
+    await assert.rejects(operation(), validator);
+  } finally {
+    await c.query(`ROLLBACK TO SAVEPOINT ${name}`);
+    await c.query(`RELEASE SAVEPOINT ${name}`);
+  }
+}
+
 test('Demand Capture scoring evidence is organization-scoped and immutable', async () => {
   const su = superuserPool();
   const admin = await su.connect();
@@ -111,7 +126,9 @@ test('Demand Capture scoring evidence is organization-scoped and immutable', asy
         [tenantId, organizationId, subjectId],
       )).rows[0].scoring_profile_id as string;
 
-      await assert.rejects(
+      await expectRejectedAtSavepoint(
+        c,
+        'duplicate_active_profile',
         () => c.query(
           `INSERT INTO platform.lead_scoring_profiles (
              tenant_id,organization_id,profile_key,name,version,components,band_thresholds,
@@ -121,10 +138,6 @@ test('Demand Capture scoring evidence is organization-scoped and immutable', asy
         ),
         (error: unknown) => (error as { code?: string }).code === '23505',
       );
-      await c.query('ROLLBACK TO SAVEPOINT no_such_savepoint').catch(() => undefined);
-      // The expected unique violation aborts the transaction; restart while retaining session context.
-      await c.query('ROLLBACK');
-      await c.query('BEGIN');
 
       const qualificationId = (await c.query(
         `INSERT INTO platform.lead_qualification_templates (
