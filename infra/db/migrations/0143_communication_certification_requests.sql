@@ -1,6 +1,6 @@
 BEGIN;
 
-CREATE TABLE platform.communication_certification_requests (
+CREATE TABLE IF NOT EXISTS platform.communication_certification_requests (
   certification_request_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE RESTRICT,
   organization_id uuid,
@@ -34,7 +34,7 @@ CREATE TABLE platform.communication_certification_requests (
   )
 );
 
-CREATE INDEX communication_certification_requests_lookup_idx
+CREATE INDEX IF NOT EXISTS communication_certification_requests_lookup_idx
   ON platform.communication_certification_requests (
     tenant_id, connector_key, channel, status, requested_at DESC
   );
@@ -42,20 +42,24 @@ CREATE INDEX communication_certification_requests_lookup_idx
 ALTER TABLE platform.communication_certification_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.communication_certification_requests FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS communication_certification_requests_select ON platform.communication_certification_requests;
 CREATE POLICY communication_certification_requests_select
   ON platform.communication_certification_requests
   FOR SELECT USING (tenant_id = platform.current_tenant_id());
 
+DROP POLICY IF EXISTS communication_certification_requests_insert ON platform.communication_certification_requests;
 CREATE POLICY communication_certification_requests_insert
   ON platform.communication_certification_requests
   FOR INSERT WITH CHECK (tenant_id = platform.current_tenant_id());
 
+DROP POLICY IF EXISTS communication_certification_requests_update ON platform.communication_certification_requests;
 CREATE POLICY communication_certification_requests_update
   ON platform.communication_certification_requests
   FOR UPDATE
   USING (tenant_id = platform.current_tenant_id())
   WITH CHECK (tenant_id = platform.current_tenant_id());
 
+DROP POLICY IF EXISTS communication_certification_requests_delete ON platform.communication_certification_requests;
 CREATE POLICY communication_certification_requests_delete
   ON platform.communication_certification_requests
   FOR DELETE USING (false);
