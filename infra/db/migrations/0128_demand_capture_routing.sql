@@ -76,47 +76,50 @@ STABLE
 SECURITY DEFINER
 SET search_path = pg_catalog, platform
 AS $subject_scope$
-  SELECT EXISTS (
-    SELECT 1
-    FROM platform.memberships membership
-    WHERE membership.tenant_id = p_tenant_id
-      AND membership.subject_id = p_subject_id
-      AND membership.issuer IS NOT DISTINCT FROM p_issuer
-      AND membership.status = 'ACTIVE'
-      AND membership.valid_from <= now()
-      AND (membership.valid_until IS NULL OR membership.valid_until > now())
-      AND (
-        (
-          membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
-          AND membership.organization_id = p_organization_id
-        )
-        OR (
-          membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
-          AND EXISTS (
-            SELECT 1
-            FROM platform.organization_closure closure
-            WHERE closure.tenant_id = membership.tenant_id
-              AND closure.ancestor_organization_id = membership.organization_id
-              AND closure.descendant_organization_id = p_organization_id
-              AND closure.depth > 0
+  SELECT
+    p_tenant_id = platform.current_tenant_id()
+    AND platform.current_context_can_access_organization(p_tenant_id, p_organization_id)
+    AND EXISTS (
+      SELECT 1
+      FROM platform.memberships membership
+      WHERE membership.tenant_id = p_tenant_id
+        AND membership.subject_id = p_subject_id
+        AND membership.issuer IS NOT DISTINCT FROM p_issuer
+        AND membership.status = 'ACTIVE'
+        AND membership.valid_from <= now()
+        AND (membership.valid_until IS NULL OR membership.valid_until > now())
+        AND (
+          (
+            membership.organization_scope_mode IN ('SELF','SELF_AND_DESCENDANTS')
+            AND membership.organization_id = p_organization_id
+          )
+          OR (
+            membership.organization_scope_mode IN ('DESCENDANTS','SELF_AND_DESCENDANTS')
+            AND EXISTS (
+              SELECT 1
+              FROM platform.organization_closure closure
+              WHERE closure.tenant_id = membership.tenant_id
+                AND closure.ancestor_organization_id = membership.organization_id
+                AND closure.descendant_organization_id = p_organization_id
+                AND closure.depth > 0
+            )
+          )
+          OR (
+            membership.organization_scope_mode = 'SELECTED'
+            AND EXISTS (
+              SELECT 1
+              FROM platform.membership_organizations selected
+              WHERE selected.membership_id = membership.membership_id
+                AND selected.tenant_id = membership.tenant_id
+                AND selected.organization_id = p_organization_id
+            )
           )
         )
-        OR (
-          membership.organization_scope_mode = 'SELECTED'
-          AND EXISTS (
-            SELECT 1
-            FROM platform.membership_organizations selected
-            WHERE selected.membership_id = membership.membership_id
-              AND selected.tenant_id = membership.tenant_id
-              AND selected.organization_id = p_organization_id
-          )
-        )
-      )
-  );
+    );
 $subject_scope$;
 
 COMMENT ON FUNCTION platform.subject_can_access_organization(uuid, text, text, uuid) IS
-  'RLS-safe parameterized membership predicate used to validate Demand Capture routing targets without changing current request subject context.';
+  'Context-bounded parameterized membership predicate for Demand Capture routing targets. It cannot probe a tenant or organization outside the caller current workspace scope and never rewrites request subject context.';
 
 ALTER TABLE platform.lead_capture_routing_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.lead_capture_routing_rules FORCE ROW LEVEL SECURITY;
