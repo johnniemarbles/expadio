@@ -9,7 +9,7 @@ const runtime = read('../../../packages/postgres-runtime/src/learning-enrollment
 const learners = read('../app/api/learning/learners/route.ts');
 const enrollments = read('../app/api/learning/enrollments/route.ts');
 const mine = read('../app/api/learning/me/enrollments/route.ts');
-const complete = read('../app/api/learning/me/enrollments/[id]/lessons/[lessonId]/complete/route.ts');
+const complete = read('../app/api/learning/me/enrollments/[enrollmentId]/lessons/[lessonId]/complete/route.ts');
 const transcript = read('../app/api/learning/me/transcript/route.ts');
 const context = read('../lib/request-context.ts');
 
