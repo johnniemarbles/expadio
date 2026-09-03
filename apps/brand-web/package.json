@@ -15,6 +15,8 @@
     "@clerk/nextjs": "^7.8.2",
     "@expadio/postgres-runtime": "workspace:*",
     "@expadio/tenancy": "workspace:*",
+    "@expadio/lead-capture": "workspace:*",
+    "@expadio/lead-identity": "workspace:*",
     "@expadio/ui": "workspace:*",
     "next": "16.3.3",
     "openai": "^7.9.0",

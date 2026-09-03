@@ -146,13 +146,21 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
     if (res.ok) { const d = await res.json(); if (Array.isArray(d)) setLeads(d); }
   }
 
-  async function moveLead(leadId: string, stage: LeadStage) {
+  async function moveLead(leadId: string, stage: LeadStage, reason?: string) {
     setMovingLead(leadId); setLeadError(null);
     try {
       const res = await fetch(`/api/crm/leads/${encodeURIComponent(leadId)}${queryString}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stage }),
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reason ? { stage, reason } : { stage }),
       });
       const data = await res.json();
+      // A non-standard move (skip, step back, reopen) needs a reason: prompt once
+      // and retry so governance is explained rather than a dead-end error.
+      if (!res.ok && data?.reasonKey === "TRANSITION_REASON_REQUIRED" && reason === undefined) {
+        const supplied = typeof window !== "undefined" ? window.prompt("This is a non-standard stage change. Enter a reason:") : null;
+        if (supplied && supplied.trim()) { await moveLead(leadId, stage, supplied.trim()); return; }
+        throw new Error("A reason is required for this stage change.");
+      }
       if (!res.ok) throw new Error(apiError(data, "Could not move the lead."));
       setLeads((prev) => prev.map((l) => (l.leadId === leadId ? { ...l, stage } : l)));
     } catch (cause) {
