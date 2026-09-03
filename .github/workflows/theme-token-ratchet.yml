@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '22.16.0'
-          package-manager-cache: false
       - name: Reject new raw application colors
         env:
           THEME_RATCHET_BASE_REF: ${{ github.base_ref }}
