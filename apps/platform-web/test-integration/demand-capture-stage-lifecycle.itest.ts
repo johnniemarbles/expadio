@@ -103,7 +103,6 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
       await setContext(c, { tenantId, organizationId, subjectId });
       await c.query('BEGIN');
 
-      // Canonical next stage needs no override reason, but still requires governed actor context.
       await setTransitionContext(c, subjectId);
       const first = await c.query(
         `UPDATE platform.lead_capture_leads SET stage='CONTACT_ATTEMPTED',updated_at=now()
@@ -124,7 +123,6 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
         actor_subject_id: subjectId,
       });
 
-      // A skipped step fails closed without a reason.
       await setTransitionContext(c, subjectId);
       await expectRejectedAtSavepoint(
         c,
@@ -133,7 +131,6 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
         (error: unknown) => (error as { code?: string }).code === '23514',
       );
 
-      // The same non-standard move succeeds only with an explicit reason and is marked OVERRIDE.
       await setTransitionContext(c, subjectId, 'Qualification completed outside the standard sequence');
       await c.query(`UPDATE platform.lead_capture_leads SET stage='QUALIFIED',updated_at=now() WHERE capture_lead_id=$1`, [captureLeadId]);
       const override = await c.query(
@@ -144,7 +141,6 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
       assert.equal(override.rows[0].transition_kind, 'OVERRIDE');
       assert.equal(override.rows[0].reason, 'Qualification completed outside the standard sequence');
 
-      // Operational status is orthogonal and independently audited.
       await setTransitionContext(c, subjectId, 'Waiting for requested documents');
       await c.query(`UPDATE platform.lead_capture_leads SET status='WAITING_ON_LEAD',updated_at=now() WHERE capture_lead_id=$1`, [captureLeadId]);
       const waiting = await c.query(`SELECT stage,status FROM platform.lead_capture_leads WHERE capture_lead_id=$1`, [captureLeadId]);
@@ -160,7 +156,6 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
         reason: 'Waiting for requested documents',
       });
 
-      // Terminal stage requires both override reason (because it skips) and close reason.
       await setTransitionContext(c, subjectId, 'Opportunity ended', '');
       await expectRejectedAtSavepoint(
         c,
@@ -188,7 +183,6 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
       assert.equal(terminalStatusHistory.rows[0].from_status, 'WAITING_ON_LEAD');
       assert.equal(terminalStatusHistory.rows[0].to_status, 'LOST');
 
-      // History is immutable under the same authorized business context.
       const historyId = (await c.query(
         `SELECT stage_history_id FROM platform.lead_capture_stage_history
           WHERE capture_lead_id=$1 ORDER BY changed_at DESC LIMIT 1`,
@@ -206,10 +200,9 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
       c.release();
     }
   } finally {
-    await admin.query(`ALTER TABLE platform.lead_capture_stage_history DISABLE TRIGGER lead_capture_stage_history_append_only`).catch(() => undefined);
-    await admin.query(`ALTER TABLE platform.lead_capture_status_history DISABLE TRIGGER lead_capture_status_history_append_only`).catch(() => undefined);
-    await admin.query(`DELETE FROM platform.lead_capture_stage_history WHERE tenant_id=$1`, [tenantId]).catch(() => undefined);
-    await admin.query(`DELETE FROM platform.lead_capture_status_history WHERE tenant_id=$1`, [tenantId]).catch(() => undefined);
+    // All lifecycle mutations above are deliberately rolled back, so no history
+    // survives to require trigger bypass during cleanup. Never disable immutable
+    // history triggers in the shared integration database.
     await admin.query(`DELETE FROM platform.lead_capture_leads WHERE tenant_id=$1`, [tenantId]).catch(() => undefined);
     await admin.query(`DELETE FROM platform.lead_capture_sources WHERE tenant_id=$1`, [tenantId]).catch(() => undefined);
     await admin.query(`DELETE FROM platform.memberships WHERE tenant_id=$1`, [tenantId]).catch(() => undefined);
