@@ -8,12 +8,40 @@ export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
+interface ScoreRow {
+  score_id: string;
+  scoring_profile_id: string;
+  profile_key: string;
+  profile_version: number;
+  total_score: string | number;
+  band: string;
+  calculation_reason: string;
+  calculation_fingerprint: string | null;
+  calculated_by_subject_id: string;
+  calculated_at: Date | string;
+}
+
 function profileKey(value: unknown): string | undefined {
   if (value == null || value === '') return undefined;
   if (typeof value !== 'string') throw new Error('profileKey must be a string.');
   const normalized = value.trim();
   if (!normalized || normalized.length > 120 || /[\0\r]/u.test(normalized)) throw new Error('Invalid profileKey.');
   return normalized;
+}
+
+function toScoreResponse(row: ScoreRow) {
+  return {
+    scoreId: row.score_id,
+    scoringProfileId: row.scoring_profile_id,
+    profileKey: row.profile_key,
+    profileVersion: row.profile_version,
+    totalScore: Number(row.total_score),
+    band: row.band,
+    calculationReason: row.calculation_reason,
+    calculationFingerprint: row.calculation_fingerprint,
+    calculatedBySubjectId: row.calculated_by_subject_id,
+    calculatedAt: new Date(row.calculated_at).toISOString(),
+  };
 }
 
 export async function GET(
@@ -30,7 +58,7 @@ export async function GET(
       if (module?.availability !== 'ACTIVE') return NextResponse.json({ denied: true, reasonKey: 'LEAD_MODULE_NOT_ACTIVE' }, { status: 403 });
       const lead = await client.query(`SELECT organization_id FROM platform.lead_capture_leads WHERE tenant_id=$1::uuid AND capture_lead_id=$2::uuid`, [context.tenantId, captureLeadId]);
       if (!lead.rows[0]) return NextResponse.json({ error: 'Demand Capture Lead not found.' }, { status: 404 });
-      const scores = await client.query(
+      const scores = await client.query<ScoreRow>(
         `SELECT s.score_id, s.scoring_profile_id, p.profile_key, s.profile_version,
                 s.total_score, s.band, s.calculation_reason, s.calculation_fingerprint,
                 s.calculated_by_subject_id, s.calculated_at
@@ -43,7 +71,8 @@ export async function GET(
           ORDER BY s.calculated_at DESC, s.score_id DESC`,
         [context.tenantId, captureLeadId],
       );
-      return NextResponse.json({ captureLeadId, current: scores.rows[0] ?? null, history: scores.rows });
+      const history = scores.rows.map(toScoreResponse);
+      return NextResponse.json({ captureLeadId, current: history[0] ?? null, history });
     });
   } catch (error) {
     console.error('Brand Demand Capture score read failed:', error);
@@ -99,7 +128,9 @@ export async function POST(
   } catch (error) {
     console.error('Brand Demand Capture score calculation failed:', error);
     const message = error instanceof Error ? error.message : 'Unable to calculate Demand Capture score.';
-    const status = message === 'LEAD_SCORING_ACTIVE_PROFILE_NOT_FOUND' ? 409 : 500;
-    return NextResponse.json({ error: message }, { status });
+    if (message === 'LEAD_SCORING_ACTIVE_PROFILE_NOT_FOUND') {
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Unable to calculate Demand Capture score.' }, { status: 500 });
   }
 }
