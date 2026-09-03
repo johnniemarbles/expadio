@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// Initialize the OpenAI client (requires process.env.OPENAI_API_KEY)
-const openai = new OpenAI();
-
 export const maxDuration = 60; // Allow more time for vision processing
 
 export async function POST(req: Request) {
   try {
+    // Initialize the OpenAI client inside the handler to prevent Next.js build-time 
+    // evaluation errors when OPENAI_API_KEY is not present in the environment (e.g. CI)
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OpenAI API key not configured on server' }, { status: 500 });
+    }
+    const openai = new OpenAI();
+    
     const { image, prompt } = await req.json();
 
     if (!image) {
