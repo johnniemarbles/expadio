@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const migration = readFileSync(new URL('../../../infra/db/migrations/0140_learning_assignment_submission.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../../../infra/db/migrations/0150_learning_assignment_submission.sql', import.meta.url), 'utf8');
 const runtime = readFileSync(new URL('../src/learning-assignment.ts', import.meta.url), 'utf8');
 
 test('assignment truth is versioned, tenant isolated and grading evidence is append-only', () => {
