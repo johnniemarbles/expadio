@@ -93,6 +93,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   return <>
     <section className={styles.pageHead}>
       <div><p className={styles.eyebrow}>Growth · {context.organizationName}</p><h1>Lead Management</h1><p>Organization-scoped CRM projection for active demand. Demand Capture’s 19-stage journey remains a separate governed layer.</p></div>
+      <div><Link className={styles.secondaryButton} href="/leads/capture">Open Demand Capture</Link></div>
     </section>
 
     <section className={styles.grid}>{counts.map(({ stage, count }) => <article className={styles.metric} key={stage}><div className={styles.metricLabel}>{stage}</div><div className={styles.metricValue}>{count}</div><div className={styles.metricDetail}>Visible in this workspace scope</div></article>)}</section>
