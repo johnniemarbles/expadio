@@ -14,22 +14,6 @@ function boundedString(value: unknown, max: number): string | null {
   return text;
 }
 
-async function requireRoutingGovernance(context: Awaited<ReturnType<typeof resolveBrandContext>>) {
-  return withBrandTransaction(context, async (client) => {
-    const module = await loadTenantProductModule(client, {
-      tenantId: context.tenantId,
-      moduleKey: 'lead-management',
-    });
-    if (module?.availability !== 'ACTIVE') {
-      return { denied: NextResponse.json({ denied: true, reasonKey: 'LEAD_MODULE_NOT_ACTIVE' }, { status: 403 }) } as const;
-    }
-    if (!await hasBrandGovernanceForOrganization(client, context.subjectId, context.organizationId)) {
-      return { denied: NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Brand governance is required.' }, { status: 403 }) } as const;
-    }
-    return { client } as const;
-  });
-}
-
 export async function GET() {
   try {
     const context = await resolveBrandContext();
