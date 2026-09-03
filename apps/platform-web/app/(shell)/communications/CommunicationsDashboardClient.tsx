@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MotionPanel, MotionCard } from '@expadio/ui';
+import { MotionPanel } from '@expadio/ui';
 import Link from "next/link";
 import styles from "./page.module.css";
 import { DomainConfigModal } from "./DomainConfigModal";
@@ -160,7 +160,7 @@ export function CommunicationsDashboardClient({
           <h1 className={styles.commandCenterTitle}>Network command center</h1>
         </div>
         <div className={styles.topActionsGroup}>
-          <MotionStatus live tone={platformStatus === "Healthy" ? "success" : "warning"}>
+          <MotionStatus live tone={platformStatus === "Operational data live" ? "success" : "warning"}>
             {platformStatus}
           </MotionStatus>
           <button
