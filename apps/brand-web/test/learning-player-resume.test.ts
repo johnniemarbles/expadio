@@ -7,7 +7,7 @@ const player = read('../app/(workspace)/learn/[id]/page.tsx');
 const resume = read('../app/api/learning/progress/resume/route.ts');
 const complete = read('../app/api/learning/progress/complete/route.ts');
 const runtime = read('../../../packages/postgres-runtime/src/learning-enrollment.ts');
-const migration = read('../../../infra/db/migrations/0136_learning_player_resume.sql');
+const migration = read('../../../infra/db/migrations/0139_learning_player_resume.sql');
 
 test('player renders canonical blocks without raw JSON or trusted HTML', () => {
   assert.match(player, /content\.schemaVersion === 1/);
