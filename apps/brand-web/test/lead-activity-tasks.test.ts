@@ -25,5 +25,5 @@ test('notes are authored as NOTE activities anchored to an in-scope lead', () =>
 });
 
 test('task completion stamps completed_at only when DONE', () => {
-  assert.match(taskUpdate, /CASE WHEN \$4 = 'DONE' THEN now\(\) ELSE NULL END/);
+  assert.match(taskUpdate, /completed_at = CASE WHEN \$\$\{values\.length\} = 'DONE' THEN now\(\) ELSE NULL END/);
 });
