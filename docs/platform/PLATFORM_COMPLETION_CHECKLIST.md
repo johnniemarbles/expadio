@@ -223,7 +223,7 @@ The original extract-gate wording is preserved in `docs/leads/RLS-SOAK.md`; pass
 
 ### Next on EXPADIO (after gates)
 
-- [~] Bounded Demand Capture persistence, projection and signed-ingress seams are now in the monorepo (#614/#623). Routing, scoring, assignment and the explained unassigned queue remain.
+- [ ] Partial: bounded Demand Capture persistence, projection and signed-ingress seams are now in the monorepo (#614/#623). Routing, scoring, assignment and the explained unassigned queue remain.
 - [ ] Add capture ingest source to `LEAD_INGEST_SOURCES` only if `web_form` is insufficient; do not invent a second lead table in `platform`.
 - [x] Bind capture sources to the canonical organization/workspace context rather than a parallel org tree (#604/#623).
 - [x] Integration proof: signed source captures under organization scope; descendant access and sibling denial are enforced by RLS (#604/#623). Production seed-tenant smoke remains deployment evidence.
