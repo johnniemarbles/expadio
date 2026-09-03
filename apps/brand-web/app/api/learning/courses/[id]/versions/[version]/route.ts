@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { replaceLearningCourseDraft } from '@expadio/postgres-runtime/learning';
-import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
+import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
