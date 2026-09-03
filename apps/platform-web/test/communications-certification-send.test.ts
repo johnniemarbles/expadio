@@ -21,7 +21,7 @@ test('Certification Send enters the durable governed COMMUNICATE spine', () => {
 });
 
 test('certification request is durable, tenant isolated, and deployment bound', () => {
-  assert.match(migration, /CREATE TABLE platform\.communication_certification_requests/);
+  assert.match(migration, /CREATE TABLE (IF NOT EXISTS )?platform\.communication_certification_requests/);
   assert.match(migration, /delivery_id uuid NOT NULL/);
   assert.match(migration, /action_intent_id uuid NOT NULL/);
   assert.match(migration, /commit_sha text NOT NULL/);

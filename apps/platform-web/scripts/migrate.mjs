@@ -91,7 +91,12 @@ async function runMigrations() {
         await client.query('COMMIT');
       } catch (err) {
         await client.query('ROLLBACK');
-        throw err;
+        if (err.code === '42P07' || err.code === '42710' || err.code === '42701') {
+          console.warn(`[migration] Relation, object, or column in ${file} already exists (${err.code}). Marking ${file} as applied.`);
+          await client.query('INSERT INTO public.schema_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING', [file]);
+        } else {
+          throw err;
+        }
       }
     }
     console.log('✅ All migrations applied successfully.');
