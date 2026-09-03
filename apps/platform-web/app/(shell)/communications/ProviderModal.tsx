@@ -60,7 +60,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   }
 
   async function registerConnector(credentialRef: string | null, capabilities: string[]) {
-    const res = await fetch("/api/communications/providers", {
+    const res = await fetch(`/api/communications/providers${window.location.search}`, {
       method: "POST",
       headers: { ...standardStepUp(), "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -80,7 +80,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   async function runByokIntake() {
     if (!secret.trim()) throw new Error("BYOK requires an API secret.");
     setStatus("Requesting a one-time wrapping key…");
-    const keyRes = await fetch("/api/custody/keys/active", { headers: standardStepUp() });
+    const keyRes = await fetch("/api/custody/wrapping-key", { headers: standardStepUp() });
     const keyBody = await keyRes.json();
     if (!keyRes.ok) throw new Error(apiError(keyBody, "Could not fetch a wrapping key."));
     const key = keyBody as PublishedWrappingKey;
@@ -119,11 +119,12 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
       );
     }
     if (!intakeRes.ok) throw new Error(apiError(intakeBody, "The credential could not be verified."));
-    if (typeof intakeBody.reference !== "string" || intakeBody.reference.length === 0) {
+    if (typeof intakeBody.reference !== "string" && typeof intakeBody.credentialRef !== "string") {
       throw new Error("Credential custody did not return a canonical credential reference.");
     }
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
-    return { reference: intakeBody.reference, capabilities: [selected.capabilityKey] };
+    const credentialRef = intakeBody.credentialRef || intakeBody.reference;
+    return { reference: credentialRef, capabilities: [selected.capabilityKey] };
   }
 
   async function submit(event: React.FormEvent) {
