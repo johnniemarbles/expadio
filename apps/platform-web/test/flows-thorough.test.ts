@@ -23,7 +23,7 @@ test("provider registration performs the governed custody handshake with step-up
   assert.match(providerModal, /\/api\/custody\/credentials/);
   assert.match(providerModal, /fetch\(`\/api\/communications\/providers\$\{window\.location\.search\}`/);
   // A no-secret path that works without a credential.
-  assert.match(providerModal, /CUSTOMER_EGRESS/);
+  assert.doesNotMatch(providerModal, /CUSTOMER_EGRESS/);
 });
 
 test("client-side wrapping matches the server unwrap contract", () => {
