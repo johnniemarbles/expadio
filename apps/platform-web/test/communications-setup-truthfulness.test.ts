@@ -6,7 +6,7 @@ const route = readFileSync(new URL('../app/api/communications/setup/state/route.
 
 test('Communications setup state never fabricates zero facts on query failure', () => {
   assert.doesNotMatch(route, /\.catch\(\(\) => \(\{ rows:/);
-  assert.match(route, /communication_sending_domains/);
+  assert.match(route, /communication_certifications/);
   assert.match(route, /communication_sender_identities/);
   assert.match(route, /communication_plane_budgets/);
   assert.match(route, /communication_spend_caps/);
