@@ -85,12 +85,23 @@ export async function POST(
             message: 'Retire the current active profile version before activating this draft.',
           }, { status: 409 });
         }
-        await client.query(
-          `UPDATE platform.lead_scoring_profiles
-              SET status='ACTIVE', activated_at=clock_timestamp(), retired_at=NULL
-            WHERE tenant_id=$1::uuid AND organization_id=$2::uuid AND scoring_profile_id=$3::uuid`,
-          [context.tenantId, context.organizationId, scoringProfileId],
-        );
+        try {
+          await client.query(
+            `UPDATE platform.lead_scoring_profiles
+                SET status='ACTIVE', activated_at=clock_timestamp(), retired_at=NULL
+              WHERE tenant_id=$1::uuid AND organization_id=$2::uuid AND scoring_profile_id=$3::uuid`,
+            [context.tenantId, context.organizationId, scoringProfileId],
+          );
+        } catch (error) {
+          if ((error as { code?: string }).code === '23505') {
+            return NextResponse.json({
+              denied: true,
+              reasonKey: 'SCORING_PROFILE_ACTIVE_CONFLICT',
+              message: 'Another scoring profile version became active concurrently. Retire it before activating this draft.',
+            }, { status: 409 });
+          }
+          throw error;
+        }
       } else {
         await client.query(
           `UPDATE platform.lead_scoring_profiles
