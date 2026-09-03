@@ -76,8 +76,8 @@ test('SMS and WhatsApp OTP templates are seeded in the migration', () => {
   assert.match(migration, /\{\{ttlMinutes\}\}/);
   // Idempotent: does not clobber existing rows
   assert.match(migration, /WHERE NOT EXISTS/);
-  // Plain format for SMS carrier compatibility
-  assert.match(migration, /'PLAIN'/);
+  // Text format for SMS carrier compatibility
+  assert.match(migration, /'TEXT'/);
 });
 
 test('delivery never logs the plaintext code or phone number', () => {
