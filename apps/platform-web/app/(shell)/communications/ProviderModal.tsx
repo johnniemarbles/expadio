@@ -143,7 +143,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   const field: React.CSSProperties = {
     width: "100%",
     padding: "8px 12px",
-    border: "1px solid var(--line, #cbd5e1)",
+    border: "1px solid var(--theme-border)",
     borderRadius: 8,
     fontSize: 13,
     outline: "none",
@@ -151,7 +151,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
 
   return (
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(event) => event.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
+      <form onSubmit={submit} onClick={(event) => event.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface)", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>Register executable provider</h2>
@@ -184,18 +184,18 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
             <input type="number" min="0" value={priority} onChange={(event) => setPriority(event.target.value)} style={field} />
           </label>
           <div style={{ display: "grid", gap: 4, fontSize: 12 }}>Capability
-            <div style={{ ...field, background: "#f8fafc", fontFamily: "monospace", fontSize: 12 }}>{selected.capabilityKey}</div>
+            <div style={{ ...field, background: "var(--theme-surface-muted)", fontFamily: "monospace", fontSize: 12 }}>{selected.capabilityKey}</div>
           </div>
         </div>
 
-        <fieldset style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 10, padding: 12, margin: 0 }}>
+        <fieldset style={{ border: "1px solid var(--theme-border)", borderRadius: 10, padding: 12, margin: 0 }}>
           <legend style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-secondary)", padding: "0 6px" }}>Credential custody</legend>
           <p style={{ margin: 0, fontSize: 12 }}>
             <strong>Governed BYOK</strong> — the secret is wrapped in this browser, probed, vaulted, and registered by reference. Credential-less customer-egress execution is not exposed because these adapters require governed credentials at runtime.
           </p>
         </fieldset>
 
-        <div style={{ display: "grid", gap: 10, border: "1px dashed var(--line, #cbd5e1)", borderRadius: 10, padding: 12 }}>
+        <div style={{ display: "grid", gap: 10, border: "1px dashed var(--theme-border)", borderRadius: 10, padding: 12 }}>
           <label style={{ display: "grid", gap: 4, fontSize: 12 }}>API secret / token
             <input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} placeholder="Wrapped in your browser before it is sent" style={field} autoComplete="off" />
           </label>
@@ -212,10 +212,10 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
               <input value={fromNumber} onChange={(event) => setFromNumber(event.target.value)} placeholder="+15551234567" style={field} />
             </label>
           </div>
-          <p style={{ margin: 0, fontSize: 11, color: "var(--ink-500, #64748b)" }}>The raw secret is never submitted as plaintext.</p>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--theme-text-muted)" }}>The raw secret is never submitted as plaintext.</p>
         </div>
 
-        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--brand, var(--theme-primary))" }}>{status}</p>}
+        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--theme-primary)" }}>{status}</p>}
         {warnings.length > 0 && (
           <div style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>
             {warnings.map((warning, index) => <div key={index}>⚠️ {warning}</div>)}
@@ -224,8 +224,8 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={() => { reset(); onClose(); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+          <button type="button" onClick={() => { reset(); onClose(); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
             {saving ? "Working…" : "Verify & register"}
           </button>
         </div>
