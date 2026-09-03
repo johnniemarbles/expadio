@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { PostgresClient, SqlQueryResult } from '../src/index.ts';
 import {
   issueContentAssetReadGrant,
+  loadContentAsset,
   registerContentAsset,
   quarantineContentAssetForScan,
   resolveQuarantinedContentAssetScan,
@@ -341,4 +342,13 @@ test('scanner failure cannot publish a quarantined asset', async () => {
     /SCANNER_UNAVAILABLE/,
   );
   assert.equal(client.calls.length, 1);
+});
+
+
+test('asset status lookup remains tenant-scoped and RLS-visible', async () => {
+  const client = new ScriptedClient([{ rows: [row('QUARANTINED')], rowCount: 1 }]);
+  const asset = await loadContentAsset(client, { tenantId, assetId });
+  assert.equal(asset.state, 'QUARANTINED');
+  assert.match(client.calls[0]?.text ?? '', /tenant_id = \$1::uuid AND asset_id = \$2::uuid/);
+  assert.deepEqual(client.calls[0]?.values, [tenantId, assetId]);
 });
