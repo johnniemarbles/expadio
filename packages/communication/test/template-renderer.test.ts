@@ -128,12 +128,12 @@ test('HTML template variables are escaped before provider output', () => {
   );
 });
 
-test('HTML sanitizer removes script elements and unsafe attributes', () => {
+test('HTML sanitizer removes blocked elements, contents, unsafe URLs and unsafe attributes', () => {
   const sanitized = sanitizeCommunicationHtml(
     '<div onclick="steal()"><script>alert(1)</script><a href="javascript:alert(2)" target="_blank">open</a><img src="https://cdn.example/logo.png" onerror="steal()"></div>',
   );
 
-  assert.equal(sanitized.html.value, '<div>alert(1)<a target="_blank" rel="noopener noreferrer">open</a><img src="https://cdn.example/logo.png"></div>');
+  assert.equal(sanitized.html.value, '<div><a target="_blank" rel="noopener noreferrer">open</a><img src="https://cdn.example/logo.png"></div>');
   assert.ok(sanitized.violations.some((violation) => violation.code === 'UNSAFE_HTML_ELEMENT'));
   assert.ok(sanitized.violations.some((violation) => violation.code === 'UNSAFE_HTML_ATTRIBUTE'));
   assert.ok(sanitized.violations.some((violation) => violation.code === 'UNSAFE_HTML_URL'));
@@ -145,7 +145,7 @@ test('rendered HTML is centrally sanitized before adapters receive it', () => {
       ...template,
       content: {
         ...template.content,
-        body: '<p>Hello {{person.name}}</p><iframe src="https://evil.example"></iframe><a href="javascript:alert(1)">bad</a>',
+        body: '<p>Hello {{person.name}}</p><iframe src="https://evil.example">payload</iframe><a href="javascript:alert(1)">bad</a>',
       },
     },
     variables: { person: { name: 'Maya' } },
