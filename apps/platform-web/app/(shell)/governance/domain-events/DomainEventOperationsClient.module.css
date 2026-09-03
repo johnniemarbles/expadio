@@ -1,9 +1,9 @@
 .surface { animation:domainEventsIn var(--theme-motion-panel) var(--theme-easing) both; }
 .stats > * { animation:domainStatIn var(--theme-motion-normal) var(--theme-easing) both; }
-.stats > *:nth-child(2) { animation-delay:40ms; }
-.stats > *:nth-child(3) { animation-delay:80ms; }
-.stats > *:nth-child(4) { animation-delay:120ms; }
-.stats > *:nth-child(5) { animation-delay:160ms; }
+.stats > *:nth-child(2) { animation-delay:calc(var(--theme-motion-fast) * 0.29); }
+.stats > *:nth-child(3) { animation-delay:calc(var(--theme-motion-fast) * 0.57); }
+.stats > *:nth-child(4) { animation-delay:calc(var(--theme-motion-fast) * 0.86); }
+.stats > *:nth-child(5) { animation-delay:calc(var(--theme-motion-fast) * 1.14); }
 .stat { transition:border-color var(--theme-motion-fast) var(--theme-easing),box-shadow var(--theme-motion-fast) var(--theme-easing),transform var(--theme-motion-fast) var(--theme-easing); }
 .stat:hover { border-color:color-mix(in srgb,var(--theme-primary) 18%,var(--theme-border)); box-shadow:var(--theme-shadow-subtle); transform:translateY(calc(var(--theme-motion-distance-micro) * -1)); }
 .filter { transition:background var(--theme-motion-fast) var(--theme-easing),border-color var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing),transform var(--theme-motion-fast) var(--theme-easing); }
@@ -13,7 +13,7 @@
 .table tbody tr { transition:background var(--theme-motion-fast) var(--theme-easing); }
 .table tbody tr:hover { background:color-mix(in srgb,var(--theme-primary) 4%,var(--theme-surface)); }
 .status { transition:background var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing),box-shadow var(--theme-motion-fast) var(--theme-easing); }
-.statusLive { animation:domainStatusPulse 1.8s var(--theme-easing) infinite; }
+.statusLive { animation:domainStatusPulse calc(var(--theme-motion-data) * 2.57) var(--theme-easing) infinite; }
 .traceLink,.requeueButton { transition:transform var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing),background var(--theme-motion-fast) var(--theme-easing),box-shadow var(--theme-motion-fast) var(--theme-easing),opacity var(--theme-motion-fast) var(--theme-easing); }
 .traceLink:hover,.requeueButton:not(:disabled):hover { transform:translateY(calc(var(--theme-motion-distance-micro) * -1)); }
 .requeueButton:not(:disabled):hover { box-shadow:var(--theme-shadow-subtle); }

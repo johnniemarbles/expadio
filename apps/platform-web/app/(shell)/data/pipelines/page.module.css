@@ -19,7 +19,7 @@
 .statusBadge { display:inline-flex; align-items:center; min-height:24px; padding:0 8px; border-radius:999px; border:1px solid var(--theme-border); font-size:11px; font-weight:800; letter-spacing:.02em; transition:background var(--theme-motion-fast) var(--theme-easing), color var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing); }
 .statusSuccess { color:var(--theme-success); background:color-mix(in srgb,var(--theme-success) 12%,transparent); border-color:color-mix(in srgb,var(--theme-success) 28%,var(--theme-border)); }
 .statusDanger { color:var(--theme-danger); background:color-mix(in srgb,var(--theme-danger) 10%,transparent); border-color:color-mix(in srgb,var(--theme-danger) 28%,var(--theme-border)); }
-.statusLive { color:var(--theme-primary); background:color-mix(in srgb,var(--theme-primary) 10%,transparent); border-color:color-mix(in srgb,var(--theme-primary) 28%,var(--theme-border)); animation:pipelineLivePulse 1.8s var(--theme-easing) infinite; }
+.statusLive { color:var(--theme-primary); background:color-mix(in srgb,var(--theme-primary) 10%,transparent); border-color:color-mix(in srgb,var(--theme-primary) 28%,var(--theme-border)); animation:pipelineLivePulse calc(var(--theme-motion-data) * 2.57) var(--theme-easing) infinite; }
 .statusPending { color:var(--theme-warning); background:color-mix(in srgb,var(--theme-warning) 10%,transparent); border-color:color-mix(in srgb,var(--theme-warning) 28%,var(--theme-border)); }
 .statusNeutral { color:var(--theme-text-secondary); background:var(--theme-surface-muted); }
 .stageProgress { display:inline-flex; align-items:center; gap:6px; transition:color var(--theme-motion-fast) var(--theme-easing); }

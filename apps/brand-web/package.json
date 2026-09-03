@@ -15,11 +15,12 @@
     "@clerk/nextjs": "^7.8.2",
     "@expadio/postgres-runtime": "workspace:*",
     "@expadio/tenancy": "workspace:*",
+    "@expadio/ui": "workspace:*",
     "next": "16.3.3",
+    "openai": "^7.9.0",
     "pg": "^8.23.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "@expadio/ui": "workspace:*"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
