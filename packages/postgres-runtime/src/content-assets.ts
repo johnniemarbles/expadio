@@ -3,6 +3,8 @@ import {
   validateContentAssetRegistration,
   type ContentAssetRegistrationInput,
   type ContentAssetState,
+  type ContentAssetBinaryStore,
+  type ContentAssetReadGrant,
 } from '@expadio/storage';
 import type { PostgresClient } from './index.ts';
 
@@ -162,4 +164,114 @@ export async function transitionContentAsset(
     ],
   );
   return record(next, false);
+}
+
+interface TransferAssetRow extends AssetRow {
+  readonly retention_policy_key: string;
+  readonly retention_policy_version: number;
+  readonly required_residency_tags: readonly string[];
+  readonly required_compliance_tags: readonly string[];
+  readonly correlation_id: string;
+}
+
+const TRANSFER_SELECT = `${SELECT}, retention_policy_key, retention_policy_version,
+  required_residency_tags, required_compliance_tags, correlation_id`;
+
+export async function uploadContentAsset(
+  client: PostgresClient,
+  store: ContentAssetBinaryStore,
+  input: {
+    readonly tenantId: string;
+    readonly assetId: string;
+    readonly content: Uint8Array;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<ContentAssetRecord> {
+  const loaded = await client.query<TransferAssetRow>(
+    `SELECT ${TRANSFER_SELECT} FROM platform.content_assets
+      WHERE tenant_id = $1::uuid AND asset_id = $2::uuid
+      FOR UPDATE`,
+    [input.tenantId, input.assetId],
+  );
+  const asset = loaded.rows[0];
+  if (!asset) throw new Error('CONTENT_ASSET_NOT_FOUND');
+  if (asset.state !== 'PENDING_UPLOAD') throw new Error('CONTENT_ASSET_NOT_PENDING_UPLOAD');
+
+  const stored = await store.store({
+    tenantId: asset.tenant_id,
+    organizationId: asset.organization_id,
+    assetId: asset.asset_id,
+    objectReference: asset.storage_object_reference,
+    content: input.content,
+    contentType: asset.content_type,
+    expectedByteLength: Number(asset.byte_length),
+    expectedSha256: asset.sha256,
+    requiredResidencyTags: [...asset.required_residency_tags],
+    requiredComplianceTags: [...asset.required_compliance_tags],
+    correlationId: input.correlationId,
+  });
+  if (
+    stored.objectReference !== asset.storage_object_reference
+    || stored.byteLength !== Number(asset.byte_length)
+    || stored.sha256 !== asset.sha256
+  ) {
+    throw new Error('CONTENT_ASSET_PROVIDER_VERIFICATION_MISMATCH');
+  }
+
+  return transitionContentAsset(client, {
+    tenantId: input.tenantId,
+    assetId: input.assetId,
+    toState: 'UPLOADED',
+    reasonKey: 'PROVIDER_WRITE_VERIFIED',
+    actorSubjectId: input.actorSubjectId,
+    correlationId: input.correlationId,
+  });
+}
+
+export async function issueContentAssetReadGrant(
+  client: PostgresClient,
+  store: ContentAssetBinaryStore,
+  input: {
+    readonly tenantId: string;
+    readonly assetId: string;
+    readonly purpose: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<ContentAssetReadGrant> {
+  const loaded = await client.query<TransferAssetRow>(
+    `SELECT ${TRANSFER_SELECT} FROM platform.content_assets
+      WHERE tenant_id = $1::uuid AND asset_id = $2::uuid
+        AND state = 'AVAILABLE'`,
+    [input.tenantId, input.assetId],
+  );
+  const asset = loaded.rows[0];
+  if (!asset) throw new Error('CONTENT_ASSET_NOT_AVAILABLE');
+
+  const grant = await store.issueReadGrant({
+    tenantId: asset.tenant_id,
+    organizationId: asset.organization_id,
+    assetId: asset.asset_id,
+    objectReference: asset.storage_object_reference,
+    purpose: input.purpose,
+    requiredResidencyTags: [...asset.required_residency_tags],
+    requiredComplianceTags: [...asset.required_compliance_tags],
+  });
+
+  await client.query(
+    `INSERT INTO platform.content_asset_events (
+       tenant_id, organization_id, asset_id, from_state, to_state,
+       reason_key, actor_subject_id, correlation_id
+     ) VALUES ($1::uuid, $2::uuid, $3::uuid, 'AVAILABLE', 'AVAILABLE',
+               'READ_GRANT_ISSUED', $4, $5)`,
+    [
+      asset.tenant_id,
+      asset.organization_id,
+      asset.asset_id,
+      input.actorSubjectId,
+      input.correlationId,
+    ],
+  );
+  return grant;
 }
