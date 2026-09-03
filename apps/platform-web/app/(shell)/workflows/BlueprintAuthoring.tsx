@@ -131,6 +131,6 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
           </tbody>
         </table>
       </div>
-    </section>
+    </MotionPanel>
   );
 }
