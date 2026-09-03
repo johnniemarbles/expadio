@@ -10,7 +10,7 @@
 .panelHeading h2 { margin:0; font-size:16px; letter-spacing:-.012em; }
 .panelHeading .eyebrow { margin-bottom:5px; }
 .panelBody { padding:18px 20px; color:var(--ink-600); font-size:14px; line-height:1.55; }
-.textButton { border:0; background:transparent; color:var(--brand); font-size:12px; font-weight:750; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:color 0.15s ease; }
+.textButton { border:0; background:transparent; color:var(--brand); font-size:12px; font-weight:750; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:color calc(var(--theme-motion-data) * 0.21) var(--theme-easing); }
 .textButton:hover { color:var(--brand-dark); }
 .countBadge { min-width:26px; height:26px; border-radius:7px; background:var(--brand-soft); color:var(--brand-dark); display:grid; place-items:center; font-size:12px; font-weight:800; }
 .activityPanel { margin-bottom:16px; }
