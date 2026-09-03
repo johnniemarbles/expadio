@@ -112,7 +112,7 @@ CREATE INDEX IF NOT EXISTS content_asset_events_asset_idx
 CREATE OR REPLACE FUNCTION platform.enforce_content_asset_state_transition()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF NEW.state = OLD.state THEN
     RETURN NEW;
@@ -130,7 +130,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END
-$;
+$$;
 
 DROP TRIGGER IF EXISTS content_assets_state_transition ON platform.content_assets;
 CREATE TRIGGER content_assets_state_transition
