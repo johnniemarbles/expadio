@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { apiError } from "../../../lib/api-error";
 import { wrapSecret, type PublishedWrappingKey } from "../../../lib/custody-wrap";
+import { MotionStatus } from "@expadio/ui";
 
 type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () => void };
 
@@ -252,7 +253,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
           </div>
         )}
 
-        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--brand, #4f46e5)" }}>{status}</p>}
+        <MotionStatus status={status} />
         {warnings.length > 0 && (
           <div style={{ fontSize: 12, color: "#925b0b", background: "#fef3c7", padding: 10, borderRadius: 8 }}>
             {warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}

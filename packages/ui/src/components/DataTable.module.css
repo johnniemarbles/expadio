@@ -64,9 +64,9 @@
 }
 
 .tr {
-  transition:
-    background var(--theme-motion-fast) var(--theme-easing),
-    color var(--theme-motion-fast) var(--theme-easing);
+  transition: 
+    background var(--theme-transition-hover),
+    color var(--theme-transition-hover);
 }
 
 .tr:hover {

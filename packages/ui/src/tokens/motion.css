@@ -1,0 +1,35 @@
+:root {
+  /* 1. Timing - The raw duration values */
+  --theme-motion-instant: 0ms;
+  --theme-motion-fast: 140ms;
+  --theme-motion-normal: 220ms;
+  --theme-motion-slow: 340ms;
+  --theme-motion-data: 700ms;
+
+  /* 2. Easing - The curves */
+  --theme-easing-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --theme-easing-entrance: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --theme-easing-exit: cubic-bezier(0.4, 0.0, 1, 1);
+  --theme-easing-emphasis: cubic-bezier(0.2, 0.0, 0, 1.0);
+
+  /* 3. Distance - For translates and slides */
+  --theme-distance-micro: 4px;
+  --theme-distance-small: 8px;
+  --theme-distance-panel: 16px;
+
+  /* 4. Semantic Combinations (The Grammar) */
+  --theme-transition-hover: var(--theme-motion-fast) var(--theme-easing-standard);
+  --theme-transition-entrance: var(--theme-motion-normal) var(--theme-easing-entrance);
+  --theme-transition-exit: var(--theme-motion-fast) var(--theme-easing-exit);
+  
+  /* Reduced Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    --theme-motion-fast: 0ms;
+    --theme-motion-normal: 0ms;
+    --theme-motion-slow: 0ms;
+    --theme-motion-data: 0ms;
+    --theme-transition-hover: none;
+    --theme-transition-entrance: none;
+    --theme-transition-exit: none;
+  }
+}

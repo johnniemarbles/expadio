@@ -16,6 +16,7 @@ export * from './components/ActivityTimeline';
 export * from './components/Toast';
 export * from './components/DataTable';
 export * from './components/OperationalState';
+export * from './motion/MotionStatus';
 
 export * from './theme';
 export * from './components/ThemeModeControl';
