@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ nod
       ...(typeof body.effectiveFrom === 'string' ? { effectiveFrom: body.effectiveFrom } : {}),
       ...(typeof body.evidenceRef === 'string' ? { evidenceRef: body.evidenceRef } : {}),
       ...(typeof body.approvedBy === 'string' ? { approvedBy: body.approvedBy } : {}),
-      ...(body.notes && typeof body.notes === 'object' ? { notes: body.notes } : {}),
+      ...(body.notes && typeof body.notes === 'object' ? { notes: body.notes as Record<string, unknown> } : {}),
       createdBy: context.subjectId,
     };
     const errors = validateCreateRelationship(input);

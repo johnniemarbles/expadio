@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       displayName: body.displayName as string,
       ...(typeof body.externalRef === 'string' ? { externalRef: body.externalRef } : {}),
       ...(typeof body.organizationId === 'string' ? { organizationId: body.organizationId } : {}),
-      ...(body.metadata && typeof body.metadata === 'object' ? { metadata: body.metadata } : {}),
+      ...(body.metadata && typeof body.metadata === 'object' ? { metadata: body.metadata as Record<string, unknown> } : {}),
       createdBy: context.subjectId,
     };
     const errors = validateCreateEntityNode(input);
