@@ -134,6 +134,7 @@ test('Demand Capture routing falls through invalid targets and records explicit 
       assert.equal(assigned.assignedSubjectId, validTargetSubjectId);
       assert.equal(assigned.reasonCode, 'MATCHED_RULE');
       assert.equal(assigned.replayed, false);
+      assert.equal(assigned.unassignedEventId, null);
 
       const owner = await client.query(`SELECT owner_subject_id FROM platform.lead_capture_leads WHERE capture_lead_id=$1`, [captureLeadId]);
       assert.equal(owner.rows[0].owner_subject_id, validTargetSubjectId);
@@ -157,6 +158,7 @@ test('Demand Capture routing falls through invalid targets and records explicit 
         issuer: ISSUER,
       });
       assert.equal(replay?.replayed, true);
+      assert.equal(replay?.unassignedEventId, null);
       const replayCount = await client.query<{ count: number }>(
         `SELECT count(*)::int AS count FROM platform.lead_capture_assignment_events WHERE capture_lead_id=$1`,
         [captureLeadId],
@@ -179,6 +181,7 @@ test('Demand Capture routing falls through invalid targets and records explicit 
       assert.equal(unassigned.routingRuleId, null);
       assert.equal(unassigned.reasonCode, 'NO_VALID_ROUTE');
       assert.equal(unassigned.replayed, false);
+      assert.ok(unassigned.unassignedEventId);
 
       const secondEvents = await client.query(
         `SELECT outcome,assigned_subject_id,previous_owner_subject_id,reason_code
@@ -194,6 +197,21 @@ test('Demand Capture routing falls through invalid targets and records explicit 
         reason_code: 'NO_VALID_ROUTE',
       });
 
+      const domainEvent = await client.query(
+        `SELECT e.event_type,e.aggregate_type,e.aggregate_id,e.causation_id,e.payload,o.status AS outbox_status
+           FROM platform.domain_events e
+           JOIN platform.domain_event_outbox o
+             ON o.tenant_id=e.tenant_id AND o.event_id=e.event_id
+          WHERE e.tenant_id=$1::uuid AND e.event_id=$2::uuid`,
+        [tenantId, unassigned.unassignedEventId],
+      );
+      assert.equal(domainEvent.rows.length, 1);
+      assert.equal(domainEvent.rows[0].event_type, 'LeadCapture.RoutingUnassigned');
+      assert.equal(domainEvent.rows[0].aggregate_type, 'lead.capture');
+      assert.equal(domainEvent.rows[0].aggregate_id, captureLeadId);
+      assert.equal(domainEvent.rows[0].payload.organizationId, organizationId);
+      assert.equal(domainEvent.rows[0].outbox_status, 'PENDING');
+
       const unassignedReplay = await routeDemandCaptureLead(client, {
         tenantId,
         captureLeadId,
@@ -201,6 +219,14 @@ test('Demand Capture routing falls through invalid targets and records explicit 
         issuer: ISSUER,
       });
       assert.equal(unassignedReplay?.replayed, true);
+      assert.equal(unassignedReplay?.unassignedEventId, null);
+      const domainEventCount = await client.query<{ count: number }>(
+        `SELECT count(*)::int AS count FROM platform.domain_events
+          WHERE tenant_id=$1::uuid AND aggregate_type='lead.capture'
+            AND aggregate_id=$2 AND event_type='LeadCapture.RoutingUnassigned'`,
+        [tenantId, captureLeadId],
+      );
+      assert.equal(domainEventCount.rows[0].count, 1);
 
       const eventId = (await client.query(
         `SELECT assignment_event_id FROM platform.lead_capture_assignment_events
