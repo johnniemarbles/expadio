@@ -71,18 +71,17 @@ export interface ClinicalConsultationExtractionInput {
   readonly idempotencyKey: string;
 }
 
+
 export interface ClinicalConsultationExtractionResult {
   readonly proposal: AiProposal;
   readonly extractedFindings: readonly ClinicalFinding[];
-  readonly proposedTreatmentAttributes: DentexTreatmentAttributes;
-  readonly recommendedUrgency: DentexTreatmentUrgency;
+  readonly proposedTreatmentAttributes: Partial<DentexTreatmentAttributes>;
+  readonly recommendedUrgency: DentexTreatmentUrgency | null;
 }
 
 export function validateToothNumber(tooth: string): boolean {
   const normalized = tooth.trim().toUpperCase();
-  const num = parseInt(normalized, 10);
-  if (!isNaN(num) && num >= 1 && num <= 32) return true;
-  return /^[A-T]$/.test(normalized);
+  return /^(?:[1-9]|[12][0-9]|3[0-2]|[A-T])$/.test(normalized);
 }
 
 export async function extractDentexClinicalConsultation(
@@ -108,65 +107,31 @@ export async function extractDentexClinicalConsultation(
 
   const proposal = await input.aiGateway.invoke(intent);
 
-  const notesLower = input.consultationNotes.toLowerCase();
+  // Until AI output artifacts are durably persisted and schema-validated, this
+  // function may only surface identifiers that are explicitly present in the
+  // clinician-authored source note. It must not invent a tooth, diagnosis,
+  // procedure, severity, or urgency from keywords.
   const findings: ClinicalFinding[] = [];
-  let detectedTooth: string | undefined;
-  let detectedProcedureCode: string | undefined;
-  let urgency: DentexTreatmentUrgency = "Routine";
 
-  const toothMatch = input.consultationNotes.match(/(?:tooth|#)\s*([0-9]{1,2}|[A-T])/i);
-  if (toothMatch && toothMatch[1] && validateToothNumber(toothMatch[1])) {
-    detectedTooth = toothMatch[1];
-  }
+  const toothMatch = input.consultationNotes.match(/(?:tooth|#)\s*([0-9]{1,2}|[A-T])(?![A-Z0-9])/i);
+  const detectedTooth = toothMatch?.[1] && validateToothNumber(toothMatch[1])
+    ? toothMatch[1].toUpperCase()
+    : undefined;
 
-  if (notesLower.includes("crown") || notesLower.includes("d2740")) {
-    detectedProcedureCode = "D2740";
-    urgency = "Priority";
-    findings.push({
-      findingId: `find_${input.idempotencyKey}_1`,
-      tooth: detectedTooth ?? "19",
-      condition: "Fractured cusp / recurrent decay",
-      severity: "MODERATE",
-      detectedAt: new Date().toISOString(),
-    });
-  } else if (notesLower.includes("root canal") || notesLower.includes("d3330") || notesLower.includes("abscess") || notesLower.includes("severe pain")) {
-    detectedProcedureCode = "D3330";
-    urgency = "Emergency";
-    findings.push({
-      findingId: `find_${input.idempotencyKey}_1`,
-      tooth: detectedTooth ?? "14",
-      condition: "Symptomatic irreversible pulpitis / apical periodontitis",
-      severity: "SEVERE",
-      detectedAt: new Date().toISOString(),
-    });
-  } else if (notesLower.includes("cleaning") || notesLower.includes("prophy") || notesLower.includes("d1110")) {
-    detectedProcedureCode = "D1110";
-    urgency = "Routine";
-    findings.push({
-      findingId: `find_${input.idempotencyKey}_1`,
-      condition: "Plaque accumulation / generalized gingivitis",
-      severity: "MILD",
-      detectedAt: new Date().toISOString(),
-    });
-  } else {
-    detectedProcedureCode = "D0150";
-    urgency = "Routine";
-    findings.push({
-      findingId: `find_${input.idempotencyKey}_1`,
-      condition: "Comprehensive oral evaluation",
-      severity: "MILD",
-      detectedAt: new Date().toISOString(),
-    });
-  }
+  const procedureMatch = input.consultationNotes.match(/\b(D[0-9]{4})\b/i);
+  const detectedProcedureCode = procedureMatch?.[1]?.toUpperCase();
+  const verifiedProcedureCode = detectedProcedureCode !== undefined
+    && STANDARD_CDT_PROCEDURES[detectedProcedureCode] !== undefined
+      ? detectedProcedureCode
+      : undefined;
 
   return {
     proposal,
     extractedFindings: findings,
     proposedTreatmentAttributes: {
       ...(detectedTooth !== undefined ? { tooth: detectedTooth } : {}),
-      ...(detectedProcedureCode !== undefined ? { procedureCode: detectedProcedureCode } : {}),
-      urgency,
+      ...(verifiedProcedureCode !== undefined ? { procedureCode: verifiedProcedureCode } : {}),
     },
-    recommendedUrgency: urgency,
+    recommendedUrgency: null,
   };
 }
