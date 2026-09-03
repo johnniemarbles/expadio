@@ -19,9 +19,9 @@ test('sending-domain creation is admin gated, activation-aware and tenant scoped
 
 test('Cloudflare authorization happens before token use or provider calls', () => {
   const authorizationIndex = cloudflare.indexOf('const authorized = await withTenantClient');
-  const tokenIndex = cloudflare.indexOf('const token =');
-  const providerIndex = cloudflare.indexOf('findZone(token, domain)');
-  assert.ok(authorizationIndex >= 0 && tokenIndex > authorizationIndex && providerIndex > authorizationIndex);
+  const credentialIndex = cloudflare.indexOf('resolveGovernedCloudflareDnsToken', authorizationIndex);
+  const providerIndex = cloudflare.indexOf('findZone(governedCredential.credential.token, domain)', authorizationIndex);
+  assert.ok(authorizationIndex >= 0 && credentialIndex > authorizationIndex && providerIndex > credentialIndex);
 });
 
 test('sending-domain creation validates domain-address ownership and defaults conservatively', () => {

@@ -60,9 +60,9 @@ test('tenant domain collection excludes inherited platform rows and cannot react
 
 test('Cloudflare path rejects suspension before token use or provider mutation', () => {
   const authorizationIndex = cloudflare.indexOf('const authorized = await withTenantClient');
-  const tokenIndex = cloudflare.indexOf('const token =');
-  const providerIndex = cloudflare.indexOf('findZone(token, domain)');
-  assert.ok(authorizationIndex >= 0 && tokenIndex > authorizationIndex && providerIndex > authorizationIndex);
+  const credentialIndex = cloudflare.indexOf('resolveGovernedCloudflareDnsToken', authorizationIndex);
+  const providerIndex = cloudflare.indexOf('findZone(governedCredential.credential.token, domain)', authorizationIndex);
+  assert.ok(authorizationIndex >= 0 && credentialIndex > authorizationIndex && providerIndex > credentialIndex);
   assert.match(cloudflare, /authorized\.suspended/);
   assert.match(cloudflare, /can only be restored through Platform governance/);
   assert.match(cloudflare, /WHEN platform\.communication_sender_identities\.status = 'INACTIVE' THEN 'ACTIVE'/);
