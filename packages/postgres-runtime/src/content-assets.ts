@@ -324,9 +324,9 @@ export async function issueMyLearningLessonAssetReadGrant(
               CASE WHEN jsonb_typeof(lesson.content->'blocks') = 'array'
                 THEN lesson.content->'blocks' ELSE '[]'::jsonb END
             ) AS block
-           WHERE block->'data'->>'assetId' = $6
-              OR block->'accessibility'->>'transcriptAssetId' = $6
-              OR block->'accessibility'->>'captionsAssetId' = $6
+           WHERE block->'data'->>'assetId' = $6::uuid::text
+              OR block->'accessibility'->>'transcriptAssetId' = $6::uuid::text
+              OR block->'accessibility'->>'captionsAssetId' = $6::uuid::text
         )
         AND NOT EXISTS (
           SELECT 1
