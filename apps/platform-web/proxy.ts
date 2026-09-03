@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/api/health(.*)',
   '/api/webhooks(.*)',
   '/api/health(.*)',
   '/api/execution/health(.*)',
@@ -28,8 +29,14 @@ if (!process.env.CLERK_SECRET_KEY) {
 }
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req) && process.env.CLERK_SECRET_KEY !== 'sk_test_0123456789abcdef0123456789abcdef0123456789abcdef') {
-    await auth.protect()
+  if (req.nextUrl.pathname.startsWith('/api/health')) {
+    return NextResponse.next()
+  }
+
+  if (!isPublicRoute(req)) {
+    if (process.env.CLERK_SECRET_KEY !== 'sk_test_0123456789abcdef0123456789abcdef0123456789abcdef') {
+      await auth.protect()
+    }
   }
 
   const params = req.nextUrl.searchParams

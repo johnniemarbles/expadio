@@ -6,18 +6,25 @@ import pg from 'pg';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-if (!process.env.DATABASE_URL) { console.error("FATAL ERROR: DATABASE_URL is not set in environment variables! Railway cannot connect to PostgreSQL."); process.exit(1); }
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL
-});
+const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_PRIVATE_URL;
+
+if (!dbUrl) {
+  console.log('Skipping migrations: DATABASE_URL not set in environment.');
+  process.exit(0);
+}
+
+const pool = new pg.Pool({ connectionString: dbUrl });
 
 async function runMigrations() {
-  if (!process.env.DATABASE_URL) {
-    console.log('Skipping migrations: DATABASE_URL not set.');
-    process.exit(0);
-  }
+  const client = await pool.connect().catch((err) => {
+    console.warn('Warning: Could not connect to PostgreSQL database during startup:', err.message);
+    return null;
+  });
 
-  const client = await pool.connect();
+  if (!client) {
+    console.warn('Skipping migrations due to database connection error.');
+    return;
+  }
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS public.schema_migrations (
