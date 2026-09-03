@@ -4,10 +4,12 @@ import type { PostgresClient, SqlQueryResult } from '../src/index.ts';
 import {
   issueContentAssetReadGrant,
   registerContentAsset,
+  quarantineContentAssetForScan,
+  resolveQuarantinedContentAssetScan,
   transitionContentAsset,
   uploadContentAsset,
 } from '../src/content-assets.ts';
-import type { ContentAssetBinaryStore } from '@expadio/storage';
+import type { ContentAssetBinaryStore, ContentAssetScanner } from '@expadio/storage';
 
 const tenantId = 'c56a4180-65aa-42ec-a945-5fd21dec0538';
 const organizationId = 'c56a4180-65aa-42ec-a945-5fd21dec0539';
@@ -207,4 +209,136 @@ test('read grants fail closed when asset is not available', async () => {
     }),
     /NOT_AVAILABLE/,
   );
+});
+
+
+const quarantinedRow = () => ({
+  ...row('QUARANTINED'),
+  retention_policy_key: 'learning.standard',
+  retention_policy_version: 1,
+  required_residency_tags: ['ca'],
+  required_compliance_tags: [],
+  correlation_id: 'course:v1',
+});
+
+test('uploaded assets enter quarantine before scanning', async () => {
+  const client = new ScriptedClient([
+    { rows: [row('UPLOADED')], rowCount: 1 },
+    { rows: [row('QUARANTINED')], rowCount: 1 },
+    { rows: [], rowCount: 1 },
+  ]);
+  const result = await quarantineContentAssetForScan(client, {
+    tenantId,
+    assetId,
+    actorSubjectId: 'worker_scanner',
+    correlationId: 'scan:queue:1',
+  });
+  assert.equal(result.state, 'QUARANTINED');
+  assert.match(client.calls[2]?.text ?? '', /MALWARE_SCAN_REQUIRED|content_asset_events/);
+});
+
+test('clean scan releases a quarantined asset with lifecycle evidence', async () => {
+  const client = new ScriptedClient([
+    { rows: [quarantinedRow()], rowCount: 1 },
+    { rows: [row('QUARANTINED')], rowCount: 1 },
+    { rows: [row('AVAILABLE')], rowCount: 1 },
+    { rows: [], rowCount: 1 },
+  ]);
+  const scanner: ContentAssetScanner = {
+    scan: async (scanInput) => ({
+      assetId: scanInput.assetId,
+      objectReference: scanInput.objectReference,
+      sha256: scanInput.sha256,
+      verdict: 'CLEAN',
+      reasonKey: 'NO_THREATS_FOUND',
+      engine: 'clamav',
+      engineVersion: '1.4.3',
+      signatureVersion: '20260903',
+      scannedAt: '2026-09-03T10:00:00.000Z',
+    }),
+  };
+  const result = await resolveQuarantinedContentAssetScan(client, scanner, {
+    tenantId,
+    assetId,
+    actorSubjectId: 'worker_scanner',
+    correlationId: 'scan:1',
+  });
+  assert.equal(result.asset.state, 'AVAILABLE');
+  assert.equal(result.scan.verdict, 'CLEAN');
+  assert.match(client.calls[0]?.text ?? '', /state = 'QUARANTINED'[\s\S]*FOR UPDATE/);
+  assert.match(String(client.calls[3]?.values?.[5]), /MALWARE_SCAN_CLEAN/);
+});
+
+test('malicious scan rejects the asset and an indeterminate scan stays quarantined', async () => {
+  const maliciousClient = new ScriptedClient([
+    { rows: [quarantinedRow()], rowCount: 1 },
+    { rows: [row('QUARANTINED')], rowCount: 1 },
+    { rows: [row('REJECTED')], rowCount: 1 },
+    { rows: [], rowCount: 1 },
+  ]);
+  const malicious: ContentAssetScanner = {
+    scan: async (scanInput) => ({
+      assetId: scanInput.assetId,
+      objectReference: scanInput.objectReference,
+      sha256: scanInput.sha256,
+      verdict: 'MALICIOUS',
+      reasonKey: 'EICAR_TEST_SIGNATURE',
+      engine: 'clamav',
+      engineVersion: '1.4.3',
+      signatureVersion: '20260903',
+      scannedAt: '2026-09-03T10:00:00.000Z',
+    }),
+  };
+  const rejected = await resolveQuarantinedContentAssetScan(maliciousClient, malicious, {
+    tenantId,
+    assetId,
+    actorSubjectId: 'worker_scanner',
+    correlationId: 'scan:2',
+  });
+  assert.equal(rejected.asset.state, 'REJECTED');
+
+  const indeterminateClient = new ScriptedClient([
+    { rows: [quarantinedRow()], rowCount: 1 },
+    { rows: [], rowCount: 1 },
+  ]);
+  const indeterminate: ContentAssetScanner = {
+    scan: async (scanInput) => ({
+      assetId: scanInput.assetId,
+      objectReference: scanInput.objectReference,
+      sha256: scanInput.sha256,
+      verdict: 'INDETERMINATE',
+      reasonKey: 'ENGINE_TIMEOUT',
+      engine: 'clamav',
+      engineVersion: '1.4.3',
+      signatureVersion: '20260903',
+      scannedAt: '2026-09-03T10:00:00.000Z',
+    }),
+  };
+  const held = await resolveQuarantinedContentAssetScan(indeterminateClient, indeterminate, {
+    tenantId,
+    assetId,
+    actorSubjectId: 'worker_scanner',
+    correlationId: 'scan:3',
+  });
+  assert.equal(held.asset.state, 'QUARANTINED');
+  assert.equal(held.asset.idempotent, true);
+  assert.match(indeterminateClient.calls[1]?.text ?? '', /content_asset_events/);
+  assert.match(String(indeterminateClient.calls[1]?.values?.[4]), /MALWARE_SCAN_INDETERMINATE/);
+});
+
+test('scanner failure cannot publish a quarantined asset', async () => {
+  const client = new ScriptedClient([{ rows: [quarantinedRow()], rowCount: 1 }]);
+  const scanner: ContentAssetScanner = {
+    scan: async () => { throw new Error('SCANNER_UNAVAILABLE'); },
+  };
+  await assert.rejects(
+    () => resolveQuarantinedContentAssetScan(client, scanner, {
+      tenantId,
+      assetId,
+      actorSubjectId: 'worker_scanner',
+      correlationId: 'scan:failed',
+    }),
+    /SCANNER_UNAVAILABLE/,
+  );
+  assert.equal(client.calls.length, 1);
 });
