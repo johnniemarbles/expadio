@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { PostgresClient } from './index.ts';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
 import { requireTenantModuleOperational } from './product-module.ts';
+import { reconcileLearningEnrollmentCompletion } from './learning-enrollment.ts';
 
 async function requireLearning(client: PostgresClient, tenantId: string): Promise<void> {
   await requireTenantModuleOperational(client, { tenantId, moduleKey: 'LEARNING' });
@@ -254,6 +255,14 @@ export async function gradeLearningAssignmentSubmission(
     correlationId: input.correlationId, payload: { scorePoints: score ?? null, maxPoints: current.maxPoints },
     metadata: { source: 'learning.assignment.grading' },
   }});
+  if (input.outcome === 'GRADED') {
+    await reconcileLearningEnrollmentCompletion(client, {
+      tenantId: input.tenantId,
+      enrollmentId: current.enrollment_id,
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+    });
+  }
   return project(next);
 }
 
