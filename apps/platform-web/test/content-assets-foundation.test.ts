@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const migration = readFileSync(
-  new URL('../../../infra/db/migrations/0135_content_assets.sql', import.meta.url),
+  new URL('../../../infra/db/migrations/0138_content_assets.sql', import.meta.url),
   'utf8',
 );
 const runtime = readFileSync(
