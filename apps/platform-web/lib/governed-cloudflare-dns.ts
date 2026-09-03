@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import {
   routeConnector,
   type ConnectorDefinition,
+  type CredentialLease,
 } from '@expadio/provider-registry';
 import type { SecretResolver } from '@expadio/provider-registry/repository';
 import {
@@ -26,6 +27,7 @@ export interface GovernedCloudflareDnsTokenOptions {
   readonly secretResolver?: SecretResolver;
   readonly requestId?: () => string;
   readonly correlationId?: () => string;
+  readonly now?: () => string;
 }
 
 export interface GovernedCloudflareDnsToken {
@@ -39,6 +41,16 @@ function supportedCloudflareDnsConnector(connector: ConnectorDefinition): boolea
     && connector.capabilityKeys.includes(CLOUDFLARE_DNS_CAPABILITY_KEY)
     && connector.providerKey.trim().toLowerCase() === 'cloudflare'
     && ['dns', 'infrastructure', 'cloudflare-dns'].includes(connector.providerType.trim().toLowerCase());
+}
+
+function assertLeaseIsCurrent(lease: CredentialLease, requestedAt: string): void {
+  const at = Date.parse(requestedAt);
+  const issuedAt = Date.parse(lease.issuedAt);
+  const expiresAt = Date.parse(lease.expiresAt);
+  if (!Number.isFinite(at) || !Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)
+    || issuedAt > at || expiresAt <= at) {
+    throw new Error('CLOUDFLARE_DNS_CREDENTIAL_LEASE_INVALID');
+  }
 }
 
 /**
@@ -113,8 +125,13 @@ export async function resolveGovernedCloudflareDnsToken(
     },
     connectorWithCredential,
   );
+  const resolvedAt = options.now?.() ?? new Date().toISOString();
+  assertLeaseIsCurrent(lease, resolvedAt);
 
   const secret = await (options.secretResolver ?? delegatedSecretResolver).resolve(lease.credentialReference);
+  if (secret.expiresAt !== undefined && secret.expiresAt.getTime() <= Date.parse(resolvedAt)) {
+    throw new Error('CLOUDFLARE_DNS_SECRET_EXPIRED');
+  }
   return {
     token: secret.value,
     connectorKey: connector.connectorKey,
