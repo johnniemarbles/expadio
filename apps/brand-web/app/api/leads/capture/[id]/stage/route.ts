@@ -82,8 +82,10 @@ export async function POST(
         [context.subjectId, reason ?? '', closeReasonCode ?? ''],
       );
 
+      await client.query('SAVEPOINT governed_capture_stage');
+      let updated;
       try {
-        const updated = await client.query<{
+        updated = await client.query<{
           capture_lead_id: string; stage: string; status: string;
           stage_entered_at: Date | string; close_reason_code: string | null; closed_at: Date | string | null;
         }>(
@@ -94,44 +96,10 @@ export async function POST(
             RETURNING capture_lead_id, stage, status, stage_entered_at, close_reason_code, closed_at`,
           [context.tenantId, captureLeadId, targetStage],
         );
-        const changed = updated.rows[0];
-        if (!changed) return NextResponse.json({ error: 'Demand Capture Lead not found.' }, { status: 404 });
-
-        const history = await client.query<{
-          stage_history_id: string; from_stage: string; to_stage: string; transition_kind: string;
-          reason: string | null; close_reason_code: string | null; duration_in_previous_seconds: string | number;
-          changed_at: Date | string;
-        }>(
-          `SELECT stage_history_id, from_stage, to_stage, transition_kind,
-                  reason, close_reason_code, duration_in_previous_seconds, changed_at
-             FROM platform.lead_capture_stage_history
-            WHERE tenant_id = $1::uuid AND capture_lead_id = $2::uuid
-            ORDER BY changed_at DESC, stage_history_id DESC
-            LIMIT 1`,
-          [context.tenantId, captureLeadId],
-        );
-        const event = history.rows[0];
-        return NextResponse.json({
-          success: true,
-          replayed: false,
-          captureLeadId,
-          stage: changed.stage,
-          operationalStatus: changed.status,
-          stageEnteredAt: new Date(changed.stage_entered_at).toISOString(),
-          closeReasonCode: changed.close_reason_code,
-          closedAt: changed.closed_at ? new Date(changed.closed_at).toISOString() : null,
-          transition: event ? {
-            stageHistoryId: event.stage_history_id,
-            fromStage: event.from_stage,
-            toStage: event.to_stage,
-            transitionKind: event.transition_kind,
-            reason: event.reason,
-            closeReasonCode: event.close_reason_code,
-            durationInPreviousSeconds: Number(event.duration_in_previous_seconds),
-            changedAt: new Date(event.changed_at).toISOString(),
-          } : null,
-        });
+        await client.query('RELEASE SAVEPOINT governed_capture_stage');
       } catch (error) {
+        await client.query('ROLLBACK TO SAVEPOINT governed_capture_stage');
+        await client.query('RELEASE SAVEPOINT governed_capture_stage');
         const code = (error as { code?: string }).code;
         const message = error instanceof Error ? error.message : '';
         if (code === '23514' && message.includes('requires reason')) {
@@ -146,6 +114,43 @@ export async function POST(
         }
         throw error;
       }
+
+      const changed = updated.rows[0];
+      if (!changed) return NextResponse.json({ error: 'Demand Capture Lead not found.' }, { status: 404 });
+      const history = await client.query<{
+        stage_history_id: string; from_stage: string; to_stage: string; transition_kind: string;
+        reason: string | null; close_reason_code: string | null; duration_in_previous_seconds: string | number;
+        changed_at: Date | string;
+      }>(
+        `SELECT stage_history_id, from_stage, to_stage, transition_kind,
+                reason, close_reason_code, duration_in_previous_seconds, changed_at
+           FROM platform.lead_capture_stage_history
+          WHERE tenant_id = $1::uuid AND capture_lead_id = $2::uuid
+          ORDER BY changed_at DESC, stage_history_id DESC
+          LIMIT 1`,
+        [context.tenantId, captureLeadId],
+      );
+      const event = history.rows[0];
+      return NextResponse.json({
+        success: true,
+        replayed: false,
+        captureLeadId,
+        stage: changed.stage,
+        operationalStatus: changed.status,
+        stageEnteredAt: new Date(changed.stage_entered_at).toISOString(),
+        closeReasonCode: changed.close_reason_code,
+        closedAt: changed.closed_at ? new Date(changed.closed_at).toISOString() : null,
+        transition: event ? {
+          stageHistoryId: event.stage_history_id,
+          fromStage: event.from_stage,
+          toStage: event.to_stage,
+          transitionKind: event.transition_kind,
+          reason: event.reason,
+          closeReasonCode: event.close_reason_code,
+          durationInPreviousSeconds: Number(event.duration_in_previous_seconds),
+          changedAt: new Date(event.changed_at).toISOString(),
+        } : null,
+      });
     });
   } catch (error) {
     console.error('Brand Demand Capture stage transition failed:', error);
