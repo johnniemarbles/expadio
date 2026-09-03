@@ -21,8 +21,8 @@
   border: 1px solid var(--theme-border, var(--theme-border));
   box-shadow: var(--theme-shadow-elevated, 0 10px 25px rgba(0,0,0,0.12));
   color: var(--theme-text-primary, var(--theme-text-primary));
-  animation: toastSlideIn var(--theme-motion-fast) var(--theme-easing) both;
-  transition: transform var(--theme-motion-fast) var(--theme-easing), opacity var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing);
+  animation: toastSlideIn var(--theme-transition-entrance) both;
+  transition: transform var(--theme-transition-hover), opacity var(--theme-transition-hover), border-color var(--theme-transition-hover);
 }
 
 .toastItem:hover {

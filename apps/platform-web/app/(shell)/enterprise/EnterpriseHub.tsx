@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import styles from './enterprise.module.css';
+import { MotionPanel, MotionTabs, MotionFeedback } from '@expadio/ui';
 import { GraphCompatibilityStatus } from './GraphCompatibilityStatus';
 
 type Tab =
@@ -397,7 +398,7 @@ export function EnterpriseHub({
       {tab === 'perspectives' && (
         <div className={styles.stack}>
           <GraphCompatibilityStatus suffix={suffix} />
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header>
               <div>
                 <span>Five-perspective graph</span>
@@ -450,12 +451,12 @@ export function EnterpriseHub({
               Unclassified legacy relationships are excluded. Each result uses the shortest explainable
               governed path from the active organization and preserves effective-date provenance.
             </div>
-          </section>
+          </MotionPanel>
         </div>
       )}
 
       {tab === 'structure' && (
-        <section className={styles.panel}>
+        <MotionPanel className={styles.panel}>
           <header><div><span>Operational hierarchy</span><h2>Organizations</h2></div></header>
           <div className={styles.tableWrap}>
             <table>
@@ -470,12 +471,12 @@ export function EnterpriseHub({
               ))}</tbody>
             </table>
           </div>
-        </section>
+        </MotionPanel>
       )}
 
       {tab === 'legal' && (
         <div className={styles.stack}>
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header><div><span>Corporate identity</span><h2>Legal entities</h2></div><small>Verified entities are eligible for governed ownership and commercial authority.</small></header>
             <div className={styles.cards}>
               {data.legalEntities.map((entity) => (
@@ -490,9 +491,9 @@ export function EnterpriseHub({
                 </article>
               ))}
             </div>
-          </section>
+          </MotionPanel>
 
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header>
               <div><span>Ownership / legal perspective</span><h2>Governed ownership interests</h2></div>
               <small>Changes remain pending until a different authorized subject approves them.</small>
@@ -519,13 +520,13 @@ export function EnterpriseHub({
                 ))}</tbody>
               </table>
             </div>
-          </section>
+          </MotionPanel>
         </div>
       )}
 
       {tab === 'commercial' && (
         <div className={styles.stack}>
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header><div><span>Geographic authority</span><h2>Territory catalog</h2></div><small>Structured geography now; geometry can be attached later without changing right IDs.</small></header>
             <form className={styles.formGrid} onSubmit={createTerritory}>
               <label>Stable key<input name="territoryKey" required placeholder="ca.on" /></label>
@@ -544,9 +545,9 @@ export function EnterpriseHub({
                 </span>
               ))}
             </div>
-          </section>
+          </MotionPanel>
 
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header><div><span>Legal authority</span><h2>Commercial agreements</h2></div><small>Approval and execution activation are separate.</small></header>
             <form className={styles.formGrid} onSubmit={createAgreement}>
               <label>Title<input name="title" required placeholder="Canada Master Franchise" /></label>
@@ -601,9 +602,9 @@ export function EnterpriseHub({
                 ))}</tbody>
               </table>
             </div>
-          </section>
+          </MotionPanel>
 
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header><div><span>Appointments & rights</span><h2>Commercial network</h2></div><small>Decision → rights grant → active appointment.</small></header>
             <form className={styles.formGrid} onSubmit={createAppointment}>
               <label>Active agreement<select name="agreementId" required defaultValue=""><option value="" disabled>Select active agreement</option>{activeAgreements.map((agreement) => <option value={agreement.agreementId} key={agreement.agreementId}>{agreement.title}</option>)}</select></label>
@@ -638,13 +639,13 @@ export function EnterpriseHub({
                 </article>
               ))}
             </div>
-          </section>
+          </MotionPanel>
         </div>
       )}
 
       {tab === 'jurisdictions' && (
         <div className={styles.stack}>
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header><div><span>Permission to operate</span><h2>Jurisdiction activation</h2></div><small>Rights do not themselves authorize operations in a jurisdiction.</small></header>
             <div className={styles.cards}>
               {data.portfolio.appointments.filter((item) => item.state === 'ACTIVE').map((appointment) => (
@@ -681,9 +682,9 @@ export function EnterpriseHub({
                 </article>
               ))}
             </div>
-          </section>
+          </MotionPanel>
 
-          <section className={styles.panel}>
+          <MotionPanel className={styles.panel}>
             <header><div><span>Activation controls</span><h2>Jurisdiction reviews</h2></div><small>Verification, approval, and activation are separate evidence-bearing operations.</small></header>
             <div className={styles.tableWrap}>
               <table>
@@ -736,12 +737,12 @@ export function EnterpriseHub({
                 })}</tbody>
               </table>
             </div>
-          </section>
+          </MotionPanel>
         </div>
       )}
 
       {tab === 'readiness' && (
-        <section className={styles.panel}>
+        <MotionPanel className={styles.panel}>
           <header><div><span>Setup journeys</span><h2>Organization readiness</h2></div></header>
           <div className={styles.tableWrap}>
             <table>
@@ -756,11 +757,11 @@ export function EnterpriseHub({
               ))}</tbody>
             </table>
           </div>
-        </section>
+        </MotionPanel>
       )}
 
       {tab === 'approvals' && (
-        <section className={styles.panel}>
+        <MotionPanel className={styles.panel}>
           <header><div><span>Governed change</span><h2>Pending enterprise changes</h2></div></header>
           <div className={styles.tableWrap}>
             <table>
@@ -783,7 +784,7 @@ export function EnterpriseHub({
               ))}</tbody>
             </table>
           </div>
-        </section>
+        </MotionPanel>
       )}
     </div>
   );
