@@ -5,6 +5,7 @@ import { listMyLearningEnrollments } from '@expadio/postgres-runtime/learning-en
 import { CompleteLessonButton } from '../../../../components/CompleteLessonButton';
 import { ResumeLessonButton } from '../../../../components/ResumeLessonButton';
 import { LearnerAssessmentRunner } from '../../../../components/LearnerAssessmentRunner';
+import { ProtectedLessonAsset } from '../../../../components/ProtectedLessonAsset';
 import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
 
@@ -16,7 +17,11 @@ function blocks(content: Readonly<Record<string, unknown>>): readonly Record<str
     : [];
 }
 
-function renderContent(content: Readonly<Record<string, unknown>>) {
+function renderContent(
+  content: Readonly<Record<string, unknown>>,
+  enrollmentId: string,
+  lessonId: string,
+) {
   const items = blocks(content);
   if (items.length === 0) {
     const legacy = content.text;
@@ -34,7 +39,21 @@ function renderContent(content: Readonly<Record<string, unknown>>) {
     if (type === 'RICH_TEXT') return <p id={`lesson-block-${id}`} key={id}>{text}</p>;
     if (type === 'CODE') return <pre id={`lesson-block-${id}`} key={id}><code>{String(data.code ?? '')}</code></pre>;
     if (type === 'DISCUSSION_PROMPT') return <section id={`lesson-block-${id}`} key={id}><strong>Discuss</strong><p>{String(data.prompt ?? '')}</p></section>;
-    return <section id={`lesson-block-${id}`} key={id}><strong>{String(data.title ?? type)}</strong><p>Protected {type.toLowerCase()} content.</p></section>;
+    if (['IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT', 'RESOURCE'].includes(type) && typeof data.assetId === 'string') {
+      const accessibility = block.accessibility && typeof block.accessibility === 'object'
+        ? block.accessibility as Record<string, unknown> : {};
+      return <section id={`lesson-block-${id}`} key={id}>
+        <ProtectedLessonAsset
+          enrollmentId={enrollmentId}
+          lessonId={lessonId}
+          assetId={data.assetId}
+          kind={type as 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'RESOURCE'}
+          title={typeof data.title === 'string' ? data.title : undefined}
+          label={typeof accessibility.label === 'string' ? accessibility.label : undefined}
+        />
+      </section>;
+    }
+    return <section id={`lesson-block-${id}`} key={id}><strong>{String(data.title ?? type)}</strong><p>This activity requires a specialized learner tool.</p></section>;
   })}</div>;
 }
 
@@ -126,7 +145,7 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
                         </div>
                         <span className={complete ? styles.done : styles.pending}>{complete ? 'Completed' : unlocked ? 'Available' : 'Locked'}</span>
                       </div>
-                      {unlocked ? renderContent(lesson.content) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
+                      {unlocked ? renderContent(lesson.content, value.enrollment.enrollmentId, lesson.lessonId) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
                       {unlocked && !complete && resumeBlock ? <ResumeLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} blockId={String(resumeBlock.id)} position={Number(resumeBlock.position)} label={state?.resumeBlockId ? 'Continue lesson' : 'Start lesson'} /> : null}
                       {unlocked && !complete && (value.enrollment.status === 'ASSIGNED' || value.enrollment.status === 'IN_PROGRESS') ? (
                         <CompleteLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} />
