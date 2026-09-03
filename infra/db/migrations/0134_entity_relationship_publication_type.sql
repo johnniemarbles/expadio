@@ -52,22 +52,36 @@ BEGIN
           AND organization.organization_id = p_entity_key::uuid
         LIMIT 1;
       EXCEPTION WHEN invalid_text_representation THEN
-        RAISE EXCEPTION 'governed operating-unit key must be a UUID'
-          USING ERRCODE = '22023';
+        source_display_name := NULL;
       END;
 
-      IF source_organization_id IS NULL THEN
-        RAISE EXCEPTION 'GOVERNED_ENTITY_NODE_NOT_FOUND'
-          USING ERRCODE = '23503';
+      IF source_display_name IS NULL THEN
+        SELECT
+          registry_node.display_name,
+          CASE WHEN registry_node.status = 'ACTIVE' THEN 'ACTIVE' ELSE 'INACTIVE' END,
+          registry_node.attributes || jsonb_build_object(
+            'sourceTable', 'platform.entity_registry_nodes',
+            'registryNodeId', registry_node.node_id,
+            'registryNodeType', registry_node.node_type,
+            'entityKey', registry_node.entity_key
+          )
+        INTO source_display_name, source_status, source_attributes
+        FROM platform.entity_registry_nodes registry_node
+        WHERE registry_node.tenant_id = p_tenant_id
+          AND registry_node.node_type = p_registry_node_type
+          AND registry_node.entity_key = p_entity_key
+        LIMIT 1;
       END IF;
 
-      SELECT node.node_id INTO resolved_node_id
-        FROM platform.entity_nodes node
-       WHERE node.tenant_id = p_tenant_id
-         AND node.organization_id = source_organization_id
-         AND node.status <> 'DISSOLVED'
-       ORDER BY node.created_at DESC, node.node_id DESC
-       LIMIT 1;
+      IF source_organization_id IS NOT NULL THEN
+        SELECT node.node_id INTO resolved_node_id
+          FROM platform.entity_nodes node
+         WHERE node.tenant_id = p_tenant_id
+           AND node.organization_id = source_organization_id
+           AND node.status <> 'DISSOLVED'
+         ORDER BY node.created_at DESC, node.node_id DESC
+         LIMIT 1;
+      END IF;
 
     WHEN 'LEGAL_ENTITY' THEN
       governed_node_type := 'LEGAL_ENTITY';
@@ -92,9 +106,26 @@ BEGIN
           AND legal_entity.legal_entity_id = p_entity_key::uuid
         LIMIT 1;
       EXCEPTION WHEN invalid_text_representation THEN
-        RAISE EXCEPTION 'governed legal-entity key must be a UUID'
-          USING ERRCODE = '22023';
+        source_display_name := NULL;
       END;
+
+      IF source_display_name IS NULL THEN
+        SELECT
+          registry_node.display_name,
+          CASE WHEN registry_node.status = 'ACTIVE' THEN 'ACTIVE' ELSE 'INACTIVE' END,
+          registry_node.attributes || jsonb_build_object(
+            'sourceTable', 'platform.entity_registry_nodes',
+            'registryNodeId', registry_node.node_id,
+            'registryNodeType', registry_node.node_type,
+            'entityKey', registry_node.entity_key
+          )
+        INTO source_display_name, source_status, source_attributes
+        FROM platform.entity_registry_nodes registry_node
+        WHERE registry_node.tenant_id = p_tenant_id
+          AND registry_node.node_type = p_registry_node_type
+          AND registry_node.entity_key = p_entity_key
+        LIMIT 1;
+      END IF;
 
       SELECT node.node_id INTO resolved_node_id
         FROM platform.entity_nodes node
@@ -125,9 +156,26 @@ BEGIN
           AND territory.territory_id = p_entity_key::uuid
         LIMIT 1;
       EXCEPTION WHEN invalid_text_representation THEN
-        RAISE EXCEPTION 'governed location key must be a UUID'
-          USING ERRCODE = '22023';
+        source_display_name := NULL;
       END;
+
+      IF source_display_name IS NULL THEN
+        SELECT
+          registry_node.display_name,
+          CASE WHEN registry_node.status = 'ACTIVE' THEN 'ACTIVE' ELSE 'INACTIVE' END,
+          registry_node.attributes || jsonb_build_object(
+            'sourceTable', 'platform.entity_registry_nodes',
+            'registryNodeId', registry_node.node_id,
+            'registryNodeType', registry_node.node_type,
+            'entityKey', registry_node.entity_key
+          )
+        INTO source_display_name, source_status, source_attributes
+        FROM platform.entity_registry_nodes registry_node
+        WHERE registry_node.tenant_id = p_tenant_id
+          AND registry_node.node_type = p_registry_node_type
+          AND registry_node.entity_key = p_entity_key
+        LIMIT 1;
+      END IF;
 
       SELECT node.node_id INTO resolved_node_id
         FROM platform.entity_nodes node
