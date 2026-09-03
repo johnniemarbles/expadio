@@ -64,8 +64,14 @@ BEGIN
     VALUES(tenant_a,'ENTITY_NODE',hq::text,'COMMERCIAL_PARENT','ENTITY_NODE',unit_a::text,
            'ACTIVE','entity-soak',hq,unit_a,'COMMERCIAL_PARENT');
     RAISE EXCEPTION 'FAIL Gate 6: cardinality violation accepted';
-  EXCEPTION WHEN check_violation OR raise_exception THEN
-    RAISE NOTICE 'PASS Gate 6: cardinality enforcement';
+  EXCEPTION
+    WHEN check_violation THEN RAISE NOTICE 'PASS Gate 6: cardinality enforcement';
+    WHEN raise_exception THEN
+      IF SQLERRM LIKE 'Cardinality violation:%' THEN
+        RAISE NOTICE 'PASS Gate 6: cardinality enforcement';
+      ELSE
+        RAISE;
+      END IF;
   END;
 
   INSERT INTO platform.entity_node_ownership_interests
@@ -76,8 +82,14 @@ BEGIN
       (tenant_id,owned_node_id,owning_node_id,percentage,created_by)
     VALUES(tenant_a,unit_a,owner_b,50,'entity-soak');
     RAISE EXCEPTION 'FAIL Gate 7: ownership overage accepted';
-  EXCEPTION WHEN check_violation OR raise_exception THEN
-    RAISE NOTICE 'PASS Gate 7: ownership overage rejected';
+  EXCEPTION
+    WHEN check_violation THEN RAISE NOTICE 'PASS Gate 7: ownership overage rejected';
+    WHEN raise_exception THEN
+      IF SQLERRM LIKE 'OWNERSHIP_OVERAGE:%' THEN
+        RAISE NOTICE 'PASS Gate 7: ownership overage rejected';
+      ELSE
+        RAISE;
+      END IF;
   END;
   INSERT INTO platform.entity_node_ownership_interests
     (tenant_id,owned_node_id,owning_node_id,percentage,created_by)
