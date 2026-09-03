@@ -6,12 +6,15 @@ import {
   scorePercent,
   validateAssessmentDraft,
   validateQuestionDraft,
+  type LearningAssessmentCompletionRequirement,
   type LearningAssessmentType,
   type LearningQuestionType,
 } from '@expadio/learning';
 import type { PostgresClient } from './index.ts';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
 import { requireTenantModuleOperational } from './product-module.ts';
+import { reconcileLearningEnrollmentCompletion } from './learning-enrollment.ts';
+import { reconcileLearningProgramsForEvidence } from './learning-program-certification.ts';
 
 const KEY = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -40,6 +43,7 @@ interface AssessmentVersionRow {
   readonly max_attempts: number;
   readonly time_limit_seconds: number | null;
   readonly course_version_id: string | null;
+  readonly completion_requirement: LearningAssessmentCompletionRequirement;
 }
 
 interface AttemptRow {
@@ -77,6 +81,26 @@ export interface LearningQuestionCreated {
   readonly state: 'DRAFT';
 }
 
+export interface LearningPublishedQuestionSummary {
+  readonly questionId: string;
+  readonly questionKey: string;
+  readonly questionBankId: string;
+  readonly bankName: string;
+  readonly questionVersionId: string;
+  readonly version: number;
+  readonly type: LearningQuestionType;
+  readonly prompt: string;
+}
+
+export interface LearningPublishedAssessmentVersionSummary {
+  readonly assessmentId: string;
+  readonly assessmentKey: string;
+  readonly assessmentVersionId: string;
+  readonly version: number;
+  readonly title: string;
+  readonly type: LearningAssessmentType;
+}
+
 export interface LearningAssessmentSummary {
   readonly assessmentId: string;
   readonly assessmentKey: string;
@@ -99,6 +123,7 @@ export interface MyAssessmentSummary {
   readonly passed: boolean;
   readonly enrollmentId: string;
   readonly courseVersionId: string;
+  readonly completionRequirement: LearningAssessmentCompletionRequirement;
 }
 
 export interface MyAssessmentAttempt {
@@ -249,6 +274,51 @@ export async function listLearningQuestionBanks(
     bankKey: row.bank_key,
     name: row.name,
     status: row.status,
+  }));
+}
+
+export async function listLearningPublishedQuestions(
+  client: PostgresClient,
+  tenantId: string,
+): Promise<readonly LearningPublishedQuestionSummary[]> {
+  await requireLearning(client, tenantId);
+  const result = await client.query<{
+    readonly question_id: string;
+    readonly question_key: string;
+    readonly question_bank_id: string;
+    readonly bank_name: string;
+    readonly question_version_id: string;
+    readonly version: number;
+    readonly question_type: LearningQuestionType;
+    readonly prompt: string;
+  }>(
+    `SELECT question.question_id, question.question_key, question.question_bank_id,
+            bank.name AS bank_name, version.question_version_id, version.version,
+            version.question_type, version.prompt
+       FROM platform.learning_questions question
+       JOIN platform.learning_question_banks bank
+         ON bank.question_bank_id = question.question_bank_id
+        AND bank.tenant_id = question.tenant_id
+        AND bank.status = 'ACTIVE'
+       JOIN platform.learning_question_versions version
+         ON version.question_id = question.question_id
+        AND version.tenant_id = question.tenant_id
+        AND version.state = 'PUBLISHED'
+      WHERE question.tenant_id = $1::uuid
+        AND question.status = 'ACTIVE'
+      ORDER BY bank.name, question.question_key, question.question_id`,
+    [tenantId],
+  );
+
+  return result.rows.map((row) => ({
+    questionId: row.question_id,
+    questionKey: row.question_key,
+    questionBankId: row.question_bank_id,
+    bankName: row.bank_name,
+    questionVersionId: row.question_version_id,
+    version: row.version,
+    type: row.question_type,
+    prompt: row.prompt,
   }));
 }
 
@@ -479,10 +549,10 @@ export async function createLearningAssessment(
       `INSERT INTO platform.learning_assessment_versions (
          tenant_id, assessment_id, version, state, title, instructions,
          assessment_type, pass_percent, max_attempts, time_limit_seconds,
-         course_version_id, created_by_subject_id, updated_by_subject_id
+         course_version_id, completion_requirement, created_by_subject_id, updated_by_subject_id
        ) VALUES (
          $1::uuid, $2::uuid, 1, 'DRAFT', $3, $4,
-         $5, $6, $7, $8, $9::uuid, $10, $10
+         $5, $6, $7, $8, $9::uuid, $10, $11, $11
        )
        RETURNING assessment_version_id`,
       [
@@ -495,6 +565,7 @@ export async function createLearningAssessment(
         draft.maxAttempts,
         draft.timeLimitSeconds,
         draft.courseVersionId,
+        draft.completionRequirement,
         input.actorSubjectId,
       ],
     );
@@ -521,6 +592,43 @@ export async function createLearningAssessment(
     if (error?.code === '23505') throw new Error('LEARNING_ASSESSMENT_KEY_EXISTS');
     throw error;
   }
+}
+
+export async function listLearningPublishedAssessmentVersions(
+  client: PostgresClient,
+  tenantId: string,
+): Promise<readonly LearningPublishedAssessmentVersionSummary[]> {
+  await requireLearning(client, tenantId);
+  const result = await client.query<{
+    readonly assessment_id: string;
+    readonly assessment_key: string;
+    readonly assessment_version_id: string;
+    readonly version: number;
+    readonly title: string;
+    readonly assessment_type: LearningAssessmentType;
+  }>(
+    `SELECT assessment.assessment_id, assessment.assessment_key,
+            version.assessment_version_id, version.version, version.title,
+            version.assessment_type
+       FROM platform.learning_assessments assessment
+       JOIN platform.learning_assessment_versions version
+         ON version.assessment_id = assessment.assessment_id
+        AND version.tenant_id = assessment.tenant_id
+        AND version.version = assessment.current_published_version
+        AND version.state = 'PUBLISHED'
+      WHERE assessment.tenant_id = $1::uuid
+        AND assessment.status = 'ACTIVE'
+      ORDER BY version.title, assessment.assessment_key`,
+    [tenantId],
+  );
+  return result.rows.map((row) => ({
+    assessmentId: row.assessment_id,
+    assessmentKey: row.assessment_key,
+    assessmentVersionId: row.assessment_version_id,
+    version: row.version,
+    title: row.title,
+    type: row.assessment_type,
+  }));
 }
 
 export async function listLearningAssessments(
@@ -581,7 +689,7 @@ export async function publishLearningAssessmentVersion(
   const versions = await client.query<AssessmentVersionRow>(
     `SELECT assessment_version_id, assessment_id, version, state, title,
             instructions, assessment_type, pass_percent, max_attempts,
-            time_limit_seconds, course_version_id
+            time_limit_seconds, course_version_id, completion_requirement
        FROM platform.learning_assessment_versions
       WHERE tenant_id = $1::uuid
         AND assessment_id = $2::uuid
@@ -704,10 +812,11 @@ export async function listMyAvailableAssessments(
     readonly attempts_used: string | number;
     readonly best_score_percent: string | number | null;
     readonly passed: boolean;
+    readonly completion_requirement: LearningAssessmentCompletionRequirement;
   }>(
     `SELECT a.assessment_id, a.assessment_key, v.assessment_version_id,
             v.version, v.title, v.assessment_type, v.pass_percent, v.max_attempts,
-            e.enrollment_id, e.course_version_id,
+            v.completion_requirement, e.enrollment_id, e.course_version_id,
             count(attempt.attempt_id) FILTER (WHERE attempt.status <> 'VOID') AS attempts_used,
             max(attempt.score_percent) FILTER (WHERE attempt.status = 'GRADED') AS best_score_percent,
             coalesce(bool_or(attempt.passed) FILTER (WHERE attempt.status = 'GRADED'), false) AS passed
@@ -730,7 +839,7 @@ export async function listMyAvailableAssessments(
         AND v.course_version_id IS NOT NULL
       GROUP BY a.assessment_id, a.assessment_key, v.assessment_version_id,
                v.version, v.title, v.assessment_type, v.pass_percent, v.max_attempts,
-               e.enrollment_id, e.course_version_id
+               v.completion_requirement, e.enrollment_id, e.course_version_id
       ORDER BY v.title, a.assessment_id`,
     [input.tenantId, learnerId],
   );
@@ -749,6 +858,7 @@ export async function listMyAvailableAssessments(
     passed: row.passed,
     enrollmentId: row.enrollment_id,
     courseVersionId: row.course_version_id,
+    completionRequirement: row.completion_requirement,
   }));
 }
 
@@ -1193,6 +1303,25 @@ export async function submitMyAssessmentAttempt(
       metadata: { source: 'learning.assessment.grading' },
     },
   });
+
+  if (attempt.enrollment_id !== null) {
+    await reconcileLearningEnrollmentCompletion(client, {
+      tenantId: input.tenantId,
+      enrollmentId: attempt.enrollment_id,
+      actorSubjectId: input.subjectId,
+      correlationId: input.correlationId,
+    });
+  }
+
+  if (passed) {
+    await reconcileLearningProgramsForEvidence(client, {
+      tenantId: input.tenantId,
+      learnerId: attempt.learner_id,
+      actorSubjectId: input.subjectId,
+      correlationId: input.correlationId,
+      assessmentVersionId: attempt.assessment_version_id,
+    });
+  }
 
   return {
     attemptId: attempt.attempt_id,

@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './MetricCard.module.css';
 import { HealthTone } from '../contracts.js';
+import { MotionCard } from '../motion/MotionCard';
 
 export interface MetricCardProps {
   label: string;
@@ -11,13 +12,13 @@ export interface MetricCardProps {
 
 export function MetricCard({ label, value, detail, tone }: MetricCardProps) {
   return (
-    <div className={styles.card}>
+    <MotionCard className={styles.card} interactive>
       <div className={styles.header}>
         <span className={styles.label}>{label}</span>
         <span className={`${styles.dot} ${styles[tone]}`} aria-label={`Health tone: ${tone}`} />
       </div>
       <div className={styles.value}>{value}</div>
       <div className={styles.detail}>{detail}</div>
-    </div>
+    </MotionCard>
   );
 }

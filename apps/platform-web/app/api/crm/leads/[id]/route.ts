@@ -6,7 +6,7 @@ import { toLead } from '../route';
 
 /**
  * Move a lead through the pipeline (governed). RLS keeps the update within the
- * caller's tenant; a governing role is required to mutate.
+ * caller's selected organization subtree; a governing role is required to mutate.
  */
 
 export const runtime = 'nodejs';
@@ -39,8 +39,9 @@ export async function PATCH(
         `UPDATE platform.crm_leads
             SET stage = $2, updated_at = now()
           WHERE lead_id = $1::uuid
-          RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
-                    amount_minor_units, currency, source, raw_payload, owner_subject_id, created_at, updated_at`,
+          RETURNING lead_id, tenant_id, organization_id, account_id, contact_id, title, stage,
+                    amount_minor_units, currency, source, raw_payload, owner_subject_id,
+                    capture_lead_id, capture_layer_id, created_at, updated_at`,
         [leadId, stage],
       );
       if (updated.rows.length === 0) return { notFound: true } as const;

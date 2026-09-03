@@ -1,0 +1,103 @@
+.backdrop {
+  animation: providerBackdropIn var(--theme-motion-fast) var(--theme-easing) both;
+}
+
+.dialog {
+  animation: providerDialogIn var(--theme-motion-panel) var(--theme-easing-emphasis) both;
+  transform-origin: 50% 35%;
+}
+
+.status,
+.warning,
+.error {
+  animation: providerFeedbackIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 28%, transparent);
+  content: "";
+  animation: providerStatusPulse 1.8s var(--theme-easing) infinite;
+}
+
+.actions button {
+  transition:
+    transform var(--theme-motion-fast) var(--theme-easing),
+    box-shadow var(--theme-motion-fast) var(--theme-easing),
+    opacity var(--theme-motion-fast) var(--theme-easing);
+}
+
+.actions button:not(:disabled):hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.actions button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.actions button:disabled {
+  transform: none;
+}
+
+@keyframes providerBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes providerDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-panel)) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes providerFeedbackIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-small));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes providerStatusPulse {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 0%, transparent);
+    opacity: .72;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .status,
+  .warning,
+  .error,
+  .status::before {
+    animation: none;
+  }
+
+  .actions button {
+    transition: none;
+  }
+
+  .actions button:not(:disabled):hover,
+  .actions button:not(:disabled):active {
+    transform: none;
+  }
+}

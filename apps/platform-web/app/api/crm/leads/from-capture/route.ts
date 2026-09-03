@@ -1,19 +1,23 @@
 import { NextResponse } from 'next/server';
 import { LeadValidationError } from '@expadio/lead';
-import { resolveRequestContext, withTenantTransaction, deniedResponse } from '../../../../../lib/request-context';
+import { ContextDenied, resolveRequestContext, withTenantTransaction, deniedResponse } from '../../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../../lib/crm-authz';
 import {
   CaptureScopeRejected,
   UPSERT_CAPTURE_CRM_LEAD_SQL,
-  buildCaptureConvertWrite,
+  buildTrustedCaptureConvertWrite,
   captureConvertBindParams,
+  captureLeadIdFromConvertBody,
+  loadTrustedCaptureProjection,
   toCaptureCrmLead,
 } from '../../../../../lib/lead-capture-convert';
 
 /**
- * Project an inbound capture snapshot onto platform.crm_leads.
- * Does not replace POST /api/crm/leads/:id/convert (customer funnel).
- * Does not delete extract capture history (I8).
+ * Project one persisted Demand Capture lead onto platform.crm_leads.
+ * The request supplies only captureLeadId. Stage, payload, organization, owner and
+ * layer provenance are loaded from trusted persisted capture state under RLS.
+ * Does not replace POST /api/crm/leads/:id/convert (customer funnel) and never
+ * deletes the 19-stage capture record (I8).
  */
 
 export const runtime = 'nodejs';
@@ -22,6 +26,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    if (!context.organizationId) {
+      throw new ContextDenied('ORGANIZATION_CONTEXT_REQUIRED', 'Select an organization workspace to convert a capture lead.', 403);
+    }
     let body: unknown = {};
     try {
       body = await request.json();
@@ -29,15 +36,15 @@ export async function POST(request: Request) {
       body = {};
     }
 
-    let write;
+    let captureLeadId: string;
     try {
-      write = buildCaptureConvertWrite(body, context);
+      captureLeadId = captureLeadIdFromConvertBody(body);
     } catch (error) {
-      if (error instanceof CaptureScopeRejected) {
-        return NextResponse.json({ error: error.message, field: error.field }, { status: 400 });
-      }
-      if (error instanceof LeadValidationError) {
-        return NextResponse.json({ error: error.message, field: error.field }, { status: 400 });
+      if (error instanceof CaptureScopeRejected || error instanceof LeadValidationError) {
+        return NextResponse.json(
+          { error: error.message, field: 'field' in error ? error.field : undefined },
+          { status: 400 },
+        );
       }
       throw error;
     }
@@ -46,12 +53,24 @@ export async function POST(request: Request) {
       if (!(await hasCrmWriteRole(client, context.subjectId))) {
         return { forbidden: true } as const;
       }
+
+      const projection = await loadTrustedCaptureProjection(client, {
+        tenantId: context.tenantId,
+        captureLeadId,
+      });
+      if (!projection) return { captureNotFound: true } as const;
+
+      const write = buildTrustedCaptureConvertWrite(projection, context);
       try {
-        const upserted = await client.query(UPSERT_CAPTURE_CRM_LEAD_SQL, captureConvertBindParams(
-          write.principal.tenantId,
-          context.subjectId,
-          write.input,
-        ));
+        const upserted = await client.query(
+          UPSERT_CAPTURE_CRM_LEAD_SQL,
+          captureConvertBindParams(
+            write.principal.tenantId,
+            write.organizationId,
+            write.ownerSubjectId,
+            write.input,
+          ),
+        );
         const row = upserted.rows[0];
         return {
           lead: toCaptureCrmLead(row),
@@ -60,7 +79,9 @@ export async function POST(request: Request) {
           deleteCapture: false as const,
         };
       } catch (err: unknown) {
-        const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: string }).code) : '';
+        const code = typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: string }).code)
+          : '';
         if (code === '23503') return { badRef: true } as const;
         throw err;
       }
@@ -72,8 +93,14 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
+    if ('captureNotFound' in result) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'CAPTURE_LEAD_NOT_FOUND', message: 'The capture lead is not visible in this organization workspace.' },
+        { status: 404 },
+      );
+    }
     if ('badRef' in result) {
-      return NextResponse.json({ error: 'The linked account or contact does not exist in this workspace.' }, { status: 400 });
+      return NextResponse.json({ error: 'The trusted capture projection contains an invalid linked reference.' }, { status: 400 });
     }
     return NextResponse.json(
       {

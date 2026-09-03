@@ -1,0 +1,25 @@
+.panel {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(var(--theme-motion-distance-panel));
+  transition:
+    opacity var(--theme-motion-panel) var(--theme-easing),
+    transform var(--theme-motion-panel) var(--theme-easing);
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+    transform: none;
+  }
+}

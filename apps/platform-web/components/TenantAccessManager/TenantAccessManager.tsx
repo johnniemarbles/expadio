@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './TenantAccessManager.module.css';
+import { MotionPanel, MotionTabs, MotionFeedback } from '@expadio/ui';
 
 type Member = {
   membershipId:string;subjectId:string;status:'ACTIVE'|'SUSPENDED'|'REVOKED';
@@ -119,7 +120,7 @@ export function TenantAccessManager({
   }
 
   return <div className={styles.stack}>
-    <section className={styles.panel}>
+    <MotionPanel className={styles.panel}>
       <div className={styles.panelHead}><div><h2>Add tenant user</h2><p>Existing Clerk users are granted immediately. New identities receive a real Clerk invitation.</p></div></div>
       <form className={styles.form} onSubmit={invite}>
         <label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="user@company.com"/></label>
@@ -129,9 +130,9 @@ export function TenantAccessManager({
       </form>
       {error?<div className={styles.error} role="alert">{error}</div>:null}
       {notice?<div className={styles.status} role="status">{notice}</div>:null}
-    </section>
+    </MotionPanel>
 
-    <section className={styles.panel}>
+    <MotionPanel className={styles.panel}>
       <div className={styles.panelHead}><div><h2>Active directory</h2><p>{members.length} membership record{members.length===1?'':'s'} in this organization.</p></div></div>
       <div className={styles.tableWrap}><table><thead><tr><th>User</th><th>Roles</th><th>Status</th><th>Expiry</th><th>Actions</th></tr></thead><tbody>
         {memberRows.map(member=><tr key={member.membershipId}>
@@ -148,11 +149,11 @@ export function TenantAccessManager({
         </tr>)}
         {memberRows.length===0?<tr><td colSpan={5} className={styles.empty}>No memberships yet.</td></tr>:null}
       </tbody></table></div>
-    </section>
+    </MotionPanel>
 
-    <section className={styles.panel}>
+    <MotionPanel className={styles.panel}>
       <div className={styles.panelHead}><div><h2>Pending invitations</h2><p>Invitation acceptance provisions membership through the verified Clerk webhook.</p></div></div>
       <div className={styles.invites}>{inviteRows.length===0?<div className={styles.empty}>No pending invitations for this workspace.</div>:inviteRows.map(inv=><div className={styles.invite} key={inv.invitationId}><div><strong>{inv.email}</strong><span>{inv.roleKey?label(inv.roleKey):'Tenant role'} · sent {new Date(inv.createdAt).toLocaleString()} · {inv.deliveryState==='CLERK_UNAVAILABLE'?'Clerk status unavailable':inv.deliveryState==='CLERK_NOT_PENDING'?'Needs reconciliation':'Pending in Clerk'}</span></div><div className={styles.actions}>{inv.acceptUrl?<button disabled={busy!==null} onClick={()=>void copyInviteLink(inv)}>Copy invite link</button>:null}<button disabled={busy!==null} onClick={()=>void resendInvite(inv.invitationId)}>{busy===`resend:${inv.invitationId}`?'Resending…':'Resend'}</button><button className={styles.danger} disabled={busy!==null} onClick={()=>void revokeInvite(inv.invitationId)}>{busy===inv.invitationId?'Revoking…':'Revoke invite'}</button></div></div>)}</div>
-    </section>
+    </MotionPanel>
   </div>
 }

@@ -1,21 +1,22 @@
 import { NextResponse } from 'next/server';
 import { validateLeadInput, LeadValidationError, type CrmLead } from '@expadio/lead';
-import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
+import { ContextDenied, resolveRequestContext, withTenantClient, deniedResponse } from '../../../../lib/request-context';
 import { hasCrmWriteRole } from '../../../../lib/crm-authz';
 
 /**
- * CRM leads (sales pipeline). Tenant-scoped via RLS; reads require membership,
- * writes require a governing role. Backed by the @expadio/lead domain.
+ * CRM leads (sales pipeline). Organization/subtree-scoped via RLS; reads require
+ * membership, writes require a governing role. Backed by the @expadio/lead domain.
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export function toLead(row: any): CrmLead & { accountName: string | null } {
+export function toLead(row: any): CrmLead & { organizationId: string; accountName: string | null } {
   const payload = row.raw_payload;
   return {
     leadId: row.lead_id,
     tenantId: row.tenant_id,
+    organizationId: row.organization_id,
     accountId: row.account_id ?? null,
     contactId: row.contact_id ?? null,
     title: row.title,
@@ -36,13 +37,16 @@ export function toLead(row: any): CrmLead & { accountName: string | null } {
 export async function GET(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    if (!context.organizationId) {
+      throw new ContextDenied('ORGANIZATION_CONTEXT_REQUIRED', 'Select an organization workspace to view leads.', 403);
+    }
     const url = new URL(request.url);
     const stage = url.searchParams.get('stage')?.trim().toUpperCase() ?? '';
     const accountId = url.searchParams.get('accountId')?.trim() ?? '';
 
     const leads = await withTenantClient(context, async (client) => {
       const result = await client.query(
-        `SELECT l.lead_id, l.tenant_id, l.account_id, l.contact_id, l.title, l.stage,
+        `SELECT l.lead_id, l.tenant_id, l.organization_id, l.account_id, l.contact_id, l.title, l.stage,
                 l.amount_minor_units, l.currency, l.source, l.raw_payload, l.owner_subject_id,
                 l.capture_lead_id, l.capture_layer_id, l.created_at, l.updated_at, a.name AS account_name
            FROM platform.crm_leads l
@@ -66,6 +70,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const context = await resolveRequestContext(request);
+    if (!context.organizationId) {
+      throw new ContextDenied('ORGANIZATION_CONTEXT_REQUIRED', 'Select an organization workspace to create a lead.', 403);
+    }
     let input;
     try {
       input = validateLeadInput(await request.json());
@@ -83,13 +90,13 @@ export async function POST(request: Request) {
       try {
         const inserted = await client.query(
           `INSERT INTO platform.crm_leads
-             (tenant_id, account_id, contact_id, title, stage, amount_minor_units, currency, source, raw_payload, owner_subject_id)
-           VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
-           RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
+             (tenant_id, organization_id, account_id, contact_id, title, stage, amount_minor_units, currency, source, raw_payload, owner_subject_id)
+           VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11)
+           RETURNING lead_id, tenant_id, organization_id, account_id, contact_id, title, stage,
                      amount_minor_units, currency, source, raw_payload, owner_subject_id,
                      capture_lead_id, capture_layer_id, created_at, updated_at`,
           [
-            context.tenantId, input.accountId, input.contactId, input.title, input.stage,
+            context.tenantId, context.organizationId, input.accountId, input.contactId, input.title, input.stage,
             input.amountMinorUnits, input.currency, input.source, JSON.stringify(input.rawPayload), context.subjectId,
           ],
         );
@@ -104,7 +111,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'You need a tenant admin role to create leads.' }, { status: 403 });
     }
     if ('badRef' in result) {
-      return NextResponse.json({ error: 'The linked account or contact does not exist in this workspace.' }, { status: 400 });
+      return NextResponse.json({ error: 'The linked account or contact does not exist in this organization workspace.' }, { status: 400 });
     }
     return NextResponse.json({ success: true, lead: result.lead }, { status: 201 });
   } catch (error) {

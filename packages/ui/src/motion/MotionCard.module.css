@@ -1,0 +1,27 @@
+.card {
+  --motion-delay: 0ms;
+  animation: motionCardIn var(--theme-motion-slow) var(--theme-easing) var(--motion-delay) both;
+}
+
+.interactive {
+  transition: transform var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing);
+}
+
+.interactive:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.interactive:active {
+  transform: translateY(0);
+}
+
+@keyframes motionCardIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .interactive { transition: none; }
+  .interactive:hover, .interactive:active { transform: none; }
+}

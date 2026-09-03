@@ -1,11 +1,19 @@
 import React from 'react';
 import styles from '../../page.module.css';
 import { fetchApi } from '../../../../lib/live-adapter';
-import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
+import { DeniedState, EmptyState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
-import { requestedOrganizationId, type RouteSearchParams } from '../../../../lib/request-context';
+import { type RouteSearchParams } from '../../../../lib/request-context';
 
-export default async function AgentBindingsPage({ searchParams }: { searchParams: RouteSearchParams }) {
+function bindingStatusClass(status: string): string {
+  const normalized = status.toUpperCase();
+  if (normalized === 'BOUND' || normalized === 'ACTIVE') return [styles.statusBadge, styles.statusSuccess].join(' ');
+  if (normalized === 'SUSPENDED' || normalized === 'FAILED' || normalized === 'ERROR') return [styles.statusBadge, styles.statusDanger].join(' ');
+  if (normalized === 'BINDING' || normalized === 'PENDING' || normalized === 'PROCESSING') return [styles.statusBadge, styles.statusLive].join(' ');
+  return [styles.statusBadge, styles.statusNeutral].join(' ');
+}
+
+export default async function AgentBindingsPage({ searchParams: _searchParams }: { searchParams: RouteSearchParams }) {
   const bindings = await fetchApi<any[]>('/api/agents/bindings');
   
   if (isDenied(bindings)) return <DeniedState result={bindings} />;
@@ -43,9 +51,7 @@ export default async function AgentBindingsPage({ searchParams }: { searchParams
                 <tr key={binding.binding_id}>
                   <td><span className={styles.code}>{binding.binding_id}</span></td>
                   <td><strong>{binding.capability_key}</strong></td>
-                  <td>
-                    <StatePill state={binding.status === 'BOUND' ? 'Published' : binding.status === 'SUSPENDED' ? 'Draft' : 'Review'} />
-                  </td>
+                  <td><span className={bindingStatusClass(String(binding.status ?? 'UNKNOWN'))}>{String(binding.status ?? 'UNKNOWN')}</span></td>
                   <td>{binding.mapped_to_resource || 'System'}</td>
                   <td className={styles.muted}>{new Date(binding.created_at).toLocaleString()}</td>
                 </tr>

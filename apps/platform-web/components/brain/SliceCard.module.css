@@ -6,12 +6,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  animation: brainSliceIn var(--theme-motion-panel) var(--theme-easing) both;
+  transition: transform var(--theme-motion-normal) var(--theme-easing), box-shadow var(--theme-motion-normal) var(--theme-easing), border-color var(--theme-motion-normal) var(--theme-easing);
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(calc(-1 * var(--theme-motion-distance-micro)));
+  box-shadow: var(--theme-shadow-subtle);
+  border-color: color-mix(in srgb, var(--theme-primary) 22%, var(--theme-border));
 }
 
 .header {
@@ -67,4 +69,14 @@
 .footer {
   font-size: 0.875rem;
   color: var(--theme-text-muted);
+}
+
+@keyframes brainSliceIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; transition: none; }
+  .card:hover { transform: none; }
 }

@@ -7,6 +7,7 @@
   padding: 20px;
   background: color-mix(in srgb, var(--theme-overlay) 62%, transparent);
   backdrop-filter: blur(6px);
+  animation: domainBackdropIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .dialog {
@@ -18,6 +19,7 @@
   border-radius: 16px;
   background: var(--theme-surface-raised);
   box-shadow: var(--theme-shadow-lg);
+  animation: domainDialogIn var(--theme-motion-panel) var(--theme-easing) both;
 }
 
 .header {
@@ -55,6 +57,16 @@
   color: var(--theme-text-primary);
   cursor: pointer;
   font-size: 16px;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+}
+
+.closeButton:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+  border-color: color-mix(in srgb, var(--theme-primary) 24%, var(--theme-border));
+}
+
+.closeButton:active {
+  transform: translateY(var(--theme-motion-distance-micro));
 }
 
 .description {
@@ -73,6 +85,8 @@
   border: 1px solid color-mix(in srgb, var(--theme-warning) 28%, transparent);
   border-radius: 12px;
   background: color-mix(in srgb, var(--theme-warning) 6%, var(--theme-surface));
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+  animation: domainSectionIn var(--theme-motion-panel) var(--theme-easing) both;
 }
 
 .fieldset {
@@ -114,10 +128,20 @@
   background: var(--theme-text-inverse);
   color: var(--theme-text-primary);
   font-size: 13px;
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
+}
+
+.input:focus,
+.inputInvalid:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-warning) 10%, transparent);
 }
 
 .inputInvalid {
   border-color: var(--theme-danger);
+}
+
+.inputInvalid:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-danger) 10%, transparent);
 }
 
 .actions {
@@ -133,6 +157,7 @@
   border-radius: 999px;
   cursor: pointer;
   font-weight: 700;
+  transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), opacity var(--theme-motion-fast) var(--theme-easing);
 }
 
 .primaryButton {
@@ -150,6 +175,20 @@
   font-size: 13px;
 }
 
+.primaryButton:not(:disabled):hover,
+.secondaryButton:not(:disabled):hover,
+.smallButton:not(:disabled):hover,
+.dangerButton:not(:disabled):hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.primaryButton:not(:disabled):active,
+.secondaryButton:not(:disabled):active,
+.smallButton:not(:disabled):active,
+.dangerButton:not(:disabled):active {
+  transform: translateY(var(--theme-motion-distance-micro));
+}
+
 .primaryButton:disabled,
 .secondaryButton:disabled,
 .smallButton:disabled,
@@ -163,6 +202,7 @@
   padding: 10px;
   border-radius: 8px;
   font-size: 13px;
+  animation: domainBannerIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .alert {
@@ -208,6 +248,7 @@
   padding: 20px;
   color: var(--theme-text-muted);
   text-align: center;
+  animation: domainFadeIn var(--theme-motion-normal) var(--theme-easing) both;
 }
 
 .domainList {
@@ -219,6 +260,16 @@
   border: 1px solid var(--theme-border);
   border-radius: 10px;
   background: var(--theme-surface-raised);
+  transition: border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing);
+  animation: domainSectionIn var(--theme-motion-panel) var(--theme-easing) both;
+}
+
+.domainList .domainCard:nth-child(2) { animation-delay: 35ms; }
+.domainList .domainCard:nth-child(3) { animation-delay: 70ms; }
+.domainList .domainCard:nth-child(4) { animation-delay: 105ms; }
+
+.domainCard:hover {
+  border-color: color-mix(in srgb, var(--theme-primary) 18%, var(--theme-border));
 }
 
 .domainHeader {
@@ -253,6 +304,7 @@
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
+  transition: color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing);
 }
 
 .statusVerified {
@@ -332,10 +384,36 @@
 .recordStatus {
   color: var(--theme-warning);
   font-weight: 700;
+  transition: color var(--theme-motion-fast) var(--theme-easing);
 }
 
 .recordStatusVerified {
   color: var(--theme-success);
+}
+
+@keyframes domainBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes domainDialogIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes domainSectionIn {
+  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes domainBannerIn {
+  from { opacity: 0; transform: translateY(calc(var(--theme-motion-distance-small) * -1)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes domainFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (max-width: 720px) {
@@ -348,4 +426,10 @@
   .domainActions {
     flex-wrap: wrap;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,.dialog,.actionPanel,.alert,.success,.loading,.empty,.domainCard { animation: none; }
+  .closeButton,.actionPanel,.input,.inputInvalid,.primaryButton,.secondaryButton,.smallButton,.dangerButton,.domainCard,.statusPill,.statusVerified,.statusRevoked,.statusPending,.recordStatus { transition: none; }
+  .closeButton:hover,.closeButton:active,.primaryButton:not(:disabled):hover,.primaryButton:not(:disabled):active,.secondaryButton:not(:disabled):hover,.secondaryButton:not(:disabled):active,.smallButton:not(:disabled):hover,.smallButton:not(:disabled):active,.dangerButton:not(:disabled):hover,.dangerButton:not(:disabled):active { transform: none; }
 }

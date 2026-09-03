@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MotionPanel, MotionCard } from '@expadio/ui';
 import styles from "./page.module.css";
 import capacityStyles from "./CapacityPanel.module.css";
 
@@ -142,7 +143,7 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
       {notice && <div className={`${capacityStyles.banner} ${capacityStyles.notice}`}>✅ {notice}</div>}
 
       {/* Plane partition */}
-      <section className={styles.attentionTablePanel}>
+      <MotionPanel className={styles.attentionTablePanel}>
         <div className={styles.attentionPanelHeading}>
           <div>
             <h3>Plane partition</h3>
@@ -165,10 +166,10 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
         ) : (
           <p className={capacityStyles.empty}>No plane budget is configured for this tenant yet.</p>
         )}
-      </section>
+      </MotionPanel>
 
       {/* Quota bounds */}
-      <section className={styles.attentionTablePanel}>
+      <MotionPanel className={styles.attentionTablePanel}>
         <div className={styles.attentionPanelHeading}>
           <div>
             <h3>Rate bounds</h3>
@@ -212,10 +213,10 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
             No per-connector bounds set. Consumption this minute — transactional {quota?.consumption.transactional.minuteCount ?? 0}, bulk {quota?.consumption.bulk.minuteCount ?? 0}.
           </p>
         )}
-      </section>
+      </MotionPanel>
 
       {/* Spend breaker */}
-      <section className={styles.attentionTablePanel}>
+      <MotionPanel className={styles.attentionTablePanel}>
         <div className={styles.attentionPanelHeading}>
           <div>
             <h3>Cost breaker</h3>
@@ -250,7 +251,7 @@ export function CapacityPanel({ queryString = "" }: CapacityPanelProps) {
             {savingCap ? "Saving…" : "Update cap"}
           </button>
         </div>
-      </section>
+      </MotionPanel>
     </div>
   );
 }

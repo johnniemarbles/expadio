@@ -7,13 +7,21 @@
   padding: 2rem;
   color: var(--theme-text-primary);
   box-shadow: var(--theme-shadow-card);
+  animation: brainOverviewIn var(--theme-motion-panel) var(--theme-easing) both;
 }
 
 .content { display:flex; flex-direction:column; gap:1.5rem; }
 .title { font-size:1.75rem; font-weight:750; margin:0; color:var(--theme-text-primary); letter-spacing:-.03em; }
 .summary { font-size:.95rem; color:var(--theme-text-secondary); margin:0; }
 .metrics { display:flex; gap:3rem; margin-top:.5rem; flex-wrap:wrap; }
-.metric { display:flex; flex-direction:column; gap:.25rem; min-width:110px; }
+.metric { display:flex; flex-direction:column; gap:.25rem; min-width:110px; animation:brainMetricIn var(--theme-motion-normal) var(--theme-easing) both; }
+.metric:nth-child(2) { animation-delay: 40ms; }
+.metric:nth-child(3) { animation-delay: 80ms; }
 .metricValue { font-size:2rem; font-weight:750; color:var(--theme-text-primary); line-height:1.2; letter-spacing:-.03em; }
 .metricLabel { font-size:.875rem; color:var(--theme-text-muted); font-weight:550; }
+
+@keyframes brainOverviewIn { from { opacity:0; transform:translateY(var(--theme-motion-distance-small)); } to { opacity:1; transform:translateY(0); } }
+@keyframes brainMetricIn { from { opacity:0; transform:translateY(var(--theme-motion-distance-micro)); } to { opacity:1; transform:translateY(0); } }
+
 @media(max-width:680px){.card{padding:1.5rem}.metrics{gap:1.5rem}}
+@media(prefers-reduced-motion:reduce){.card,.metric{animation:none}}

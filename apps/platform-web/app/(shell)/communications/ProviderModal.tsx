@@ -4,12 +4,27 @@ import { useMemo, useState } from "react";
 import { apiError } from "../../../lib/api-error";
 import { wrapSecret, type PublishedWrappingKey } from "../../../lib/custody-wrap";
 import { EXECUTABLE_COMMUNICATION_PROVIDERS } from "../../../lib/communication-runtime-providers";
+import { MotionStatus } from "@expadio/ui";
 
 type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () => void };
 
-function reauthHeaders(json = true): HeadersInit {
+/**
+ * Provider registration is a governed, step-up-guarded flow (design §2–§3), not
+ * a plain form:
+ *   - DELEGATED (BYOK): fetch a wrapping key, wrap the secret in the browser,
+ *     POST /custody/credentials to probe + vault it, then register with the
+ *     returned reference. The plaintext secret never leaves the tab in the clear.
+ *
+ * Every custody and provider call carries a fresh step-up header (§3.4).
+ */
+
+function standardStepUp() {
+  const token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("expadio_auth="))
+    ?.split("=")[1];
   return {
-    ...(json ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${token}`,
     "x-expadio-reauth-at": new Date().toISOString(),
   };
 }
@@ -28,95 +43,87 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  const selected = useMemo(
-    () => EXECUTABLE_COMMUNICATION_PROVIDERS.find((provider) => provider.providerKey === registerKey)
-      ?? EXECUTABLE_COMMUNICATION_PROVIDERS[0],
-    [registerKey],
-  );
-
-  if (!isOpen) return null;
+  const selected = useMemo(() => EXECUTABLE_COMMUNICATION_PROVIDERS.find((p) => p.providerKey === registerKey)!, [registerKey]);
 
   function reset() {
+    setConnectorKey("");
+    setRegion("");
+    setPriority("100");
     setSecret("");
     setAccountSid("");
     setFromAddress("");
     setFromNumber("");
+    setSaving(false);
     setStatus(null);
     setError(null);
     setWarnings([]);
   }
 
-  async function registerConnector(credentialRef: string) {
-    const response = await fetch(`/api/communications/providers${window.location.search}`, {
+  async function registerConnector(credentialRef: string | null, capabilities: string[]) {
+    const res = await fetch("/api/communications/providers", {
       method: "POST",
-      headers: reauthHeaders(),
+      headers: { ...standardStepUp(), "Content-Type": "application/json" },
       body: JSON.stringify({
         providerKey: selected.providerKey,
-        providerType: selected.providerType,
         connectorKey: connectorKey.trim() || undefined,
+        capabilities,
         region: region.trim() || undefined,
-        priority: Number(priority) || 100,
-        custodyMode: "DELEGATED",
-        capabilityKeys: [selected.capabilityKey],
+        priority: parseInt(priority, 10),
         credentialRef,
+        custodyMode: "DELEGATED",
       }),
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(apiError(result, "Provider registration failed."));
+    const body = await res.json();
+    if (!res.ok) throw new Error(apiError(body, "Failed to register the connector."));
   }
 
-  async function runByokIntake(): Promise<string> {
-    if (!secret.trim()) throw new Error("Enter the API secret or token to store.");
-    if (selected.custodyBaseKey === "twilio" && !accountSid.trim()) {
-      throw new Error("Twilio Account SID is required.");
-    }
-    const effectiveConnectorKey = connectorKey.trim()
-      || `comm-${selected.providerKey}-${crypto.randomUUID().slice(0, 8)}`;
-
+  async function runByokIntake() {
+    if (!secret.trim()) throw new Error("BYOK requires an API secret.");
     setStatus("Requesting a one-time wrapping key…");
-    const keyRes = await fetch(`/api/custody/wrapping-key${window.location.search}`, {
-      headers: reauthHeaders(false),
-    });
+    const keyRes = await fetch("/api/custody/keys/active", { headers: standardStepUp() });
     const keyBody = await keyRes.json();
-    if (!keyRes.ok) throw new Error(apiError(keyBody, "Could not obtain a wrapping key."));
+    if (!keyRes.ok) throw new Error(apiError(keyBody, "Could not fetch a wrapping key."));
+    const key = keyBody as PublishedWrappingKey;
 
-    setStatus("Wrapping the credential in your browser…");
-    const envelope = await wrapSecret(keyBody as PublishedWrappingKey, secret);
-    const parameters: Record<string, string> = {};
-    if (accountSid.trim()) parameters.accountSid = accountSid.trim();
-    if (region.trim()) parameters.region = region.trim();
-    if (fromAddress.trim()) parameters.fromAddress = fromAddress.trim();
-    if (fromNumber.trim()) parameters.fromNumber = fromNumber.trim();
+    setStatus("Wrapping your secret locally…");
+    const envelope = await wrapSecret(key, secret);
+    const effectiveConnectorKey = connectorKey.trim() || `${selected.providerKey}-byok-${Date.now().toString().slice(-4)}`;
 
-    setStatus("Probing the credential with the provider…");
-    const intakeRes = await fetch(`/api/custody/credentials${window.location.search}`, {
+    setStatus("Vaulting and probing the credential…");
+    const intakeRes = await fetch("/api/custody/credentials", {
       method: "POST",
-      headers: reauthHeaders(),
+      headers: { ...standardStepUp(), "Content-Type": "application/json" },
       body: JSON.stringify({
-        connectorKey: effectiveConnectorKey,
-        providerKey: selected.custodyBaseKey,
-        envelope,
-        parameters,
+        targetSystem: selected.providerKey,
+        credentialIdentifier: effectiveConnectorKey,
+        wrappedEnvelope: envelope,
+        wrappingKeyId: key.keyId,
+        metadata: {
+          accountSid: accountSid.trim() || undefined,
+          fromAddress: fromAddress.trim() || undefined,
+          fromNumber: fromNumber.trim() || undefined,
+        },
       }),
     });
     const intakeBody = await intakeRes.json();
-    if (Array.isArray(intakeBody?.warnings) && intakeBody.warnings.length > 0) {
+    if (intakeBody.warnings && Array.isArray(intakeBody.warnings)) {
       setWarnings(
         intakeBody.warnings
-          .map((warning: unknown) => typeof warning === "string"
-            ? warning
-            : typeof warning === "object" && warning !== null && "message" in warning
+          .map((warning: unknown) =>
+            typeof warning === "string"
+              ? warning
+              : typeof warning === "object" && warning !== null && "message" in warning
               ? String((warning as { message: unknown }).message)
               : "")
           .filter(Boolean),
       );
     }
     if (!intakeRes.ok) throw new Error(apiError(intakeBody, "The credential could not be verified."));
-    if (typeof intakeBody.credentialRef !== "string" || intakeBody.credentialRef.length === 0) {
+    if (typeof intakeBody.reference !== "string" || intakeBody.reference.length === 0) {
       throw new Error("Credential custody did not return a canonical credential reference.");
     }
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
-    return intakeBody.credentialRef;
+    return { reference: intakeBody.reference, capabilities: [selected.capabilityKey] };
   }
 
   async function submit(event: React.FormEvent) {
@@ -126,9 +133,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setWarnings([]);
     setStatus(null);
     try {
-      const credentialRef = await runByokIntake();
+      const { reference, capabilities } = await runByokIntake();
       setStatus("Registering the connector…");
-      await registerConnector(credentialRef);
+      await registerConnector(reference, capabilities);
       onCreated();
       reset();
       onClose();
@@ -151,17 +158,31 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
 
   return (
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(event) => event.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface)", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
-          <h2 style={{ margin: "4px 0 0" }}>Register executable provider</h2>
-          <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--theme-text-secondary)" }}>
-            Only providers with a governed EXPADIO execution adapter are offered here. Future catalog providers remain unavailable until their send and lifecycle paths are wired and certified.
-          </p>
+      <form
+        role="dialog"
+        aria-label="Register communications provider"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={submit}
+        style={{
+          background: "var(--theme-surface)",
+          border: "1px solid var(--theme-border)",
+          borderRadius: 16,
+          boxShadow: "var(--theme-shadow-elevated)",
+          width: "100%",
+          maxWidth: 480,
+          padding: 24,
+          display: "grid",
+          gap: 20,
+          animation: "providerDialogIn var(--theme-transition-entrance) both"
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, letterSpacing: "-.02em" }}>Register communications provider</h2>
+          <button type="button" onClick={onClose} style={{ background: "transparent", border: 0, fontSize: 20, cursor: "pointer", color: "var(--theme-text-muted)" }}>&times;</button>
         </div>
 
         <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Provider
-          <select value={registerKey} onChange={(event) => setRegisterKey(event.target.value)} style={field}>
+          <select value={registerKey} onChange={(event) => setRegisterKey(event.target.value)} style={{ ...field, background: "var(--theme-surface-raised)" }}>
             {EXECUTABLE_COMMUNICATION_PROVIDERS.map((provider) => (
               <option key={provider.providerKey} value={provider.providerKey}>
                 {provider.label} · {provider.providerType}
@@ -215,7 +236,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
           <p style={{ margin: 0, fontSize: 11, color: "var(--theme-text-muted)" }}>The raw secret is never submitted as plaintext.</p>
         </div>
 
-        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--theme-primary)" }}>{status}</p>}
+        {status && <MotionStatus live tone="info">{status}</MotionStatus>}
         {warnings.length > 0 && (
           <div style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>
             {warnings.map((warning, index) => <div key={index}>⚠️ {warning}</div>)}

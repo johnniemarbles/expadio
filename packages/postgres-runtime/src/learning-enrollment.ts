@@ -12,6 +12,7 @@ import {
 import type { PostgresClient } from './index.ts';
 import { appendDomainEventWithOutbox } from './domain-events.ts';
 import { requireTenantModuleOperational } from './product-module.ts';
+import { reconcileLearningProgramsForEvidence } from './learning-program-certification.ts';
 
 interface LearnerRow {
   readonly learner_id: string;
@@ -649,7 +650,83 @@ export async function completeMyLearningLesson(
     },
   });
 
-  const counts = await client.query<{
+  const reconciliation = await reconcileLearningEnrollmentCompletion(client, {
+    tenantId: input.tenantId,
+    enrollmentId: input.enrollmentId,
+    actorSubjectId: input.subjectId,
+    correlationId: input.correlationId,
+  });
+
+  return {
+    enrollmentId: input.enrollmentId,
+    lessonId: input.lessonId,
+    enrollmentStatus: reconciliation.enrollmentStatus,
+    completionPercent: reconciliation.completionPercent,
+    courseCompleted: reconciliation.courseCompleted,
+    idempotent: false,
+  };
+}
+
+
+export interface LearningCompletionReconciliation {
+  readonly enrollmentId: string;
+  readonly enrollmentStatus: EnrollmentStatus;
+  readonly completionPercent: number;
+  readonly courseCompleted: boolean;
+  readonly requiredLessons: number;
+  readonly completedRequiredLessons: number;
+  readonly requiredAssessments: number;
+  readonly passedRequiredAssessments: number;
+  readonly idempotent: boolean;
+}
+
+export async function reconcileLearningEnrollmentCompletion(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly enrollmentId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<LearningCompletionReconciliation> {
+  await requireLearning(client, input.tenantId);
+
+  const locked = await client.query<EnrollmentRow & {
+    readonly course_key: string;
+    readonly course_version: number;
+  }>(
+    `SELECT e.*, c.course_key, v.version AS course_version
+       FROM platform.learning_enrollments e
+       JOIN platform.learning_courses c
+         ON c.course_id = e.course_id AND c.tenant_id = e.tenant_id
+       JOIN platform.learning_course_versions v
+         ON v.course_version_id = e.course_version_id AND v.tenant_id = e.tenant_id
+      WHERE e.tenant_id = $1::uuid
+        AND e.enrollment_id = $2::uuid
+      FOR UPDATE OF e`,
+    [input.tenantId, input.enrollmentId],
+  );
+  const enrollmentRow = locked.rows[0];
+  if (enrollmentRow === undefined) throw new Error('LEARNING_ENROLLMENT_NOT_FOUND');
+
+  if (enrollmentRow.status === 'COMPLETED') {
+    return {
+      enrollmentId: input.enrollmentId,
+      enrollmentStatus: 'COMPLETED',
+      completionPercent: 100,
+      courseCompleted: true,
+      requiredLessons: 0,
+      completedRequiredLessons: 0,
+      requiredAssessments: 0,
+      passedRequiredAssessments: 0,
+      idempotent: true,
+    };
+  }
+  if (!enrollmentAllowsProgress(enrollmentRow.status)) {
+    throw new Error('LEARNING_ENROLLMENT_NOT_PROGRESSABLE');
+  }
+
+  const lessonCounts = await client.query<{
     readonly required_count: string | number;
     readonly total_count: string | number;
     readonly completed_required_count: string | number;
@@ -673,16 +750,54 @@ export async function completeMyLearningLesson(
        AND lesson.course_version_id = $3::uuid`,
     [input.tenantId, input.enrollmentId, enrollmentRow.course_version_id],
   );
-  const count = counts.rows[0];
-  if (count === undefined) throw new Error('LEARNING_PROGRESS_COUNT_FAILED');
+  const lesson = lessonCounts.rows[0];
+  if (lesson === undefined) throw new Error('LEARNING_PROGRESS_COUNT_FAILED');
 
-  const requiredCount = number(count.required_count);
-  const denominator = requiredCount > 0 ? requiredCount : number(count.total_count);
-  const completedCount = requiredCount > 0
-    ? number(count.completed_required_count)
-    : number(count.completed_total_count);
-  const percent = completionPercent(denominator, completedCount);
-  const courseCompleted = denominator > 0 && completedCount >= denominator;
+  const assessmentCounts = await client.query<{
+    readonly required_count: string | number;
+    readonly passed_count: string | number;
+  }>(
+    `SELECT
+       count(*) AS required_count,
+       count(*) FILTER (
+         WHERE EXISTS (
+           SELECT 1
+             FROM platform.learning_assessment_attempts attempt
+            WHERE attempt.tenant_id = assessment.tenant_id
+              AND attempt.assessment_version_id = assessment.assessment_version_id
+              AND attempt.enrollment_id = $2::uuid
+              AND attempt.status = 'GRADED'
+              AND attempt.passed = true
+         )
+       ) AS passed_count
+     FROM platform.learning_assessment_versions assessment
+     JOIN platform.learning_assessments identity
+       ON identity.assessment_id = assessment.assessment_id
+      AND identity.tenant_id = assessment.tenant_id
+      AND identity.status = 'ACTIVE'
+    WHERE assessment.tenant_id = $1::uuid
+      AND assessment.course_version_id = $3::uuid
+      AND assessment.state = 'PUBLISHED'
+      AND assessment.completion_requirement = 'REQUIRED'`,
+    [input.tenantId, input.enrollmentId, enrollmentRow.course_version_id],
+  );
+  const assessment = assessmentCounts.rows[0];
+  if (assessment === undefined) throw new Error('LEARNING_ASSESSMENT_PROGRESS_COUNT_FAILED');
+
+  const explicitRequiredLessons = number(lesson.required_count);
+  const requiredAssessments = number(assessment.required_count);
+  const fallbackToAllLessons = explicitRequiredLessons === 0 && requiredAssessments === 0;
+  const requiredLessons = fallbackToAllLessons ? number(lesson.total_count) : explicitRequiredLessons;
+  const completedRequiredLessons = fallbackToAllLessons
+    ? number(lesson.completed_total_count)
+    : number(lesson.completed_required_count);
+  const passedRequiredAssessments = number(assessment.passed_count);
+
+  const requirementCount = requiredLessons + requiredAssessments;
+  const completedCount = completedRequiredLessons + passedRequiredAssessments;
+  const percent = completionPercent(requirementCount, completedCount);
+  const courseCompleted = requirementCount > 0 && completedCount >= requirementCount;
+  const now = new Date();
 
   if (courseCompleted) {
     await client.query(
@@ -706,7 +821,7 @@ export async function completeMyLearningLesson(
         eventType: 'learning.course.completed',
         eventVersion: 1,
         occurredAt: now,
-        actorSubjectId: input.subjectId,
+        actorSubjectId: input.actorSubjectId,
         correlationId: input.correlationId,
         payload: {
           learnerId: enrollmentRow.learner_id,
@@ -715,9 +830,23 @@ export async function completeMyLearningLesson(
           courseVersionId: enrollmentRow.course_version_id,
           courseVersion: enrollmentRow.course_version,
           completionPercent: 100,
+          requirements: {
+            requiredLessons,
+            completedRequiredLessons,
+            requiredAssessments,
+            passedRequiredAssessments,
+          },
         },
-        metadata: { source: 'learning.progress' },
+        metadata: { source: 'learning.completion-policy' },
       },
+    });
+
+    await reconcileLearningProgramsForEvidence(client, {
+      tenantId: input.tenantId,
+      learnerId: enrollmentRow.learner_id,
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      courseVersionId: enrollmentRow.course_version_id,
     });
   } else {
     await client.query(
@@ -734,10 +863,13 @@ export async function completeMyLearningLesson(
 
   return {
     enrollmentId: input.enrollmentId,
-    lessonId: input.lessonId,
     enrollmentStatus: courseCompleted ? 'COMPLETED' : 'IN_PROGRESS',
     completionPercent: courseCompleted ? 100 : percent,
     courseCompleted,
+    requiredLessons,
+    completedRequiredLessons,
+    requiredAssessments,
+    passedRequiredAssessments,
     idempotent: false,
   };
 }

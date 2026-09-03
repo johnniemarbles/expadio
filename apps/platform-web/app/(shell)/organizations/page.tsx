@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from '../page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
-import { DeniedState, EmptyState, StatePill } from '@expadio/ui';
+import { DeniedState, EmptyState, StatusBadge } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import type { RouteSearchParams } from '../../../lib/request-context';
 import {
@@ -24,6 +24,14 @@ interface OrganizationRow {
 interface ReadinessPortfolioResponse {
   parentOrganizationId: string;
   items: ReadinessPortfolioItem[];
+}
+
+function organizationTone(status: string): 'positive' | 'warning' | 'danger' | 'neutral' {
+  const normalized = status.toUpperCase();
+  if (normalized === 'ACTIVE') return 'positive';
+  if (normalized === 'SUSPENDED' || normalized === 'PENDING') return 'warning';
+  if (normalized === 'DISABLED' || normalized === 'DEACTIVATED' || normalized === 'FAILED') return 'danger';
+  return 'neutral';
 }
 
 export default async function OrganizationsPage({
@@ -129,17 +137,7 @@ export default async function OrganizationsPage({
                     <br />
                     <span className={styles.code}>{organization.organization_id}</span>
                   </td>
-                  <td>
-                    <StatePill
-                      state={
-                        organization.status === 'ACTIVE'
-                          ? 'Published'
-                          : organization.status === 'SUSPENDED'
-                            ? 'Review'
-                            : 'Draft'
-                      }
-                    />
-                  </td>
+                  <td><StatusBadge tone={organizationTone(organization.status)}>{organization.status}</StatusBadge></td>
                   <td>{organization.members ?? 0}</td>
                   <td className={styles.muted}>
                     {new Date(organization.created_at).toLocaleString()}
