@@ -12,18 +12,19 @@ export interface MotionMetricProps extends Omit<HTMLAttributes<HTMLElement>, 'ch
 
 export function MotionMetric({ value, format = Math.round, duration = 700, label, ...props }: MotionMetricProps) {
   const { reduced } = useMotionPreferences();
-  const previous = useRef(value);
+  const displayed = useRef(value);
   const [display, setDisplay] = useState(value);
   useEffect(() => {
-    const startValue = previous.current;
-    previous.current = value;
-    if (reduced || duration <= 0 || startValue === value) { setDisplay(value); return; }
+    const startValue = displayed.current;
+    if (reduced || duration <= 0 || startValue === value) { displayed.current = value; setDisplay(value); return; }
     const start = performance.now();
     let frame = 0;
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(startValue + (value - startValue) * eased);
+      const next = startValue + (value - startValue) * eased;
+      displayed.current = next;
+      setDisplay(next);
       if (progress < 1) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
