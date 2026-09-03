@@ -34,6 +34,7 @@ test('attribution touches append; first-touch stays fixed while latest advances'
     const tenantId = randomUUID();
     const organizationId = randomUUID();
     const sourceId = randomUUID();
+    await suc.query(`INSERT INTO platform.tenants (tenant_id, name) VALUES ($1, 'Attr Tenant') ON CONFLICT DO NOTHING`, [tenantId]);
     await suc.query(`INSERT INTO platform.organizations (organization_id, tenant_id, parent_organization_id, name) VALUES ($1,$2,NULL,'Attr Org')`, [organizationId, tenantId]);
     await suc.query(
       `INSERT INTO platform.lead_capture_sources (source_id, tenant_id, organization_id, source_key, surface, require_signed_ticket, status, verification_algorithm, channel, trust_rail, publishable_key, allowed_origins)

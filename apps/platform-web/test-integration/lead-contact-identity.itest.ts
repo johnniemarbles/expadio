@@ -38,6 +38,7 @@ async function seed(su: pg.PoolClient) {
   const tenantId = randomUUID();
   const organizationId = randomUUID();
   const sourceId = randomUUID();
+  await su.query(`INSERT INTO platform.tenants (tenant_id, name) VALUES ($1, 'Identity Tenant') ON CONFLICT DO NOTHING`, [tenantId]);
   await su.query(`INSERT INTO platform.organizations (organization_id, tenant_id, parent_organization_id, name) VALUES ($1,$2,NULL,$3)`, [organizationId, tenantId, 'Identity Org']);
   await su.query(
     `INSERT INTO platform.lead_capture_sources
