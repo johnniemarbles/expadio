@@ -124,14 +124,15 @@ test('trusted Demand Capture inherits organization subtree RLS and projects pers
       assert.deepEqual(visible.rows.map((r) => r.capture_lead_id), [unitCapture]);
 
       const trusted = await loadTrustedCaptureProjection(c, { tenantId, captureLeadId: unitCapture });
-      assert.ok(trusted);
+      assert.equal(trusted.kind, 'ok');
+      if (trusted.kind !== 'ok') throw new Error('Expected trusted.kind to be ok');
       assert.equal(trusted.organizationId, unitA, 'projection keeps the captured descendant organization');
       assert.equal(trusted.snapshot.captureStage, 'APPLICATION_STARTED');
       assert.equal(trusted.snapshot.captureLayerId, 'unit-a-layer');
       assert.deepEqual(trusted.snapshot.rawPayload, { marker: 'trusted-unit' });
 
       const hiddenSibling = await loadTrustedCaptureProjection(c, { tenantId, captureLeadId: siblingCapture });
-      assert.equal(hiddenSibling, null, 'sibling capture must be invisible in selected Country A workspace');
+      assert.equal(hiddenSibling.kind, 'not_found', 'sibling capture must be invisible in selected Country A workspace');
 
       // Selected Country A may not forge a Country B capture source.
       await assert.rejects(

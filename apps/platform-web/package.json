@@ -42,7 +42,9 @@
     "@expadio/entity": "workspace:*",
     "@expadio/agent-runtime": "workspace:*",
     "@expadio/capabilities": "workspace:*",
-    "@expadio/knowledge": "workspace:*"
+    "@expadio/knowledge": "workspace:*",
+    "@expadio/lead-capture": "workspace:*",
+    "@expadio/lead-identity": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
