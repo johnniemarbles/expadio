@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import pg from 'pg';
+import { appendDomainEventWithOutbox } from '@expadio/postgres-runtime/domain-events';
 
 export interface DemandCaptureRoutingResult {
   readonly captureLeadId: string;
@@ -10,6 +12,7 @@ export interface DemandCaptureRoutingResult {
   readonly reasonCode: 'MATCHED_RULE' | 'NO_VALID_ROUTE';
   readonly explanation: string;
   readonly replayed: boolean;
+  readonly unassignedEventId: string | null;
 }
 
 interface LockedLead {
@@ -109,6 +112,7 @@ export async function routeDemandCaptureLead(
       reasonCode,
       explanation,
       replayed: true,
+      unassignedEventId: null,
     };
   }
 
@@ -121,12 +125,13 @@ export async function routeDemandCaptureLead(
     [input.tenantId, input.captureLeadId, assignedSubjectId],
   );
 
-  await client.query(
+  const assignment = await client.query<{ assignment_event_id: string }>(
     `INSERT INTO platform.lead_capture_assignment_events (
        tenant_id, organization_id, capture_lead_id, routing_rule_id,
        outcome, assigned_subject_id, previous_owner_subject_id,
        reason_code, explanation, actor_subject_id
-     ) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10)`,
+     ) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10)
+     RETURNING assignment_event_id`,
     [
       input.tenantId,
       lead.organization_id,
@@ -140,6 +145,43 @@ export async function routeDemandCaptureLead(
       input.actorSubjectId,
     ],
   );
+  const assignmentEventId = assignment.rows[0]?.assignment_event_id;
+  if (!assignmentEventId) throw new Error('DEMAND_CAPTURE_ASSIGNMENT_EVENT_INSERT_FAILED');
+
+  let unassignedEventId: string | null = null;
+  if (outcome === 'UNASSIGNED') {
+    const occurredAt = new Date();
+    const appended = await appendDomainEventWithOutbox(client, {
+      event: {
+        eventId: randomUUID(),
+        tenantId: input.tenantId,
+        aggregateType: 'lead.capture',
+        aggregateId: input.captureLeadId,
+        eventType: 'LeadCapture.RoutingUnassigned',
+        eventVersion: 1,
+        occurredAt,
+        recordedAt: occurredAt,
+        actorSubjectId: input.actorSubjectId,
+        correlationId: `lead-capture:${input.captureLeadId}:routing`,
+        causationId: assignmentEventId,
+        packKey: null,
+        packVersion: null,
+        payload: {
+          captureLeadId: input.captureLeadId,
+          organizationId: lead.organization_id,
+          sourceId: lead.source_id,
+          previousOwnerSubjectId: lead.owner_subject_id,
+          reasonCode,
+          explanation,
+        },
+        metadata: {
+          source: 'lead.capture.routing',
+          assignmentEventId,
+        },
+      },
+    });
+    unassignedEventId = appended.event.eventId;
+  }
 
   return {
     captureLeadId: input.captureLeadId,
@@ -151,5 +193,6 @@ export async function routeDemandCaptureLead(
     reasonCode,
     explanation,
     replayed: false,
+    unassignedEventId,
   };
 }
