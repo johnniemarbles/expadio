@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
@@ -53,6 +54,14 @@ export async function POST(
     }
 
     return await withBrandTransaction(context, async (client) => {
+      const module = await loadTenantProductModule(client, {
+        tenantId: context.tenantId,
+        moduleKey: 'lead-management',
+      });
+      if (module?.availability !== 'ACTIVE') {
+        return NextResponse.json({ denied: true, reasonKey: 'LEAD_MODULE_NOT_ACTIVE' }, { status: 403 });
+      }
+
       const current = await client.query<{ organization_id: string; stage: string; status: string }>(
         `SELECT organization_id, stage, status
            FROM platform.lead_capture_leads
