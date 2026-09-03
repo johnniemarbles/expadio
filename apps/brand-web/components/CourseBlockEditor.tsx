@@ -85,6 +85,16 @@ export function CourseBlockEditor({
     migrationRequired = true;
   }
 
+  const validationIssues = migrationRequired
+    ? ['Legacy content must be migrated before editing.']
+    : (content?.blocks ?? []).flatMap((block, index) => {
+        if (['RICH_TEXT', 'HEADING', 'CALLOUT'].includes(block.type) && String(block.data.text ?? '').trim() === '') {
+          return [`Block ${index + 1} requires text.`];
+        }
+        return [];
+      });
+  const validationKey = validationIssues.join('|');
+
   function updateBlocks(change: (blocks: Block[]) => Block[]) {
     if (!selected || migrationRequired) return;
     setDraft((current) => ({
@@ -100,6 +110,7 @@ export function CourseBlockEditor({
   }
 
   async function save(signal?: AbortSignal) {
+    if (validationIssues.length > 0) throw new Error('LESSON_CONTENT_VALIDATION_FAILED');
     setStatus('SAVING');
     const response = await fetch(`/api/learning/courses/${courseId}/versions/${version.version}`, {
       method: 'PUT',
@@ -121,7 +132,7 @@ export function CourseBlockEditor({
   }
 
   useEffect(() => {
-    if (!dirty || !editable) return;
+    if (!dirty || !editable || validationIssues.length > 0) return;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
       void save(controller.signal).catch((cause) => {
@@ -131,10 +142,15 @@ export function CourseBlockEditor({
       });
     }, 800);
     return () => { window.clearTimeout(timeout); controller.abort(); };
-  }, [draft, dirty, editable]);
+  }, [draft, dirty, editable, validationKey]);
 
   function insertCommand() {
-    const type = ({ '/text': 'RICH_TEXT', '/heading': 'HEADING', '/callout': 'CALLOUT' } as const)[command.trim().toLowerCase() as '/text'];
+    const commands: Record<string, BlockType> = {
+      '/text': 'RICH_TEXT',
+      '/heading': 'HEADING',
+      '/callout': 'CALLOUT',
+    };
+    const type = commands[command.trim().toLowerCase()];
     if (!type) { setError('Use /text, /heading or /callout.'); return; }
     updateBlocks((blocks) => [...blocks, initialBlock(type)]);
     setCommand('');
@@ -184,6 +200,7 @@ export function CourseBlockEditor({
           ))}
         </ol>
       ) : null}
+      {validationIssues.length > 0 ? <section className="validationSummary" aria-labelledby="lesson-validation-title"><strong id="lesson-validation-title">Validation</strong><ul>{validationIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul></section> : null}
       <p role="status" aria-live="polite">Draft: {status}{dirty ? ' · unsaved changes' : ''}</p>
       {error ? <p role="alert">{error}</p> : null}
     </div>
