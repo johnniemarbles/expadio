@@ -16,6 +16,7 @@
     "@expadio/postgres-runtime": "workspace:*",
     "@expadio/tenancy": "workspace:*",
     "@expadio/lead-capture": "workspace:*",
+    "@expadio/lead-identity": "workspace:*",
     "next": "16.3.3",
     "pg": "^8.23.0",
     "react": "19.2.4",

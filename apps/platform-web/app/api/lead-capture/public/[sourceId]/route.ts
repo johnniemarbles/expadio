@@ -17,6 +17,7 @@ import {
 } from '../../../../../lib/lead-capture-public-guard';
 import { generateOtpCode, hashOtp, hashToken, newOtpSalt, otpExpiry, OTP_MAX_ATTEMPTS } from '../../../../../lib/lead-capture-otp';
 import { deliverCaptureOtp } from '../../../../../lib/lead-capture-otp-delivery';
+import { resolveOrCreateLeadContact } from '../../../../../lib/lead-contact-resolution';
 import {
   UUID_RE,
   checkKeyAndOrigin,
@@ -168,13 +169,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
     const fields = extractLeadFields(submission);
     const captureLeadId = randomUUID();
     const rawPayloadJson = JSON.stringify(submission);
+
+    // Gate 1: resolve the person (exact-email auto-link) + enqueue review
+    // candidates. Best-effort — never fail the capture over identity work.
+    let contactId: string | null = null;
+    try {
+      const resolved = await resolveOrCreateLeadContact(client, {
+        tenantId,
+        organizationId: source.organization_id,
+        email,
+        phone: submission.contact.phone ?? null,
+        firstName: submission.contact.firstName ?? null,
+        lastName: submission.contact.lastName ?? null,
+      });
+      contactId = resolved.contactId;
+    } catch (error) {
+      console.warn(`Capture contact resolution skipped for ${captureLeadId}:`, error instanceof Error ? error.message : error);
+    }
+
     await client.query(
       `INSERT INTO platform.lead_capture_leads
          (capture_lead_id, tenant_id, organization_id, source_id, external_reference,
-          title, email, stage, status, verification_state, raw_payload)
-       VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,'NEW_ENQUIRY','ACTIVE','UNVERIFIED',$8::jsonb)`,
+          title, email, stage, status, verification_state, raw_payload, contact_id)
+       VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,'NEW_ENQUIRY','ACTIVE','UNVERIFIED',$8::jsonb,$9::uuid)`,
       [captureLeadId, tenantId, source.organization_id, sourceId, fields.externalReference ?? null,
-       fields.title, email, rawPayloadJson],
+       fields.title, email, rawPayloadJson, contactId],
     );
     await client.query(
       `INSERT INTO platform.lead_capture_submissions
