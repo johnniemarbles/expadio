@@ -317,4 +317,16 @@ BEGIN
 END;
 $$;
 
+-- 0132 created platform.genesis_claims with tenant_id but did not enable RLS.
+-- Keep the repository-wide tenant drift guard authoritative by adding the
+-- missing tenant policy instead of suppressing the guard.
+ALTER TABLE platform.genesis_claims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.genesis_claims FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS genesis_claims_tenant_all ON platform.genesis_claims;
+CREATE POLICY genesis_claims_tenant_all
+  ON platform.genesis_claims FOR ALL
+  USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+
 COMMIT;
