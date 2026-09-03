@@ -142,7 +142,7 @@ FOR EACH ROW EXECUTE FUNCTION platform.enforce_content_asset_state_transition();
 CREATE OR REPLACE FUNCTION platform.enforce_content_asset_immutable_scope()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$$
+AS $$
 BEGIN
   IF NEW.tenant_id <> OLD.tenant_id
      OR NEW.organization_id <> OLD.organization_id
@@ -165,7 +165,7 @@ FOR EACH ROW EXECUTE FUNCTION platform.enforce_content_asset_immutable_scope();
 CREATE OR REPLACE FUNCTION platform.prevent_content_asset_event_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$$
+AS $$
 BEGIN
   RAISE EXCEPTION 'CONTENT_ASSET_EVENTS_APPEND_ONLY';
 END
