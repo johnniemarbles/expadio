@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 const route = read('../app/api/communications/providers/[key]/certification-send/route.ts');
 const webhook = read('../lib/communication-provider-webhook.ts');
 const reconciliation = read('../lib/communication-certification-reconciliation.ts');
-const migration = read('../../../infra/db/migrations/0137_communication_certification_requests.sql');
+const migration = read('../../../infra/db/migrations/0143_communication_certification_requests.sql');
 
 test('Certification Send enters the durable governed COMMUNICATE spine', () => {
   assert.match(route, /appendDomainEventWithOutbox/);

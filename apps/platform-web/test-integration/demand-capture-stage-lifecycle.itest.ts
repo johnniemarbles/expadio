@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
+import { generatePublishableKey } from '../lib/lead-capture-public-source.ts';
 
 const APP_ROLE = 'expadio_capture_lifecycle_tester';
 const APP_ROLE_PASSWORD = 'capture_lifecycle_test';
@@ -82,9 +83,9 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
     );
     const sourceId = (await admin.query(
       `INSERT INTO platform.lead_capture_sources
-         (tenant_id,organization_id,source_key,surface,require_signed_ticket,status)
-       VALUES ($1,$2,'lifecycle-seed','WEBHOOK',false,'ACTIVE') RETURNING source_id`,
-      [tenantId, organizationId],
+         (tenant_id,organization_id,source_key,surface,require_signed_ticket,status,verification_algorithm,channel,trust_rail,publishable_key,allowed_origins)
+       VALUES ($1,$2,'lifecycle-seed','FORM',false,'ACTIVE','ED25519','WEB','PUBLIC',$3, ARRAY['https://example.com']) RETURNING source_id`,
+      [tenantId, organizationId, generatePublishableKey()],
     )).rows[0].source_id as string;
     const captureLeadId = (await admin.query(
       `INSERT INTO platform.lead_capture_leads

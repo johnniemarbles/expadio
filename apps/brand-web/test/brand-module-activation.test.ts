@@ -29,7 +29,7 @@ test('Brand generic activation endpoint provisions Learning and Lead Management 
 
 test('Lead Management manifest exposes a launch route for active Brand navigation', () => {
   const originalMigration = read('../../../infra/db/migrations/0124_brand_lead_management_module.sql');
-  const backfillMigration = read('../../../infra/db/migrations/0135_brand_lead_management_launch_route.sql');
+  const backfillMigration = read('../../../infra/db/migrations/0141_brand_lead_management_launch_route.sql');
 
   assert.match(originalMigration, /'route', '\/leads'/);
   assert.match(backfillMigration, /module_key = 'lead-management'/);

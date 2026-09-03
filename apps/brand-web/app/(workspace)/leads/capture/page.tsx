@@ -29,6 +29,7 @@ export default async function DemandCapturePage() {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Link className={styles.secondaryButton} href="/leads/capture/routing">Routing rules</Link>
+        <Link className={styles.secondaryButton} href="/leads/analytics">Analytics</Link>
         <Link className={styles.secondaryButton} href="/leads">CRM leads</Link>
       </div>
     </section>
