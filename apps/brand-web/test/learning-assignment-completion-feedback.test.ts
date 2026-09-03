@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const migration = readFileSync(new URL('../../../infra/db/migrations/0141_learning_assignment_completion.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../../../infra/db/migrations/0150_learning_assignment_completion.sql', import.meta.url), 'utf8');
 const enrollment = readFileSync(new URL('../../../packages/postgres-runtime/src/learning-enrollment.ts', import.meta.url), 'utf8');
 const assignment = readFileSync(new URL('../../../packages/postgres-runtime/src/learning-assignment.ts', import.meta.url), 'utf8');
 const player = readFileSync(new URL('../app/(workspace)/learn/[id]/page.tsx', import.meta.url), 'utf8');
