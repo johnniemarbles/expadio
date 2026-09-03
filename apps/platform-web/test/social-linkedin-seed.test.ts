@@ -41,7 +41,7 @@ test('seed-tenant smoke asserts disabled connector + capability bind + no sender
 
 test('worker and sender identity stay off social', () => {
   assert.match(worker, /ResendEmailAdapter/);
-  assert.match(worker, /selected\.providerKey !== 'resend'/);
+  assert.match(worker, /selected.providerKey === 'resend'/);
   assert.doesNotMatch(worker, /LinkedInSocialTextAdapter/);
   assert.doesNotMatch(worker, /linkedin-social-text-v1/);
   assert.doesNotMatch(worker, /governedLinkedInAccessTokenProvider/);

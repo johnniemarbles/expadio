@@ -122,7 +122,7 @@ test('seam never dispatches, never adds PUBLISH_SOCIAL, never merges #482 subjec
   assert.doesNotMatch(lib, /social_content_items/);
   assert.doesNotMatch(verticals, /SOCIAL_CONTENT_WORKFLOW/);
   assert.doesNotMatch(verticals, /social\.content_publish/);
-  assert.match(worker, /providerKey !== 'resend'/);
+  assert.match(worker, /providerKey === 'resend'/);
   assert.doesNotMatch(worker, /linkedin-social-text-v1/);
   assert.doesNotMatch(worker, /governedLinkedInAccessTokenProvider/);
 });
