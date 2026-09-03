@@ -257,6 +257,29 @@ export async function gradeLearningAssignmentSubmission(
   return project(next);
 }
 
+export async function listMyLearningAssignmentSubmissions(
+  client: PostgresClient,
+  input: { readonly tenantId: string; readonly subjectId: string; readonly subjectIssuer: string | null },
+): Promise<readonly LearningAssignmentSubmission[]> {
+  await requireLearning(client, input.tenantId);
+  const result = await client.query<SubmissionRow>(
+    `SELECT ${SUBMISSION_SELECT}
+       FROM platform.learning_assignment_submissions submission
+       JOIN platform.learning_learners learner
+         ON learner.learner_id = submission.learner_id AND learner.tenant_id = submission.tenant_id
+        AND learner.subject_id = $2 AND learner.subject_issuer IS NOT DISTINCT FROM $3
+        AND learner.status = 'ACTIVE'
+       JOIN platform.learning_assignment_versions version
+         ON version.assignment_version_id = submission.assignment_version_id AND version.tenant_id = submission.tenant_id
+       JOIN platform.learning_assignments assignment
+         ON assignment.assignment_id = submission.assignment_id AND assignment.tenant_id = submission.tenant_id
+      WHERE submission.tenant_id = $1::uuid
+      ORDER BY submission.submitted_at DESC, submission.submission_id`,
+    [input.tenantId, input.subjectId, input.subjectIssuer],
+  );
+  return result.rows.map(project);
+}
+
 export async function listLearningAssignmentSubmissions(
   client: PostgresClient,
   tenantId: string,
