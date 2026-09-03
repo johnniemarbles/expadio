@@ -25,9 +25,10 @@ export default async function DemandCapturePage() {
       <div>
         <p className={styles.eyebrow}>Growth · {context.organizationName}</p>
         <h1>Demand Capture</h1>
-        <p>Operate the full 19-stage journey separately from the five-stage CRM projection. Journey stage and operational status are independently governed and historically auditable.</p>
+        <p>Operate the full 19-stage journey separately from the five-stage CRM projection. Journey stage, operational status, and ownership are independently governed and historically auditable.</p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Link className={styles.secondaryButton} href="/leads/capture/routing">Routing rules</Link>
         <Link className={styles.secondaryButton} href="/leads">CRM leads</Link>
       </div>
     </section>
