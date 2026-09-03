@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { publishLearningAssignmentVersion } from '@expadio/postgres-runtime/learning-assignment';
-import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../../../../../lib/brand-context';
+import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../../../../lib/brand-context';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
