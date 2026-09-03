@@ -6,7 +6,7 @@
 .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
 .card,.panel,.remediation { border:1px solid var(--theme-border); border-radius:var(--theme-radius-card); background:var(--theme-surface); color:var(--theme-text-primary); box-shadow:var(--theme-shadow-subtle); }
 .card { display:grid; gap:6px; padding:16px; animation:vendorEnter var(--theme-motion-panel) var(--theme-easing) both; transition:transform var(--theme-motion-normal) var(--theme-easing),box-shadow var(--theme-motion-normal) var(--theme-easing),border-color var(--theme-motion-normal) var(--theme-easing); }
-.card:nth-child(2){animation-delay:40ms}.card:nth-child(3){animation-delay:80ms}.card:nth-child(4){animation-delay:120ms}
+.card:nth-child(2){animation-delay:calc(var(--theme-motion-fast) * 0.29)}.card:nth-child(3){animation-delay:calc(var(--theme-motion-fast) * 0.57)}.card:nth-child(4){animation-delay:calc(var(--theme-motion-fast) * 0.86)}
 .card:hover { transform:translateY(calc(-1 * var(--theme-motion-distance-micro))); box-shadow:var(--theme-shadow-elevated); border-color:color-mix(in srgb,var(--theme-primary) 20%,var(--theme-border)); }
 .metricLabel { color:var(--theme-text-muted); font:800 10px/1.2 var(--theme-font-mono); letter-spacing:.08em; text-transform:uppercase; }
 .metricValue { color:var(--theme-text-primary); font-size:30px; font-weight:850; line-height:1; }

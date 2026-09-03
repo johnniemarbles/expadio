@@ -16,12 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
       - uses: actions/setup-node@v5
         with:
           node-version: '22.16.0'
-          package-manager-cache: false
-      - run: |
-          corepack enable
-          corepack prepare pnpm@10.15.0 --activate
+          cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Cache Next.js
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/platform-web/.next/cache
+          key: ${{ runner.os }}-nextjs-platform-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('apps/platform-web/**/*.ts', 'apps/platform-web/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-platform-${{ hashFiles('**/pnpm-lock.yaml') }}-
       - run: pnpm --filter @expadio/platform-web check
