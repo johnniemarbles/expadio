@@ -74,6 +74,14 @@ ALTER TABLE platform.entity_relationships
   ADD COLUMN IF NOT EXISTS source_node_id uuid REFERENCES platform.entity_nodes(node_id),
   ADD COLUMN IF NOT EXISTS target_node_id uuid REFERENCES platform.entity_nodes(node_id);
 
+ALTER TABLE platform.entity_relationships
+  ADD CONSTRAINT entity_relationships_source_node_tenant_fk
+    FOREIGN KEY (source_node_id, tenant_id)
+    REFERENCES platform.entity_nodes(node_id, tenant_id) ON DELETE RESTRICT,
+  ADD CONSTRAINT entity_relationships_target_node_tenant_fk
+    FOREIGN KEY (target_node_id, tenant_id)
+    REFERENCES platform.entity_nodes(node_id, tenant_id) ON DELETE RESTRICT;
+
 -- Self-relationships are not meaningful in this model.
 ALTER TABLE platform.entity_relationships
   ADD CONSTRAINT entity_relationships_no_self_loop
