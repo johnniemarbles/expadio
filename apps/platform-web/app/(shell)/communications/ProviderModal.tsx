@@ -157,6 +157,8 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     outline: "none",
   };
 
+  if (!isOpen) return null;
+
   return (
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
       <form
