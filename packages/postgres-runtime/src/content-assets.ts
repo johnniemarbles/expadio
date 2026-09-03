@@ -5,6 +5,8 @@ import {
   type ContentAssetState,
   type ContentAssetBinaryStore,
   type ContentAssetReadGrant,
+  type ContentAssetScanner,
+  type ContentAssetScanResult,
 } from '@expadio/storage';
 import type { PostgresClient } from './index.ts';
 
@@ -274,4 +276,110 @@ export async function issueContentAssetReadGrant(
     ],
   );
   return grant;
+}
+
+
+export async function quarantineContentAssetForScan(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly assetId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<ContentAssetRecord> {
+  return transitionContentAsset(client, {
+    ...input,
+    toState: 'QUARANTINED',
+    reasonKey: 'MALWARE_SCAN_REQUIRED',
+  });
+}
+
+async function appendContentAssetEvidence(
+  client: PostgresClient,
+  asset: TransferAssetRow,
+  input: {
+    readonly reasonKey: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<void> {
+  await client.query(
+    `INSERT INTO platform.content_asset_events (
+       tenant_id, organization_id, asset_id, from_state, to_state,
+       reason_key, actor_subject_id, correlation_id
+     ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $4, $5, $6, $7)`,
+    [
+      asset.tenant_id,
+      asset.organization_id,
+      asset.asset_id,
+      asset.state,
+      input.reasonKey,
+      input.actorSubjectId,
+      input.correlationId,
+    ],
+  );
+}
+
+export async function resolveQuarantinedContentAssetScan(
+  client: PostgresClient,
+  scanner: ContentAssetScanner,
+  input: {
+    readonly tenantId: string;
+    readonly assetId: string;
+    readonly actorSubjectId: string;
+    readonly correlationId: string;
+  },
+): Promise<{
+  readonly asset: ContentAssetRecord;
+  readonly scan: ContentAssetScanResult;
+}> {
+  const loaded = await client.query<TransferAssetRow>(
+    `SELECT ${TRANSFER_SELECT} FROM platform.content_assets
+      WHERE tenant_id = $1::uuid AND asset_id = $2::uuid
+        AND state = 'QUARANTINED'
+      FOR UPDATE`,
+    [input.tenantId, input.assetId],
+  );
+  const asset = loaded.rows[0];
+  if (!asset) throw new Error('CONTENT_ASSET_NOT_QUARANTINED');
+
+  const scan = await scanner.scan({
+    tenantId: asset.tenant_id,
+    organizationId: asset.organization_id,
+    assetId: asset.asset_id,
+    objectReference: asset.storage_object_reference,
+    contentType: asset.content_type,
+    byteLength: Number(asset.byte_length),
+    sha256: asset.sha256,
+    correlationId: input.correlationId,
+  });
+  if (
+    scan.assetId !== asset.asset_id
+    || scan.objectReference !== asset.storage_object_reference
+    || scan.sha256 !== asset.sha256
+  ) {
+    throw new Error('CONTENT_ASSET_SCAN_VERIFICATION_MISMATCH');
+  }
+
+  if (scan.verdict === 'INDETERMINATE') {
+    await appendContentAssetEvidence(client, asset, {
+      reasonKey: `MALWARE_SCAN_INDETERMINATE:${scan.reasonKey}`,
+      actorSubjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+    });
+    return { asset: record(asset, true), scan };
+  }
+
+  const next = await transitionContentAsset(client, {
+    tenantId: input.tenantId,
+    assetId: input.assetId,
+    toState: scan.verdict === 'CLEAN' ? 'AVAILABLE' : 'REJECTED',
+    reasonKey: scan.verdict === 'CLEAN'
+      ? `MALWARE_SCAN_CLEAN:${scan.engine}:${scan.signatureVersion}`
+      : `MALWARE_SCAN_REJECTED:${scan.reasonKey}`,
+    actorSubjectId: input.actorSubjectId,
+    correlationId: input.correlationId,
+  });
+  return { asset: next, scan };
 }
