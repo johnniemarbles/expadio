@@ -7,6 +7,7 @@ import {
   type ExpadioThemeDefinition,
 } from '@expadio/ui';
 import styles from './appearance.module.css';
+import { MotionPanel, MotionTabs, MotionFeedback } from '@expadio/ui';
 
 type HistoryItem={recordVersion:number;authoredAt:string;reason:string;themeKey:string;themeName:string};
 

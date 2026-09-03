@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MotionPanel, MotionCard } from '@expadio/ui';
 import styles from "./page.module.css";
 import recoveryStyles from "./LegacyDeliveryRecoveryPanel.module.css";
 
@@ -84,7 +85,7 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
   }
 
   return (
-    <section className={styles.attentionTablePanel}>
+    <MotionPanel className={styles.attentionTablePanel}>
       <div className={styles.attentionPanelHeading}>
         <div>
           <h3>Legacy delivery recovery</h3>
@@ -152,6 +153,6 @@ export function LegacyDeliveryRecoveryPanel({ queryString = "" }: { queryString?
           </table>
         </div>
       )}
-    </section>
+    </MotionPanel>
   );
 }

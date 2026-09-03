@@ -14,6 +14,10 @@ import {
   type LearningGovernedActionResult,
 } from './learning-governed-actions';
 import {
+  materializeDemandCaptureGovernedActionsForEvent,
+  type DemandCaptureGovernedActionResult,
+} from './demand-capture-governed-actions';
+import {
   executeGovernedCommunicateAction,
   type GovernedCommunicateExecutionResult,
 } from './governed-communicate-executor';
@@ -33,7 +37,8 @@ import { loadTenantProductModule } from '@expadio/postgres-runtime/product-modul
 
 export type DomainEventGovernedActionResult =
   | CrmCaseGovernedActionResult
-  | LearningGovernedActionResult;
+  | LearningGovernedActionResult
+  | DemandCaptureGovernedActionResult;
 
 export type DomainEventActionWorkerResult =
   | { readonly status: 'IDLE' }
@@ -136,6 +141,14 @@ async function materializeActions(
     });
   }
 
+  if (claim.event.aggregateType === 'lead.capture') {
+    return materializeDemandCaptureGovernedActionsForEvent(client, {
+      tenantId: claim.tenantId,
+      eventId: claim.eventId,
+      now: () => now,
+    });
+  }
+
   if (claim.event.aggregateType.startsWith('learning.')) {
     return materializeLearningGovernedActionsForEvent(client, {
       tenantId: claim.tenantId,
@@ -166,7 +179,7 @@ async function completeClaim(
  * This is the composition boundary:
  * - outbox leasing/retry stays horizontal;
  * - learner-created assignment automation remains a Learning-domain concern;
- * - crm.case and Learning governed-action materializers provide aggregate data;
+ * - crm.case, Demand Capture, and Learning governed-action materializers provide aggregate data;
  * - task, communication, and schedule execution remain shared platform
  *   executors.
  *

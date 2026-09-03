@@ -79,6 +79,14 @@ interface CredentialRow {
   readonly revocation_reason: string | null;
 }
 
+export interface LearningPublishedProgramVersionSummary {
+  readonly programId: string;
+  readonly programKey: string;
+  readonly programVersionId: string;
+  readonly version: number;
+  readonly title: string;
+}
+
 export interface LearningProgramSummary {
   readonly programId: string;
   readonly programKey: string;
@@ -359,6 +367,40 @@ export async function createLearningProgram(
     if (error?.code === '23505') throw new Error('LEARNING_PROGRAM_KEY_EXISTS');
     throw error;
   }
+}
+
+export async function listLearningPublishedProgramVersions(
+  client: PostgresClient,
+  tenantId: string,
+): Promise<readonly LearningPublishedProgramVersionSummary[]> {
+  await requireLearning(client, tenantId);
+  const result = await client.query<{
+    readonly program_id: string;
+    readonly program_key: string;
+    readonly program_version_id: string;
+    readonly version: number;
+    readonly title: string;
+  }>(
+    `SELECT program.program_id, program.program_key,
+            version.program_version_id, version.version, version.title
+       FROM platform.learning_programs program
+       JOIN platform.learning_program_versions version
+         ON version.program_id = program.program_id
+        AND version.tenant_id = program.tenant_id
+        AND version.version = program.current_published_version
+        AND version.state = 'PUBLISHED'
+      WHERE program.tenant_id = $1::uuid
+        AND program.status = 'ACTIVE'
+      ORDER BY version.title, program.program_key`,
+    [tenantId],
+  );
+  return result.rows.map((row) => ({
+    programId: row.program_id,
+    programKey: row.program_key,
+    programVersionId: row.program_version_id,
+    version: row.version,
+    title: row.title,
+  }));
 }
 
 export async function listLearningPrograms(

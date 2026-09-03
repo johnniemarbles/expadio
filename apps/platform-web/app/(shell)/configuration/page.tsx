@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
+import { MotionPanel, MotionTabs, MotionFeedback } from '@expadio/ui';
 import { fetchApi } from '../../../lib/live-adapter';
 import { DeniedState, StatusBadge } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';

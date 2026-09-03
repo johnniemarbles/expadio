@@ -27,6 +27,8 @@ const badgeClass = (state: string): string => {
   return [styles.statusBadge, styles.statusNeutral].join(' ');
 };
 
+import { MotionPanel, MotionFeedback } from "@expadio/ui";
+
 export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprints: BlueprintSummary[]; queryString?: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="blueprints-title">
+    <MotionPanel className={styles.panel} aria-labelledby="blueprints-title">
       <div className={styles.panelHeading}>
         <div>
           <p className={styles.eyebrow}>Authoring</p>
@@ -87,7 +89,7 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
         </div>
       </div>
 
-      {error && <p role="alert" className={[styles.inlineAlert, styles.inlineAlertDanger].join(' ')}>{error}</p>}
+      {error && <MotionFeedback tone="danger" title={error} className={styles.inlineAlert} />}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -129,6 +131,6 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
           </tbody>
         </table>
       </div>
-    </section>
+    </MotionPanel>
   );
 }

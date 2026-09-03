@@ -8,11 +8,9 @@ interface TargetOption {
   readonly label: string;
 }
 
-type ManagedSection = 'assessments' | 'programs' | 'skills' | 'assignments';
+type ManagedSection = 'skills' | 'assignments';
 
 const endpointBySection: Record<ManagedSection, string> = {
-  assessments: '/api/learning/assessments',
-  programs: '/api/learning/programs',
   skills: '/api/learning/competency-frameworks',
   assignments: '/api/learning/assignment-rules',
 };
@@ -30,9 +28,6 @@ export function LearningSectionAdminPanel({
   const [key, setKey] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [assessmentType, setAssessmentType] = useState('QUIZ');
-  const [passPercent, setPassPercent] = useState('80');
-  const [maxAttempts, setMaxAttempts] = useState('3');
   const [targetType, setTargetType] = useState<'COURSE' | 'PROGRAM'>('COURSE');
   const [targetId, setTargetId] = useState(courseTargets[0]?.id ?? '');
   const [dueDays, setDueDays] = useState('');
@@ -40,9 +35,6 @@ export function LearningSectionAdminPanel({
   const [subjectRequired, setSubjectRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bankKey, setBankKey] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [bankBusy, setBankBusy] = useState(false);
 
   const targets = useMemo(
     () => targetType === 'COURSE' ? courseTargets : programTargets,
@@ -57,24 +49,6 @@ export function LearningSectionAdminPanel({
   }
 
   function payload(): Record<string, unknown> {
-    if (section === 'assessments') {
-      return {
-        assessmentKey: key,
-        draft: {
-          title,
-          instructions: description,
-          type: assessmentType,
-          passPercent: Number(passPercent),
-          maxAttempts: Number(maxAttempts),
-          timeLimitSeconds: null,
-          courseVersionId: null,
-          items: [],
-        },
-      };
-    }
-    if (section === 'programs') {
-      return { programKey: key, draft: { title, description, items: [] } };
-    }
     if (section === 'skills') {
       return { frameworkKey: key, draft: { title, description, competencies: [] } };
     }
@@ -120,38 +94,9 @@ export function LearningSectionAdminPanel({
     }
   }
 
-  async function createQuestionBank(event: React.FormEvent) {
-    event.preventDefault();
-    setBankBusy(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/learning/question-banks', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ bankKey, name: bankName }),
-      });
-      const body = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(body.error ?? 'Question bank creation failed.');
-      setBankKey('');
-      setBankName('');
-      router.refresh();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Question bank creation failed.');
-    } finally {
-      setBankBusy(false);
-    }
-  }
-
-  const heading =
-    section === 'assessments' ? 'Create assessment draft'
-      : section === 'programs' ? 'Create program draft'
-        : section === 'skills' ? 'Create competency framework'
-          : 'Create assignment rule';
-
   return (
-    <>
     <form className="learningForm" onSubmit={(event) => void submit(event)}>
-      <h3 className="wide">{heading}</h3>
+      <h3 className="wide">{section === 'skills' ? 'Create competency framework' : 'Create assignment rule'}</h3>
       <label>
         Stable key
         <input
@@ -167,28 +112,13 @@ export function LearningSectionAdminPanel({
         <input value={title} onChange={(event) => setTitle(event.target.value)} required />
       </label>
       <label className="wide">
-        {section === 'assessments' ? 'Instructions' : 'Description'}
+        Description
         <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
       </label>
 
-      {section === 'assessments' ? (
-        <>
-          <label>Type<select value={assessmentType} onChange={(event) => setAssessmentType(event.target.value)}><option>QUIZ</option><option>EXAM</option><option>PRACTICE</option></select></label>
-          <label>Pass percent<input type="number" min="0" max="100" step="0.01" value={passPercent} onChange={(event) => setPassPercent(event.target.value)} required /></label>
-          <label>Max attempts<input type="number" min="1" max="1000" value={maxAttempts} onChange={(event) => setMaxAttempts(event.target.value)} required /></label>
-          <p className="wide">The draft starts without questions. Add question-bank items before publication.</p>
-        </>
-      ) : null}
-
-      {section === 'programs' ? (
-        <p className="wide">The draft starts empty. Add published course or assessment requirements before publication.</p>
-      ) : null}
-
       {section === 'skills' ? (
-        <p className="wide">The framework starts empty. Add competencies, levels and evidence rules before publication.</p>
-      ) : null}
-
-      {section === 'assignments' ? (
+        <p className="wide">The framework starts as an editable draft. Competencies, levels and evidence rules can be added before publication.</p>
+      ) : (
         <>
           <label>Target type<select value={targetType} onChange={(event) => switchTargetType(event.target.value as 'COURSE' | 'PROGRAM')}><option value="COURSE">Course</option><option value="PROGRAM">Program</option></select></label>
           <label>Target<select value={targetId} onChange={(event) => setTargetId(event.target.value)} required><option value="">Select target</option>{targets.map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select></label>
@@ -196,20 +126,10 @@ export function LearningSectionAdminPanel({
           <label>Audience<select value={audienceType} onChange={(event) => setAudienceType(event.target.value)}><option value="">Any audience</option><option>INTERNAL</option><option>PARTNER</option><option>CUSTOMER</option><option>EXTERNAL</option></select></label>
           <label className="wide"><input type="checkbox" checked={subjectRequired} onChange={(event) => setSubjectRequired(event.target.checked)} /> Require a linked sign-in identity</label>
         </>
-      ) : null}
+      )}
 
       <div className="wide"><button type="submit" disabled={busy || (section === 'assignments' && !targetId)}>{busy ? 'Creating…' : 'Create draft'}</button></div>
       {error ? <div className="aiError wide" role="alert">{error}</div> : null}
     </form>
-    {section === 'assessments' ? (
-      <form className="learningForm" onSubmit={(event) => void createQuestionBank(event)}>
-        <h3 className="wide">Create question bank</h3>
-        <label>Bank key<input value={bankKey} onChange={(event) => setBankKey(event.target.value.toLowerCase())} pattern="[a-z0-9]+([._-][a-z0-9]+)*" required /></label>
-        <label>Bank name<input value={bankName} onChange={(event) => setBankName(event.target.value)} required /></label>
-        <p className="wide">Question banks are reusable across assessments. Questions remain versioned and must be published before an assessment can pin them.</p>
-        <div className="wide"><button type="submit" disabled={bankBusy}>{bankBusy ? 'Creating…' : 'Create question bank'}</button></div>
-      </form>
-    ) : null}
-    </>
   );
 }

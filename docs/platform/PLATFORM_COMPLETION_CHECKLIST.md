@@ -2,7 +2,7 @@
 
 Status: active project memory  
 Owner: platform program  
-Last updated: 2026-08-31  
+Last updated: 2026-09-03  
 Current strategy: platform completion before vertical expansion
 
 This checklist is the durable project memory for autonomous execution. Update it in every platform PR when a task is completed, paused, or newly discovered.
@@ -76,6 +76,7 @@ This checklist is the durable project memory for autonomous execution. Update it
 
 - [x] Foundation freeze document created.
 - [x] Platform completion checklist created.
+- [x] Canonical Platform-vs-Brand capability ledger created (`docs/architecture/PLATFORM-BRAND-CAPABILITY-LEDGER.md`).
 
 ## AutoGTM / Demand Generation Control Plane (#483)
 
@@ -211,20 +212,22 @@ Binding keys:
 - [x] Lab API: `POST /v1/submissions`, lead read/stage, `POST /v1/leads/:id/convert`.
 - [x] Merge-readiness doc and extract issue #1 list the four gates below.
 
-### Merge gates — all required before any PR into `johnniemarbles/expadio`
+### Merge gates — reconciled on main 2026-09-03
 
-- [ ] Live Postgres FORCE RLS soak of extract `0001`+`0002` against two tenants, sibling brands, and two countries (India vs US). Country grant must not read the sibling country. HQ grant reads descendants.
-- [ ] Convert path writes `platform.crm_leads` through `@expadio/lead` using `mapCaptureStageToCrm`. Capture lead / submissions / attribution / audit remain. Re-convert is idempotent.
-- [ ] EXPADIO gateway injects `x-expadio-principal`. Lab header trust off on platform. Body `tenantId` / `brandId` / `layerId` rejected (P16).
-- [ ] No BEMP `/brand/leads` routes, screens, or `lib/leads/service.ts` copied onto main.
+- [x] Real PostgreSQL FORCE RLS integration coverage proves tenant isolation, sibling denial and selected-organization descendant visibility (#604). A production-data soak remains an operational deployment check.
+- [x] Convert path loads persisted trusted capture state and idempotently writes `platform.crm_leads`; capture provenance remains queryable (#614).
+- [x] Signed ingress resolves scope from a registered source, rejects authority-bearing body input and exercises the ingress RLS role (#623).
+- [x] Brand Lead Management consumes EXPADIO shared contracts/services; BEMP `/brand/leads` and `lib/leads/service.ts` were not copied (#612).
+
+The original extract-gate wording is preserved in `docs/leads/RLS-SOAK.md`; passing repository integration tests must not be represented as a production database soak.
 
 ### Next on EXPADIO (after gates)
 
-- [ ] Port extract packages as `@expadio/lead-*` into the monorepo. Keep `@expadio/lead` as the CRM entity.
+- [ ] Partial: bounded Demand Capture persistence, projection and signed-ingress seams are now in the monorepo (#614/#623). Routing, scoring, assignment and the explained unassigned queue remain.
 - [ ] Add capture ingest source to `LEAD_INGEST_SOURCES` only if `web_form` is insufficient; do not invent a second lead table in `platform`.
-- [ ] Bind capture sources to existing tenancy (`operatingUnit` / workspace) rather than a parallel org tree.
-- [ ] Seed-tenant proof: unit landing captures a lead; HQ subject sees it; sibling-unit subject gets 404.
-- [ ] Seed-tenant proof: convert creates one `platform.crm_leads` row; capture row still present with `crm_lead_id`.
+- [x] Bind capture sources to the canonical organization/workspace context rather than a parallel org tree (#604/#623).
+- [x] Integration proof: signed source captures under organization scope; descendant access and sibling denial are enforced by RLS (#604/#623). Production seed-tenant smoke remains deployment evidence.
+- [x] Integration proof: repeated trusted conversion creates one `platform.crm_leads` projection and retains the capture row/provenance (#614). Production seed-tenant smoke remains deployment evidence.
 - [ ] Decision Fabric only if a capture-to-CRM convert or stage jump needs a second-subject APPROVE. Do not auto-approve on score (P10 / P18).
 - [ ] OTP provider and CSV import stay extract-side until the four gates are green.
 

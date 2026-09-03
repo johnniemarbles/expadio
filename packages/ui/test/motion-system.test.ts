@@ -11,12 +11,14 @@ function readUiSource(path: string): string {
   return readFileSync(resolve(uiRoot, path), 'utf8');
 }
 
-test('MotionPanel closed state is removed from layout and assistive navigation', () => {
+test('MotionPanel closing state is inert before it is unmounted', () => {
   const source = readUiSource('src/motion/MotionPanel.tsx');
 
   assert.match(source, /aria-hidden=\{!open\}/u);
-  assert.match(source, /data-state=\{open \? 'open' : 'closed'\}/u);
-  assert.match(source, /hidden=\{!open\}/u);
+  assert.match(source, /inert=\{!open \? true : undefined\}/u);
+  assert.match(source, /data-state=\{open \? 'open' : 'closing'\}/u);
+  assert.match(source, /setTimeout/u);
+  assert.match(source, /if \(!mounted\) return null/u);
 });
 
 test('reduced motion tokens also override scoped Platform and Brand themes', () => {

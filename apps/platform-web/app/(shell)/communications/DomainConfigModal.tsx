@@ -72,7 +72,6 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [verifyResults, setVerifyResults] = useState<Record<string, VerifyCheck[]>>({});
-  const [apiToken, setApiToken] = useState("");
   const [adding, setAdding] = useState(false);
 
   const normalizedDomain = domain.trim().toLowerCase();
@@ -103,7 +102,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       const res = await fetch(`/api/communications/domains/cloudflare${window.location.search}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: normalizedDomain, apiToken: apiToken.trim() || undefined }),
+        body: JSON.stringify({ domain: normalizedDomain }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Failed to configure DNS records"));
@@ -131,7 +130,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
       });
       const data = await res.json();
       if (!res.ok) throw new Error(apiError(data, "Could not add the domain"));
-      setLastProvisionResult({ message: `Added ${normalizedDomain} as PENDING. Add the DNS records below, then Verify.` });
+      setLastProvisionResult({ message: `Added ${normalizedDomain} as PENDING. Add the DNS and provider-issued records below, then Verify.` });
       await reload();
     } catch (err: unknown) {
       setError(errorMessage(err, "Could not add the domain"));
@@ -188,7 +187,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
         </div>
 
         <p className={styles.description}>
-          Sending domains require verified DNS records before governed email dispatch is permitted. The table shows required records; live observations appear only after an explicit Verify check.
+          Sending domains require DNS and provider verification before governed email dispatch is permitted. Provider-issued DKIM is never inferred from generic DNS records.
         </p>
 
         <div className={styles.actionPanel}>
@@ -197,13 +196,10 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
               <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. mail.yourbrand.com" className={domain && !domainValid ? styles.inputInvalid : styles.input} />
               {domain && !domainValid && <span className={styles.invalidText}>Enter a valid domain such as mail.example.com.</span>}
             </label>
-            <label className={styles.label}>Cloudflare API token <span className={styles.optionalText}>(optional if the deployment has one)</span>
-              <input type="password" value={apiToken} onChange={(e) => setApiToken(e.target.value)} placeholder="Token with Zone · DNS · Edit for this domain" autoComplete="off" className={styles.input} />
-              <span className={styles.helpText}>Used once to create the records, then discarded — never stored. The zone is discovered automatically from the domain.</span>
-            </label>
+            <span className={styles.helpText}>Cloudflare auto-configuration uses deployment-held DNS automation only. This browser never accepts or transports a Cloudflare API token. If automation is unavailable, the API returns the records for manual setup.</span>
             <div className={styles.actions}>
-              <button type="button" onClick={handleAutoConfigure} disabled={loading || adding || !domainValid} className={styles.primaryButton}>{loading ? "Provisioning DNS…" : "⚡ Auto-Configure with Cloudflare"}</button>
-              <button type="button" onClick={handleAddManual} disabled={loading || adding || !domainValid} className={styles.secondaryButton}>{adding ? "Adding…" : "Add without Cloudflare"}</button>
+              <button type="button" onClick={handleAutoConfigure} disabled={loading || adding || !domainValid} className={styles.primaryButton}>{loading ? "Provisioning DNS…" : "⚡ Use Deployment DNS Automation"}</button>
+              <button type="button" onClick={handleAddManual} disabled={loading || adding || !domainValid} className={styles.secondaryButton}>{adding ? "Adding…" : "Add for Manual DNS"}</button>
             </div>
           </div>
 
@@ -261,7 +257,7 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
               </div>
             ))}
           </div>
-        ) : <div className={styles.empty}>No sending domains configured. Click Auto-Configure above to register your first sending domain.</div>}
+        ) : <div className={styles.empty}>No sending domains configured. Add one above to begin DNS and provider verification.</div>}
       </div>
     </div>
   );
