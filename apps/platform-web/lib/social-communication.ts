@@ -244,6 +244,6 @@ export function fileSocialCommunicationIntent(params: {
     sent: false,
     dispatched: false,
     persisted: true,
-    reasonKey: connectorState.ready ? 'INTENT_PERSISTED_NOT_DISPATCHED' : connectorState.code,
+    reasonKey: (connectorState.ready ? 'INTENT_PERSISTED_NOT_DISPATCHED' : connectorState.code) as 'CONNECTOR_DISABLED' | 'CONNECTOR_MISSING' | 'INTENT_PERSISTED_NOT_DISPATCHED',
   };
 }
