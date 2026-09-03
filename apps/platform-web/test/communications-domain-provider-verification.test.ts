@@ -59,11 +59,11 @@ test('tenant domain collection excludes inherited platform rows and cannot react
 });
 
 test('Cloudflare path rejects suspension before token use or provider mutation', () => {
-  const preflightIndex = cloudflare.indexOf('const preflight = await withTenantClient');
+  const authorizationIndex = cloudflare.indexOf('const authorized = await withTenantClient');
   const tokenIndex = cloudflare.indexOf('const token =');
   const providerIndex = cloudflare.indexOf('findZone(token, domain)');
-  assert.ok(preflightIndex >= 0 && tokenIndex > preflightIndex && providerIndex > preflightIndex);
-  assert.match(cloudflare, /preflight\.suspended/);
+  assert.ok(authorizationIndex >= 0 && tokenIndex > authorizationIndex && providerIndex > authorizationIndex);
+  assert.match(cloudflare, /authorized\.suspended/);
   assert.match(cloudflare, /can only be restored through Platform governance/);
   assert.match(cloudflare, /WHEN platform\.communication_sender_identities\.status = 'INACTIVE' THEN 'ACTIVE'/);
 });
