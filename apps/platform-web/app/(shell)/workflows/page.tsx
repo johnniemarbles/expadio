@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './page.module.css';
 import { fetchApi } from '../../../lib/live-adapter';
-import { DeniedState, EmptyState } from '@expadio/ui';
+import { DeniedState, EmptyState, MotionPanel } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { requestedOrganizationId, type RouteSearchParams } from '../../../lib/request-context';
 
@@ -28,9 +28,9 @@ export default async function WorkflowConsolePage({ searchParams }: { searchPara
           <h1 id="page-title">Workflow Engine</h1>
           <p>Monitor active business processes and stage transition bottlenecks.</p>
         </div>
-      </section>
+      </MotionPanel>
 
-      <section className={styles.panel} aria-labelledby="workflows-title">
+      <MotionPanel className={styles.panel} aria-labelledby="workflows-title">
         <div className={styles.panelHeading}>
           <div>
             <h2 id="workflows-title">Active Instances</h2>
@@ -67,7 +67,7 @@ export default async function WorkflowConsolePage({ searchParams }: { searchPara
             <EmptyState title="No active workflows" description="There are no workflow instances running in this organization." />
           )}
         </div>
-      </section>
+      </MotionPanel>
     </>
   );
 }
