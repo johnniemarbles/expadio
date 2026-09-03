@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateLeadScoringProfileDefinition } from '@expadio/lead';
+import { validateLeadScoringProfileDefinition } from '../../../../../lib/lead-scoring-domain';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
 
