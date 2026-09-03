@@ -10,11 +10,21 @@ import {
   type CaptureAttribution,
   type CaptureConsent,
   type CaptureFieldValue,
+  type CaptureInterestSubmissionInput,
   type CaptureSubmission,
   type CaptureSubmissionInput,
 } from './contract.ts';
+import type { CaptureInterestPayload, CaptureInterestType } from './interest-payload.ts';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+const INTEREST_TYPES: readonly CaptureInterestType[] = [
+  'FRANCHISEE',
+  'MASTER_FRANCHISEE',
+  'DISTRIBUTOR',
+  'AFFILIATE',
+  'LICENSEE',
+  'AGENT',
+];
 
 function cleanString(value: unknown, max: number): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -105,6 +115,20 @@ function normalizeFields(input: Readonly<Record<string, CaptureFieldValue>> | un
   return out;
 }
 
+function normalizeInterest(input: CaptureInterestPayload | undefined): CaptureInterestPayload | undefined {
+  if (input === undefined) return undefined;
+  if (!input || typeof input !== 'object') {
+    throw new CaptureContractError('CAPTURE_INTEREST_INVALID', 'Interest payload must be an object.');
+  }
+  if (!INTEREST_TYPES.includes(input.interestType)) {
+    throw new CaptureContractError('CAPTURE_INTEREST_TYPE_INVALID', `Unsupported interest type: ${String(input.interestType)}`);
+  }
+  if (!input.person || typeof input.person !== 'object' || !Array.isArray(input.locationSought)) {
+    throw new CaptureContractError('CAPTURE_INTEREST_BASE_INVALID', 'Interest payload requires person and locationSought blocks.');
+  }
+  return input;
+}
+
 function displayTitle(input: CaptureSubmissionInput, email: string): string {
   const explicit = cleanString(input.title, 200);
   if (explicit) return explicit;
@@ -118,7 +142,8 @@ function displayTitle(input: CaptureSubmissionInput, email: string): string {
 
 /**
  * Validate and normalize a raw surface input into the canonical wire submission.
- * Email is the one hard requirement; everything else is cleaned or dropped.
+ * Email remains the hard requirement for legacy/generic capture. New commercial
+ * interest surfaces should call normalizeInterestSubmission instead.
  */
 export function normalizeSubmission(input: CaptureSubmissionInput): CaptureSubmission {
   if (!input || typeof input !== 'object' || !input.contact || typeof input.contact !== 'object') {
@@ -152,18 +177,36 @@ export function normalizeSubmission(input: CaptureSubmissionInput): CaptureSubmi
   const extRef = cleanString(input.externalReference, 200);
   const formId = cleanString(input.formId, 120);
   const formVersion = cleanString(input.formVersion, 40);
+  const interest = normalizeInterest(input.interest);
 
   return {
     contact,
     ...(organization !== undefined ? { organization } : {}),
     consent: normalizeConsent(input.consent),
     attribution: normalizeAttribution(input.attribution),
+    ...(interest !== undefined ? { interest } : {}),
     title: displayTitle(input, email),
     ...(extRef !== undefined ? { externalReference: extRef } : {}),
     ...(formId !== undefined ? { formId } : {}),
     ...(formVersion !== undefined ? { formVersion } : {}),
     fields: normalizeFields(input.fields),
   };
+}
+
+/** Strict Tier 1 + Tier 2 entry point for commercial-interest forms. The
+ * presence checks are runtime counterparts to CaptureInterestSubmissionInput,
+ * so untyped JSON callers cannot omit attribution/consent/interest silently. */
+export function normalizeInterestSubmission(input: CaptureInterestSubmissionInput): CaptureSubmission {
+  if (input.consent === undefined) {
+    throw new CaptureContractError('CAPTURE_CONSENT_REQUIRED', 'Interest capture requires a consent array.');
+  }
+  if (input.attribution === undefined) {
+    throw new CaptureContractError('CAPTURE_ATTRIBUTION_REQUIRED', 'Interest capture requires attribution metadata.');
+  }
+  if (input.interest === undefined) {
+    throw new CaptureContractError('CAPTURE_INTEREST_REQUIRED', 'Interest capture requires a typed interest payload.');
+  }
+  return normalizeSubmission(input);
 }
 
 /**
