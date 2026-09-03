@@ -19,12 +19,16 @@ export function configuredContentAssetPolicy(): {
   readonly requiredComplianceTags: readonly string[];
   readonly retentionPolicy: { readonly key: string; readonly version: number };
 } {
-  const policy = {
+  const retentionVersion = Number(requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_VERSION'));
+  if (!Number.isInteger(retentionVersion) || retentionVersion < 1) {
+    throw new Error('CONTENT_ASSET_RETENTION_POLICY_VERSION_INVALID');
+  }
+  return {
     requiredResidencyTags: tags('EXPADIO_CONTENT_ASSET_RESIDENCY_TAGS'),
     requiredComplianceTags: tags('EXPADIO_CONTENT_ASSET_COMPLIANCE_TAGS'),
     retentionPolicy: {
       key: requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_KEY'),
-      version: Number(requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_VERSION')),
+      version: retentionVersion,
     },
   };
 }
