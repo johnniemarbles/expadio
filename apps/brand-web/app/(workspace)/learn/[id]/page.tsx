@@ -2,17 +2,39 @@ import { notFound } from 'next/navigation';
 import { loadLearningCourseVersion } from '@expadio/postgres-runtime/learning';
 import { listMyAvailableAssessments } from '@expadio/postgres-runtime/learning-assessment';
 import { listMyLearningEnrollments } from '@expadio/postgres-runtime/learning-enrollment';
-import { CompleteLessonButton } from '../../../../components/CompleteLessonButton';
+import { CompleteLessonButton } from '../../../../components/ResumeLessonButton';
 import { LearnerAssessmentRunner } from '../../../../components/LearnerAssessmentRunner';
 import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
 
 export const dynamic = 'force-dynamic';
 
+function blocks(content: Readonly<Record<string, unknown>>): readonly Record<string, unknown>[] {
+  return content.schemaVersion === 1 && Array.isArray(content.blocks)
+    ? content.blocks as readonly Record<string, unknown>[]
+    : [];
+}
+
 function renderContent(content: Readonly<Record<string, unknown>>) {
-  const text = content.text;
-  if (typeof text === 'string') return <div className={styles.lessonContent}>{text}</div>;
-  return <pre className={styles.lessonContent}>{JSON.stringify(content, null, 2)}</pre>;
+  const items = blocks(content);
+  if (items.length === 0) {
+    const legacy = content.text;
+    return typeof legacy === 'string'
+      ? <div className={styles.lessonContent}>{legacy}</div>
+      : <div className={styles.lessonContent}>No learner content is available for this lesson.</div>;
+  }
+  return <div className={styles.lessonContent}>{items.map((block) => {
+    const id = String(block.id);
+    const type = String(block.type);
+    const data = block.data && typeof block.data === 'object' ? block.data as Record<string, unknown> : {};
+    const text = String(data.text ?? '');
+    if (type === 'HEADING') return <h3 id={`lesson-block-${id}`} key={id}>{text}</h3>;
+    if (type === 'CALLOUT') return <aside id={`lesson-block-${id}`} key={id}>{text}</aside>;
+    if (type === 'RICH_TEXT') return <p id={`lesson-block-${id}`} key={id}>{text}</p>;
+    if (type === 'CODE') return <pre id={`lesson-block-${id}`} key={id}><code>{String(data.code ?? '')}</code></pre>;
+    if (type === 'DISCUSSION_PROMPT') return <section id={`lesson-block-${id}`} key={id}><strong>Discuss</strong><p>{String(data.prompt ?? '')}</p></section>;
+    return <section id={`lesson-block-${id}`} key={id}><strong>{String(data.title ?? type)}</strong><p>Protected {type.toLowerCase()} content.</p></section>;
+  })}</div>;
 }
 
 export default async function LearnerCoursePage({ params }: { params: Promise<{ id: string }> }) {
@@ -91,6 +113,9 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
                 {module.lessons.map((lesson) => {
                   const state = progress.get(lesson.lessonId);
                   const complete = state?.progressStatus === 'COMPLETED';
+                  const unlocked = state?.unlocked !== false;
+                  const lessonBlocks = blocks(lesson.content);
+                  const resumeBlock = lessonBlocks.find((block) => block.id === state?.resumeBlockId) ?? lessonBlocks[0];
                   return (
                     <div className={styles.learnerLesson} key={lesson.lessonId}>
                       <div className={styles.lessonHeader}>
@@ -98,10 +123,11 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
                           <strong>{lesson.title}</strong>
                           <div className={styles.muted}>{lesson.activityType}{lesson.required ? ' · Required' : ' · Optional'}</div>
                         </div>
-                        <span className={complete ? styles.done : styles.pending}>{complete ? 'Completed' : 'Not complete'}</span>
+                        <span className={complete ? styles.done : styles.pending}>{complete ? 'Completed' : unlocked ? 'Available' : 'Locked'}</span>
                       </div>
-                      {renderContent(lesson.content)}
-                      {!complete && (value.enrollment.status === 'ASSIGNED' || value.enrollment.status === 'IN_PROGRESS') ? (
+                      {unlocked ? renderContent(lesson.content) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
+                      {unlocked && !complete && resumeBlock ? <ResumeLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} blockId={String(resumeBlock.id)} position={Number(resumeBlock.position)} label={state?.resumeBlockId ? 'Continue lesson' : 'Start lesson'} /> : null}
+                      {unlocked && !complete && (value.enrollment.status === 'ASSIGNED' || value.enrollment.status === 'IN_PROGRESS') ? (
                         <CompleteLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} />
                       ) : null}
                     </div>
