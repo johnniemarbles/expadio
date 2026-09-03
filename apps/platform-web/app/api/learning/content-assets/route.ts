@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         idempotencyKey: body.idempotencyKey as string,
         retentionPolicy: body.retentionPolicy as { key: string; version: number },
         requiredResidencyTags: body.requiredResidencyTags as string[],
-        requiredComplianceTags: body.requiredComplianceTags as string[] ?? [],
+        requiredComplianceTags: Array.isArray(body.requiredComplianceTags) ? body.requiredComplianceTags : [],
         correlationId,
       });
     });
