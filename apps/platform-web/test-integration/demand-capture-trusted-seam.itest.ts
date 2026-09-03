@@ -53,7 +53,7 @@ async function source(c: pg.PoolClient, tenantId: string, organizationId: string
   return (await c.query(
     `INSERT INTO platform.lead_capture_sources
        (tenant_id, organization_id, source_key, surface, layer_key, require_signed_ticket)
-     VALUES ($1, $2, $3, 'WEBHOOK', $4, true)
+     VALUES ($1, $2, $3, 'WEBHOOK', $4, false)
      RETURNING source_id`,
     [tenantId, organizationId, key, layer],
   )).rows[0].source_id as string;
@@ -137,8 +137,8 @@ test('trusted Demand Capture inherits organization subtree RLS and projects pers
       await assert.rejects(
         c.query(
           `INSERT INTO platform.lead_capture_sources
-             (tenant_id, organization_id, source_key, surface)
-           VALUES ($1, $2, 'forged-sibling', 'WEBHOOK')`,
+             (tenant_id, organization_id, source_key, surface, require_signed_ticket)
+           VALUES ($1, $2, 'forged-sibling', 'WEBHOOK', false)`,
           [tenantId, countryB],
         ),
         (err: unknown) => (err as { code?: string }).code === '42501',
