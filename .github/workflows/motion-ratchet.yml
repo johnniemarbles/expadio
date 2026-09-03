@@ -13,7 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { fetch-depth: 0 }
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
       - uses: actions/setup-node@v5
+        with: { node-version: '22.16.0' }
       - name: Reject ungoverned motion
         env: { MOTION_RATCHET_BASE_REF: "${{ github.base_ref }}" }
         run: node scripts/check-motion-ratchet.mjs
