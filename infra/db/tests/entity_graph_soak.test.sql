@@ -109,6 +109,12 @@ BEGIN
   RAISE NOTICE 'PASS Gate 10: organization_closure compatibility';
 END $$;
 
+DROP ROLE IF EXISTS expadio_entity_graph_soak;
+CREATE ROLE expadio_entity_graph_soak;
+GRANT USAGE ON SCHEMA platform TO expadio_entity_graph_soak;
+GRANT SELECT ON platform.entity_nodes TO expadio_entity_graph_soak;
+
+SET ROLE expadio_entity_graph_soak;
 SELECT set_config('app.tenant_id','64f7c7d2-a001-4e32-a201-000000000002',true);
 DO $$
 DECLARE
@@ -120,5 +126,6 @@ BEGIN
   IF visible_count<>0 THEN RAISE EXCEPTION 'FAIL Gate 1: cross-tenant row visible'; END IF;
   RAISE NOTICE 'PASS Gate 1: cross-tenant RLS isolation';
 END $$;
+RESET ROLE;
 
 ROLLBACK;
