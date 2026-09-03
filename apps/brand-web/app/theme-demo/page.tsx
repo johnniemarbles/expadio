@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
-// Default theme matching standard styles
 const defaultTheme = {
-  name: 'Default',
+  name: 'Default EXPADIO',
   primary: '#0070f3',
   background: '#ffffff',
   text: '#111111',
@@ -16,25 +15,80 @@ export default function ThemeDemoPage() {
   const [themes, setThemes] = useState([defaultTheme]);
   const [activeThemeIndex, setActiveThemeIndex] = useState(0);
   const [prompt, setPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState('');
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const activeTheme = themes[activeThemeIndex];
 
-  const handleAddTheme = () => {
-    // Generate a random mock theme for demonstration purposes
-    const randomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-    
-    const newTheme = {
-      name: prompt || `Generated Theme ${themes.length}`,
-      primary: randomColor(),
-      background: randomColor(),
-      text: randomColor(),
-      surface: randomColor(),
-      borderRadius: `${Math.floor(Math.random() * 20)}px`
-    };
-    
+  // Convert image to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    setIsGenerating(true);
+
+    try {
+      const base64Image = await fileToBase64(file);
+      await generateThemeFromAI(base64Image, prompt);
+    } catch (err: any) {
+      setError(err.message || 'Failed to process image');
+    } finally {
+      setIsGenerating(false);
+      // Reset input so the same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const generateThemeFromAI = async (base64Image: string, customPrompt: string) => {
+    const response = await fetch('/api/extract-theme', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Image, prompt: customPrompt })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'API request failed');
+    }
+
+    const newTheme = await response.json();
     setThemes([...themes, newTheme]);
     setActiveThemeIndex(themes.length); // Switch to the new theme
-    setPrompt('');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setError('');
+      setIsGenerating(true);
+      try {
+        const base64Image = await fileToBase64(file);
+        await generateThemeFromAI(base64Image, prompt);
+      } catch (err: any) {
+        setError(err.message || 'Failed to process image');
+      } finally {
+        setIsGenerating(false);
+      }
+    } else {
+      setError('Please drop a valid image file.');
+    }
   };
 
   return (
@@ -48,7 +102,8 @@ export default function ThemeDemoPage() {
         backgroundColor: 'var(--theme-background)',
         color: 'var(--theme-text)',
         minHeight: '100vh',
-        fontFamily: 'sans-serif'
+        fontFamily: 'sans-serif',
+        transition: 'all 0.3s ease'
       } as React.CSSProperties}
     >
       {/* Tab Navigation */}
@@ -66,10 +121,11 @@ export default function ThemeDemoPage() {
                 border: 'none',
                 borderRadius: 'var(--theme-radius)',
                 cursor: 'pointer',
-                fontWeight: index === activeThemeIndex ? 'bold' : 'normal'
+                fontWeight: index === activeThemeIndex ? 'bold' : 'normal',
+                whiteSpace: 'nowrap'
               }}
             >
-              {theme.name}
+              {theme.name || `Theme ${index + 1}`}
             </button>
           ))}
         </div>
@@ -77,39 +133,58 @@ export default function ThemeDemoPage() {
 
       {/* Generator Panel */}
       <div style={{ padding: '40px 20px', backgroundColor: 'var(--theme-surface)' }}>
-        <h2>Generate New Theme</h2>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-          <input 
-            type="text" 
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter a theme prompt (e.g. 'Dark neon cyberpunk')"
-            style={{
-              padding: '10px',
-              borderRadius: 'var(--theme-radius)',
-              border: '1px solid #ccc',
-              flex: 1,
-              maxWidth: '400px'
-            }}
-          />
-          <button 
-            onClick={handleAddTheme}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'var(--theme-primary)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 'var(--theme-radius)',
-              cursor: 'pointer'
-            }}
-          >
-            Generate & Apply
-          </button>
+        <h2>Generate New Theme with AI</h2>
+        
+        <input 
+          type="text" 
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Optional: Add hints (e.g., 'Make it dark mode', 'Use soft pastels')"
+          style={{
+            padding: '12px',
+            borderRadius: 'var(--theme-radius)',
+            border: '1px solid #ccc',
+            width: '100%',
+            maxWidth: '600px',
+            marginBottom: '20px',
+            display: 'block'
+          }}
+        />
+
+        <div 
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          style={{ 
+            padding: '40px 20px', 
+            border: '2px dashed var(--theme-primary)', 
+            borderRadius: 'var(--theme-radius)', 
+            maxWidth: '600px', 
+            textAlign: 'center',
+            backgroundColor: 'var(--theme-background)',
+            cursor: isGenerating ? 'wait' : 'pointer',
+            opacity: isGenerating ? 0.7 : 1
+          }}
+        >
+          {isGenerating ? (
+            <p style={{ fontWeight: 'bold' }}>🤖 AI is analyzing your image and extracting theme...</p>
+          ) : (
+            <>
+              <p>Click or drag & drop a UI screenshot here to extract its theme</p>
+              <small>Supported formats: JPG, PNG, WEBP</small>
+            </>
+          )}
         </div>
-        <div style={{ marginTop: '20px', padding: '20px', border: '2px dashed #ccc', borderRadius: 'var(--theme-radius)', maxWidth: '400px', textAlign: 'center' }}>
-          <p>Or drag and drop a screenshot here</p>
-          <small>(Screenshot extraction coming soon)</small>
-        </div>
+        
+        {error && <p style={{ color: 'red', marginTop: '10px' }}>Error: {error}</p>}
+        
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleImageUpload} 
+          accept="image/*" 
+          style={{ display: 'none' }} 
+        />
       </div>
 
       {/* The Demo Sandbox Area */}
@@ -139,14 +214,27 @@ export default function ThemeDemoPage() {
           {/* Sample Form Element */}
           <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: 'var(--theme-radius)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <h3 style={{ marginTop: 0 }}>Quick Settings</h3>
-            <label style={{ display: 'block', marginBottom: '10px' }}>
+            <label style={{ display: 'block', marginBottom: '10px', cursor: 'pointer' }}>
               <input type="checkbox" defaultChecked style={{ marginRight: '8px', accentColor: 'var(--theme-primary)' }} />
               Enable Notifications
             </label>
-            <label style={{ display: 'block', marginBottom: '10px' }}>
+            <label style={{ display: 'block', marginBottom: '10px', cursor: 'pointer' }}>
               <input type="checkbox" style={{ marginRight: '8px', accentColor: 'var(--theme-primary)' }} />
               Dark Mode Preferences
             </label>
+            <input 
+              type="text" 
+              placeholder="Sample Input Field" 
+              style={{
+                width: '100%',
+                padding: '10px',
+                marginTop: '10px',
+                border: '1px solid #ccc',
+                borderRadius: 'var(--theme-radius)',
+                backgroundColor: 'var(--theme-background)',
+                color: 'var(--theme-text)'
+              }}
+            />
           </div>
         </div>
       </div>
