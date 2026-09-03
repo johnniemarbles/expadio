@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const migration = read('../../../infra/db/migrations/0139_crm_lead_stage_governance.sql');
+const migration = read('../../../infra/db/migrations/0145_crm_lead_stage_governance.sql');
 const route = read('../app/api/crm/leads/[id]/route.ts');
 
 test('migration adds optimistic-concurrency revision and a hash-chained ledger', () => {

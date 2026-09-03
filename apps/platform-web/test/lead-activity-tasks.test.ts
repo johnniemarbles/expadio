@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const migration = read('../../../infra/db/migrations/0143_lead_activity_tasks.sql');
+const migration = read('../../../infra/db/migrations/0146_lead_activity_tasks.sql');
 const ingress = read('../app/api/lead-capture/public/[sourceId]/route.ts');
 
 test('activity timeline is append-only, org-scoped, and notes require a body', () => {

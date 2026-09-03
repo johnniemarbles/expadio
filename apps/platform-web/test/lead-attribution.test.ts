@@ -4,7 +4,7 @@ import test from 'node:test';
 import { attributionColumns } from '../lib/lead-attribution.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const migration = read('../../../infra/db/migrations/0138_lead_attribution_consent.sql');
+const migration = read('../../../infra/db/migrations/0144_lead_attribution_consent.sql');
 const ingress = read('../app/api/lead-capture/public/[sourceId]/route.ts');
 
 test('attribution columns are ordered, trimmed, and blanks become null', () => {
