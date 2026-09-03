@@ -65,6 +65,22 @@ test('later assessment snapshot wins for the same criterion', () => {
   assert.equal(result.band, 'HOT');
 });
 
+test('score arithmetic is canonicalized to PostgreSQL numeric(12,4) precision before banding', () => {
+  const result = calculateLeadScore({
+    components: [{
+      key: 'fractional',
+      criterionKey: 'fractional',
+      weight: 1,
+      pointsPossible: 1,
+      responsePoints: { MEETS: 0.33333 },
+    }],
+    bandThresholds: { MATCHED: 0.3333, ZERO: 0 },
+  }, [{ criterionKey: 'fractional', response: 'MEETS' }]);
+  assert.equal(result.totalScore, 0.3333);
+  assert.equal(result.components[0]?.pointsAwarded, 0.3333);
+  assert.equal(result.band, 'MATCHED');
+});
+
 test('invalid scoring profiles fail closed before persistence', () => {
   assert.throws(
     () => validateLeadScoringProfileDefinition({
@@ -87,5 +103,16 @@ test('invalid scoring profiles fail closed before persistence', () => {
     }),
     (error: unknown) => error instanceof LeadScoringValidationError
       && error.code === 'LEAD_SCORING_POINTS_RANGE_INVALID',
+  );
+
+  assert.throws(
+    () => validateLeadScoringProfileDefinition({
+      components: [
+        { key: 'fit', criterionKey: 'fit', weight: 1, pointsPossible: 10, responsePoints: { MEETS: 10 } },
+      ],
+      bandThresholds: { HOT: 8, WARM: 4 },
+    }),
+    (error: unknown) => error instanceof LeadScoringValidationError
+      && error.code === 'LEAD_SCORING_ZERO_BAND_REQUIRED',
   );
 });
