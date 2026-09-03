@@ -183,6 +183,15 @@ test('Demand Capture stage and operational status lifecycle is governed, atomic 
       assert.equal(terminalStatusHistory.rows[0].from_status, 'WAITING_ON_LEAD');
       assert.equal(terminalStatusHistory.rows[0].to_status, 'LOST');
 
+      await setTransitionContext(c, subjectId, 'Attempted status-only reopen');
+      await expectRejectedAtSavepoint(
+        c,
+        'terminal_status_mismatch',
+        () => c.query(`UPDATE platform.lead_capture_leads SET status='ACTIVE' WHERE capture_lead_id=$1`, [captureLeadId]),
+        (error: unknown) => (error as { code?: string }).code === '23514'
+          && String((error as Error).message).includes('aligned operational status'),
+      );
+
       const historyId = (await c.query(
         `SELECT stage_history_id FROM platform.lead_capture_stage_history
           WHERE capture_lead_id=$1 ORDER BY changed_at DESC LIMIT 1`,
