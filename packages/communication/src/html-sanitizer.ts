@@ -49,7 +49,12 @@ function sanitizeToken(
 
   const parsed = TAG_RE.exec(token);
   if (parsed === null) return escapeHtmlText(token);
-  const [, closing, rawName, rawAttrs, selfClosing] = parsed;
+  const closing = parsed[1] ?? '';
+  const rawName = parsed[2];
+  const rawAttrs = parsed[3] ?? '';
+  const selfClosing = parsed[4] ?? '';
+  if (rawName === undefined) return escapeHtmlText(token);
+
   const tagName = rawName.toLowerCase();
   if (!COMMUNICATION_ALLOWED_HTML_TAGS.has(tagName as never)) {
     violations.push({ code: 'UNSAFE_HTML_ELEMENT', detail: `<${tagName}> is not allowed in communication templates.` });
