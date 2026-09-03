@@ -736,6 +736,8 @@ export interface LearningCompletionReconciliation {
   readonly completedRequiredLessons: number;
   readonly requiredAssessments: number;
   readonly passedRequiredAssessments: number;
+  readonly requiredAssignments: number;
+  readonly gradedRequiredAssignments: number;
   readonly idempotent: boolean;
 }
 
@@ -778,6 +780,8 @@ export async function reconcileLearningEnrollmentCompletion(
       completedRequiredLessons: 0,
       requiredAssessments: 0,
       passedRequiredAssessments: 0,
+      requiredAssignments: 0,
+      gradedRequiredAssignments: 0,
       idempotent: true,
     };
   }
@@ -843,17 +847,45 @@ export async function reconcileLearningEnrollmentCompletion(
   const assessment = assessmentCounts.rows[0];
   if (assessment === undefined) throw new Error('LEARNING_ASSESSMENT_PROGRESS_COUNT_FAILED');
 
+  const assignmentCounts = await client.query<{
+    readonly required_count: string | number;
+    readonly graded_count: string | number;
+  }>(
+    `SELECT count(*) AS required_count,
+       count(*) FILTER (WHERE EXISTS (
+         SELECT 1 FROM platform.learning_assignment_submissions submission
+          WHERE submission.tenant_id = version.tenant_id
+            AND submission.assignment_version_id = version.assignment_version_id
+            AND submission.enrollment_id = $2::uuid
+            AND submission.status = 'GRADED'
+       )) AS graded_count
+     FROM platform.learning_assignment_versions version
+     JOIN platform.learning_assignments assignment
+       ON assignment.assignment_id = version.assignment_id
+      AND assignment.tenant_id = version.tenant_id
+      AND assignment.status = 'ACTIVE'
+    WHERE version.tenant_id = $1::uuid
+      AND version.course_version_id = $3::uuid
+      AND version.state = 'PUBLISHED'
+      AND version.completion_requirement = 'REQUIRED'`,
+    [input.tenantId, input.enrollmentId, enrollmentRow.course_version_id],
+  );
+  const assignment = assignmentCounts.rows[0];
+  if (!assignment) throw new Error('LEARNING_ASSIGNMENT_PROGRESS_COUNT_FAILED');
+
   const explicitRequiredLessons = number(lesson.required_count);
   const requiredAssessments = number(assessment.required_count);
-  const fallbackToAllLessons = explicitRequiredLessons === 0 && requiredAssessments === 0;
+  const requiredAssignments = number(assignment.required_count);
+  const gradedRequiredAssignments = number(assignment.graded_count);
+  const fallbackToAllLessons = explicitRequiredLessons === 0 && requiredAssessments === 0 && requiredAssignments === 0;
   const requiredLessons = fallbackToAllLessons ? number(lesson.total_count) : explicitRequiredLessons;
   const completedRequiredLessons = fallbackToAllLessons
     ? number(lesson.completed_total_count)
     : number(lesson.completed_required_count);
   const passedRequiredAssessments = number(assessment.passed_count);
 
-  const requirementCount = requiredLessons + requiredAssessments;
-  const completedCount = completedRequiredLessons + passedRequiredAssessments;
+  const requirementCount = requiredLessons + requiredAssessments + requiredAssignments;
+  const completedCount = completedRequiredLessons + passedRequiredAssessments + gradedRequiredAssignments;
   const percent = completionPercent(requirementCount, completedCount);
   const courseCompleted = requirementCount > 0 && completedCount >= requirementCount;
   const now = new Date();
@@ -894,6 +926,8 @@ export async function reconcileLearningEnrollmentCompletion(
             completedRequiredLessons,
             requiredAssessments,
             passedRequiredAssessments,
+            requiredAssignments,
+            gradedRequiredAssignments,
           },
         },
         metadata: { source: 'learning.completion-policy' },
@@ -929,6 +963,8 @@ export async function reconcileLearningEnrollmentCompletion(
     completedRequiredLessons,
     requiredAssessments,
     passedRequiredAssessments,
+    requiredAssignments,
+    gradedRequiredAssignments,
     idempotent: false,
   };
 }

@@ -16,12 +16,12 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string; lessonId: string }> },
+  { params }: { params: Promise<{ enrollmentId: string; lessonId: string }> },
 ) {
   try {
     const context = await resolveRequestContext(request);
     const raw = await params;
-    const enrollmentId = requireLearningUuid(decodeURIComponent(raw.id), 'enrollmentId');
+    const enrollmentId = requireLearningUuid(decodeURIComponent(raw.enrollmentId), 'enrollmentId');
     const lessonId = requireLearningUuid(decodeURIComponent(raw.lessonId), 'lessonId');
 
     const result = await withTenantTransaction(context, (client) =>

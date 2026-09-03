@@ -2,9 +2,12 @@ import { notFound } from 'next/navigation';
 import { loadLearningCourseVersion } from '@expadio/postgres-runtime/learning';
 import { listMyAvailableAssessments } from '@expadio/postgres-runtime/learning-assessment';
 import { listMyLearningEnrollments } from '@expadio/postgres-runtime/learning-enrollment';
+import { listMyLearningAssignmentSubmissions, type LearningAssignmentSubmission } from '@expadio/postgres-runtime/learning-assignment';
 import { CompleteLessonButton } from '../../../../components/CompleteLessonButton';
 import { ResumeLessonButton } from '../../../../components/ResumeLessonButton';
 import { LearnerAssessmentRunner } from '../../../../components/LearnerAssessmentRunner';
+import { ProtectedLessonAsset } from '../../../../components/ProtectedLessonAsset';
+import { LearnerAssignmentForm } from '../../../../components/LearnerAssignmentForm';
 import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
 
@@ -16,7 +19,12 @@ function blocks(content: Readonly<Record<string, unknown>>): readonly Record<str
     : [];
 }
 
-function renderContent(content: Readonly<Record<string, unknown>>) {
+function renderContent(
+  content: Readonly<Record<string, unknown>>,
+  enrollmentId: string,
+  lessonId: string,
+  submissions: readonly LearningAssignmentSubmission[],
+) {
   const items = blocks(content);
   if (items.length === 0) {
     const legacy = content.text;
@@ -34,7 +42,37 @@ function renderContent(content: Readonly<Record<string, unknown>>) {
     if (type === 'RICH_TEXT') return <p id={`lesson-block-${id}`} key={id}>{text}</p>;
     if (type === 'CODE') return <pre id={`lesson-block-${id}`} key={id}><code>{String(data.code ?? '')}</code></pre>;
     if (type === 'DISCUSSION_PROMPT') return <section id={`lesson-block-${id}`} key={id}><strong>Discuss</strong><p>{String(data.prompt ?? '')}</p></section>;
-    return <section id={`lesson-block-${id}`} key={id}><strong>{String(data.title ?? type)}</strong><p>Protected {type.toLowerCase()} content.</p></section>;
+    if (['IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT', 'RESOURCE'].includes(type) && typeof data.assetId === 'string') {
+      const accessibility = block.accessibility && typeof block.accessibility === 'object'
+        ? block.accessibility as Record<string, unknown> : {};
+      return <section id={`lesson-block-${id}`} key={id}>
+        <ProtectedLessonAsset
+          enrollmentId={enrollmentId}
+          lessonId={lessonId}
+          assetId={data.assetId}
+          kind={type as 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'RESOURCE'}
+          title={typeof data.title === 'string' ? data.title : undefined}
+          label={typeof accessibility.label === 'string' ? accessibility.label : undefined}
+        />
+      </section>;
+    }
+    if (type === 'ASSIGNMENT' && typeof data.definitionId === 'string') {
+      return <section id={`lesson-block-${id}`} key={id}>
+        <LearnerAssignmentForm
+          enrollmentId={enrollmentId}
+          lessonId={lessonId}
+          assignmentKey={data.definitionId}
+          title={typeof data.title === 'string' ? data.title : undefined}
+          submission={submissions.find((entry) =>
+            entry.enrollmentId === enrollmentId
+            && entry.lessonId === lessonId
+            && entry.assignmentKey === data.definitionId
+            && entry.status !== 'VOID'
+          )}
+        />
+      </section>;
+    }
+    return <section id={`lesson-block-${id}`} key={id}><strong>{String(data.title ?? type)}</strong><p>This activity requires a specialized learner tool.</p></section>;
   })}</div>;
 }
 
@@ -50,7 +88,7 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
     const enrollment = home.enrollments.find((entry) => entry.enrollmentId === id);
     if (!enrollment) return null;
 
-    const [course, assessments] = await Promise.all([
+    const [course, assessments, assignmentSubmissions] = await Promise.all([
       loadLearningCourseVersion(client, {
         tenantId: context.tenantId,
         courseId: enrollment.courseId,
@@ -61,12 +99,18 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
         subjectId: context.subjectId,
         subjectIssuer: context.issuer,
       }),
+      listMyLearningAssignmentSubmissions(client, {
+        tenantId: context.tenantId,
+        subjectId: context.subjectId,
+        subjectIssuer: context.issuer,
+      }),
     ]);
 
     return {
       enrollment,
       course,
       assessments: assessments.filter((assessment) => assessment.enrollmentId === enrollment.enrollmentId),
+      assignmentSubmissions,
     };
   });
   if (!value) notFound();
@@ -126,7 +170,7 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
                         </div>
                         <span className={complete ? styles.done : styles.pending}>{complete ? 'Completed' : unlocked ? 'Available' : 'Locked'}</span>
                       </div>
-                      {unlocked ? renderContent(lesson.content) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
+                      {unlocked ? renderContent(lesson.content, value.enrollment.enrollmentId, lesson.lessonId, value.assignmentSubmissions) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
                       {unlocked && !complete && resumeBlock ? <ResumeLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} blockId={String(resumeBlock.id)} position={Number(resumeBlock.position)} label={state?.resumeBlockId ? 'Continue lesson' : 'Start lesson'} /> : null}
                       {unlocked && !complete && (value.enrollment.status === 'ASSIGNED' || value.enrollment.status === 'IN_PROGRESS') ? (
                         <CompleteLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} />

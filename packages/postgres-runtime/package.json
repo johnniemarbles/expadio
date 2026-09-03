@@ -52,6 +52,7 @@
     "./content-assets": "./src/content-assets.ts",
     "./learning-enrollment": "./src/learning-enrollment.ts",
     "./learning-assessment": "./src/learning-assessment.ts",
+    "./learning-assignment": "./src/learning-assignment.ts",
     "./learning-program-certification": "./src/learning-program-certification.ts",
     "./learning-competency": "./src/learning-competency.ts",
     "./learning-assignment-automation": "./src/learning-assignment-automation.ts",
