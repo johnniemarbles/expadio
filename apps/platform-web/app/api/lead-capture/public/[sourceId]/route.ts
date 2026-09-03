@@ -229,6 +229,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
       console.warn(`Capture attribution persistence skipped for ${captureLeadId}:`, error instanceof Error ? error.message : error);
     }
 
+    // Gate 3: open the activity timeline with a system "captured" entry.
+    try {
+      await client.query(
+        `INSERT INTO platform.lead_activities
+           (tenant_id, organization_id, capture_lead_id, contact_id, activity_type, body, metadata)
+         VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,'SYSTEM',$5,$6::jsonb)`,
+        [tenantId, source.organization_id, captureLeadId, contactId,
+         `Captured via ${source.source_key}`, JSON.stringify({ sourceKey: source.source_key, channel: 'WEB' })],
+      );
+    } catch (error) {
+      console.warn(`Capture activity log skipped for ${captureLeadId}:`, error instanceof Error ? error.message : error);
+    }
+
     await client.query('COMMIT');
 
     await deliverCaptureOtp({

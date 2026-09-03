@@ -10,7 +10,7 @@ test('Brand source registration is organization-bound and governance-gated', () 
   assert.match(source, /hasBrandGovernanceForOrganization/);
   assert.match(source, /context\.organizationId/);
   assert.match(source, /require_signed_ticket, status, verification_algorithm/);
-  assert.match(source, /true, 'ACTIVE', 'ED25519'/);
+  assert.match(source, /\$8, 'ACTIVE', 'ED25519'/);
 });
 
 test('Brand stores only Ed25519 public verification material', () => {

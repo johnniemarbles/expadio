@@ -21,16 +21,22 @@ import { PostgresCommunicationSuppressionRepository } from '@expadio/postgres-ru
 import { PostgresCommunicationTemplateRepository } from '@expadio/postgres-runtime/template';
 import { PostgresProviderRegistryRepository } from '@expadio/postgres-runtime/provider-registry';
 import { dbPool } from './iam-adapter';
-import { OTP_CAPABILITY_KEY, buildOtpCommunicateIntent } from './lead-capture-otp-intent';
+import {
+  OTP_CAPABILITY_KEY,
+  OTP_SMS_CAPABILITY_KEY,
+  OTP_WHATSAPP_CAPABILITY_KEY,
+  buildOtpCommunicateIntent,
+  buildSmsOtpCommunicateIntent,
+} from './lead-capture-otp-intent';
 
 export interface CaptureOtpDelivery {
   readonly tenantId: string;
   readonly organizationId: string;
   readonly captureLeadId: string;
-  readonly channel: 'EMAIL' | 'SMS';
+  readonly channel: 'EMAIL' | 'SMS' | 'WHATSAPP';
   /** Plaintext code — passed to the fabric as a variable, never persisted or logged. */
   readonly code: string;
-  /** Raw destination (email/phone). Only the hash is persisted on the challenge. */
+  /** Raw destination (email address or phone number). Only the hash is persisted on the challenge. */
   readonly destination: string;
 }
 
@@ -43,10 +49,10 @@ export type CaptureOtpDeliveryResult =
  * throws — the caller has already committed the capture.
  */
 export async function deliverCaptureOtp(delivery: CaptureOtpDelivery): Promise<CaptureOtpDeliveryResult> {
-  // Only email OTP is wired today; SMS OTP awaits the SMS trigger/template.
-  if (delivery.channel !== 'EMAIL') {
-    return { dispatched: false, reasonCode: 'CHANNEL_UNSUPPORTED' };
-  }
+  const capabilityKey =
+    delivery.channel === 'SMS' ? OTP_SMS_CAPABILITY_KEY :
+    delivery.channel === 'WHATSAPP' ? OTP_WHATSAPP_CAPABILITY_KEY :
+    OTP_CAPABILITY_KEY;
 
   const client = await dbPool.connect();
   try {
@@ -54,16 +60,25 @@ export async function deliverCaptureOtp(delivery: CaptureOtpDelivery): Promise<C
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [delivery.tenantId]);
 
     const providers = new PostgresProviderRegistryRepository(client);
-    const connectors = await providers.listConnectors(delivery.tenantId, OTP_CAPABILITY_KEY);
-    const routingPolicy = await providers.loadRoutingPolicy(delivery.tenantId, OTP_CAPABILITY_KEY);
+    const connectors = await providers.listConnectors(delivery.tenantId, capabilityKey);
+    const routingPolicy = await providers.loadRoutingPolicy(delivery.tenantId, capabilityKey);
 
-    const intent = buildOtpCommunicateIntent({
-      tenantId: delivery.tenantId,
-      organizationId: delivery.organizationId,
-      captureLeadId: delivery.captureLeadId,
-      recipientEmail: delivery.destination,
-      code: delivery.code,
-    });
+    const intent = delivery.channel === 'EMAIL'
+      ? buildOtpCommunicateIntent({
+          tenantId: delivery.tenantId,
+          organizationId: delivery.organizationId,
+          captureLeadId: delivery.captureLeadId,
+          recipientEmail: delivery.destination,
+          code: delivery.code,
+        })
+      : buildSmsOtpCommunicateIntent({
+          tenantId: delivery.tenantId,
+          organizationId: delivery.organizationId,
+          captureLeadId: delivery.captureLeadId,
+          recipientPhone: delivery.destination,
+          code: delivery.code,
+          channel: delivery.channel,
+        });
 
     const queue = await queueGovernedCommunicateAction(intent, {
       compliance: {

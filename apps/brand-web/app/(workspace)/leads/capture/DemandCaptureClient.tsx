@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from '../../workspace.module.css';
 
@@ -172,6 +173,7 @@ export default function DemandCaptureClient() {
         <td>{lead.ownerSubjectId ? <><strong>{lead.ownerSubjectId}</strong><br /><small>Governed assignment</small></> : <><span className={styles.pill}>UNASSIGNED</span><br /><small>No valid route selected</small></>}</td>
         <td>{lead.projectedToCrm ? 'Projected' : 'Capture only'}</td>
         <td style={{ minWidth: 320 }}>
+          <Link className={styles.secondaryButton} href={`/leads/capture/${lead.captureLeadId}`} style={{ marginBottom: 8, display: 'inline-flex' }}>View detail</Link>
           <button className={styles.secondaryButton} type="button" onClick={() => void routeLead(lead)} disabled={workingId === lead.captureLeadId}>Route now</button>
           <form action={(form) => transitionStage(lead, form)} style={{ display: 'grid', gap: 6, marginTop: 8 }}>
             <select name="stage" defaultValue={lead.stage} disabled={workingId === lead.captureLeadId}>{STAGES.map((stage) => <option value={stage} key={stage}>{stage}</option>)}</select>

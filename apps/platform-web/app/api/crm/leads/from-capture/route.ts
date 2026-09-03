@@ -54,13 +54,14 @@ export async function POST(request: Request) {
         return { forbidden: true } as const;
       }
 
-      const projection = await loadTrustedCaptureProjection(client, {
+      const projectionResult = await loadTrustedCaptureProjection(client, {
         tenantId: context.tenantId,
         captureLeadId,
       });
-      if (!projection) return { captureNotFound: true } as const;
+      if (projectionResult.kind === 'not_found') return { captureNotFound: true } as const;
+      if (projectionResult.kind === 'verification_required') return { verificationRequired: true } as const;
 
-      const write = buildTrustedCaptureConvertWrite(projection, context);
+      const write = buildTrustedCaptureConvertWrite(projectionResult, context);
       try {
         const upserted = await client.query(
           UPSERT_CAPTURE_CRM_LEAD_SQL,
@@ -97,6 +98,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { denied: true, reasonKey: 'CAPTURE_LEAD_NOT_FOUND', message: 'The capture lead is not visible in this organization workspace.' },
         { status: 404 },
+      );
+    }
+    if ('verificationRequired' in result) {
+      return NextResponse.json(
+        { denied: true, reasonKey: 'VERIFICATION_REQUIRED', message: 'The capture lead must be OTP-verified before it can enter the CRM pipeline.' },
+        { status: 422 },
       );
     }
     if ('badRef' in result) {
