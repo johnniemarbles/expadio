@@ -37,25 +37,23 @@ export async function GET(
       const row = lead.rows[0];
       if (!row) return NextResponse.json({ error: 'Demand Capture Lead not found.' }, { status: 404 });
 
-      const [stageHistory, statusHistory] = await Promise.all([
-        client.query(
-          `SELECT stage_history_id, from_stage, to_stage, transition_kind,
-                  actor_subject_id, reason, close_reason_code,
-                  duration_in_previous_seconds, changed_at
-             FROM platform.lead_capture_stage_history
-            WHERE tenant_id = $1::uuid AND capture_lead_id = $2::uuid
-            ORDER BY changed_at DESC, stage_history_id DESC`,
-          [context.tenantId, captureLeadId],
-        ),
-        client.query(
-          `SELECT status_history_id, from_status, to_status, actor_subject_id,
-                  reason, duration_in_previous_seconds, changed_at
-             FROM platform.lead_capture_status_history
-            WHERE tenant_id = $1::uuid AND capture_lead_id = $2::uuid
-            ORDER BY changed_at DESC, status_history_id DESC`,
-          [context.tenantId, captureLeadId],
-        ),
-      ]);
+      const stageHistory = await client.query(
+        `SELECT stage_history_id, from_stage, to_stage, transition_kind,
+                actor_subject_id, reason, close_reason_code,
+                duration_in_previous_seconds, changed_at
+           FROM platform.lead_capture_stage_history
+          WHERE tenant_id = $1::uuid AND capture_lead_id = $2::uuid
+          ORDER BY changed_at DESC, stage_history_id DESC`,
+        [context.tenantId, captureLeadId],
+      );
+      const statusHistory = await client.query(
+        `SELECT status_history_id, from_status, to_status, actor_subject_id,
+                reason, duration_in_previous_seconds, changed_at
+           FROM platform.lead_capture_status_history
+          WHERE tenant_id = $1::uuid AND capture_lead_id = $2::uuid
+          ORDER BY changed_at DESC, status_history_id DESC`,
+        [context.tenantId, captureLeadId],
+      );
 
       return NextResponse.json({
         captureLeadId: row.capture_lead_id,
