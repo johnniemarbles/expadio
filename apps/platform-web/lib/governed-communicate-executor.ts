@@ -35,7 +35,7 @@ export interface GovernedCommunicateExecutionResult {
  * queue phase has an immutable execution attempt, redelivery returns that
  * attempt without re-running compliance, template, or routing work.
  */
-async function executeGovernedCommunicateActionInTransaction(
+export async function executeGovernedCommunicateActionInTransaction(
   client: PoolClient,
   input: {
     readonly intent: PersistedGovernedActionIntent;

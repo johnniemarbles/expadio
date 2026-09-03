@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import { reconcileCommunicationCertification } from './communication-certification-reconciliation.ts';
 
 export type CommunicationProviderWebhookOutcome =
   | 'SENT'
@@ -62,6 +63,7 @@ interface DeliveryRow {
 }
 
 interface WebhookEventRow {
+  readonly webhook_event_id: string;
   readonly normalized_outcome: CommunicationProviderWebhookOutcome;
   readonly delivery_id: string | null;
   readonly previous_delivery_state: CommunicationDeliveryLifecycleState | null;
@@ -194,7 +196,7 @@ export async function ingestVerifiedCommunicationProviderWebhook(
   await client.query('BEGIN');
   try {
     const duplicate = await client.query<WebhookEventRow>(
-      `SELECT normalized_outcome, delivery_id, previous_delivery_state,
+      `SELECT webhook_event_id, normalized_outcome, delivery_id, previous_delivery_state,
               new_delivery_state, reason_code
          FROM platform.communication_provider_webhook_events
         WHERE tenant_id = $1::uuid
@@ -276,7 +278,7 @@ export async function ingestVerifiedCommunicationProviderWebhook(
          $1::uuid, $2, $3, $4, $5, $6, $7,
          $8::uuid, $9, $10, $11, $12::jsonb, $13::timestamptz, $14::timestamptz
        )
-       RETURNING normalized_outcome, delivery_id, previous_delivery_state,
+       RETURNING webhook_event_id, normalized_outcome, delivery_id, previous_delivery_state,
                  new_delivery_state, reason_code`,
       [
         tenantId, webhook.providerKey, connectorKey, providerEventId,
@@ -287,6 +289,25 @@ export async function ingestVerifiedCommunicationProviderWebhook(
     );
     const row = inserted.rows[0];
     if (row === undefined) throw new Error('PROVIDER_WEBHOOK_EVENT_INSERT_FAILED');
+
+    if (
+      delivery !== undefined
+      && transition?.applied === true
+      && (
+        transition.nextState === 'DELIVERED'
+        || transition.nextState === 'BOUNCED'
+        || transition.nextState === 'COMPLAINED'
+        || transition.nextState === 'FAILED'
+        || transition.nextState === 'CANCELLED'
+      )
+    ) {
+      await reconcileCommunicationCertification(client, {
+        tenantId,
+        deliveryId: delivery.delivery_id,
+        webhookEventId: row.webhook_event_id,
+        finalDeliveryState: transition.nextState,
+      });
+    }
 
     await client.query('COMMIT');
     return toResult('RECORDED', row);
