@@ -26,7 +26,7 @@ ALTER TABLE platform.entity_relationships
   ADD COLUMN IF NOT EXISTS effective_from    date NOT NULL DEFAULT CURRENT_DATE,
   ADD COLUMN IF NOT EXISTS effective_to      date,
   ADD COLUMN IF NOT EXISTS evidence_ref      text,
-  ADD COLUMN IF NOT EXISTS approved_by       uuid,
+  ADD COLUMN IF NOT EXISTS approved_by       text,
   ADD COLUMN IF NOT EXISTS notes             jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 -- ── Step 2: migrate existing free-form rows to LEGACY ─────────────────────
@@ -59,6 +59,13 @@ ALTER TABLE platform.entity_relationships
 ALTER TABLE platform.entity_relationships
   ADD CONSTRAINT entity_relationships_effective_period_check
   CHECK (effective_to IS NULL OR effective_to > effective_from);
+
+-- Expand the legacy status constraint for governed history.
+ALTER TABLE platform.entity_relationships
+  DROP CONSTRAINT IF EXISTS entity_relationships_status_check;
+ALTER TABLE platform.entity_relationships
+  ADD CONSTRAINT entity_relationships_status_check
+  CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUPERSEDED', 'TERMINATED'));
 
 -- ── Step 3: add source and target node references ──────────────────────────
 -- 0063 may have used generic uuid columns or organization references.
@@ -161,9 +168,10 @@ LANGUAGE sql STABLE AS $$
     notes
   FROM platform.entity_relationships
   WHERE
-    (p_as_source AND source_node_id = p_node_id)
-    OR (NOT p_as_source AND target_node_id = p_node_id)
+    ((p_as_source AND source_node_id = p_node_id)
+      OR (NOT p_as_source AND target_node_id = p_node_id))
     AND effective_to IS NULL
+    AND status = 'ACTIVE'
     AND (p_relationship IS NULL OR relationship_type = p_relationship)
   ORDER BY effective_from DESC;
 $$;
