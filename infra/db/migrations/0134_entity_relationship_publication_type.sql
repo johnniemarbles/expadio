@@ -3,7 +3,8 @@ BEGIN;
 -- 0128 made platform.entity_relationships.relationship_type mandatory, but the
 -- enterprise publication helper from 0120 still inserted only relationship_key.
 -- Recreate the helper after the governed taxonomy migration so derived
--- enterprise edges are classified with the registered governed relationship type.
+-- enterprise edges are classified into the constrained governed relationship
+-- taxonomy while preserving the original business relationship_key.
 CREATE OR REPLACE FUNCTION platform.create_governed_entity_relationship(
   p_tenant_id uuid, p_source_entity_type text, p_source_entity_id text,
   p_relationship_key text, p_target_entity_type text, p_target_entity_id text,
@@ -18,6 +19,7 @@ SET search_path = pg_catalog, platform
 AS $$
 DECLARE
   definition platform.entity_relationship_definitions%ROWTYPE;
+  governed_relationship_type text;
   existing_id uuid;
   new_id uuid;
   conflict_count integer;
@@ -57,6 +59,35 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  governed_relationship_type := CASE
+    WHEN definition.relationship_key IN (
+      'COMMERCIAL_PARENT'
+    ) THEN 'COMMERCIAL_PARENT'
+    WHEN definition.relationship_key IN (
+      'OPERATIONAL_PARENT',
+      'OPERATED_BY',
+      'OPERATES'
+    ) THEN 'OPERATIONAL_PARENT'
+    WHEN definition.relationship_key IN (
+      'TERRITORIAL_JURISDICTION',
+      'LOCATED_IN',
+      'CONTAINS'
+    ) THEN CASE
+      WHEN definition.relationship_key = 'LOCATED_IN' THEN 'LOCATED_IN'
+      ELSE 'TERRITORIAL_JURISDICTION'
+    END
+    WHEN definition.relationship_key IN (
+      'GOVERNANCE_PARENT'
+    ) THEN 'GOVERNANCE_PARENT'
+    WHEN definition.relationship_key IN (
+      'OWNERSHIP',
+      'CONTROLLING_OWNERSHIP',
+      'MINORITY_OWNERSHIP',
+      'BENEFICIAL_OWNERSHIP'
+    ) THEN 'OWNERSHIP'
+    ELSE 'LEGACY'
+  END;
+
   source_node_id := platform.resolve_or_register_entity_registry_node(
     p_tenant_id,
     p_source_entity_type,
@@ -79,7 +110,7 @@ BEGIN
      AND relationship_key = p_relationship_key
      AND target_entity_type = p_target_entity_type
      AND target_entity_id = p_target_entity_id
-     AND relationship_type = definition.relationship_key
+     AND relationship_type = governed_relationship_type
      AND status = 'ACTIVE'
      AND valid_until IS NULL
      AND effective_to IS NULL
@@ -97,7 +128,7 @@ BEGIN
        AND r.source_entity_type = p_source_entity_type
        AND r.source_entity_id = p_source_entity_id
        AND r.relationship_key = p_relationship_key
-       AND r.relationship_type = definition.relationship_key
+       AND r.relationship_type = governed_relationship_type
        AND r.status = 'ACTIVE'
        AND r.valid_until IS NULL
        AND r.effective_to IS NULL
@@ -123,7 +154,7 @@ BEGIN
     p_tenant_id, definition.definition_id,
     source_node_id, target_node_id,
     source_node_id, target_node_id,
-    p_source_entity_type, p_source_entity_id, p_relationship_key, definition.relationship_key,
+    p_source_entity_type, p_source_entity_id, p_relationship_key, governed_relationship_type,
     p_target_entity_type, p_target_entity_id, p_valid_from, p_valid_until,
     p_valid_from::date, CASE WHEN p_valid_until IS NULL THEN NULL ELSE p_valid_until::date END,
     p_attributes,
