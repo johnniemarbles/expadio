@@ -8,6 +8,7 @@ import {
   type CommunicationContentPolicyViolation,
 } from './content-policy.ts';
 
+const BLOCKED_ELEMENT_RE = /<\s*(script|style|iframe|object|embed)\b[\s\S]*?<\s*\/\s*\1\s*>/giu;
 const TOKEN_RE = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<!doctype\b[^>]*>|<\/?[a-zA-Z][^>]*>/giu;
 const TAG_RE = /^<\s*(\/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)([\s\S]*?)(\/?)\s*>$/u;
 const ATTR_RE = /([a-zA-Z_:][a-zA-Z0-9:._-]*)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>`]+))?/gu;
@@ -15,16 +16,21 @@ const URL_ATTRIBUTES = new Set(['href', 'src']);
 
 export function sanitizeCommunicationHtml(input: string): CommunicationContentPolicyResult {
   const violations: CommunicationContentPolicyViolation[] = [];
+  const withoutBlockedContainers = input.replace(BLOCKED_ELEMENT_RE, (_match, rawTag: string) => {
+    const tagName = rawTag.toLowerCase();
+    violations.push({ code: 'UNSAFE_HTML_ELEMENT', detail: `<${tagName}> is not allowed in communication templates.` });
+    return '';
+  });
   let cursor = 0;
   let output = '';
 
-  for (const match of input.matchAll(TOKEN_RE)) {
+  for (const match of withoutBlockedContainers.matchAll(TOKEN_RE)) {
     const index = match.index ?? 0;
-    output += input.slice(cursor, index);
+    output += withoutBlockedContainers.slice(cursor, index);
     output += sanitizeToken(match[0], violations);
     cursor = index + match[0].length;
   }
-  output += input.slice(cursor);
+  output += withoutBlockedContainers.slice(cursor);
 
   return { html: sanitizedHtml(output), violations };
 }
@@ -56,7 +62,7 @@ function sanitizeToken(
   if (rawName === undefined) return escapeHtmlText(token);
 
   const tagName = rawName.toLowerCase();
-  if (!COMMUNICATION_ALLOWED_HTML_TAGS.has(tagName as never)) {
+  if (!COMMUNICATION_ALLOWED_HTML_TAGS.has(tagName)) {
     violations.push({ code: 'UNSAFE_HTML_ELEMENT', detail: `<${tagName}> is not allowed in communication templates.` });
     return '';
   }
@@ -80,7 +86,7 @@ function sanitizeAttributes(
       violations.push({ code: 'UNSAFE_HTML_ATTRIBUTE', detail: `${rawName} is not allowed on <${tagName}>.` });
       continue;
     }
-    if (!COMMUNICATION_ALLOWED_HTML_ATTRIBUTES.has(name as never)) {
+    if (!COMMUNICATION_ALLOWED_HTML_ATTRIBUTES.has(name)) {
       violations.push({ code: 'UNSAFE_HTML_ATTRIBUTE', detail: `${rawName} is not an allowed communication-template attribute.` });
       continue;
     }
