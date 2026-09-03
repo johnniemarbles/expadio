@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MotionPanel, MotionCard } from '@expadio/ui';
 import Link from "next/link";
 import styles from "./page.module.css";
 import { DomainConfigModal } from "./DomainConfigModal";
@@ -288,7 +289,7 @@ export function CommunicationsDashboardClient({
           {/* Middle 2-Column Section */}
           <div className={styles.twoColGrid}>
             {/* Cross-Channel Traffic Bar Chart */}
-            <article className={styles.cardPanel}>
+            <MotionPanel className={styles.cardPanel}>
               <div className={styles.cardPanelHeader}>
                 <div>
                   <h3>Cross-channel traffic</h3>
@@ -308,10 +309,10 @@ export function CommunicationsDashboardClient({
                   </div>
                 ))}
               </div>
-            </article>
+            </MotionPanel>
 
             {/* Channel Operations */}
-            <article className={styles.cardPanel}>
+            <MotionPanel className={styles.cardPanel}>
               <div className={styles.cardPanelHeader}>
                 <div>
                   <h3>Channel operations</h3>
@@ -348,11 +349,11 @@ export function CommunicationsDashboardClient({
                   );
                 })}
               </div>
-            </article>
+            </MotionPanel>
           </div>
 
           {/* Live operational attention */}
-          <section className={styles.attentionTablePanel}>
+          <MotionPanel className={styles.attentionTablePanel}>
             <div className={styles.attentionPanelHeading}>
               <div>
                 <h3>Operational attention</h3>
@@ -392,13 +393,13 @@ export function CommunicationsDashboardClient({
                 description="Operational incidents will appear here from the live delivery lifecycle."
               />
             )}
-          </section>
+          </MotionPanel>
         </>
       )}
 
       {/* Tab Content: Tenant health — this workspace's per-connector health + delivery */}
       {activeTab === "tenant_health" && (
-        <section className={styles.attentionTablePanel}>
+        <MotionPanel className={styles.attentionTablePanel}>
           <div className={styles.attentionPanelHeading}>
             <div>
               <h3>Tenant health</h3>
@@ -447,7 +448,7 @@ export function CommunicationsDashboardClient({
               description="Register a governed connector to see its credential and delivery health here."
             />
           )}
-        </section>
+        </MotionPanel>
       )}
 
       {/* Tab Content: Provider Control */}
@@ -509,7 +510,7 @@ export function CommunicationsDashboardClient({
             </article>
           </div>
 
-          <section className={styles.attentionTablePanel}>
+          <MotionPanel className={styles.attentionTablePanel}>
             <div className={styles.attentionPanelHeading}>
               <div>
                 <h3>Provider Registry</h3>
@@ -605,13 +606,13 @@ export function CommunicationsDashboardClient({
                 description="Register a governed connector to make it available for routing."
               />
             )}
-          </section>
+          </MotionPanel>
         </>
       )}
 
       {/* Tab Content: Deliverability */}
       {activeTab === "deliverability" && (
-        <section className={styles.attentionTablePanel}>
+        <MotionPanel className={styles.attentionTablePanel}>
           <div className={styles.attentionPanelHeading}>
             <div>
               <h3>7-Day Deliverability Performance</h3>
@@ -659,7 +660,7 @@ export function CommunicationsDashboardClient({
               description="Fleet statistics will appear as messages are processed across live connectors."
             />
           )}
-        </section>
+        </MotionPanel>
       )}
 
       {/* Tab Content: Capacity & spend (rendered — supersedes the raw-JSON Advanced Setup tab) */}

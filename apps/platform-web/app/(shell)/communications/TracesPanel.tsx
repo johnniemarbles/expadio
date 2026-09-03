@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MotionPanel, MotionCard } from '@expadio/ui';
 import styles from "./page.module.css";
 import traceStyles from "./TracesPanel.module.css";
 import type { DecisionTrace, TraceOutcome } from "@expadio/communication";
@@ -105,7 +106,7 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
   }
 
   return (
-    <section className={styles.attentionTablePanel}>
+    <MotionPanel className={styles.attentionTablePanel}>
       <div className={styles.attentionPanelHeading}>
         <div>
           <h3>Decision traces</h3>
@@ -234,6 +235,6 @@ export function TracesPanel({ queryString = "" }: TracesPanelProps) {
           </div>
         </div>
       )}
-    </section>
+    </MotionPanel>
   );
 }
