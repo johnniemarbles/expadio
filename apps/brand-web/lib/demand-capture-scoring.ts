@@ -5,7 +5,7 @@ import {
   validateLeadScoringProfileDefinition,
   type LeadScoringProfileDefinition,
   type QualificationResponse,
-} from '@expadio/lead';
+} from './lead-scoring-domain.ts';
 
 interface ProfileRow {
   scoring_profile_id: string;
