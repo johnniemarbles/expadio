@@ -92,12 +92,14 @@ export async function submitMyLearningAssignment(
     readonly course_version_id: string;
     readonly assignment_id: string;
     readonly assignment_version_id: string;
+    readonly title: string;
+    readonly max_points: string | number;
     readonly allow_text: boolean;
     readonly allow_attachments: boolean;
     readonly due_at: Date | string | null;
   }>(
     `SELECT learner.learner_id, enrollment.course_version_id, assignment.assignment_id,
-            version.assignment_version_id, version.allow_text, version.allow_attachments, version.due_at
+            version.assignment_version_id, version.title, version.max_points, version.allow_text, version.allow_attachments, version.due_at
        FROM platform.learning_enrollments enrollment
        JOIN platform.learning_learners learner
          ON learner.learner_id = enrollment.learner_id AND learner.tenant_id = enrollment.tenant_id
@@ -175,7 +177,7 @@ export async function submitMyLearningAssignment(
        score_points, $13::numeric AS max_points, feedback, submitted_at, graded_at`,
     [input.tenantId, row.assignment_id, row.assignment_version_id, row.learner_id,
       input.enrollmentId, row.course_version_id, input.lessonId, input.submissionKey,
-      attempt.rows[0]?.next_attempt ?? 1, responseText, input.assignmentKey, input.assignmentKey, 1],
+      attempt.rows[0]?.next_attempt ?? 1, responseText, input.assignmentKey, row.title, row.max_points],
   );
   const submission = inserted.rows[0];
   if (!submission) throw new Error('LEARNING_ASSIGNMENT_SUBMISSION_INSERT_FAILED');
