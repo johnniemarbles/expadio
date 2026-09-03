@@ -15,6 +15,30 @@ function boundedString(value: unknown, max: number): string | null {
   return text;
 }
 
+function parseQualificationRequest(body: Record<string, unknown>) {
+  const hasTemplateKey = Object.prototype.hasOwnProperty.call(body, 'templateKey');
+  const templateKey = hasTemplateKey ? boundedString(body.templateKey, 120) : 'default';
+  if (!templateKey) throw new Error('templateKey must be a non-empty string of at most 120 characters.');
+  if (!Array.isArray(body.assessments) || body.assessments.length === 0 || body.assessments.length > 100) {
+    throw new Error('At least one qualification assessment is required.');
+  }
+  const supplied = body.assessments.map((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`Assessment ${index + 1} must be an object.`);
+    const record = entry as Record<string, unknown>;
+    const criterionKey = boundedString(record.criterionKey, 120);
+    const response = typeof record.response === 'string' ? record.response.trim().toUpperCase() : '';
+    const note = record.note == null || record.note === '' ? null : boundedString(record.note, 2000);
+    if (!criterionKey || !(QUALIFICATION_RESPONSES as readonly string[]).includes(response) || (record.note != null && record.note !== '' && !note)) {
+      throw new Error(`Assessment ${index + 1} has invalid criterion, response or note.`);
+    }
+    return { criterionKey, response: response as QualificationResponse, note };
+  });
+  if (new Set(supplied.map((item) => item.criterionKey)).size !== supplied.length) {
+    throw new Error('Each criterion may be assessed at most once per request.');
+  }
+  return { templateKey, supplied };
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -54,24 +78,12 @@ export async function POST(
     const captureLeadId = decodeURIComponent((await params).id).trim();
     if (!context.organizationId) return NextResponse.json({ denied: true, reasonKey: 'ORGANIZATION_CONTEXT_REQUIRED' }, { status: 403 });
     if (!UUID.test(captureLeadId)) return NextResponse.json({ error: 'Invalid capture Lead identifier.' }, { status: 400 });
-    const body = await request.json().catch(() => ({}));
-    const templateKey = boundedString(body.templateKey, 120) ?? 'default';
-    if (!Array.isArray(body.assessments) || body.assessments.length === 0 || body.assessments.length > 100) {
-      return NextResponse.json({ error: 'At least one qualification assessment is required.' }, { status: 400 });
-    }
-    const supplied = body.assessments.map((entry: unknown, index: number) => {
-      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`Assessment ${index + 1} must be an object.`);
-      const record = entry as Record<string, unknown>;
-      const criterionKey = boundedString(record.criterionKey, 120);
-      const response = typeof record.response === 'string' ? record.response.trim().toUpperCase() : '';
-      const note = record.note == null || record.note === '' ? null : boundedString(record.note, 2000);
-      if (!criterionKey || !(QUALIFICATION_RESPONSES as readonly string[]).includes(response) || (record.note != null && record.note !== '' && !note)) {
-        throw new Error(`Assessment ${index + 1} has invalid criterion, response or note.`);
-      }
-      return { criterionKey, response: response as QualificationResponse, note };
-    });
-    if (new Set(supplied.map((item: { criterionKey: string }) => item.criterionKey)).size !== supplied.length) {
-      return NextResponse.json({ error: 'Each criterion may be assessed at most once per request.' }, { status: 400 });
+    const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+    let parsed: ReturnType<typeof parseQualificationRequest>;
+    try {
+      parsed = parseQualificationRequest(body);
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid qualification request.' }, { status: 400 });
     }
 
     return await withBrandTransaction(context, async (client) => {
@@ -96,7 +108,7 @@ export async function POST(
            FROM platform.lead_qualification_templates
           WHERE tenant_id=$1::uuid AND organization_id=$2::uuid
             AND template_key=$3 AND status='ACTIVE' LIMIT 1`,
-        [context.tenantId, lead.organization_id, templateKey],
+        [context.tenantId, lead.organization_id, parsed.templateKey],
       );
       const template = templateResult.rows[0];
       if (!template) {
@@ -105,11 +117,11 @@ export async function POST(
       const allowedCriteria = new Set((Array.isArray(template.criteria) ? template.criteria : [])
         .map((criterion) => typeof criterion?.key === 'string' ? criterion.key : '')
         .filter(Boolean));
-      const unknown = supplied.find((item: { criterionKey: string }) => !allowedCriteria.has(item.criterionKey));
+      const unknown = parsed.supplied.find((item) => !allowedCriteria.has(item.criterionKey));
       if (unknown) return NextResponse.json({ error: `Unknown qualification criterion: ${unknown.criterionKey}.` }, { status: 400 });
 
       const inserted = [];
-      for (const assessment of supplied) {
+      for (const assessment of parsed.supplied) {
         const result = await client.query<{ qualification_id: string; assessed_at: Date | string }>(
           `INSERT INTO platform.lead_qualifications (
              tenant_id, organization_id, capture_lead_id, qualification_template_id,
@@ -129,6 +141,6 @@ export async function POST(
     });
   } catch (error) {
     console.error('Brand qualification assessment create failed:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to record qualification assessments.' }, { status: 400 });
+    return NextResponse.json({ error: 'Unable to record qualification assessments.' }, { status: 500 });
   }
 }
