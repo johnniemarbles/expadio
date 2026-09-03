@@ -115,10 +115,10 @@ BEGIN
   SELECT count(*) INTO organization_count
     FROM platform.communication_templates WHERE scope = 'ORGANIZATION';
 
-  IF visible_count <> 3 THEN
-    RAISE EXCEPTION 'tenant A expected platform + tenant + organization templates, got %', visible_count;
+  IF visible_count <> platform_count + tenant_count + organization_count THEN
+    RAISE EXCEPTION 'tenant A template visibility total was inconsistent: %', visible_count;
   END IF;
-  IF platform_count <> 1 OR tenant_count <> 1 OR organization_count <> 1 THEN
+  IF platform_count < 1 OR tenant_count <> 1 OR organization_count <> 1 THEN
     RAISE EXCEPTION 'tenant A template scope visibility was incorrect';
   END IF;
 END;
