@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
-import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../../lib/brand-context';
-import { calculateAndPersistDemandCaptureScore } from '../../../../../../../lib/demand-capture-scoring';
+import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
+import { calculateAndPersistDemandCaptureScore } from '../../../../../../lib/demand-capture-scoring';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
