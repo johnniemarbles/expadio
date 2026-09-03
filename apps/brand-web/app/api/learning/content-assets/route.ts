@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { proxyLearningAssetRequest } from '@/lib/platform-content-asset-proxy';
+import { proxyLearningAssetRequest } from '../../../../lib/platform-content-asset-proxy';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
