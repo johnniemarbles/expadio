@@ -29,3 +29,12 @@
 @media(prefers-reduced-motion:reduce){.shell,.sidebar,.main,.metric,.panel,.appCard,.accessCard,.appSwitcher>div,.moreMenu>div{animation:none}.globalNav a,.navIcon,.workspaceSelect select,.workspaceSelect button,.appSwitcher summary,.moduleTabs>a,.moreMenu>summary,.metric,.panel,.appCard,.button,.progressFill,.secondaryButton{transition:none}.globalNav a:hover,.workspaceSelect button:hover,.metric:hover,.panel:hover,.appCard:hover,.button:hover,.button:active{transform:none}}
 @media(max-width:1000px){.shell{grid-template-columns:1fr}.sidebar{position:static;height:auto}.globalNav{grid-template-columns:repeat(2,minmax(0,1fr))}.navGroup{grid-column:1/-1}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}:global(.adminSplit){grid-template-columns:1fr}.moduleTabs{overflow-x:auto}}
 @media(max-width:640px){.main{padding:20px}.topbar{padding:0 16px}.grid,:global(.learningForm),.appStats,.appGrid{grid-template-columns:1fr}:global(.learningForm .wide){grid-column:auto}.topbarActions>details{display:none}.moduleHeader{align-items:flex-start}.globalNav{grid-template-columns:1fr}}
+
+:global(.learningAssetEditor){display:grid;gap:14px}
+:global(.learningAssetEditor label){display:grid;gap:6px;font-size:12px;font-weight:750}
+:global(.learningAssetEditor select),:global(.learningAssetEditor input[type=file]){min-height:42px;padding:9px 11px;border:1px solid var(--theme-border);border-radius:var(--theme-radius-control);background:var(--theme-surface);color:var(--theme-text-primary)}
+:global(.assetActions){display:flex;gap:10px;flex-wrap:wrap}
+:global(.assetActions button){min-height:38px;padding:8px 12px;border:1px solid var(--theme-border);border-radius:var(--theme-radius-control);background:var(--theme-surface-muted);color:var(--theme-text-primary);font-weight:750;cursor:pointer}
+:global(.assetActions button:disabled){cursor:not-allowed;opacity:.55}
+:global(.learningAssetEditor [role=status]){color:var(--theme-text-muted);font:700 11px/1.4 var(--theme-font-mono)}
+:global(.learningAssetEditor [role=alert]){color:var(--theme-danger);font-weight:700}
