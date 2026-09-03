@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { loadLearningCourseVersion } from '@expadio/postgres-runtime/learning';
 import { listMyAvailableAssessments } from '@expadio/postgres-runtime/learning-assessment';
 import { listMyLearningEnrollments } from '@expadio/postgres-runtime/learning-enrollment';
+import { listMyLearningAssignmentSubmissions, type LearningAssignmentSubmission } from '@expadio/postgres-runtime/learning-assignment';
 import { CompleteLessonButton } from '../../../../components/CompleteLessonButton';
 import { ResumeLessonButton } from '../../../../components/ResumeLessonButton';
 import { LearnerAssessmentRunner } from '../../../../components/LearnerAssessmentRunner';
@@ -22,6 +23,7 @@ function renderContent(
   content: Readonly<Record<string, unknown>>,
   enrollmentId: string,
   lessonId: string,
+  submissions: readonly LearningAssignmentSubmission[],
 ) {
   const items = blocks(content);
   if (items.length === 0) {
@@ -61,6 +63,12 @@ function renderContent(
           lessonId={lessonId}
           assignmentKey={data.definitionId}
           title={typeof data.title === 'string' ? data.title : undefined}
+          submission={submissions.find((entry) =>
+            entry.enrollmentId === enrollmentId
+            && entry.lessonId === lessonId
+            && entry.assignmentKey === data.definitionId
+            && entry.status !== 'VOID'
+          )}
         />
       </section>;
     }
@@ -80,7 +88,7 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
     const enrollment = home.enrollments.find((entry) => entry.enrollmentId === id);
     if (!enrollment) return null;
 
-    const [course, assessments] = await Promise.all([
+    const [course, assessments, assignmentSubmissions] = await Promise.all([
       loadLearningCourseVersion(client, {
         tenantId: context.tenantId,
         courseId: enrollment.courseId,
@@ -91,12 +99,18 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
         subjectId: context.subjectId,
         subjectIssuer: context.issuer,
       }),
+      listMyLearningAssignmentSubmissions(client, {
+        tenantId: context.tenantId,
+        subjectId: context.subjectId,
+        subjectIssuer: context.issuer,
+      }),
     ]);
 
     return {
       enrollment,
       course,
       assessments: assessments.filter((assessment) => assessment.enrollmentId === enrollment.enrollmentId),
+      assignmentSubmissions,
     };
   });
   if (!value) notFound();
@@ -156,7 +170,7 @@ export default async function LearnerCoursePage({ params }: { params: Promise<{ 
                         </div>
                         <span className={complete ? styles.done : styles.pending}>{complete ? 'Completed' : unlocked ? 'Available' : 'Locked'}</span>
                       </div>
-                      {unlocked ? renderContent(lesson.content, value.enrollment.enrollmentId, lesson.lessonId) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
+                      {unlocked ? renderContent(lesson.content, value.enrollment.enrollmentId, lesson.lessonId, value.assignmentSubmissions) : <div className={styles.lessonContent}>Complete the earlier required lesson to unlock this content.</div>}
                       {unlocked && !complete && resumeBlock ? <ResumeLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} blockId={String(resumeBlock.id)} position={Number(resumeBlock.position)} label={state?.resumeBlockId ? 'Continue lesson' : 'Start lesson'} /> : null}
                       {unlocked && !complete && (value.enrollment.status === 'ASSIGNED' || value.enrollment.status === 'IN_PROGRESS') ? (
                         <CompleteLessonButton enrollmentId={value.enrollment.enrollmentId} lessonId={lesson.lessonId} />
