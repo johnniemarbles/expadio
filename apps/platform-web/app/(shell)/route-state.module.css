@@ -1,5 +1,5 @@
 .loadingState { width:min(100%,760px); margin:28px auto; padding:24px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow-lg); }
-.loadingHeader,.loadingLine,.loadingPanel { border-radius:8px; background:linear-gradient(90deg,var(--canvas),color-mix(in srgb,var(--theme-surface-muted,var(--canvas)) 70%,var(--theme-text-primary,var(--ink-950)) 15%),var(--canvas)); background-size:220% 100%; animation:routePulse 1.4s ease-in-out infinite; }
+.loadingHeader,.loadingLine,.loadingPanel { border-radius:8px; background:var(--theme-easing-linear)-gradient(90deg,var(--canvas),color-mix(in srgb,var(--theme-surface-muted,var(--canvas)) 70%,var(--theme-text-primary,var(--ink-950)) 15%),var(--canvas)); background-size:220% 100%; animation:routePulse calc(var(--theme-motion-data) * 2) var(--theme-easing) infinite; }
 .loadingHeader { width:min(280px,65%); height:28px; }
 .loadingLine { width:min(430px,90%); height:14px; margin-top:14px; }
 .loadingPanel { height:190px; margin-top:24px; }

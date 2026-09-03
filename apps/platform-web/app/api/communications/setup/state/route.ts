@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantClient, deniedResponse } from '../../../../../lib/request-context';
 
 /**
- * Design spec §6 — the setup journey, and §5.2 — the three dashboard states.
+ * Design spec §6 — setup journey and truthful live readiness.
  *
  * Setup state is computed only from authoritative persistence. A failed fact
  * query aborts the request instead of being translated into a fabricated zero.
  * Domain readiness is derived from the same sender-identity verification state
- * used by the live domain UI/runtime path; the legacy communication_sending_domains
- * table is not treated as authoritative until a writer owns its lifecycle.
+ * used by the live domain UI/runtime path. LIVE status is never inferred from
+ * enabled connectors or synchronous test sends; it requires durable
+ * communication_certifications evidence from the production delivery lifecycle.
  */
 
 export const runtime = 'nodejs';
@@ -23,6 +24,13 @@ export type SetupStepKey =
   | 'TEST_SEND'
   | 'GO_LIVE';
 
+export type CommunicationCertificationStatus =
+  | 'UNCONFIGURED'
+  | 'CONFIGURED'
+  | 'READY_FOR_CERTIFICATION'
+  | 'LIVE_CERTIFIED'
+  | 'DEGRADED';
+
 export interface SetupStep {
   readonly key: SetupStepKey;
   readonly title: string;
@@ -35,10 +43,12 @@ export interface SetupStep {
 
 export interface SetupState {
   readonly dashboardState: 'UNCONFIGURED' | 'STEADY' | 'DEGRADED';
+  readonly certificationStatus: CommunicationCertificationStatus;
   readonly steps: readonly SetupStep[];
   readonly nextStep: SetupStepKey | null;
   readonly completedCount: number;
   readonly isLive: boolean;
+  readonly liveCertifiedConnectors: number;
   readonly degradedReasons: readonly string[];
 }
 
@@ -102,6 +112,14 @@ export async function GET(request: Request) {
         [context.tenantId],
       );
 
+      const certifications = await client.query(
+        `SELECT count(*)::int AS live
+           FROM platform.communication_certifications
+          WHERE tenant_id = $1::uuid
+            AND status = 'LIVE_CERTIFIED'`,
+        [context.tenantId],
+      );
+
       return {
         withCredential: connectors.rows[0]?.with_credential ?? 0,
         failing: connectors.rows[0]?.failing ?? 0,
@@ -112,6 +130,7 @@ export async function GET(request: Request) {
         limitsSet: (limits.rows[0]?.total ?? 0) > 0,
         breakerOpen: breaker.rows[0]?.breaker_state === 'OPEN',
         testSends: testSend.rows[0]?.total ?? 0,
+        liveCertifiedConnectors: certifications.rows[0]?.live ?? 0,
       };
     });
 
@@ -123,14 +142,31 @@ export async function GET(request: Request) {
     }
     if (facts.breakerOpen) degradedReasons.push('Your spend breaker is open');
 
+    const readyForCertification = facts.withCredential > 0
+      && facts.verifiedDomains > 0
+      && facts.senders > 0
+      && facts.limitsSet
+      && facts.testSends > 0
+      && facts.enabled > 0;
+    const isLive = facts.liveCertifiedConnectors > 0;
+    const certificationStatus: CommunicationCertificationStatus = facts.withCredential === 0
+      ? 'UNCONFIGURED'
+      : degradedReasons.length > 0
+        ? 'DEGRADED'
+        : isLive
+          ? 'LIVE_CERTIFIED'
+          : readyForCertification
+            ? 'READY_FOR_CERTIFICATION'
+            : 'CONFIGURED';
+
     const steps: SetupStep[] = [
       { key: 'CHOOSE_CUSTODY', title: 'Choose how you want to send', description: 'Our providers, your provider accounts, or your own secret store.', complete: facts.withCredential > 0, blocked: false, href: '/communications/onboarding?step=custody' },
       { key: 'CONNECT_PROVIDER', title: 'Connect a provider', description: 'We check the credential works before saving it.', complete: facts.withCredential > 0, blocked: false, href: '/communications/onboarding?step=connect' },
-      { key: 'VERIFY_DOMAIN', title: 'Verify your sending domain', description: 'DNS requirements are checked against the same sender identity used by dispatch.', complete: facts.verifiedDomains > 0, blocked: facts.withCredential === 0, ...(facts.withCredential === 0 ? { blockedReason: 'Connect a provider first — the records depend on which one you use.' } : {}), href: '/communications/onboarding?step=domain' },
+      { key: 'VERIFY_DOMAIN', title: 'Verify your sending domain', description: 'DNS and provider evidence are checked against the same sender identity used by dispatch.', complete: facts.verifiedDomains > 0, blocked: facts.withCredential === 0, ...(facts.withCredential === 0 ? { blockedReason: 'Connect a provider first — the records depend on which one you use.' } : {}), href: '/communications/onboarding?step=domain' },
       { key: 'CREATE_SENDER', title: 'Create a sender identity', description: 'The name and address recipients will see.', complete: facts.senders > 0, blocked: facts.verifiedDomains === 0, ...(facts.verifiedDomains === 0 ? { blockedReason: 'A from-address can only sit on a verified domain.' } : {}), href: '/communications/onboarding?step=sender' },
       { key: 'SET_LIMITS', title: 'Set your limits', description: 'Daily volume, spend cap, quiet hours.', complete: facts.limitsSet, blocked: false, href: '/communications/onboarding?step=limits' },
-      { key: 'TEST_SEND', title: 'Send a test and watch it land', description: "You'll see every check it passes, in real time.", complete: facts.testSends > 0, blocked: facts.senders === 0, ...(facts.senders === 0 ? { blockedReason: 'Create a sender identity first.' } : {}), href: '/communications/onboarding?step=test' },
-      { key: 'GO_LIVE', title: 'Go live', description: 'Turn on the triggers that will start sending.', complete: facts.enabled > 0 && facts.testSends > 0, blocked: facts.testSends === 0, ...(facts.testSends === 0 ? { blockedReason: 'Send a test message first.' } : {}), href: '/communications/onboarding?step=golive' },
+      { key: 'TEST_SEND', title: 'Run a provider test', description: 'Validate provider routing and credential access. This does not certify LIVE delivery.', complete: facts.testSends > 0, blocked: facts.senders === 0, ...(facts.senders === 0 ? { blockedReason: 'Create a sender identity first.' } : {}), href: '/communications/onboarding?step=test' },
+      { key: 'GO_LIVE', title: 'Certify live delivery', description: 'LIVE requires durable dispatch, provider attempt, signed webhook, terminal delivery, and trace evidence.', complete: isLive, blocked: !readyForCertification, ...(!readyForCertification ? { blockedReason: 'Complete setup and provider testing before certification.' } : {}), href: '/communications/onboarding?step=certification' },
     ];
 
     const next = steps.find((step) => !step.complete && !step.blocked)?.key ?? null;
@@ -138,10 +174,12 @@ export async function GET(request: Request) {
 
     const state: SetupState = {
       dashboardState,
+      certificationStatus,
       steps,
       nextStep: next,
       completedCount: steps.filter((step) => step.complete).length,
-      isLive: facts.enabled > 0 && facts.testSends > 0,
+      isLive,
+      liveCertifiedConnectors: facts.liveCertifiedConnectors,
       degradedReasons,
     };
 
