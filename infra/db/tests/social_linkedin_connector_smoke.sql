@@ -71,11 +71,12 @@ BEGIN
    WHERE n.nspname = 'platform'
      AND t.relname = 'communication_deliveries'
      AND c.contype = 'c'
-     AND pg_get_constraintdef(c.oid) LIKE '%channel IN (%'
+     AND pg_get_constraintdef(c.oid) LIKE '%channel%'
      AND pg_get_constraintdef(c.oid) LIKE '%''email''%'
+     AND pg_get_constraintdef(c.oid) LIKE '%''social''%'
    LIMIT 1;
-  IF deliveries_def IS NULL OR deliveries_def NOT LIKE '%''social''%' THEN
-    RAISE EXCEPTION 'communication_deliveries channel CHECK missing social: %', deliveries_def;
+  IF deliveries_def IS NULL THEN
+    RAISE EXCEPTION 'communication_deliveries channel CHECK missing social';
   END IF;
 
   SELECT pg_get_constraintdef(c.oid) INTO sender_def
@@ -85,7 +86,8 @@ BEGIN
    WHERE n.nspname = 'platform'
      AND t.relname = 'communication_sender_identities'
      AND c.contype = 'c'
-     AND pg_get_constraintdef(c.oid) LIKE '%channel IN (%'
+     AND pg_get_constraintdef(c.oid) LIKE '%channel%'
+     AND pg_get_constraintdef(c.oid) LIKE '%''email''%'
    LIMIT 1;
   IF sender_def IS NULL THEN
     RAISE EXCEPTION 'communication_sender_identities channel CHECK missing';

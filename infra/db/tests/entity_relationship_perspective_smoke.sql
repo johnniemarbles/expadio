@@ -102,6 +102,7 @@ INSERT INTO platform.entity_relationships (
   source_entity_type,
   source_entity_id,
   relationship_key,
+  relationship_type,
   target_entity_type,
   target_entity_id,
   attributes,
@@ -112,6 +113,7 @@ INSERT INTO platform.entity_relationships (
   'OPERATING_UNIT',
   'operating-unit:ca',
   'LEGACY_CUSTOM_EDGE',
+  'LEGACY',
   'EXTERNAL_PARTY',
   'external:legacy',
   '{}'::jsonb,
@@ -151,6 +153,7 @@ BEGIN
     FROM platform.entity_relationships
    WHERE tenant_id = '58100000-0000-0000-0000-000000000001'
      AND definition_id IS NULL
+     AND relationship_type = 'LEGACY'
      AND status = 'ACTIVE';
 
   SELECT count(*)
