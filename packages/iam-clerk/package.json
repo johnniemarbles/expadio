@@ -1,0 +1,15 @@
+{
+  "name": "@expadio/iam-clerk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@expadio/iam": "workspace:*",
+    "@clerk/backend": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
