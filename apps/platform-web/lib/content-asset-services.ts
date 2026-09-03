@@ -17,10 +17,15 @@ function tags(name: string): readonly string[] {
 export function configuredContentAssetPolicy(): {
   readonly requiredResidencyTags: readonly string[];
   readonly requiredComplianceTags: readonly string[];
+  readonly retentionPolicy: { readonly key: string; readonly version: number };
 } {
-  return {
+  const policy = {
     requiredResidencyTags: tags('EXPADIO_CONTENT_ASSET_RESIDENCY_TAGS'),
     requiredComplianceTags: tags('EXPADIO_CONTENT_ASSET_COMPLIANCE_TAGS'),
+    retentionPolicy: {
+      key: requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_KEY'),
+      version: Number(requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_VERSION')),
+    },
   };
 }
 
