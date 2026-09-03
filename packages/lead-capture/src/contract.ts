@@ -14,6 +14,7 @@
  * a client never asserts scope — the source row does. Anything extra a caller
  * sends is preserved in the raw payload but never trusted as scope.
  */
+import type { CaptureInterestPayload } from './interest-payload.ts';
 
 /** Wire headers. The signed set already exists on the live ingress; the
  *  publishable-key header is the PUBLIC (browser) rail's identifier. */
@@ -98,17 +99,31 @@ export interface CaptureAttribution {
 
 export type CaptureFieldValue = string | number | boolean | null;
 
-/** What a surface hands to the SDK. Loose on entry, normalized before the wire. */
+/** What a surface hands to the SDK. Loose on entry, normalized before the wire.
+ *  `interest` is optional here for backwards compatibility with generic capture
+ *  sources. New commercial-interest forms should use CaptureInterestSubmissionInput,
+ *  which makes interest + attribution + consent first-class requirements. */
 export interface CaptureSubmissionInput {
   readonly contact: CaptureContact;
   readonly organization?: CaptureOrganizationInput;
   readonly consent?: readonly CaptureConsent[];
   readonly attribution?: CaptureAttribution;
+  readonly interest?: CaptureInterestPayload;
   readonly title?: string;
   readonly externalReference?: string;
   readonly formId?: string;
   readonly formVersion?: string;
   readonly fields?: Readonly<Record<string, CaptureFieldValue>>;
+}
+
+/** Strict form-to-API contract for franchise/distributor/affiliate/license/agent
+ *  capture. Storage already treats consent and attribution separately; requiring
+ *  them here prevents new interest forms from silently omitting that evidence. */
+export interface CaptureInterestSubmissionInput
+  extends Omit<CaptureSubmissionInput, 'consent' | 'attribution' | 'interest'> {
+  readonly consent: readonly CaptureConsent[];
+  readonly attribution: CaptureAttribution;
+  readonly interest: CaptureInterestPayload;
 }
 
 /** The normalized, on-the-wire submission. Same shape both rails send. */
@@ -117,6 +132,7 @@ export interface CaptureSubmission {
   readonly organization?: CaptureOrganizationInput;
   readonly consent: readonly CaptureConsent[];
   readonly attribution: CaptureAttribution;
+  readonly interest?: CaptureInterestPayload;
   readonly title: string;
   readonly externalReference?: string;
   readonly formId?: string;
