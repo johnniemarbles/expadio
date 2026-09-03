@@ -1,6 +1,6 @@
 BEGIN;
 
-CREATE TABLE platform.communication_certifications (
+CREATE TABLE IF NOT EXISTS platform.communication_certifications (
   certification_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(tenant_id) ON DELETE CASCADE,
   organization_id uuid,
@@ -29,11 +29,11 @@ CREATE TABLE platform.communication_certifications (
     ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX communication_certifications_live_connector_uq
+CREATE UNIQUE INDEX IF NOT EXISTS communication_certifications_live_connector_uq
   ON platform.communication_certifications (tenant_id, connector_key, channel)
   WHERE status = 'LIVE_CERTIFIED';
 
-CREATE INDEX communication_certifications_lookup_idx
+CREATE INDEX IF NOT EXISTS communication_certifications_lookup_idx
   ON platform.communication_certifications (
     tenant_id,
     connector_key,
@@ -45,22 +45,26 @@ CREATE INDEX communication_certifications_lookup_idx
 ALTER TABLE platform.communication_certifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.communication_certifications FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS communication_certifications_select ON platform.communication_certifications;
 CREATE POLICY communication_certifications_select
   ON platform.communication_certifications
   FOR SELECT
   USING (tenant_id = platform.current_tenant_id());
 
+DROP POLICY IF EXISTS communication_certifications_insert ON platform.communication_certifications;
 CREATE POLICY communication_certifications_insert
   ON platform.communication_certifications
   FOR INSERT
   WITH CHECK (tenant_id = platform.current_tenant_id());
 
+DROP POLICY IF EXISTS communication_certifications_update ON platform.communication_certifications;
 CREATE POLICY communication_certifications_update
   ON platform.communication_certifications
   FOR UPDATE
   USING (tenant_id = platform.current_tenant_id())
   WITH CHECK (tenant_id = platform.current_tenant_id());
 
+DROP POLICY IF EXISTS communication_certifications_delete ON platform.communication_certifications;
 CREATE POLICY communication_certifications_delete
   ON platform.communication_certifications
   FOR DELETE

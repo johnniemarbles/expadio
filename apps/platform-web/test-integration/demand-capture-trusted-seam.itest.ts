@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
+import { generatePublishableKey } from '../lib/lead-capture-public-source.ts';
 import {
   UPSERT_CAPTURE_CRM_LEAD_SQL,
   buildTrustedCaptureConvertWrite,
@@ -52,10 +53,10 @@ async function org(c: pg.PoolClient, tenantId: string, name: string, parent: str
 async function source(c: pg.PoolClient, tenantId: string, organizationId: string, key: string, layer: string) {
   return (await c.query(
     `INSERT INTO platform.lead_capture_sources
-       (tenant_id, organization_id, source_key, surface, layer_key, require_signed_ticket)
-     VALUES ($1, $2, $3, 'WEBHOOK', $4, false)
+       (tenant_id, organization_id, source_key, surface, layer_key, require_signed_ticket, status, verification_algorithm, channel, trust_rail, publishable_key, allowed_origins)
+     VALUES ($1, $2, $3, 'FORM', $4, false, 'ACTIVE', 'ED25519', 'WEB', 'PUBLIC', $5, ARRAY['https://example.com'])
      RETURNING source_id`,
-    [tenantId, organizationId, key, layer],
+    [tenantId, organizationId, key, layer, generatePublishableKey()],
   )).rows[0].source_id as string;
 }
 
@@ -124,14 +125,15 @@ test('trusted Demand Capture inherits organization subtree RLS and projects pers
       assert.deepEqual(visible.rows.map((r) => r.capture_lead_id), [unitCapture]);
 
       const trusted = await loadTrustedCaptureProjection(c, { tenantId, captureLeadId: unitCapture });
-      assert.ok(trusted);
+      assert.equal(trusted.kind, 'ok');
+      if (trusted.kind !== 'ok') throw new Error('Expected trusted.kind to be ok');
       assert.equal(trusted.organizationId, unitA, 'projection keeps the captured descendant organization');
       assert.equal(trusted.snapshot.captureStage, 'APPLICATION_STARTED');
       assert.equal(trusted.snapshot.captureLayerId, 'unit-a-layer');
       assert.deepEqual(trusted.snapshot.rawPayload, { marker: 'trusted-unit' });
 
       const hiddenSibling = await loadTrustedCaptureProjection(c, { tenantId, captureLeadId: siblingCapture });
-      assert.equal(hiddenSibling, null, 'sibling capture must be invisible in selected Country A workspace');
+      assert.equal(hiddenSibling.kind, 'not_found', 'sibling capture must be invisible in selected Country A workspace');
 
       // Selected Country A may not forge a Country B capture source.
       await assert.rejects(

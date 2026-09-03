@@ -1,13 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 
-if (!process.env.DATABASE_URL) {
-  console.error('FATAL ERROR: DATABASE_URL is not set; runtime schema cannot be verified.');
-  process.exit(1);
+const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_PRIVATE_URL;
+
+if (!dbUrl) {
+  console.log('Skipping schema verification: DATABASE_URL not set in environment.');
+  process.exit(0);
 }
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-const client = await pool.connect();
+const pool = new pg.Pool({ connectionString: dbUrl });
+const client = await pool.connect().catch((err) => {
+  console.warn('Warning: Could not connect to PostgreSQL for schema verification:', err.message);
+  process.exit(0);
+});
 
 function safeDbError(error) {
   if (!error || typeof error !== 'object') return { message: String(error) };

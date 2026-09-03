@@ -73,10 +73,15 @@ export function captureLeadIdFromConvertBody(body: unknown): string {
  * Load authoritative capture state under RLS. Selected-workspace subtree scope is
  * enforced by lead_capture_leads/source policies; this query also pins tenant_id.
  */
+export type TrustedCaptureProjectionResult =
+  | ({ readonly kind: 'ok' } & TrustedCaptureProjection)
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'verification_required' };
+
 export async function loadTrustedCaptureProjection(
   client: CaptureSqlClient,
   input: { readonly tenantId: string; readonly captureLeadId: string },
-): Promise<TrustedCaptureProjection | null> {
+): Promise<TrustedCaptureProjectionResult> {
   const result = await client.query<{
     capture_lead_id: string;
     tenant_id: string;
@@ -87,9 +92,10 @@ export async function loadTrustedCaptureProjection(
     raw_payload: Record<string, unknown>;
     owner_subject_id: string | null;
     layer_key: string | null;
+    verification_state: string;
   }>(
     `SELECT l.capture_lead_id, l.tenant_id, l.organization_id, l.title, l.email,
-            l.stage, l.raw_payload, l.owner_subject_id, s.layer_key
+            l.stage, l.raw_payload, l.owner_subject_id, l.verification_state, s.layer_key
        FROM platform.lead_capture_leads l
        JOIN platform.lead_capture_sources s
          ON s.source_id = l.source_id
@@ -100,8 +106,10 @@ export async function loadTrustedCaptureProjection(
     [input.captureLeadId, input.tenantId],
   );
   const row = result.rows[0];
-  if (!row) return null;
+  if (!row) return { kind: 'not_found' };
+  if (row.verification_state === 'UNVERIFIED') return { kind: 'verification_required' };
   return {
+    kind: 'ok',
     organizationId: row.organization_id,
     ownerSubjectId: row.owner_subject_id,
     snapshot: {
@@ -158,7 +166,7 @@ export function captureConvertBindParams(
 }
 
 export function buildTrustedCaptureConvertWrite(
-  projection: TrustedCaptureProjection,
+  projection: TrustedCaptureProjection | (TrustedCaptureProjection & { kind: 'ok' }),
   context: ResolvedRequestContext,
 ): {
   readonly principal: ReturnType<typeof principalFromResolvedContext>;

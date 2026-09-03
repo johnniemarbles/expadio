@@ -107,7 +107,7 @@ jobs:
           set -euo pipefail
           for file in infra/db/migrations/*.sql; do
             echo "Applying ${file}"
-            psql -h localhost -U postgres -d expadio_test \
+            psql -h 127.0.0.1 -U postgres -d expadio_test \
               -v ON_ERROR_STOP=1 -f "${file}"
           done
 
@@ -118,7 +118,7 @@ jobs:
           set -euo pipefail
           for file in infra/db/tests/*.sql; do
             echo "Running ${file}"
-            psql -h localhost -U postgres -d expadio_test \
+            psql -h 127.0.0.1 -U postgres -d expadio_test \
               -v ON_ERROR_STOP=1 -f "${file}"
           done
 

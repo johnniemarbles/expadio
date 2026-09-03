@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const migration = read('../../../infra/db/migrations/0136_communication_certifications.sql');
+const migration = read('../../../infra/db/migrations/0142_communication_certifications.sql');
 const setupState = read('../app/api/communications/setup/state/route.ts');
 
 test('Communications LIVE is backed by durable certification evidence', () => {
-  assert.match(migration, /CREATE TABLE platform\.communication_certifications/);
+  assert.match(migration, /CREATE TABLE (IF NOT EXISTS )?platform\.communication_certifications/);
   assert.match(migration, /delivery_id uuid NOT NULL/);
   assert.match(migration, /provider_attempt_id uuid NOT NULL/);
   assert.match(migration, /webhook_event_id text NOT NULL/);

@@ -5,6 +5,7 @@ import { liveWorkspaceAdapter } from "../../lib/live-adapter";
 import { isDenied } from "@expadio/ui/contracts";
 import { compileScopedThemeCss, ToastProvider } from "@expadio/ui";
 import Loading from "./loading";
+import { redirect } from "next/navigation";
 import { loadBrandAppOrigin } from "../../lib/brand-app";
 import { loadPlatformEffectiveTheme } from "../../lib/effective-theme";
 import { requestedOrganizationId } from "../../lib/request-context";
@@ -12,7 +13,15 @@ import { requestedOrganizationId } from "../../lib/request-context";
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   // Resolve the effective organization through the same membership boundary as
   // API handlers. A seeded identifier is data, never authorization context.
-  const organizationId = await requestedOrganizationId();
+  let organizationId: string | null = null;
+  try {
+    organizationId = await requestedOrganizationId();
+  } catch (err: any) {
+    if (err?.name === "ContextDenied" || err?.denied?.denied) {
+      redirect("/sign-in");
+    }
+    throw err;
+  }
 
   const [sections, workspaceContext, overview, theme] = await Promise.all([
     liveWorkspaceAdapter.loadAllowedWorkspaces(),
