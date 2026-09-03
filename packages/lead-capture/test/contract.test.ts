@@ -100,7 +100,9 @@ test('browser client posts publishable key + idempotency, merges page attributio
   }) as unknown as typeof fetch;
 
   const client = createBrowserCaptureClient({
-    endpoint: 'https://api.expadio.test/api/lead-capture/public',
+    baseUrl: 'https://api.expadio.test/',
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    sourceId: '22222222-2222-4222-8222-222222222222',
     publishableKey: `cpk_${'a'.repeat(40)}`,
     fetchImpl: fakeFetch,
     captureAttribution: false,
@@ -112,7 +114,8 @@ test('browser client posts publishable key + idempotency, merges page attributio
   assert.equal(result.requiresVerification, true);
   assert.equal(result.captureLeadId, 'cap-1');
 
-  const [{ init }] = calls;
+  const [{ url, init }] = calls;
+  assert.equal(url, 'https://api.expadio.test/api/lead-capture/public/22222222-2222-4222-8222-222222222222?tenantId=11111111-1111-4111-8111-111111111111');
   const headers = init.headers as Record<string, string>;
   assert.equal(headers['x-expadio-capture-key'], `cpk_${'a'.repeat(40)}`);
   assert.equal(headers['x-expadio-idempotency-key'], 'idmp-fixed');
@@ -120,9 +123,29 @@ test('browser client posts publishable key + idempotency, merges page attributio
   assert.equal(sent.attribution.utmSource, 'newsletter');
 });
 
+test('browser client verify posts the code to the verify URL and reads the outcome', async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  const fakeFetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(url), init: init ?? {} });
+    return { ok: false, status: 401, json: async () => ({ verified: false, reason: 'INVALID', remainingAttempts: 4 }) } as Response;
+  }) as unknown as typeof fetch;
+  const client = createBrowserCaptureClient({
+    baseUrl: 'https://api.expadio.test',
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    sourceId: '22222222-2222-4222-8222-222222222222',
+    publishableKey: `cpk_${'a'.repeat(40)}`,
+    fetchImpl: fakeFetch,
+  });
+  const result = await client.verify('33333333-3333-4333-8333-333333333333', '000000');
+  assert.deepEqual(result, { verified: false, reason: 'INVALID', remainingAttempts: 4 });
+  assert.match(calls[0].url, /\/api\/lead-capture\/public\/22222222-2222-4222-8222-222222222222\/verify\?tenantId=/);
+});
+
 test('browser client refuses an invalid publishable key', () => {
   assert.throws(() => createBrowserCaptureClient({
-    endpoint: 'https://x.test',
+    baseUrl: 'https://x.test',
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    sourceId: '22222222-2222-4222-8222-222222222222',
     publishableKey: 'sk_secret_looking',
   }), /valid publishable key/);
 });

@@ -20,7 +20,9 @@ key (`cpk_…`) authorizes nothing on its own.
 
 ```html
 <form data-expadio-capture
-      data-endpoint="https://api.expadio.com/api/lead-capture/public"
+      data-base-url="https://api.expadio.com"
+      data-tenant-id="TENANT_UUID"
+      data-source-id="SOURCE_UUID"
       data-publishable-key="cpk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX">
   <input name="email" type="email" required />
   <input name="firstName" /> <input name="lastName" />
@@ -47,18 +49,30 @@ means the lead is captured but parked awaiting OTP — do not treat it as comple
 import { createBrowserCaptureClient } from '@expadio/lead-capture';
 
 const capture = createBrowserCaptureClient({
-  endpoint: 'https://api.expadio.com/api/lead-capture/public',
-  publishableKey: 'cpk_…', // safe to ship to the browser
+  baseUrl: 'https://api.expadio.com',
+  tenantId: 'TENANT_UUID',   // public routing coordinates, not secrets
+  sourceId: 'SOURCE_UUID',
+  publishableKey: 'cpk_…',   // safe to ship to the browser
 });
 
 // UTM/referrer/page URL are captured from the page automatically.
-await capture.submit({
+const { captureLeadId, requiresVerification } = await capture.submit({
   contact: { email: 'lead@example.com', firstName: 'Ada', phone: '+1 415 555 0000' },
   organization: { name: 'Analytical Engines' },
   consent: [{ channel: 'EMAIL', purpose: 'MARKETING', granted: true, textVersion: 'v3' }],
   fields: { investment_range: '50k-100k' },
 });
+
+// requiresVerification === true: the lead is captured but PARKED. Collect the
+// emailed code and complete the OTP gate to admit it to the pipeline.
+if (requiresVerification && captureLeadId) {
+  const { verified } = await capture.verify(captureLeadId, '123456');
+}
 ```
+
+The endpoints exist: `POST /api/lead-capture/public/{sourceId}?tenantId=…` (ingress)
+and `.../verify` (OTP). OTP *delivery* over Communications is wired in the next
+step, so `verify` cannot complete in production until then.
 
 ## SDK — server (SIGNED rail)
 

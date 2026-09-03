@@ -25,14 +25,31 @@ export interface CaptureResult {
 }
 
 export interface BrowserCaptureClientOptions {
-  /** Absolute URL of the PUBLIC ingress endpoint. */
-  readonly endpoint: string;
-  /** Public source identifier, `cpk_...`. */
+  /** Origin of the ingress host, e.g. `https://api.expadio.com`. */
+  readonly baseUrl: string;
+  /** Routing coordinates of the PUBLIC source (public identifiers, not secrets). */
+  readonly tenantId: string;
+  readonly sourceId: string;
+  /** Public browser key, `cpk_...`. Safe to ship in page source. */
   readonly publishableKey: string;
   /** Fill missing attribution from the current page. Default true. */
   readonly captureAttribution?: boolean;
   readonly fetchImpl?: typeof fetch;
   readonly idempotencyKey?: () => string;
+}
+
+export interface VerifyResult {
+  readonly verified: boolean;
+  readonly reason?: 'INVALID' | 'EXPIRED' | 'LOCKED';
+  readonly remainingAttempts?: number;
+}
+
+/** Build the PUBLIC ingress / verify URLs from routing coordinates. */
+export function publicCaptureUrl(baseUrl: string, tenantId: string, sourceId: string): string {
+  return `${baseUrl.replace(/\/$/u, '')}/api/lead-capture/public/${encodeURIComponent(sourceId)}?tenantId=${encodeURIComponent(tenantId)}`;
+}
+export function publicVerifyUrl(baseUrl: string, tenantId: string, sourceId: string): string {
+  return `${baseUrl.replace(/\/$/u, '')}/api/lead-capture/public/${encodeURIComponent(sourceId)}/verify?tenantId=${encodeURIComponent(tenantId)}`;
 }
 
 export function newIdempotencyKey(): string {
@@ -82,6 +99,8 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
   if (!doFetch) throw new Error('No fetch implementation is available.');
   const nextKey = options.idempotencyKey ?? newIdempotencyKey;
   const withAttribution = options.captureAttribution !== false;
+  const ingressUrl = publicCaptureUrl(options.baseUrl, options.tenantId, options.sourceId);
+  const verifyEndpoint = publicVerifyUrl(options.baseUrl, options.tenantId, options.sourceId);
 
   async function submit(input: CaptureSubmissionInput): Promise<CaptureResult> {
     const attribution = withAttribution
@@ -89,7 +108,7 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
       : input.attribution;
     const submission = normalizeSubmission({ ...input, attribution });
     const body = serializeSubmission(submission);
-    const response = await doFetch(options.endpoint, {
+    const response = await doFetch(ingressUrl, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -110,5 +129,22 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
     };
   }
 
-  return { submit };
+  /** Complete the OTP gate for a captured lead. A non-2xx (wrong/expired/locked
+   *  code) resolves to `{ verified: false, reason }` rather than throwing. */
+  async function verify(captureLeadId: string, code: string): Promise<VerifyResult> {
+    const response = await doFetch(verifyEndpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', [CAPTURE_PUBLISHABLE_KEY_HEADER]: options.publishableKey },
+      body: JSON.stringify({ captureLeadId, code }),
+    });
+    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    if (response.ok && payload.verified === true) return { verified: true };
+    return {
+      verified: false,
+      reason: typeof payload.reason === 'string' ? payload.reason as VerifyResult['reason'] : undefined,
+      remainingAttempts: typeof payload.remainingAttempts === 'number' ? payload.remainingAttempts : undefined,
+    };
+  }
+
+  return { submit, verify };
 }

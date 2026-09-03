@@ -27,6 +27,7 @@
     "@expadio/credential-custody": "workspace:*",
     "@expadio/party": "workspace:*",
     "@expadio/lead": "workspace:*",
+    "@expadio/lead-capture": "workspace:*",
     "@expadio/case": "workspace:*",
     "@expadio/agreement": "workspace:*",
     "@expadio/business-config": "workspace:*",

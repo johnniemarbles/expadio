@@ -9,8 +9,9 @@
  *
  * Markup contract:
  *   <form data-expadio-capture
- *         data-endpoint="https://api.expadio.com/api/lead-capture/public"
- *         data-publishable-key="cpk_...">
+ *         data-base-url="https://api.expadio.com"
+ *         data-tenant-id="…" data-source-id="…"
+ *         data-publishable-key="cpk_…">
  *     <input name="email" type="email" required>
  *     <input name="firstName"> <input name="lastName"> <input name="phone">
  *     <input name="company">
@@ -22,6 +23,8 @@ import { createBrowserCaptureClient } from './client.ts';
 import type { CaptureFieldValue, CaptureSubmissionInput } from './contract.ts';
 
 export interface MountedCaptureForm {
+  /** Complete the OTP gate for a lead this form captured. */
+  verify(captureLeadId: string, code: string): Promise<{ verified: boolean }>;
   destroy(): void;
 }
 
@@ -63,12 +66,14 @@ function emit(form: HTMLFormElement, name: string, detail: unknown): void {
 
 /** Wire a single form. Emits `expadio:capture:success` / `:error` events. */
 export function mountCaptureForm(form: HTMLFormElement): MountedCaptureForm {
-  const endpoint = form.getAttribute('data-endpoint');
+  const baseUrl = form.getAttribute('data-base-url');
+  const tenantId = form.getAttribute('data-tenant-id');
+  const sourceId = form.getAttribute('data-source-id');
   const publishableKey = form.getAttribute('data-publishable-key');
-  if (!endpoint || !publishableKey) {
-    throw new Error('data-endpoint and data-publishable-key are required on a capture form.');
+  if (!baseUrl || !tenantId || !sourceId || !publishableKey) {
+    throw new Error('data-base-url, data-tenant-id, data-source-id and data-publishable-key are required on a capture form.');
   }
-  const client = createBrowserCaptureClient({ endpoint, publishableKey });
+  const client = createBrowserCaptureClient({ baseUrl, tenantId, sourceId, publishableKey });
 
   const onSubmit = async (event: Event) => {
     event.preventDefault();
@@ -90,7 +95,10 @@ export function mountCaptureForm(form: HTMLFormElement): MountedCaptureForm {
   };
 
   form.addEventListener('submit', onSubmit);
-  return { destroy: () => form.removeEventListener('submit', onSubmit) };
+  return {
+    verify: (captureLeadId: string, code: string) => client.verify(captureLeadId, code),
+    destroy: () => form.removeEventListener('submit', onSubmit),
+  };
 }
 
 /** Auto-mount every `[data-expadio-capture]` form once the DOM is ready. */
