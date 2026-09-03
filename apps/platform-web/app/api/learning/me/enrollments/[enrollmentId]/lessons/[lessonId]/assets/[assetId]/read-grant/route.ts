@@ -31,7 +31,7 @@ export async function POST(
         correlationId,
       }),
     );
-    return contentAssetJson(grant);
+    return contentAssetJson({ url: grant.url, expiresAt: grant.expiresAt });
   } catch (error) {
     if (error instanceof Error && error.message === 'LEARNING_ASSET_ACCESS_DENIED') {
       return contentAssetJson({
