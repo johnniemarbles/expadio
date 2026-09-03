@@ -66,7 +66,8 @@ export async function calculateAndPersistDemandCaptureScore(
     `SELECT organization_id
        FROM platform.lead_capture_leads
       WHERE tenant_id = $1::uuid
-        AND capture_lead_id = $2::uuid`,
+        AND capture_lead_id = $2::uuid
+      FOR UPDATE`,
     [input.tenantId, input.captureLeadId],
   );
   const leadRow = lead.rows[0];
