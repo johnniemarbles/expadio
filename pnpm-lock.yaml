@@ -66,6 +66,9 @@ importers:
       '@clerk/nextjs':
         specifier: ^7.8.2
         version: 7.8.2(next@16.3.3(@types/node@22.15.3)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@expadio/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
       '@expadio/agreement':
         specifier: workspace:*
         version: link:../../packages/agreement
@@ -75,6 +78,9 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../../packages/business-config
+      '@expadio/capabilities':
+        specifier: workspace:*
+        version: link:../../packages/capabilities
       '@expadio/case':
         specifier: workspace:*
         version: link:../../packages/case
@@ -96,6 +102,9 @@ importers:
       '@expadio/industry-packs':
         specifier: workspace:*
         version: link:../../packages/industry-packs
+      '@expadio/knowledge':
+        specifier: workspace:*
+        version: link:../../packages/knowledge
       '@expadio/lead':
         specifier: workspace:*
         version: link:../../packages/lead
@@ -319,9 +328,6 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
-      '@expadio/capabilities':
-        specifier: workspace:*
-        version: link:../capabilities
 
   packages/lead: {}
 
