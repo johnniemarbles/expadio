@@ -6,6 +6,7 @@ import { CompleteLessonButton } from '../../../../components/CompleteLessonButto
 import { ResumeLessonButton } from '../../../../components/ResumeLessonButton';
 import { LearnerAssessmentRunner } from '../../../../components/LearnerAssessmentRunner';
 import { ProtectedLessonAsset } from '../../../../components/ProtectedLessonAsset';
+import { LearnerAssignmentForm } from '../../../../components/LearnerAssignmentForm';
 import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
 
@@ -50,6 +51,16 @@ function renderContent(
           kind={type as 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'RESOURCE'}
           title={typeof data.title === 'string' ? data.title : undefined}
           label={typeof accessibility.label === 'string' ? accessibility.label : undefined}
+        />
+      </section>;
+    }
+    if (type === 'ASSIGNMENT' && typeof data.definitionId === 'string') {
+      return <section id={`lesson-block-${id}`} key={id}>
+        <LearnerAssignmentForm
+          enrollmentId={enrollmentId}
+          lessonId={lessonId}
+          assignmentKey={data.definitionId}
+          title={typeof data.title === 'string' ? data.title : undefined}
         />
       </section>;
     }
