@@ -95,7 +95,7 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
   if (!/^cpk_[A-Za-z0-9]{32,64}$/u.test(options.publishableKey)) {
     throw new Error('A valid publishable key (cpk_...) is required.');
   }
-  const doFetch = options.fetchImpl ?? (globalThis as { fetch?: typeof fetch }).fetch;
+  const doFetch = (options.fetchImpl ?? (globalThis as { fetch?: typeof fetch }).fetch)!;
   if (!doFetch) throw new Error('No fetch implementation is available.');
   const nextKey = options.idempotencyKey ?? newIdempotencyKey;
   const withAttribution = options.captureAttribution !== false;

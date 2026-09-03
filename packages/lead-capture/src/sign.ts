@@ -99,7 +99,7 @@ export interface ServerCaptureClientOptions {
 /** A trusted server-to-server client that normalizes, signs, and posts to the
  *  signed ingress at `/api/lead-capture/ingest/{sourceId}?tenantId={tenantId}`. */
 export function createServerCaptureClient(options: ServerCaptureClientOptions) {
-  const doFetch = options.fetchImpl ?? (globalThis as { fetch?: typeof fetch }).fetch;
+  const doFetch = (options.fetchImpl ?? (globalThis as { fetch?: typeof fetch }).fetch)!;
   if (!doFetch) throw new Error('No fetch implementation is available.');
   const nextKey = options.idempotencyKey ?? newIdempotencyKey;
   const url = `${options.baseUrl.replace(/\/$/u, '')}/api/lead-capture/ingest/${encodeURIComponent(options.sourceId)}?tenantId=${encodeURIComponent(options.tenantId)}`;

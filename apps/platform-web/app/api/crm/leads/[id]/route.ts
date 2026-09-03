@@ -126,7 +126,7 @@ export async function PATCH(
     if ('notFound' in result) {
       return NextResponse.json({ error: 'That lead was not found in this workspace.' }, { status: 404 });
     }
-    if ('denied' in result) {
+    if (result.denied) {
       const status = result.denied.reasonCode === 'REVISION_CONFLICT' ? 409 : 422;
       return NextResponse.json({ denied: true, reasonKey: result.denied.reasonCode, message: result.denied.message }, { status });
     }
