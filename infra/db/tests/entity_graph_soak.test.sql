@@ -3,11 +3,10 @@ BEGIN;
 
 DO $$
 DECLARE
-  tenant_a uuid := gen_random_uuid();
-  tenant_b uuid := gen_random_uuid();
+  tenant_a uuid := '64f7c7d2-a001-4e32-a201-000000000001';
+  tenant_b uuid := '64f7c7d2-a001-4e32-a201-000000000002';
   hq uuid; state_a uuid; state_b uuid; operator uuid; unit_a uuid; unit_b uuid;
   owner_a uuid; owner_b uuid;
-  visible_count int;
 BEGIN
   INSERT INTO platform.tenants(tenant_id,name) VALUES
     (tenant_a,'Entity Graph Soak A'),(tenant_b,'Entity Graph Soak B');
@@ -95,11 +94,6 @@ BEGIN
     (tenant_id,owned_node_id,owning_node_id,percentage,created_by)
   VALUES(tenant_a,unit_a,owner_b,40,'entity-soak');
 
-  PERFORM set_config('app.tenant_id',tenant_b::text,true);
-  SELECT count(*) INTO visible_count FROM platform.entity_nodes WHERE tenant_id=tenant_a;
-  IF visible_count<>0 THEN RAISE EXCEPTION 'FAIL Gate 1: cross-tenant row visible'; END IF;
-  RAISE NOTICE 'PASS Gate 1: cross-tenant RLS isolation';
-
   IF EXISTS(SELECT 1 FROM platform.tenant_scoped_tables_missing_rls()) THEN
     RAISE EXCEPTION 'FAIL Gate 11: tenant table missing RLS';
   END IF;
@@ -108,6 +102,18 @@ BEGIN
   -- Compatibility smoke: retained organization_closure remains queryable.
   PERFORM 1 FROM platform.organization_closure LIMIT 1;
   RAISE NOTICE 'PASS Gate 10: organization_closure compatibility';
+END $$;
+
+SELECT set_config('app.tenant_id','64f7c7d2-a001-4e32-a201-000000000002',true);
+DO $$
+DECLARE
+  visible_count int;
+BEGIN
+  SELECT count(*) INTO visible_count
+    FROM platform.entity_nodes
+   WHERE tenant_id='64f7c7d2-a001-4e32-a201-000000000001'::uuid;
+  IF visible_count<>0 THEN RAISE EXCEPTION 'FAIL Gate 1: cross-tenant row visible'; END IF;
+  RAISE NOTICE 'PASS Gate 1: cross-tenant RLS isolation';
 END $$;
 
 ROLLBACK;
