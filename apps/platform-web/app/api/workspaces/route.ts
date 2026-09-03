@@ -27,6 +27,7 @@ export async function GET(request: Request) {
 
       { id: 'platform_comms', label: 'Provider Infrastructure', short: 'PI', href: '/communications', group: 'Infrastructure', priority: 'primary' },
       { id: 'platform_brain', label: 'AI & Brain Governance', short: 'AI', href: '/brain', group: 'Infrastructure', priority: 'primary' },
+      { id: 'platform_chief_of_staff', label: 'Chief of Staff Command', short: 'CS', href: '/chief-of-staff', group: 'Infrastructure', priority: 'primary' },
       { id: 'platform_agents', label: 'Agent Operations', short: 'AO', href: '/agents', group: 'Infrastructure', priority: 'primary' },
       { id: 'platform_usage', label: 'Usage & Metering', short: 'UM', href: '/usage', group: 'Infrastructure', priority: 'secondary' },
       { id: 'platform_data', label: 'Data Pipelines', short: 'DP', href: '/data/pipelines', group: 'Infrastructure', priority: 'secondary' },
