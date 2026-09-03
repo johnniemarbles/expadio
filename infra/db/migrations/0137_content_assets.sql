@@ -112,25 +112,27 @@ CREATE INDEX IF NOT EXISTS content_asset_events_asset_idx
 CREATE OR REPLACE FUNCTION platform.enforce_content_asset_state_transition()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF NEW.state = OLD.state THEN
     RETURN NEW;
   END IF;
-  IF NOT CASE OLD.state
-    WHEN 'PENDING_UPLOAD' THEN NEW.state IN ('UPLOADED', 'REJECTED', 'DELETED')
-    WHEN 'UPLOADED' THEN NEW.state IN ('QUARANTINED', 'AVAILABLE', 'REJECTED', 'DELETED')
-    WHEN 'QUARANTINED' THEN NEW.state IN ('AVAILABLE', 'REJECTED', 'DELETED')
-    WHEN 'AVAILABLE' THEN NEW.state IN ('QUARANTINED', 'DELETED')
-    WHEN 'REJECTED' THEN NEW.state = 'DELETED'
-    WHEN 'DELETED' THEN false
-    ELSE false
-  END THEN
+  IF NOT (
+    CASE OLD.state
+      WHEN 'PENDING_UPLOAD' THEN NEW.state IN ('UPLOADED', 'REJECTED', 'DELETED')
+      WHEN 'UPLOADED' THEN NEW.state IN ('QUARANTINED', 'AVAILABLE', 'REJECTED', 'DELETED')
+      WHEN 'QUARANTINED' THEN NEW.state IN ('AVAILABLE', 'REJECTED', 'DELETED')
+      WHEN 'AVAILABLE' THEN NEW.state IN ('QUARANTINED', 'DELETED')
+      WHEN 'REJECTED' THEN NEW.state = 'DELETED'
+      WHEN 'DELETED' THEN false
+      ELSE false
+    END
+  ) THEN
     RAISE EXCEPTION 'CONTENT_ASSET_INVALID_STATE_TRANSITION:%->%', OLD.state, NEW.state;
   END IF;
   RETURN NEW;
 END
-$;
+$$;
 
 DROP TRIGGER IF EXISTS content_assets_state_transition ON platform.content_assets;
 CREATE TRIGGER content_assets_state_transition
@@ -140,7 +142,7 @@ FOR EACH ROW EXECUTE FUNCTION platform.enforce_content_asset_state_transition();
 CREATE OR REPLACE FUNCTION platform.enforce_content_asset_immutable_scope()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+AS $$$
 BEGIN
   IF NEW.tenant_id <> OLD.tenant_id
      OR NEW.organization_id <> OLD.organization_id
@@ -163,7 +165,7 @@ FOR EACH ROW EXECUTE FUNCTION platform.enforce_content_asset_immutable_scope();
 CREATE OR REPLACE FUNCTION platform.prevent_content_asset_event_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+AS $$$
 BEGIN
   RAISE EXCEPTION 'CONTENT_ASSET_EVENTS_APPEND_ONLY';
 END
