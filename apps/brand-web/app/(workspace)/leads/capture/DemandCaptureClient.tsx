@@ -71,10 +71,34 @@ export default function DemandCaptureClient() {
 
   const metrics = useMemo(() => ({
     visible: leads.length,
-    unprojected: leads.filter((lead) => !lead.projectedToCrm).length,
+    unassigned: leads.filter((lead) => !lead.ownerSubjectId).length,
     waiting: leads.filter((lead) => lead.operationalStatus === 'WAITING_ON_LEAD' || lead.operationalStatus === 'WAITING_INTERNAL').length,
     terminal: leads.filter((lead) => TERMINAL.has(lead.stage)).length,
   }), [leads]);
+
+  async function routeLead(lead: CaptureLead) {
+    setWorkingId(lead.captureLeadId);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/leads/capture/${encodeURIComponent(lead.captureLeadId)}/routing`, { method: 'POST' });
+      const body = await readJson(response);
+      if (!response.ok) throw new Error(typeof body.message === 'string' ? body.message : typeof body.error === 'string' ? body.error : 'Routing denied.');
+      const outcome = String(body.outcome ?? 'UNASSIGNED');
+      const assignedSubjectId = typeof body.assignedSubjectId === 'string' ? body.assignedSubjectId : null;
+      const explanation = typeof body.explanation === 'string' ? body.explanation : '';
+      setNotice({
+        kind: 'success',
+        text: outcome === 'ASSIGNED'
+          ? `Assigned to ${assignedSubjectId ?? 'eligible owner'}. ${explanation}`
+          : `Lead remains explicitly unassigned. ${explanation}`,
+      });
+      await load();
+    } catch (error) {
+      setNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Routing failed.' });
+    } finally {
+      setWorkingId(null);
+    }
+  }
 
   async function transitionStage(lead: CaptureLead, form: FormData) {
     const stage = String(form.get('stage') ?? '');
@@ -126,7 +150,7 @@ export default function DemandCaptureClient() {
 
     <section className={styles.grid}>
       <article className={styles.metric}><div className={styles.metricLabel}>Visible capture leads</div><div className={styles.metricValue}>{metrics.visible}</div><div className={styles.metricDetail}>Current workspace scope</div></article>
-      <article className={styles.metric}><div className={styles.metricLabel}>Not projected to CRM</div><div className={styles.metricValue}>{metrics.unprojected}</div><div className={styles.metricDetail}>Capture remains authoritative</div></article>
+      <article className={styles.metric}><div className={styles.metricLabel}>Unassigned</div><div className={styles.metricValue}>{metrics.unassigned}</div><div className={styles.metricDetail}>Explicit routing queue</div></article>
       <article className={styles.metric}><div className={styles.metricLabel}>Waiting</div><div className={styles.metricValue}>{metrics.waiting}</div><div className={styles.metricDetail}>Lead or internal dependency</div></article>
       <article className={styles.metric}><div className={styles.metricLabel}>Terminal</div><div className={styles.metricValue}>{metrics.terminal}</div><div className={styles.metricDetail}>Won, lost or disqualified</div></article>
     </section>
@@ -140,14 +164,16 @@ export default function DemandCaptureClient() {
       </div>
 
       {!loading && leads.length === 0 ? <div className={styles.empty}>No Demand Capture leads are visible for this filter in the selected organization scope.</div> : null}
-      {leads.length > 0 ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Capture lead</th><th>Journey</th><th>Operational status</th><th>Source</th><th>CRM</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.captureLeadId}>
+      {leads.length > 0 ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Capture lead</th><th>Journey</th><th>Operational status</th><th>Source</th><th>Owner</th><th>CRM</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.captureLeadId}>
         <td><strong>{lead.title || lead.email || 'Inbound enquiry'}</strong><br /><small>{lead.email || 'No email'} · {new Date(lead.createdAt).toLocaleString()}</small></td>
         <td><span className={styles.pill}>{lead.stage}</span><br /><small>Entered {new Date(lead.stageEnteredAt).toLocaleString()}</small></td>
         <td><span className={styles.pill}>{lead.operationalStatus}</span>{lead.closeReasonCode ? <><br /><small>Close: {lead.closeReasonCode}</small></> : null}</td>
         <td>{lead.sourceKey}<br /><small>{lead.surface}</small></td>
+        <td>{lead.ownerSubjectId ? <><strong>{lead.ownerSubjectId}</strong><br /><small>Governed assignment</small></> : <><span className={styles.pill}>UNASSIGNED</span><br /><small>No valid route selected</small></>}</td>
         <td>{lead.projectedToCrm ? 'Projected' : 'Capture only'}</td>
         <td style={{ minWidth: 320 }}>
-          <form action={(form) => transitionStage(lead, form)} style={{ display: 'grid', gap: 6 }}>
+          <button className={styles.secondaryButton} type="button" onClick={() => void routeLead(lead)} disabled={workingId === lead.captureLeadId}>Route now</button>
+          <form action={(form) => transitionStage(lead, form)} style={{ display: 'grid', gap: 6, marginTop: 8 }}>
             <select name="stage" defaultValue={lead.stage} disabled={workingId === lead.captureLeadId}>{STAGES.map((stage) => <option value={stage} key={stage}>{stage}</option>)}</select>
             <input name="reason" placeholder="Reason for skip/backward/nurture/reopen" maxLength={1000} disabled={workingId === lead.captureLeadId} />
             <input name="closeReasonCode" placeholder="Close reason for terminal stage" maxLength={120} disabled={workingId === lead.captureLeadId} />
