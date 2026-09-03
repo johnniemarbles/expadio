@@ -69,7 +69,8 @@
     "./enterprise-legal": "./src/enterprise-legal.ts",
     "./enterprise-commercial": "./src/enterprise-commercial.ts",
     "./entity-graph": "./src/entity-graph.ts",
-    "./enterprise-ownership": "./src/enterprise-ownership.ts"
+    "./enterprise-ownership": "./src/enterprise-ownership.ts",
+    "./chief-of-staff": "./src/chief-of-staff.ts"
   },
   "dependencies": {
     "@expadio/access-runtime": "workspace:*",

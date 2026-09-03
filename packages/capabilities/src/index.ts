@@ -182,3 +182,4 @@ export * from './agent-capability-manifest.ts';
 export * from './agent-capability-resolution.ts';
 
 export * from './product-modules.ts';
+export * from './mcp-tool-registry.ts';

@@ -283,3 +283,7 @@ export * from './history.ts';
 export * from './correction-proposal.ts';
 
 export * from './correction-changeset.ts';
+
+export * from './chief-of-staff-types.ts';
+export * from './governed-task-executor.ts';
+export * from './chief-of-staff-orchestrator.ts';

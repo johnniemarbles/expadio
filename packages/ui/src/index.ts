@@ -22,6 +22,9 @@ export * from './components/TextField';
 export * from './components/Panel';
 export * from './components/PageHeader';
 export * from './components/StatusBadge';
+export * from './components/agent/AgentLog';
+export * from './components/agent/ApprovalCard';
+export * from './components/agent/CommandBar';
 
 export * from './theme';
 export * from './components/ThemeModeControl';
