@@ -18,6 +18,7 @@ import {
 import { generateOtpCode, hashOtp, hashToken, newOtpSalt, otpExpiry, OTP_MAX_ATTEMPTS } from '../../../../../lib/lead-capture-otp';
 import { deliverCaptureOtp } from '../../../../../lib/lead-capture-otp-delivery';
 import { resolveOrCreateLeadContact } from '../../../../../lib/lead-contact-resolution';
+import { persistCaptureAttributionAndConsent } from '../../../../../lib/lead-attribution';
 import {
   UUID_RE,
   checkKeyAndOrigin,
@@ -212,6 +213,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
       [tenantId, source.organization_id, sourceId, captureLeadId, emailHash,
        hashOtp(code, salt), salt, OTP_MAX_ATTEMPTS, otpExpiry().toISOString()],
     );
+
+    // Gate 2: durable attribution + consent evidence. Best-effort.
+    try {
+      await persistCaptureAttributionAndConsent(client, {
+        tenantId,
+        organizationId: source.organization_id,
+        captureLeadId,
+        contactId,
+        sourceKey: source.source_key,
+        attribution: submission.attribution,
+        consent: submission.consent,
+      });
+    } catch (error) {
+      console.warn(`Capture attribution persistence skipped for ${captureLeadId}:`, error instanceof Error ? error.message : error);
+    }
+
     await client.query('COMMIT');
 
     await deliverCaptureOtp({
