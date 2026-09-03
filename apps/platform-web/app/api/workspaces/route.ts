@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       { id: 'platform_access_requests', label: 'Access Requests', short: 'AR', href: '/access-requests', group: 'Administration', priority: 'secondary' },
       { id: 'platform_config', label: 'Platform Configuration', short: 'PC', href: '/configuration', group: 'Administration', priority: 'primary' },
       { id: 'platform_appearance', label: 'Theme Governance', short: 'TG', href: '/appearance', group: 'Administration', priority: 'secondary' },
+      { id: 'platform_theme_sandbox', label: 'Theme Sandbox', short: 'TS', href: '/theme-sandbox', group: 'Administration', priority: 'secondary' },
     ];
 
     return NextResponse.json(workspaces, { headers: { 'Cache-Control': 'private, no-store' } });

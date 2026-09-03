@@ -30,7 +30,7 @@
   border-radius: 11px;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, var(--theme-secondary), var(--theme-primary));
+  background: var(--theme-easing-linear)-gradient(145deg, var(--theme-secondary), var(--theme-primary));
   color: var(--theme-text-inverse);
   font-weight: 850;
 }
@@ -102,7 +102,7 @@
   padding: 20px;
   text-decoration: none;
   color: inherit;
-  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  transition: transform .calc(var(--theme-motion-data) * 22.86) var(--theme-easing), border-color .calc(var(--theme-motion-data) * 22.86) var(--theme-easing), box-shadow .calc(var(--theme-motion-data) * 22.86) var(--theme-easing);
 }
 .contextCard:hover {
   transform: translateY(-2px);
@@ -178,7 +178,7 @@
 .progressFill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--theme-primary), var(--theme-secondary));
+  background: var(--theme-easing-linear)-gradient(90deg, var(--theme-primary), var(--theme-secondary));
 }
 .progressMeta {
   margin-top: 8px;

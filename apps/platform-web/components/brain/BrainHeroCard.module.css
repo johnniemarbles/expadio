@@ -1,7 +1,7 @@
 .card {
   background:
     radial-gradient(circle at top right, color-mix(in srgb,var(--theme-primary) 14%,transparent), transparent 38%),
-    linear-gradient(145deg, var(--theme-surface-raised), var(--theme-surface));
+    var(--theme-easing-linear)-gradient(145deg, var(--theme-surface-raised), var(--theme-surface));
   border: 1px solid var(--theme-border);
   border-radius: var(--theme-radius-card);
   padding: 2rem;
@@ -15,8 +15,8 @@
 .summary { font-size:.95rem; color:var(--theme-text-secondary); margin:0; }
 .metrics { display:flex; gap:3rem; margin-top:.5rem; flex-wrap:wrap; }
 .metric { display:flex; flex-direction:column; gap:.25rem; min-width:110px; animation:brainMetricIn var(--theme-motion-normal) var(--theme-easing) both; }
-.metric:nth-child(2) { animation-delay: 40ms; }
-.metric:nth-child(3) { animation-delay: 80ms; }
+.metric:nth-child(2) { animation-delay: calc(var(--theme-motion-fast) * 0.29); }
+.metric:nth-child(3) { animation-delay: calc(var(--theme-motion-fast) * 0.57); }
 .metricValue { font-size:2rem; font-weight:750; color:var(--theme-text-primary); line-height:1.2; letter-spacing:-.03em; }
 .metricLabel { font-size:.875rem; color:var(--theme-text-muted); font-weight:550; }
 
