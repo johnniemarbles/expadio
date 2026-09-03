@@ -28,7 +28,7 @@ export default async function WorkflowConsolePage({ searchParams }: { searchPara
           <h1 id="page-title">Workflow Engine</h1>
           <p>Monitor active business processes and stage transition bottlenecks.</p>
         </div>
-      </MotionPanel>
+      </section>
 
       <MotionPanel className={styles.panel} aria-labelledby="workflows-title">
         <div className={styles.panelHeading}>
