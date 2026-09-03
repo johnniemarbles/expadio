@@ -1,0 +1,16 @@
+/**
+ * @expadio/lead-capture
+ *
+ * The shared, transport-agnostic submission contract for Demand Capture, plus
+ * the client SDK for both trust rails:
+ *   - contract / normalize  the canonical payload shape and its validation
+ *   - client                the PUBLIC (browser) rail: publishable key + Origin
+ *   - sign                  the SIGNED (server) rail: Ed25519 over the raw body
+ *
+ * The embed snippet is a separate entry (`@expadio/lead-capture/embed`) so a
+ * server bundle never pulls DOM code.
+ */
+export * from './contract.ts';
+export * from './normalize.ts';
+export * from './client.ts';
+export * from './sign.ts';

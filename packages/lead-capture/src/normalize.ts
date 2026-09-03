@@ -1,0 +1,170 @@
+/**
+ * Deterministic normalization for the submission contract. Pure and
+ * unit-tested. The same rules run wherever a submission is built so the wire
+ * shape is identical regardless of surface, and the server can re-run them to
+ * verify a client did not smuggle unexpected shapes.
+ */
+import {
+  CONSENT_CHANNELS,
+  CaptureContractError,
+  type CaptureAttribution,
+  type CaptureConsent,
+  type CaptureFieldValue,
+  type CaptureSubmission,
+  type CaptureSubmissionInput,
+} from './contract.ts';
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+
+function cleanString(value: unknown, max: number): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed.slice(0, max);
+}
+
+/** Lowercase + trim. Not an identity resolver — that is the dedup engine's job
+ *  (Gate 1); this only makes the stored value tidy and comparable. */
+export function normalizeEmail(raw: unknown): string {
+  const value = cleanString(raw, 320);
+  if (!value) throw new CaptureContractError('CAPTURE_EMAIL_REQUIRED', 'A contact email is required.');
+  const lowered = value.toLowerCase();
+  if (!EMAIL.test(lowered)) throw new CaptureContractError('CAPTURE_EMAIL_INVALID', 'The contact email is not valid.');
+  return lowered;
+}
+
+/** Light phone tidy-up: keep a leading +, digits and spacing collapse. Real
+ *  E.164 canonicalization belongs to the identity engine, not the wire. */
+export function normalizePhone(raw: unknown): string | undefined {
+  const value = cleanString(raw, 40);
+  if (!value) return undefined;
+  const compact = value.replace(/[^\d+]/gu, '');
+  return compact === '' ? undefined : compact.slice(0, 20);
+}
+
+function normalizeAttribution(input: CaptureAttribution | undefined): CaptureAttribution {
+  const a = input ?? {};
+  const pick = (v: unknown, max = 512) => cleanString(v, max);
+  return {
+    pageUrl: pick(a.pageUrl, 2048),
+    referrerUrl: pick(a.referrerUrl, 2048),
+    utmSource: pick(a.utmSource),
+    utmMedium: pick(a.utmMedium),
+    utmCampaign: pick(a.utmCampaign),
+    utmTerm: pick(a.utmTerm),
+    utmContent: pick(a.utmContent),
+    utmId: pick(a.utmId),
+    gclid: pick(a.gclid),
+    fbclid: pick(a.fbclid),
+    referralCode: pick(a.referralCode),
+    affiliateKey: pick(a.affiliateKey),
+  };
+}
+
+function normalizeConsent(input: readonly CaptureConsent[] | undefined): CaptureConsent[] {
+  if (!input) return [];
+  const out: CaptureConsent[] = [];
+  for (const entry of input) {
+    if (!entry || typeof entry !== 'object') continue;
+    if (!CONSENT_CHANNELS.includes(entry.channel)) {
+      throw new CaptureContractError('CAPTURE_CONSENT_CHANNEL_INVALID', `Unsupported consent channel: ${String(entry.channel)}`);
+    }
+    const purpose = cleanString(entry.purpose, 80);
+    if (!purpose) throw new CaptureContractError('CAPTURE_CONSENT_PURPOSE_REQUIRED', 'Consent purpose is required.');
+    out.push({
+      channel: entry.channel,
+      purpose,
+      granted: entry.granted === true,
+      textVersion: cleanString(entry.textVersion, 40),
+    });
+  }
+  return out;
+}
+
+function normalizeFields(input: Readonly<Record<string, CaptureFieldValue>> | undefined): Record<string, CaptureFieldValue> {
+  if (!input || typeof input !== 'object') return {};
+  const out: Record<string, CaptureFieldValue> = {};
+  let count = 0;
+  for (const key of Object.keys(input)) {
+    if (count >= 100) break;
+    const cleanKey = key.trim().slice(0, 80);
+    if (cleanKey === '') continue;
+    const value = input[key];
+    if (typeof value === 'string') out[cleanKey] = value.trim().slice(0, 2000);
+    else if (typeof value === 'number' && Number.isFinite(value)) out[cleanKey] = value;
+    else if (typeof value === 'boolean' || value === null) out[cleanKey] = value;
+    else continue;
+    count += 1;
+  }
+  return out;
+}
+
+function displayTitle(input: CaptureSubmissionInput, email: string): string {
+  const explicit = cleanString(input.title, 200);
+  if (explicit) return explicit;
+  const name = [cleanString(input.contact?.firstName, 100), cleanString(input.contact?.lastName, 100)]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  if (name) return name.slice(0, 200);
+  return `New enquiry from ${email}`.slice(0, 200);
+}
+
+/**
+ * Validate and normalize a raw surface input into the canonical wire submission.
+ * Email is the one hard requirement; everything else is cleaned or dropped.
+ */
+export function normalizeSubmission(input: CaptureSubmissionInput): CaptureSubmission {
+  if (!input || typeof input !== 'object' || !input.contact || typeof input.contact !== 'object') {
+    throw new CaptureContractError('CAPTURE_CONTACT_REQUIRED', 'A contact object is required.');
+  }
+  const email = normalizeEmail(input.contact.email);
+  const contact = {
+    firstName: cleanString(input.contact.firstName, 100),
+    lastName: cleanString(input.contact.lastName, 100),
+    email,
+    phone: normalizePhone(input.contact.phone),
+    phoneCountryCode: cleanString(input.contact.phoneCountryCode, 8),
+    preferredLanguage: cleanString(input.contact.preferredLanguage, 16),
+  };
+  const organizationName = cleanString(input.organization?.name, 200);
+  const organizationDomain = cleanString(input.organization?.domain, 253);
+  const organizationRole = cleanString(input.organization?.roleTitle, 120);
+  const organization = organizationName || organizationDomain || organizationRole
+    ? { name: organizationName, domain: organizationDomain, roleTitle: organizationRole }
+    : undefined;
+
+  return {
+    contact,
+    organization,
+    consent: normalizeConsent(input.consent),
+    attribution: normalizeAttribution(input.attribution),
+    title: displayTitle(input, email),
+    externalReference: cleanString(input.externalReference, 200),
+    formId: cleanString(input.formId, 120),
+    formVersion: cleanString(input.formVersion, 40),
+    fields: normalizeFields(input.fields),
+  };
+}
+
+/**
+ * The fields the thin CRM projection reads directly. A superset of the current
+ * server extraction (title/email/externalReference), so the ingress can adopt
+ * this shared definition when Rail B lands.
+ */
+export function extractLeadFields(submission: CaptureSubmission): {
+  readonly title: string;
+  readonly email: string;
+  readonly firstName?: string;
+  readonly lastName?: string;
+  readonly phone?: string;
+  readonly externalReference?: string;
+} {
+  return {
+    title: submission.title,
+    email: submission.contact.email,
+    firstName: submission.contact.firstName,
+    lastName: submission.contact.lastName,
+    phone: submission.contact.phone,
+    externalReference: submission.externalReference,
+  };
+}
