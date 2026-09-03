@@ -28,6 +28,7 @@ function superuserPool(): pg.Pool {
 
 async function seedOrganization(c: pg.PoolClient, tenantId: string): Promise<string> {
   const organizationId = randomUUID();
+  await c.query(`INSERT INTO platform.tenants (tenant_id, name) VALUES ($1, 'Capture Tenant') ON CONFLICT DO NOTHING`, [tenantId]);
   await c.query(
     `INSERT INTO platform.organizations (organization_id, tenant_id, parent_organization_id, name)
      VALUES ($1, $2, NULL, $3)`,

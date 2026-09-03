@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
+import { generatePublishableKey } from '../lib/lead-capture-public-source.ts';
 import { routeDemandCaptureLead } from '../../brand-web/lib/demand-capture-routing.ts';
 
 const APP_ROLE = 'expadio_capture_routing_tester';
@@ -77,9 +78,9 @@ test('Demand Capture routing falls through invalid targets and records explicit 
 
     const sourceId = (await admin.query(
       `INSERT INTO platform.lead_capture_sources
-         (tenant_id,organization_id,source_key,surface,require_signed_ticket,status)
-       VALUES ($1,$2,'routing-source','WEBHOOK',false,'ACTIVE') RETURNING source_id`,
-      [tenantId, organizationId],
+         (tenant_id,organization_id,source_key,surface,require_signed_ticket,status,verification_algorithm,channel,trust_rail,publishable_key,allowed_origins)
+       VALUES ($1,$2,'routing-source','FORM',false,'ACTIVE','ED25519','WEB','PUBLIC',$3, ARRAY['https://example.com']) RETURNING source_id`,
+      [tenantId, organizationId, generatePublishableKey()],
     )).rows[0].source_id as string;
     const captureLeadId = (await admin.query(
       `INSERT INTO platform.lead_capture_leads

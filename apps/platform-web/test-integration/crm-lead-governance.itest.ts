@@ -17,6 +17,7 @@ async function seedLead(c: pg.PoolClient) {
   const tenantId = randomUUID();
   const organizationId = randomUUID();
   const leadId = randomUUID();
+  await c.query(`INSERT INTO platform.tenants (tenant_id, name) VALUES ($1, 'Gov Tenant') ON CONFLICT DO NOTHING`, [tenantId]);
   await c.query(`INSERT INTO platform.organizations (organization_id, tenant_id, parent_organization_id, name) VALUES ($1,$2,NULL,'Gov Org')`, [organizationId, tenantId]);
   await c.query(
     `INSERT INTO platform.crm_leads (lead_id, tenant_id, organization_id, title, stage, currency, source, raw_payload)
