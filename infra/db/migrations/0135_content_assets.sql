@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS platform.content_assets (
   CONSTRAINT content_assets_organization_tenant_fk
     FOREIGN KEY (organization_id, tenant_id)
     REFERENCES platform.organizations(organization_id, tenant_id),
+  CONSTRAINT content_assets_asset_scope_key
+    UNIQUE (asset_id, tenant_id, organization_id),
   CONSTRAINT content_assets_tenant_idempotency_key
     UNIQUE (tenant_id, idempotency_key),
   CONSTRAINT content_assets_tenant_object_reference_key
@@ -73,8 +75,9 @@ CREATE TABLE IF NOT EXISTS platform.content_asset_references (
   block_id text,
   created_by_subject_id text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT content_asset_references_asset_fk
-    FOREIGN KEY (asset_id) REFERENCES platform.content_assets(asset_id),
+  CONSTRAINT content_asset_references_asset_scope_fk
+    FOREIGN KEY (asset_id, tenant_id, organization_id)
+    REFERENCES platform.content_assets(asset_id, tenant_id, organization_id),
   CONSTRAINT content_asset_references_organization_tenant_fk
     FOREIGN KEY (organization_id, tenant_id)
     REFERENCES platform.organizations(organization_id, tenant_id),
@@ -105,6 +108,34 @@ CREATE TABLE IF NOT EXISTS platform.content_asset_events (
 
 CREATE INDEX IF NOT EXISTS content_asset_events_asset_idx
   ON platform.content_asset_events (tenant_id, asset_id, occurred_at);
+
+CREATE OR REPLACE FUNCTION platform.enforce_content_asset_state_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.state = OLD.state THEN
+    RETURN NEW;
+  END IF;
+  IF NOT CASE OLD.state
+    WHEN 'PENDING_UPLOAD' THEN NEW.state IN ('UPLOADED', 'REJECTED', 'DELETED')
+    WHEN 'UPLOADED' THEN NEW.state IN ('QUARANTINED', 'AVAILABLE', 'REJECTED', 'DELETED')
+    WHEN 'QUARANTINED' THEN NEW.state IN ('AVAILABLE', 'REJECTED', 'DELETED')
+    WHEN 'AVAILABLE' THEN NEW.state IN ('QUARANTINED', 'DELETED')
+    WHEN 'REJECTED' THEN NEW.state = 'DELETED'
+    WHEN 'DELETED' THEN false
+    ELSE false
+  END THEN
+    RAISE EXCEPTION 'CONTENT_ASSET_INVALID_STATE_TRANSITION:%->%', OLD.state, NEW.state;
+  END IF;
+  RETURN NEW;
+END
+$;
+
+DROP TRIGGER IF EXISTS content_assets_state_transition ON platform.content_assets;
+CREATE TRIGGER content_assets_state_transition
+BEFORE UPDATE OF state ON platform.content_assets
+FOR EACH ROW EXECUTE FUNCTION platform.enforce_content_asset_state_transition();
 
 CREATE OR REPLACE FUNCTION platform.enforce_content_asset_immutable_scope()
 RETURNS trigger
