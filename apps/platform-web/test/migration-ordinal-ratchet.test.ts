@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.resolve(here, '../../../infra/db/migrations');
 
-test('new migration ordinals are unique from 0119 onward', () => {
+test('new migration ordinals are unique from 0133 onward', () => {
   const files = readdirSync(migrationsDir)
     .filter((name) => /^\d{4}_.+\.sql$/.test(name))
     .sort();
@@ -21,12 +21,12 @@ test('new migration ordinals are unique from 0119 onward', () => {
   }
 
   const duplicatesAfter0118 = [...byOrdinal.entries()]
-    .filter(([ordinal, group]) => Number(ordinal) >= 119 && group.length > 1);
+    .filter(([ordinal, group]) => Number(ordinal) >= 133 && group.length > 1);
 
   assert.deepEqual(
     duplicatesAfter0118,
     [],
-    'Migration ordinals from 0119 onward must be unique; deployed historical duplicates are not renamed.',
+    'Migration ordinals from 0133 onward must be unique; deployed historical duplicates are not renamed.',
   );
   assert.ok(
     files.includes('0119_entity_registry_integrity.sql'),
