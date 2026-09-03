@@ -50,7 +50,8 @@ export async function GET(request: Request) {
            created_at
          FROM platform.communication_sender_identities
          WHERE channel = 'email'
-           AND (scope = 'PLATFORM' OR tenant_id = $1::uuid)
+           AND tenant_id = $1::uuid
+           AND scope IN ('TENANT', 'ORGANIZATION')
          ORDER BY is_default DESC, created_at DESC`,
         [effectiveContext.tenantId]
       );
@@ -125,6 +126,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
       }
 
+      const existing = await client.query<{ status: string }>(
+        `SELECT status
+           FROM platform.communication_sender_identities
+          WHERE tenant_id = $1::uuid
+            AND scope = 'TENANT'
+            AND channel = 'email'
+            AND lower(address) = lower($2)
+          LIMIT 1`,
+        [effectiveContext.tenantId, rawAddress],
+      );
+      if (existing.rows[0]?.status === 'SUSPENDED') {
+        return NextResponse.json(
+          { error: 'This sender is suspended and can only be restored through Platform governance.' },
+          { status: 409 },
+        );
+      }
+
       await client.query('BEGIN');
       try {
         if (isDefault) {
@@ -151,7 +169,10 @@ export async function POST(request: Request) {
              purposes = EXCLUDED.purposes,
              is_default = EXCLUDED.is_default,
              verification_status = platform.communication_sender_identities.verification_status,
-             status = 'ACTIVE',
+             status = CASE
+               WHEN platform.communication_sender_identities.status = 'INACTIVE' THEN 'ACTIVE'
+               ELSE platform.communication_sender_identities.status
+             END,
              updated_at = NOW()
            RETURNING sender_id, address, purposes, is_default, verification_status, status, created_at`,
           [effectiveContext.tenantId, rawAddress, displayName, purposes, isDefault]
