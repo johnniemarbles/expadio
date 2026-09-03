@@ -78,7 +78,7 @@ test('UNASSIGNED Demand Capture event becomes one governed operational task', as
     });
     await client.query('COMMIT');
 
-    const occurredAt = new Date('2026-09-03T03:15:00.000Z');
+    const occurredAt = new Date();
     await client.query('BEGIN');
     await appendDomainEventWithOutbox(client, {
       event: {
@@ -111,7 +111,7 @@ test('UNASSIGNED Demand Capture event becomes one governed operational task', as
     const result = await processUntilEvent(client, {
       tenantId,
       eventId,
-      now: new Date('2026-09-03T03:16:00.000Z'),
+      now: new Date(Date.now() + 60_000),
     });
     assert.equal(result.actions.length, 1);
     assert.equal(result.actions[0]?.status, 'PERSISTED');
