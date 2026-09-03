@@ -196,9 +196,9 @@ export function DomainConfigModal({ isOpen, onClose, initialDomain = "expadio.co
               <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. mail.yourbrand.com" className={domain && !domainValid ? styles.inputInvalid : styles.input} />
               {domain && !domainValid && <span className={styles.invalidText}>Enter a valid domain such as mail.example.com.</span>}
             </label>
-            <span className={styles.helpText}>Cloudflare auto-configuration uses deployment-held DNS automation only. This browser never accepts or transports a Cloudflare API token. If automation is unavailable, the API returns the records for manual setup.</span>
+            <span className={styles.helpText}>Cloudflare auto-configuration uses governed DNS automation only. This browser never accepts or transports a Cloudflare API token. If no governed Cloudflare connector is routed, the API returns the records for manual setup.</span>
             <div className={styles.actions}>
-              <button type="button" onClick={handleAutoConfigure} disabled={loading || adding || !domainValid} className={styles.primaryButton}>{loading ? "Provisioning DNS…" : "⚡ Use Deployment DNS Automation"}</button>
+              <button type="button" onClick={handleAutoConfigure} disabled={loading || adding || !domainValid} className={styles.primaryButton}>{loading ? "Provisioning DNS…" : "⚡ Use Governed DNS Automation"}</button>
               <button type="button" onClick={handleAddManual} disabled={loading || adding || !domainValid} className={styles.secondaryButton}>{adding ? "Adding…" : "Add for Manual DNS"}</button>
             </div>
           </div>
