@@ -83,7 +83,7 @@
   background: var(--theme-primary);
   border-color: var(--theme-primary);
   color: var(--theme-text-inverse);
-  animation: onboardingStepPulse 2.4s ease-in-out infinite;
+  animation: onboardingStepPulse calc(var(--theme-motion-data) * 3.43) var(--theme-easing) infinite;
 }
 
 .railBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -155,7 +155,7 @@
   border: 1.5px solid var(--theme-border);
   margin-top: 2px;
   flex: none;
-  transition: border-width var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing);
+  transition: border-, border-color var(--theme-motion-fast) var(--theme-easing);
 }
 .mode[aria-pressed="true"] .radio { border-color: var(--theme-primary); border-width: 5px; }
 
@@ -229,7 +229,7 @@
   border: 2px solid color-mix(in srgb,var(--theme-primary) 25%,transparent);
   border-top-color: var(--theme-primary);
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin calc(var(--theme-motion-data) * 1) var(--theme-easing-linear) infinite;
   flex: none;
 }
 

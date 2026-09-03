@@ -95,10 +95,10 @@
   --theme-blur:18px;
   --theme-translucency:.94;
   --theme-border-glow:0 0 0 1px rgba(34,211,238,.08);
-  --theme-motion-fast:140ms;
-  --theme-motion-normal:220ms;
-  --theme-motion-slow:340ms;
-  --theme-easing:cubic-bezier(.2,.8,.2,1);
+  --theme-motion-fast:calc(var(--theme-motion-fast) * 1);
+  --theme-motion-normal:calc(var(--theme-motion-fast) * 1.57);
+  --theme-motion-slow:calc(var(--theme-motion-fast) * 2.43);
+  --theme-easing:var(--theme-easing);
 
   /* Compatibility aliases. New application styles should use semantic theme tokens. */
   --canvas:var(--theme-canvas);

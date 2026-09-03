@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { replaceLearningCourseDraft } from '@expadio/postgres-runtime/learning';
-import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '@/lib/brand-context';
+import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function PUT(
       return NextResponse.json({ error: 'LEARNING_DRAFT_IDENTIFIER_INVALID' }, { status: 400 });
     }
     const draft = await request.json().catch(() => ({}));
-    const result = await withBrandTransaction(context, async (client) => {
+    const result = await withBrandTransaction(context, async (client: any) => {
       if (!(await hasLearningAdmin(client, context.subjectId))) throw new Error('LEARNING_ADMIN_REQUIRED');
       return replaceLearningCourseDraft(client, {
         tenantId: context.tenantId,

@@ -147,9 +147,9 @@
   animation: connectorSectionIn var(--theme-motion-panel) var(--theme-easing) both;
 }
 
-.statGrid .stat:nth-child(2) { animation-delay: 30ms; }
-.statGrid .stat:nth-child(3) { animation-delay: 60ms; }
-.statGrid .stat:nth-child(4) { animation-delay: 90ms; }
+.statGrid .stat:nth-child(2) { animation-delay: calc(var(--theme-motion-fast) * 0.21); }
+.statGrid .stat:nth-child(3) { animation-delay: calc(var(--theme-motion-fast) * 0.43); }
+.statGrid .stat:nth-child(4) { animation-delay: calc(var(--theme-motion-fast) * 0.64); }
 
 .statLabel {
   color: var(--theme-text-muted);
