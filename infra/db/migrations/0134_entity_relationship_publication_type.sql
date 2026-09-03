@@ -377,4 +377,15 @@ CREATE POLICY genesis_claims_tenant_all
   USING (tenant_id = platform.current_tenant_id())
   WITH CHECK (tenant_id = platform.current_tenant_id());
 
+-- 0086 intended to widen Communication subject channels with social, but older
+-- CHECK definitions render through pg_get_constraintdef as ANY(ARRAY[...]) on
+-- some PostgreSQL versions and can be missed by a text search for channel IN.
+-- Reassert the final delivery-channel contract explicitly while leaving sender
+-- identities unchanged: social is dispatchable, not a sender identity channel.
+ALTER TABLE platform.communication_deliveries
+  DROP CONSTRAINT IF EXISTS communication_deliveries_channel_check;
+ALTER TABLE platform.communication_deliveries
+  ADD CONSTRAINT communication_deliveries_channel_check
+  CHECK (channel IN ('email','sms','whatsapp','voice','in_app','push','rcs','social'));
+
 COMMIT;
