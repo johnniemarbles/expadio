@@ -71,8 +71,11 @@ if (requiresVerification && captureLeadId) {
 ```
 
 The endpoints exist: `POST /api/lead-capture/public/{sourceId}?tenantId=…` (ingress)
-and `.../verify` (OTP). OTP *delivery* over Communications is wired in the next
-step, so `verify` cannot complete in production until then.
+and `.../verify` (OTP). OTP delivery is wired through the governed Communications
+fabric (trigger `lead-capture.otp`, a platform email template), so a code is sent
+once the tenant has an email provider bound for `communication.email.send`; until
+then delivery degrades to a logged reason (e.g. `NOT_CONFIGURED`) and capture
+still succeeds.
 
 ## SDK — server (SIGNED rail)
 
