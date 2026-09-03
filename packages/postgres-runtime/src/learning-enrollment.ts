@@ -600,6 +600,34 @@ export async function completeMyLearningLesson(
   );
   if (lessonResult.rows[0] === undefined) throw new Error('LEARNING_LESSON_NOT_IN_ENROLLMENT');
 
+  const prerequisite = await client.query(
+    `SELECT 1
+       FROM platform.learning_lessons target
+       JOIN platform.learning_course_modules target_module
+         ON target_module.course_module_id = target.course_module_id
+        AND target_module.tenant_id = target.tenant_id
+       JOIN platform.learning_lessons prior
+         ON prior.tenant_id = target.tenant_id
+        AND prior.course_version_id = target.course_version_id
+        AND prior.required = true
+       JOIN platform.learning_course_modules prior_module
+         ON prior_module.course_module_id = prior.course_module_id
+        AND prior_module.tenant_id = prior.tenant_id
+      WHERE target.tenant_id = $1::uuid
+        AND target.lesson_id = $2::uuid
+        AND (prior_module.position, prior.position) < (target_module.position, target.position)
+        AND NOT EXISTS (
+          SELECT 1 FROM platform.learning_lesson_progress progress
+           WHERE progress.tenant_id = $1::uuid
+             AND progress.enrollment_id = $3::uuid
+             AND progress.lesson_id = prior.lesson_id
+             AND progress.status = 'COMPLETED'
+        )
+      LIMIT 1`,
+    [input.tenantId, input.lessonId, input.enrollmentId],
+  );
+  if (prerequisite.rows.length > 0) throw new Error('LEARNING_LESSON_LOCKED');
+
   const now = new Date();
 
   await client.query(
