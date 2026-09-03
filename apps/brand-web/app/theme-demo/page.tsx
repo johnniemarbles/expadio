@@ -4,10 +4,10 @@ import React, { useState, useRef } from 'react';
 
 const defaultTheme = {
   name: 'Default EXPADIO',
-  primary: '#0070f3',
-  background: '#ffffff',
-  text: '#111111',
-  surface: '#f5f5f5',
+  primary: 'var(--theme-focus)',
+  background: 'var(--canvas)',
+  text: 'var(--ink-950)',
+  surface: 'var(--theme-surface-raised)',
   borderRadius: '8px'
 };
 
@@ -117,7 +117,7 @@ export default function ThemeDemoPage() {
               style={{
                 padding: '10px 20px',
                 backgroundColor: index === activeThemeIndex ? 'var(--theme-primary)' : 'var(--theme-surface)',
-                color: index === activeThemeIndex ? '#fff' : 'var(--theme-text)',
+                color: index === activeThemeIndex ? 'var(--canvas)' : 'var(--theme-text)',
                 border: 'none',
                 borderRadius: 'var(--theme-radius)',
                 cursor: 'pointer',
@@ -139,11 +139,11 @@ export default function ThemeDemoPage() {
           type="text" 
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Optional: Add hints (e.g., 'Make it dark mode', 'Use soft pastels')"
+          placeholder="Optional: Add hints"
           style={{
             padding: '12px',
             borderRadius: 'var(--theme-radius)',
-            border: '1px solid #ccc',
+            border: '1px solid var(--theme-border)',
             width: '100%',
             maxWidth: '600px',
             marginBottom: '20px',
@@ -176,7 +176,7 @@ export default function ThemeDemoPage() {
           )}
         </div>
         
-        {error && <p style={{ color: 'red', marginTop: '10px' }}>Error: {error}</p>}
+        {error && <p style={{ color: 'var(--theme-error)', marginTop: '10px' }}>Error: {error}</p>}
         
         <input 
           type="file" 
@@ -194,14 +194,14 @@ export default function ThemeDemoPage() {
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
           {/* Sample Card */}
-          <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: 'var(--theme-radius)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: 'var(--theme-radius)', boxShadow: '0 4px 6px var(--theme-shadow)' }}>
             <h3 style={{ marginTop: 0 }}>Analytics Summary</h3>
             <div style={{ fontSize: '2rem', color: 'var(--theme-primary)', fontWeight: 'bold' }}>+24%</div>
             <p>Traffic increase over the last 30 days.</p>
             <button style={{
               padding: '8px 16px',
               backgroundColor: 'var(--theme-primary)',
-              color: '#fff',
+              color: 'var(--canvas)',
               border: 'none',
               borderRadius: 'var(--theme-radius)',
               cursor: 'pointer',
@@ -212,7 +212,7 @@ export default function ThemeDemoPage() {
           </div>
 
           {/* Sample Form Element */}
-          <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: 'var(--theme-radius)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: 'var(--theme-radius)', boxShadow: '0 4px 6px var(--theme-shadow)' }}>
             <h3 style={{ marginTop: 0 }}>Quick Settings</h3>
             <label style={{ display: 'block', marginBottom: '10px', cursor: 'pointer' }}>
               <input type="checkbox" defaultChecked style={{ marginRight: '8px', accentColor: 'var(--theme-primary)' }} />
@@ -229,7 +229,7 @@ export default function ThemeDemoPage() {
                 width: '100%',
                 padding: '10px',
                 marginTop: '10px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--theme-border)',
                 borderRadius: 'var(--theme-radius)',
                 backgroundColor: 'var(--theme-background)',
                 color: 'var(--theme-text)'
