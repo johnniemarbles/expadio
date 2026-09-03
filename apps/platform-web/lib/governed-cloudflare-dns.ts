@@ -126,11 +126,12 @@ export async function resolveGovernedCloudflareDnsToken(
     connectorWithCredential,
   );
   const resolvedAt = options.now?.() ?? new Date().toISOString();
-  assertLeaseIsCurrent(lease, resolvedAt);
-
   const secret = await (options.secretResolver ?? delegatedSecretResolver).resolve(lease.credentialReference);
-  if (secret.expiresAt !== undefined && secret.expiresAt.getTime() <= Date.parse(resolvedAt)) {
-    throw new Error('CLOUDFLARE_DNS_SECRET_EXPIRED');
+  if ('expiresAt' in secret && secret.expiresAt !== undefined && secret.expiresAt !== null) {
+    const expiresMs = secret.expiresAt instanceof Date ? secret.expiresAt.getTime() : Date.parse(String(secret.expiresAt));
+    if (expiresMs <= Date.parse(resolvedAt)) {
+      throw new Error('CLOUDFLARE_DNS_SECRET_EXPIRED');
+    }
   }
   return {
     token: secret.value,
