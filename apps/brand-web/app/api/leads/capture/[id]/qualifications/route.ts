@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { QUALIFICATION_RESPONSES, type QualificationResponse } from '@expadio/lead';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
-import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../../lib/brand-context';
+import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
