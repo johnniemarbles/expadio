@@ -62,7 +62,9 @@ CREATE TABLE platform.entity_nodes (
   CHECK (
     (status = 'DISSOLVED' AND dissolved_at IS NOT NULL AND dissolved_by IS NOT NULL)
     OR (status <> 'DISSOLVED' AND dissolved_at IS NULL AND dissolved_by IS NULL)
-  )
+  ),
+  UNIQUE (node_id, tenant_id)
+
 );
 
 -- One BRAND_HQ per tenant. A tenant cannot have two root brand authorities.
