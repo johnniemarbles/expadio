@@ -97,7 +97,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
         targetSystem: selected.providerKey,
         credentialIdentifier: effectiveConnectorKey,
         wrappedEnvelope: envelope,
-        wrappingKeyId: key.keyId,
+        wrappingKeyId: key.kid,
         metadata: {
           accountSid: accountSid.trim() || undefined,
           fromAddress: fromAddress.trim() || undefined,
