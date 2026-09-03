@@ -220,52 +220,85 @@ export function resolveCommunicationIntentIdentity(
   if (!recipientSupportsChannel(intent.recipient, channel)) {
     throw new CommunicationIntentIdentityError(
       'CHANNEL_RECIPIENT_MISMATCH',
-      `Recipient does not have an address for ${channel}.`,
+      `Recipient is not addressable through ${channel}.`,
     );
   }
 
   return {
     channel,
-    recipientKey: recipientKeyForChannel(intent.recipient, channel),
-    idempotencyKey: intent.idempotencyKey,
+    recipientKey: communicationRecipientKey(intent.recipient, channel),
+    idempotencyKey: intent.idempotencyKey.trim(),
   };
 }
 
-function inferDefaultCommunicationChannel(recipient: CommunicationRecipient): CommunicationChannel | null {
-  if (recipient.email !== undefined) return 'email';
-  if (recipient.whatsapp !== undefined) return 'whatsapp';
-  if (recipient.phone !== undefined) return 'sms';
-  if (recipient.pushEndpoint !== undefined) return 'push';
-  if (recipient.subjectId !== undefined) return 'in_app';
+/**
+ * Preserves BEMP's email -> WhatsApp -> SMS default precedence. Shared phone
+ * addressing never implicitly selects voice or RCS, and subject identity never
+ * implicitly selects push or social; those channels require explicit routing policy.
+ */
+export function inferDefaultCommunicationChannel(
+  recipient: CommunicationRecipient,
+): CommunicationChannel | null {
+  if (nonBlank(recipient.email)) return 'email';
+  if (nonBlank(recipient.whatsapp)) return 'whatsapp';
+  if (nonBlank(recipient.phone)) return 'sms';
+  if (nonBlank(recipient.subjectId)) return 'in_app';
   return null;
 }
 
-function recipientSupportsChannel(recipient: CommunicationRecipient, channel: CommunicationChannel): boolean {
-  switch (channel) {
-    case 'email': return nonBlank(recipient.email);
-    case 'sms':
-    case 'voice':
-    case 'rcs': return nonBlank(recipient.phone);
-    case 'whatsapp': return nonBlank(recipient.whatsapp) || nonBlank(recipient.phone);
-    case 'push': return nonBlank(recipient.pushEndpoint);
-    case 'in_app':
-    case 'social': return nonBlank(recipient.subjectId);
+export function communicationRecipientKey(
+  recipient: CommunicationRecipient,
+  channel: CommunicationChannel,
+): string {
+  if (!recipientSupportsChannel(recipient, channel)) {
+    throw new CommunicationIntentIdentityError(
+      'CHANNEL_RECIPIENT_MISMATCH',
+      `Recipient is not addressable through ${channel}.`,
+    );
+  }
+
+  switch (communicationChannelMetadata(channel).addressKind) {
+    case 'email':
+      return recipient.email!.trim().toLowerCase();
+    case 'phone':
+      return recipient.phone!.trim();
+    case 'whatsapp':
+      return (recipient.whatsapp ?? recipient.phone)!.trim();
+    case 'subject':
+      return recipient.subjectId!.trim();
+    case 'push':
+      return (recipient.pushEndpoint ?? recipient.subjectId)!.trim();
   }
 }
 
-function recipientKeyForChannel(recipient: CommunicationRecipient, channel: CommunicationChannel): string {
-  switch (channel) {
-    case 'email': return recipient.email!;
-    case 'sms':
-    case 'voice':
-    case 'rcs': return recipient.phone!;
-    case 'whatsapp': return recipient.whatsapp ?? recipient.phone!;
-    case 'push': return recipient.pushEndpoint!;
-    case 'in_app':
-    case 'social': return recipient.subjectId!;
+export function recipientSupportsChannel(
+  recipient: CommunicationRecipient,
+  channel: CommunicationChannel,
+): boolean {
+  switch (communicationChannelMetadata(channel).addressKind) {
+    case 'email':
+      return nonBlank(recipient.email);
+    case 'phone':
+      return nonBlank(recipient.phone);
+    case 'whatsapp':
+      return nonBlank(recipient.whatsapp ?? recipient.phone);
+    case 'subject':
+      return nonBlank(recipient.subjectId);
+    case 'push':
+      return nonBlank(recipient.pushEndpoint) || nonBlank(recipient.subjectId);
   }
 }
 
-function nonBlank(value: string | undefined): value is string {
-  return typeof value === 'string' && value.trim() !== '';
+function nonBlank(value: string | undefined): boolean {
+  return value !== undefined && value.trim().length > 0;
 }
+
+export * from './webhook-ingestion.ts';
+export * from './resend-webhook-normalizer.ts';
+export * from './twilio-webhook-normalizer.ts';
+export * from './plane.ts';
+export * from './throttle.ts';
+export * from './decision-trace.ts';
+export * from './provider-unavailable-adapter.ts';
+export * from './sending-domain.ts';
+export * from './spine.ts';
