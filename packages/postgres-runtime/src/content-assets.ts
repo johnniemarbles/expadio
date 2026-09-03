@@ -279,6 +279,99 @@ export async function issueContentAssetReadGrant(
 }
 
 
+/**
+ * Issues a short-lived read grant only when the authenticated learner owns an
+ * active enrollment for the immutable course version, the lesson is unlocked,
+ * and the asset is referenced by that exact lesson document.
+ */
+export async function issueMyLearningLessonAssetReadGrant(
+  client: PostgresClient,
+  store: ContentAssetBinaryStore,
+  input: {
+    readonly tenantId: string;
+    readonly subjectId: string;
+    readonly subjectIssuer: string | null;
+    readonly enrollmentId: string;
+    readonly lessonId: string;
+    readonly assetId: string;
+    readonly correlationId: string;
+  },
+): Promise<ContentAssetReadGrant> {
+  const authorized = await client.query<{ readonly allowed: boolean }>(
+    `SELECT true AS allowed
+       FROM platform.learning_enrollments enrollment
+       JOIN platform.learning_learners learner
+         ON learner.learner_id = enrollment.learner_id
+        AND learner.tenant_id = enrollment.tenant_id
+        AND learner.subject_id = $3
+        AND learner.subject_issuer IS NOT DISTINCT FROM $4
+        AND learner.status = 'ACTIVE'
+       JOIN platform.learning_lessons lesson
+         ON lesson.lesson_id = $5::uuid
+        AND lesson.course_version_id = enrollment.course_version_id
+        AND lesson.tenant_id = enrollment.tenant_id
+       JOIN platform.content_assets asset
+         ON asset.asset_id = $6::uuid
+        AND asset.tenant_id = enrollment.tenant_id
+        AND asset.purpose = 'LEARNING_CONTENT'
+        AND asset.state = 'AVAILABLE'
+      WHERE enrollment.tenant_id = $1::uuid
+        AND enrollment.enrollment_id = $2::uuid
+        AND enrollment.status IN ('ASSIGNED','IN_PROGRESS')
+        AND EXISTS (
+          SELECT 1
+            FROM jsonb_array_elements(
+              CASE WHEN jsonb_typeof(lesson.content->'blocks') = 'array'
+                THEN lesson.content->'blocks' ELSE '[]'::jsonb END
+            ) AS block
+           WHERE block->'data'->>'assetId' = $6
+              OR block->'accessibility'->>'transcriptAssetId' = $6
+              OR block->'accessibility'->>'captionsAssetId' = $6
+        )
+        AND NOT EXISTS (
+          SELECT 1
+            FROM platform.learning_lessons prior
+            JOIN platform.learning_course_modules prior_module
+              ON prior_module.course_module_id = prior.course_module_id
+             AND prior_module.tenant_id = prior.tenant_id
+            JOIN platform.learning_course_modules target_module
+              ON target_module.course_module_id = lesson.course_module_id
+             AND target_module.tenant_id = lesson.tenant_id
+           WHERE prior.tenant_id = enrollment.tenant_id
+             AND prior.course_version_id = enrollment.course_version_id
+             AND prior.required = true
+             AND (prior_module.position, prior.position) < (target_module.position, lesson.position)
+             AND NOT EXISTS (
+               SELECT 1
+                 FROM platform.learning_lesson_progress progress
+                WHERE progress.tenant_id = enrollment.tenant_id
+                  AND progress.enrollment_id = enrollment.enrollment_id
+                  AND progress.lesson_id = prior.lesson_id
+                  AND progress.status = 'COMPLETED'
+             )
+        )
+      LIMIT 1`,
+    [
+      input.tenantId,
+      input.enrollmentId,
+      input.subjectId,
+      input.subjectIssuer,
+      input.lessonId,
+      input.assetId,
+    ],
+  );
+  if (!authorized.rows[0]) throw new Error('LEARNING_ASSET_ACCESS_DENIED');
+
+  return issueContentAssetReadGrant(client, store, {
+    tenantId: input.tenantId,
+    assetId: input.assetId,
+    purpose: 'learning.learner-playback',
+    actorSubjectId: input.subjectId,
+    correlationId: input.correlationId,
+  });
+}
+
+
 export async function quarantineContentAssetForScan(
   client: PostgresClient,
   input: {
