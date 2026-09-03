@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { registerContentAsset } from '@expadio/postgres-runtime/content-assets';
 import { contentAssetError, contentAssetForbidden, contentAssetJson } from '@/lib/content-asset-api';
+import { configuredContentAssetPolicy } from '@/lib/content-asset-services';
 import { hasLearningAuthoringRole } from '@/lib/learning-authz';
 import { resolveRequestContext, withTenantTransaction } from '@/lib/request-context';
 
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
     }
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const correlationId = request.headers.get('x-correlation-id')?.trim() || randomUUID();
+    const policy = configuredContentAssetPolicy();
     const result = await withTenantTransaction(context, async (client) => {
       if (!(await hasLearningAuthoringRole(client, context.subjectId))) return null;
       return registerContentAsset(client, {
@@ -31,9 +33,9 @@ export async function POST(request: Request) {
         byteLength: body.byteLength as number,
         sha256: body.sha256 as string,
         idempotencyKey: body.idempotencyKey as string,
-        retentionPolicy: body.retentionPolicy as { key: string; version: number },
-        requiredResidencyTags: body.requiredResidencyTags as string[],
-        requiredComplianceTags: Array.isArray(body.requiredComplianceTags) ? body.requiredComplianceTags : [],
+        retentionPolicy: policy.retentionPolicy,
+        requiredResidencyTags: policy.requiredResidencyTags,
+        requiredComplianceTags: policy.requiredComplianceTags,
         correlationId,
       });
     });

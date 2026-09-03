@@ -14,13 +14,32 @@ function tags(name: string): readonly string[] {
  * Platform-only composition root. Provider secrets are read exclusively on the
  * Node server and are never serialized into route responses or Brand bundles.
  */
+export function configuredContentAssetPolicy(): {
+  readonly requiredResidencyTags: readonly string[];
+  readonly requiredComplianceTags: readonly string[];
+  readonly retentionPolicy: { readonly key: string; readonly version: number };
+} {
+  const retentionVersion = Number(requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_VERSION'));
+  if (!Number.isInteger(retentionVersion) || retentionVersion < 1) {
+    throw new Error('CONTENT_ASSET_RETENTION_POLICY_VERSION_INVALID');
+  }
+  return {
+    requiredResidencyTags: tags('EXPADIO_CONTENT_ASSET_RESIDENCY_TAGS'),
+    requiredComplianceTags: tags('EXPADIO_CONTENT_ASSET_COMPLIANCE_TAGS'),
+    retentionPolicy: {
+      key: requiredEnv('EXPADIO_CONTENT_ASSET_RETENTION_POLICY_KEY'),
+      version: retentionVersion,
+    },
+  };
+}
+
 export function createContentAssetBinaryStore(): SupabaseContentAssetStore {
   return new SupabaseContentAssetStore({
     projectUrl: requiredEnv('EXPADIO_CONTENT_ASSET_STORAGE_URL'),
     bucket: requiredEnv('EXPADIO_CONTENT_ASSET_STORAGE_BUCKET'),
     accessToken: async () => requiredEnv('EXPADIO_CONTENT_ASSET_STORAGE_TOKEN'),
-    residencyTags: tags('EXPADIO_CONTENT_ASSET_RESIDENCY_TAGS'),
-    complianceTags: tags('EXPADIO_CONTENT_ASSET_COMPLIANCE_TAGS'),
+    residencyTags: configuredContentAssetPolicy().requiredResidencyTags,
+    complianceTags: configuredContentAssetPolicy().requiredComplianceTags,
     signedReadTtlSeconds: 300,
   });
 }

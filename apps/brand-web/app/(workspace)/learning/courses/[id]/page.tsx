@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { CourseBlockEditor } from '../../../../../components/CourseBlockEditor';
+import { CourseAssetEditor } from '../../../../../components/CourseAssetEditor';
 import { CourseActions } from '../../../../../components/CourseActions';
 import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
 import { loadCourseDetail } from '../../../../../lib/learning-data';
@@ -28,6 +30,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <article className={styles.metric}><div className={styles.metricLabel}>Lessons</div><div className={styles.metricValue}>{version.modules.reduce((sum, module) => sum + module.lessons.length, 0)}</div><div className={styles.metricDetail}>Activities in this version</div></article>
         <article className={styles.metric}><div className={styles.metricLabel}>Visibility</div><div className={styles.metricValue} style={{ fontSize: 18 }}>{version.visibility}</div><div className={styles.metricDetail}>{version.language}</div></article>
       </section>
+      {value.admin ? <section className={styles.panel}><div className={styles.panelHead}><div><h2>Lesson block editor</h2><p>Compose validated, ordered lesson content with autosaved drafts.</p></div></div><div className={styles.panelBody}><CourseBlockEditor courseId={summary.courseId} version={version} /></div></section> : null}
+      {value.admin ? <section className={styles.panel}><div className={styles.panelHead}><div><h2>Lesson assets</h2><p>Upload, scan, preview and attach an approved asset to this draft.</p></div></div><div className={styles.panelBody}><CourseAssetEditor courseId={summary.courseId} version={version} /></div></section> : null}
       <section className={styles.panel}><div className={styles.panelHead}><h2>Learning objectives</h2></div><div className={styles.panelBody}>{version.learningObjectives.length === 0 ? 'No objectives.' : <ul>{version.learningObjectives.map((objective) => <li key={objective}>{objective}</li>)}</ul>}</div></section>
       <section className={styles.panel}><div className={styles.panelHead}><h2>Course structure</h2></div><div className={styles.panelBody}><div className={styles.courseModules}>{version.modules.map((module) => <article key={module.courseModuleId} className={styles.moduleCard}><strong>{module.position}. {module.title}</strong>{module.lessons.map((lesson) => <div key={lesson.lessonId} className={styles.lesson}><div><strong>{lesson.title}</strong> · {lesson.activityType}</div><div className={styles.muted}>{lesson.estimatedMinutes ? `${lesson.estimatedMinutes} min` : 'Flexible duration'}{lesson.required ? ' · Required' : ' · Optional'}</div></div>)}</article>)}</div></div></section>
     </>
