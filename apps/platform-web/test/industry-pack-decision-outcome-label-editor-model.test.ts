@@ -89,7 +89,7 @@ test('clearing all decision-outcome labels removes only the optional override ma
 });
 
 test('empty labels do not invent a caseWorkflow section when none exists', () => {
-  const definition = { label: 'Neutral Pack' };
+  const definition = { label: 'Neutral Pack' } as any;
   const merged = applyDraftDecisionOutcomeLabelsEditorState(definition, { labels: [] });
 
   assert.strictEqual(merged, definition);
