@@ -52,6 +52,21 @@ async function signedSource(c: pg.PoolClient, input: {
   )).rows[0].source_id as string;
 }
 
+async function expectRejectedAtSavepoint(
+  c: pg.PoolClient,
+  name: string,
+  operation: () => Promise<unknown>,
+  validator: (error: unknown) => boolean,
+) {
+  await c.query(`SAVEPOINT ${name}`);
+  try {
+    await assert.rejects(operation(), validator);
+  } finally {
+    await c.query(`ROLLBACK TO SAVEPOINT ${name}`);
+    await c.query(`RELEASE SAVEPOINT ${name}`);
+  }
+}
+
 test('signed ingress is source-bound, idempotent and cannot choose organization or stage', async () => {
   const su = superuserPool();
   const admin = await su.connect();
@@ -96,8 +111,10 @@ test('signed ingress is source-bound, idempotent and cannot choose organization 
         [captureLeadId, tenantId, orgA, sourceA, Buffer.from(raw).toString('utf8')],
       );
 
-      await assert.rejects(
-        c.query(
+      await expectRejectedAtSavepoint(
+        c,
+        'forged_org',
+        () => c.query(
           `INSERT INTO platform.lead_capture_leads
              (tenant_id, organization_id, source_id, title, stage, status, raw_payload)
            VALUES ($1,$2,$3,'Forged org','NEW_ENQUIRY','ACTIVE','{}'::jsonb)`,
@@ -106,8 +123,10 @@ test('signed ingress is source-bound, idempotent and cannot choose organization 
         (error: unknown) => ['42501','23503'].includes((error as { code?: string }).code ?? ''),
       );
 
-      await assert.rejects(
-        c.query(
+      await expectRejectedAtSavepoint(
+        c,
+        'forged_stage',
+        () => c.query(
           `INSERT INTO platform.lead_capture_leads
              (tenant_id, organization_id, source_id, title, stage, status, raw_payload)
            VALUES ($1,$2,$3,'Forged stage','WON','ACTIVE','{}'::jsonb)`,
@@ -123,8 +142,10 @@ test('signed ingress is source-bound, idempotent and cannot choose organization 
          VALUES ($1,$2,$3,$4,$5,'idem-signed-1',$6::jsonb)`,
         [submissionId, tenantId, orgA, sourceA, captureLeadId, Buffer.from(raw).toString('utf8')],
       );
-      await assert.rejects(
-        c.query(
+      await expectRejectedAtSavepoint(
+        c,
+        'duplicate_idem',
+        () => c.query(
           `INSERT INTO platform.lead_capture_submissions
              (tenant_id, organization_id, source_id, capture_lead_id, idempotency_key, raw_payload)
            VALUES ($1,$2,$3,$4,'idem-signed-1','{}'::jsonb)`,
