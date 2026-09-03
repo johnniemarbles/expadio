@@ -34,3 +34,16 @@ test('storage references stay opaque and provider-neutral', () => {
   assert.doesNotMatch(migration, /public_url|access_key|secret_key|service_role/i);
   assert.doesNotMatch(runtime, /SUPABASE|S3_|AWS_|bucket/i);
 });
+
+
+test('content asset migration requires quarantine and valid PL/pgSQL quoting', () => {
+  assert.doesNotMatch(migration, /LANGUAGE plpgsql\nAS \$\n/);
+  assert.match(
+    migration,
+    /WHEN 'UPLOADED' THEN NEW\.state IN \('QUARANTINED', 'REJECTED', 'DELETED'\)/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /WHEN 'UPLOADED' THEN NEW\.state IN \([^\n]*'AVAILABLE'/,
+  );
+});
