@@ -21,7 +21,7 @@ export interface CommunicationContentPolicyResult {
   readonly violations: readonly CommunicationContentPolicyViolation[];
 }
 
-export const COMMUNICATION_ALLOWED_HTML_TAGS = new Set([
+export const COMMUNICATION_ALLOWED_HTML_TAGS: ReadonlySet<string> = new Set([
   'a',
   'abbr',
   'b',
@@ -56,9 +56,9 @@ export const COMMUNICATION_ALLOWED_HTML_TAGS = new Set([
   'tr',
   'u',
   'ul',
-] as const);
+]);
 
-export const COMMUNICATION_ALLOWED_HTML_ATTRIBUTES = new Set([
+export const COMMUNICATION_ALLOWED_HTML_ATTRIBUTES: ReadonlySet<string> = new Set([
   'alt',
   'aria-label',
   'colspan',
@@ -71,7 +71,7 @@ export const COMMUNICATION_ALLOWED_HTML_ATTRIBUTES = new Set([
   'target',
   'title',
   'width',
-] as const);
+]);
 
 export function sanitizedHtml(value: string): SanitizedHtml {
   return { __brand: 'SanitizedHtml', value };
