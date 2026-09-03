@@ -1,0 +1,6 @@
+.drawer{transition:opacity var(--theme-motion-panel) var(--theme-easing),transform var(--theme-motion-panel) var(--theme-easing)}
+.drawer[data-state='closed']{opacity:0;pointer-events:none;visibility:hidden}
+.drawer[data-state='closed'][data-side='right']{transform:translateX(var(--theme-motion-distance-panel))}
+.drawer[data-state='closed'][data-side='left']{transform:translateX(calc(var(--theme-motion-distance-panel) * -1))}
+.drawer[data-state='open']{opacity:1;transform:translateX(0);visibility:visible}
+@media(prefers-reduced-motion:reduce){.drawer{transition:none;transform:none}}

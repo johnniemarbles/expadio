@@ -1,0 +1,3 @@
+.list>*{animation:motionListIn var(--theme-motion-normal) var(--theme-easing) both;animation-delay:calc(var(--motion-stagger) * var(--motion-index,0))}
+@keyframes motionListIn{from{opacity:0;transform:translateY(var(--theme-motion-distance-small))}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.list>*{animation:none}}

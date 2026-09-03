@@ -50,7 +50,14 @@ export async function resolveBrandContext():Promise<BrandContext>{
 export async function withBrandTransaction<T>(context:BrandContext,work:(client:pg.PoolClient)=>Promise<T>):Promise<T>{
   const client=await dbPool.connect();
   try{
-    await client.query('BEGIN');await client.query("SELECT set_config('app.tenant_id',$1,true)",[context.tenantId]);
+    await client.query('BEGIN');
+    await client.query(
+      `SELECT set_config('app.tenant_id',$1,true),
+              set_config('app.subject_id',$2,true),
+              set_config('app.issuer',$3,true),
+              set_config('app.organization_id',$4,true)`,
+      [context.tenantId,context.subjectId,context.issuer,context.organizationId],
+    );
     const value=await work(client);await client.query('COMMIT');return value;
   }catch(error){try{await client.query('ROLLBACK')}catch{}throw error}finally{client.release()}
 }

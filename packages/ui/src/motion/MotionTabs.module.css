@@ -1,0 +1,4 @@
+.tabs{display:flex;border-bottom:1px solid var(--theme-border)}
+.tabs>[role='tab']{transition:background-color var(--theme-motion-fast) var(--theme-easing),border-color var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing),transform var(--theme-motion-fast) var(--theme-easing)}
+.tabs>[role='tab']:active{transform:translateY(var(--theme-motion-distance-micro))}
+@media(prefers-reduced-motion:reduce){.tabs>[role='tab']{transition:none}.tabs>[role='tab']:active{transform:none}}

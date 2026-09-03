@@ -21,15 +21,13 @@ function apiError(data: unknown, fallback: string): string {
   return fallback;
 }
 
-const badge = (state: string): React.CSSProperties => {
-  const map: Record<string, string> = {
-    ACTIVE: 'var(--theme-primary)', DRAFT: 'var(--theme-neutral)', IN_REVIEW: 'var(--theme-warning)', SUPERSEDED: 'var(--theme-neutral)', ARCHIVED: 'var(--theme-neutral)',
-  };
-  return {
-    display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-    color: 'var(--theme-text-inverse)', background: map[state] ?? 'var(--theme-neutral)',
-  };
+const badgeClass = (state: string): string => {
+  if (state === 'ACTIVE') return [styles.statusBadge, styles.statusPositive].join(' ');
+  if (state === 'IN_REVIEW') return [styles.statusBadge, styles.statusWarning].join(' ');
+  return [styles.statusBadge, styles.statusNeutral].join(' ');
 };
+
+import { MotionPanel, MotionFeedback } from "@expadio/ui";
 
 export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprints: BlueprintSummary[]; queryString?: string }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -71,19 +69,19 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="blueprints-title">
+    <MotionPanel className={styles.panel} aria-labelledby="blueprints-title">
       <div className={styles.panelHeading}>
         <div>
           <p className={styles.eyebrow}>Authoring</p>
           <h2 id="blueprints-title">Workflow Blueprints</h2>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className={styles.toolbar}>
           {platformKeys.map((b) => (
             <button
               key={b.blueprintKey}
               onClick={() => clone(b.blueprintKey)}
               disabled={busy !== null}
-              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
+              className={[styles.button, styles.buttonSecondary].join(' ')}
             >
               {busy === `clone:${b.blueprintKey}` ? 'Cloning…' : `Customize "${b.blueprintKey}"`}
             </button>
@@ -91,7 +89,7 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
         </div>
       </div>
 
-      {error && <p style={{ color: 'var(--theme-danger)', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
+      {error && <MotionFeedback tone="danger" title={error} className={styles.inlineAlert} />}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -114,13 +112,13 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
                 <td>{b.scope}</td>
                 <td>{b.version}</td>
                 <td>{b.stageCount}</td>
-                <td><span style={badge(b.state)}>{b.state}</span></td>
+                <td><span className={badgeClass(b.state)}>{b.state}</span></td>
                 <td>
                   {b.scope === 'TENANT' && (b.state === 'DRAFT' || b.state === 'IN_REVIEW') ? (
                     <button
                       onClick={() => publish(b.blueprintKey, b.version)}
                       disabled={busy !== null}
-                      style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}
+                      className={styles.button}
                     >
                       {busy === `publish:${b.blueprintKey}:${b.version}` ? 'Publishing…' : 'Publish'}
                     </button>
@@ -133,6 +131,6 @@ export function BlueprintAuthoring({ blueprints, queryString = '' }: { blueprint
           </tbody>
         </table>
       </div>
-    </section>
+    </MotionPanel>
   );
 }

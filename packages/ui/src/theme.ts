@@ -53,10 +53,18 @@ export interface ThemeMaterial {
 }
 
 export interface ThemeMotion {
+  readonly instant: string;
   readonly fast: string;
   readonly normal: string;
   readonly slow: string;
+  readonly panel: string;
+  readonly data: string;
+  readonly distanceMicro: string;
+  readonly distanceSmall: string;
+  readonly distancePanel: string;
   readonly easing: string;
+  readonly easingEmphasis: string;
+  readonly easingLinear: string;
 }
 
 export interface ThemeShellTokens {
@@ -205,10 +213,18 @@ export const EXPADIO_COMMAND_OBSIDIAN: ExpadioThemeDefinition = {
     borderGlow: '0 0 0 1px rgba(34,211,238,.08)',
   },
   motion: {
+    instant: '0ms',
     fast: '140ms',
     normal: '220ms',
     slow: '340ms',
+    panel: '360ms',
+    data: '700ms',
+    distanceMicro: '2px',
+    distanceSmall: '6px',
+    distancePanel: '12px',
     easing: 'cubic-bezier(.2,.8,.2,1)',
+    easingEmphasis: 'cubic-bezier(.2,.9,.2,1.2)',
+    easingLinear: 'linear',
   },
   shell: {
     sidebarWidth: '228px',
@@ -364,10 +380,18 @@ export function themeVariableMap(
     '--theme-blur': theme.material.blur,
     '--theme-translucency': theme.material.translucency,
     '--theme-border-glow': theme.material.borderGlow,
+    '--theme-motion-instant': theme.motion.instant,
     '--theme-motion-fast': theme.motion.fast,
     '--theme-motion-normal': theme.motion.normal,
     '--theme-motion-slow': theme.motion.slow,
+    '--theme-motion-panel': theme.motion.panel,
+    '--theme-motion-data': theme.motion.data,
+    '--theme-motion-distance-micro': theme.motion.distanceMicro,
+    '--theme-motion-distance-small': theme.motion.distanceSmall,
+    '--theme-motion-distance-panel': theme.motion.distancePanel,
     '--theme-easing': theme.motion.easing,
+    '--theme-easing-emphasis': theme.motion.easingEmphasis,
+    '--theme-easing-linear': theme.motion.easingLinear,
     '--theme-sidebar-width': theme.shell.sidebarWidth,
     '--theme-header-height': theme.shell.headerHeight,
     '--theme-sidebar-surface': mode === 'dark' ? theme.shell.sidebarSurfaceDark : theme.shell.sidebarSurfaceLight,

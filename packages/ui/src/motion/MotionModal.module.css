@@ -1,0 +1,6 @@
+.backdrop{position:fixed;inset:0;display:grid;place-items:center;background:var(--theme-overlay);animation:motionBackdropIn var(--theme-motion-fast) var(--theme-easing) both;z-index:100}
+.dialog{max-height:min(90vh,900px);overflow:auto;background:var(--theme-surface-raised);border:1px solid var(--theme-border);border-radius:var(--theme-radius-modal);box-shadow:var(--theme-shadow-elevated);animation:motionDialogIn var(--theme-motion-panel) var(--theme-easing) both}
+.title{color:var(--theme-text-primary);font-weight:800}
+@keyframes motionBackdropIn{from{opacity:0}to{opacity:1}}
+@keyframes motionDialogIn{from{opacity:0;transform:translateY(var(--theme-motion-distance-panel)) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.backdrop,.dialog{animation:none}}

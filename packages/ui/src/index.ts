@@ -2,6 +2,7 @@
 export * from './contracts';
 export * from './operational-state';
 export * from './motion-presets';
+export * from './motion';
 
 // Components
 export * from './components/StatePill';

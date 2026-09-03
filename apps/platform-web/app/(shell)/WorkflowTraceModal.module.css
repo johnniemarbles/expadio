@@ -1,0 +1,64 @@
+.backdrop {
+  animation: traceBackdropIn var(--theme-motion-fast) var(--theme-easing) both;
+}
+
+.dialog {
+  animation: traceDialogIn var(--theme-motion-normal) var(--theme-easing) both;
+}
+
+.feedback {
+  animation: traceFeedbackIn var(--theme-motion-fast) var(--theme-easing) both;
+}
+
+.closeButton {
+  transition:
+    border-color var(--theme-motion-fast) var(--theme-easing),
+    background var(--theme-motion-fast) var(--theme-easing),
+    transform var(--theme-motion-fast) var(--theme-easing);
+}
+
+.closeButton:hover {
+  transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
+}
+
+.closeButton:active {
+  transform: translateY(0);
+}
+
+@keyframes traceBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes traceDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--theme-motion-distance-small));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes traceFeedbackIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .feedback {
+    animation: none;
+  }
+
+  .closeButton {
+    transition: none;
+  }
+
+  .closeButton:hover,
+  .closeButton:active {
+    transform: none;
+  }
+}

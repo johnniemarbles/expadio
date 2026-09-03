@@ -444,8 +444,15 @@ test('competency reconciliation promotes, downgrades and lapses from pinned evid
     const practitionerPractice = practitioner.competencies.find(
       (item) => item.competencyKey === 'privacy.practice',
     );
-    assert.equal(practitionerPractice?.currentLevel?.levelKey, 'practitioner');
-    assert.equal(practitioner.eventsEmitted, 1);
+    const practitionerCurrency = practitioner.competencies.find(
+      (item) => item.competencyKey === 'privacy.credential.currency',
+    );
+    // Passing the final program assessment now completes the program and issues
+    // its credential in the same governed transaction, so competency evidence
+    // can advance directly to the highest currently satisfied level.
+    assert.equal(practitionerPractice?.currentLevel?.levelKey, 'certified');
+    assert.equal(practitionerCurrency?.currentLevel?.levelKey, 'current');
+    assert.equal(practitioner.eventsEmitted, 2);
 
     await assert.rejects(
       () => tx(c, () => reconcileMyLearningCompetencies(c, {
@@ -465,6 +472,7 @@ test('competency reconciliation promotes, downgrades and lapses from pinned evid
       correlationId: 'competency-program-complete-itest',
     }));
     assert.equal(programCompleted.enrollment.status, 'COMPLETED');
+    assert.equal(programCompleted.newlyCompleted, false);
     assert.equal(programCompleted.issuedCredentials.length, 1);
     const credential = programCompleted.issuedCredentials[0];
     assert.ok(credential);
@@ -484,7 +492,7 @@ test('competency reconciliation promotes, downgrades and lapses from pinned evid
     assert.equal(certifiedPractice?.currentLevel?.levelKey, 'certified');
     assert.equal(currency?.status, 'ACTIVE');
     assert.equal(currency?.currentLevel?.levelKey, 'current');
-    assert.equal(certified.eventsEmitted, 2);
+    assert.equal(certified.eventsEmitted, 0);
 
     const issuedAtMs = Date.parse(credential.issuedAt);
     const expiredAt = new Date(issuedAtMs + 11 * 86400000);
@@ -577,7 +585,7 @@ test('competency reconciliation promotes, downgrades and lapses from pinned evid
     assert.deepEqual(events.rows, [
       { event_type: 'learning.competency.achieved', count: 2 },
       { event_type: 'learning.competency.lapsed', count: 1 },
-      { event_type: 'learning.competency.level.changed', count: 3 },
+      { event_type: 'learning.competency.level.changed', count: 2 },
     ]);
   } finally {
     c.release();

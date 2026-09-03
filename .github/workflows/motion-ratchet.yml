@@ -1,0 +1,20 @@
+name: Motion Ratchet
+on:
+  pull_request:
+    paths: ['apps/**','verticals/**','packages/ui/**','scripts/check-motion-ratchet.mjs','.github/workflows/motion-ratchet.yml']
+permissions:
+  contents: read
+concurrency:
+  group: motion-ratchet-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v5
+        with: { node-version: '22.16.0', package-manager-cache: false }
+      - name: Reject ungoverned motion
+        env: { MOTION_RATCHET_BASE_REF: "${{ github.base_ref }}" }
+        run: node scripts/check-motion-ratchet.mjs

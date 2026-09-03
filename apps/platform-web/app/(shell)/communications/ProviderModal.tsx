@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { apiError } from "../../../lib/api-error";
 import { wrapSecret, type PublishedWrappingKey } from "../../../lib/custody-wrap";
+import motionStyles from "./ProviderModal.module.css";
 
 type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () => void };
 
@@ -18,7 +19,6 @@ type ProviderModalProps = { isOpen: boolean; onClose: () => void; onCreated: () 
  * Every custody and provider call carries a fresh step-up header (§3.4).
  */
 
-// [registerKey, channel, label, custodyBaseKey|null]
 const PROVIDERS: readonly [string, string, string, string | null][] = [
   ["ses", "email", "AWS SES", "ses"],
   ["sendgrid", "email", "SendGrid", "sendgrid"],
@@ -60,15 +60,12 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   const [region, setRegion] = useState("");
   const [priority, setPriority] = useState("100");
   const [custodyMode, setCustodyMode] = useState<CustodyMode>("CUSTOMER_EGRESS");
-
-  // BYOK credential fields.
   const [secret, setSecret] = useState("");
   const [accountSid, setAccountSid] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [accessKeyId, setAccessKeyId] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [fromNumber, setFromNumber] = useState("");
-
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,8 +137,6 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     if (!intakeRes.ok) throw new Error(apiError(intakeBody, "The credential could not be verified."));
 
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
-    // Probe capabilities ('sms.send') are provider-scope; the connector is
-    // registered against the platform capability key for its channel.
     return { reference: intakeBody.reference, capabilities: [capabilityKey] };
   }
 
@@ -172,12 +167,12 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
   }
 
   const field: React.CSSProperties = {
-    width: "100%", padding: "8px 12px", border: "1px solid var(--line, #cbd5e1)", borderRadius: 8, fontSize: 13, outline: "none",
+    width: "100%", padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13, outline: "none",
   };
 
   return (
-    <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--surface, var(--theme-text-inverse))", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
+    <div role="presentation" onClick={onClose} className={motionStyles.backdrop} style={{ position: "fixed", inset: 0, zIndex: 120, background: "var(--theme-overlay)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className={motionStyles.dialog} style={{ width: "min(580px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", borderRadius: 16, padding: 28, display: "grid", gap: 14 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>Register provider</h2>
@@ -203,12 +198,11 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
             <input type="number" min="0" value={priority} onChange={(e) => setPriority(e.target.value)} style={field} />
           </label>
           <div style={{ display: "grid", gap: 4, fontSize: 12 }}>Capability
-            <div style={{ ...field, background: "#f8fafc", fontFamily: "monospace", fontSize: 12 }}>{capabilityKey}</div>
+            <div style={{ ...field, background: "var(--theme-surface-muted)", fontFamily: "monospace", fontSize: 12 }}>{capabilityKey}</div>
           </div>
         </div>
 
-        {/* Custody mode */}
-        <fieldset style={{ border: "1px solid var(--line, #e2e8f0)", borderRadius: 10, padding: 12, margin: 0 }}>
+        <fieldset style={{ border: "1px solid var(--theme-border)", borderRadius: 10, padding: 12, margin: 0 }}>
           <legend style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-secondary)", padding: "0 6px" }}>Credential custody</legend>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, marginBottom: 8 }}>
             <input type="radio" name="custody" checked={custodyMode === "CUSTOMER_EGRESS"} onChange={() => setCustodyMode("CUSTOMER_EGRESS")} />
@@ -221,48 +215,28 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
         </fieldset>
 
         {custodyMode === "DELEGATED" && byokAvailable && (
-          <div style={{ display: "grid", gap: 10, border: "1px dashed var(--line, #cbd5e1)", borderRadius: 10, padding: 12 }}>
+          <div style={{ display: "grid", gap: 10, border: "1px dashed var(--theme-border)", borderRadius: 10, padding: 12 }}>
             <label style={{ display: "grid", gap: 4, fontSize: 12 }}>API secret / token
               <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="Wrapped in your browser before it is sent" style={field} autoComplete="off" />
             </label>
-            {custodyBase === "twilio" && (
-              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account SID
-                <input value={accountSid} onChange={(e) => setAccountSid(e.target.value)} placeholder="ACxxxxxxxx" style={field} />
-              </label>
-            )}
-            {custodyBase === "ses" && (
-              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Access key ID
-                <input value={accessKeyId} onChange={(e) => setAccessKeyId(e.target.value)} placeholder="AKIA…" style={field} />
-              </label>
-            )}
-            {custodyBase === "vonage" && (
-              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>API key
-                <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={field} />
-              </label>
-            )}
+            {custodyBase === "twilio" && <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Account SID<input value={accountSid} onChange={(e) => setAccountSid(e.target.value)} placeholder="ACxxxxxxxx" style={field} /></label>}
+            {custodyBase === "ses" && <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Access key ID<input value={accessKeyId} onChange={(e) => setAccessKeyId(e.target.value)} placeholder="AKIA…" style={field} /></label>}
+            {custodyBase === "vonage" && <label style={{ display: "grid", gap: 4, fontSize: 12 }}>API key<input value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={field} /></label>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>From address
-                <input value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="no-reply@brand.com" style={field} />
-              </label>
-              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>From number
-                <input value={fromNumber} onChange={(e) => setFromNumber(e.target.value)} placeholder="+15551234567" style={field} />
-              </label>
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>From address<input value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="no-reply@brand.com" style={field} /></label>
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>From number<input value={fromNumber} onChange={(e) => setFromNumber(e.target.value)} placeholder="+15551234567" style={field} /></label>
             </div>
-            <p style={{ margin: 0, fontSize: 11, color: "var(--ink-500, #64748b)" }}>The secret is ECDH-wrapped in your browser; only the sealed envelope is transmitted.</p>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--theme-text-muted)" }}>The secret is ECDH-wrapped in your browser; only the sealed envelope is transmitted.</p>
           </div>
         )}
 
-        {status && <p style={{ margin: 0, fontSize: 12, color: "var(--brand, var(--theme-primary))" }}>{status}</p>}
-        {warnings.length > 0 && (
-          <div style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>
-            {warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
-          </div>
-        )}
-        {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
+        {status && <p className={motionStyles.status} style={{ margin: 0, fontSize: 12, color: "var(--theme-primary)" }}>{status}</p>}
+        {warnings.length > 0 && <div className={motionStyles.warning} style={{ fontSize: 12, color: "var(--theme-warning)", background: "color-mix(in srgb,var(--theme-warning) 12%,transparent)", padding: 10, borderRadius: 8 }}>{warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}</div>}
+        {error && <p role="alert" className={motionStyles.error} style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={() => { reset(); onClose(); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line, #cbd5e1)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--brand, var(--theme-primary))", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+        <div className={motionStyles.actions} style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button type="button" onClick={() => { reset(); onClose(); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
             {saving ? "Working…" : custodyMode === "DELEGATED" ? "Verify & register" : "Register provider"}
           </button>
         </div>

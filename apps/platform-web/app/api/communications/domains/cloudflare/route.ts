@@ -5,13 +5,18 @@ import { findZone, upsertRecord, CloudflareError } from "../../../../../lib/clou
 import { requireCommunicationDomainAdmin } from "../../../../../lib/communication-domain-admin";
 
 /**
- * Sending-domain auto-configuration (design: no fabricated VERIFIED).
+ * Sending-domain DNS auto-configuration.
  *
  * The caller and existing sender state are checked before any Cloudflare token
  * or provider call. DNS requirements are provisioned only when a transient or
  * deployment token is available; provider-issued DKIM remains untouched. The
  * resulting tenant sender stays PENDING and transactional-only until explicit
  * DNS + provider verification.
+ * 
+ * Cloudflare credentials are deployment-held infrastructure credentials. This
+ * boundary never accepts a DNS credential from a browser request. When the
+ * deployment has no Cloudflare token configured, the endpoint returns the DNS
+ * requirements for manual configuration and performs no external mutation.
  */
 
 export const runtime = "nodejs";
@@ -26,6 +31,15 @@ export async function POST(request: Request) {
     const domain = typeof body.domain === "string" ? body.domain.trim().toLowerCase() : "";
     if (!DOMAIN_PATTERN.test(domain)) {
       return NextResponse.json({ error: "Enter a valid domain such as mail.example.com." }, { status: 400 });
+    }
+    if (typeof body.apiToken === "string" && body.apiToken.trim()) {
+      return NextResponse.json(
+        {
+          error: "Cloudflare credentials cannot be supplied through this request. Configure deployment DNS automation instead.",
+          reasonKey: "BROWSER_DNS_CREDENTIAL_FORBIDDEN",
+        },
+        { status: 400 },
+      );
     }
 
     const address = `notifications@${domain}`;
@@ -59,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     const records = expectedDnsRecords(domain);
-    const token = (typeof body.apiToken === "string" && body.apiToken.trim()) || process.env.CLOUDFLARE_API_TOKEN || "";
+    const token = process.env.CLOUDFLARE_API_TOKEN?.trim() ?? "";
 
     let provisioned = false;
     let zoneName: string | null = null;
@@ -118,7 +132,7 @@ export async function POST(request: Request) {
 
     const message = provisioned
       ? `Configured ${results?.length ?? 0} verifiable DNS records in Cloudflare zone ${zoneName}. Add/verify the provider-issued records too, then Verify.`
-      : `Generated DNS requirements for ${domain}. Add the provider-issued records in your email provider, then Verify.`;
+      : `Generated DNS requirements for ${domain}. Deployment Cloudflare automation is not configured, so add these records manually and then Verify.`;
 
     return NextResponse.json({
       success: true,

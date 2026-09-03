@@ -21,8 +21,13 @@
   border: 1px solid var(--theme-border, var(--theme-border));
   box-shadow: var(--theme-shadow-elevated, 0 10px 25px rgba(0,0,0,0.12));
   color: var(--theme-text-primary, var(--theme-text-primary));
-  animation: toastSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  animation: toastSlideIn var(--theme-transition-entrance) both;
+  transition: transform var(--theme-transition-hover), opacity var(--theme-transition-hover), border-color var(--theme-transition-hover);
+}
+
+.toastItem:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--theme-primary) 16%, var(--theme-border));
 }
 
 .toastIcon {
@@ -87,16 +92,18 @@
   margin-left: 4px;
   line-height: 1;
   border-radius: 4px;
+  transition: color var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
 }
 
 .toastClose:hover {
   color: var(--theme-text-primary, var(--ink-900));
+  transform: scale(1.05);
 }
 
 @keyframes toastSlideIn {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.95);
+    transform: translateY(var(--theme-motion-distance-panel)) scale(.98);
   }
   to {
     opacity: 1;
@@ -105,7 +112,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toastItem {
+  .toastItem,
+  .toastClose {
     animation: none;
+    transition: none;
+  }
+  .toastItem:hover,
+  .toastClose:hover {
+    transform: none;
   }
 }

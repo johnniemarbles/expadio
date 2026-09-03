@@ -387,7 +387,9 @@ test('program completion issues one credential and governs lifecycle transitions
     }));
     assert.equal(completed.enrollment.status, 'COMPLETED');
     assert.equal(completed.enrollment.completionPercent, 100);
-    assert.equal(completed.newlyCompleted, true);
+    // Assessment pass now reconciles affected programs immediately.
+    // A later explicit reconcile is an idempotent read/reconciliation pass.
+    assert.equal(completed.newlyCompleted, false);
     assert.equal(completed.issuedCredentials.length, 1);
 
     const credential = completed.issuedCredentials[0];

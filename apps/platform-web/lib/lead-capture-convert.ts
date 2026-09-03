@@ -1,9 +1,9 @@
 /**
- * Capture → thin CRM writer (I8 / ADR-011).
+ * Trusted Capture → thin CRM writer (I8 / ADR-011).
  *
- * Distinct from POST /api/crm/leads/:id/convert, which turns a CRM lead into a
- * customer. This writer projects an extract capture snapshot onto
- * platform.crm_leads and never deletes capture history.
+ * The request may identify a capture lead, but cannot assert its stage, payload,
+ * organization, or layer provenance. Those fields are loaded from persisted
+ * Demand Capture state under the same organization-aware RLS context.
  */
 import {
   buildCrmLeadFromCapture,
@@ -17,10 +17,20 @@ import type { ResolvedRequestContext } from './request-context';
 export class CaptureScopeRejected extends Error {
   readonly field: string;
   constructor(field: string) {
-    super(`${field} is not accepted on the convert body. Tenant and layer come from the gateway principal.`);
+    super(`${field} is not accepted on the convert body. Capture scope and provenance come from trusted persisted capture state.`);
     this.name = 'CaptureScopeRejected';
     this.field = field;
   }
+}
+
+export interface CaptureSqlClient {
+  query<Row = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<{ rows: Row[] }>;
+}
+
+export interface TrustedCaptureProjection {
+  readonly organizationId: string;
+  readonly ownerSubjectId: string | null;
+  readonly snapshot: CaptureConvertSnapshot;
 }
 
 /** Production principal. Never taken from the JSON body (P16). */
@@ -36,61 +46,89 @@ export function principalFromResolvedContext(context: ResolvedRequestContext): {
   };
 }
 
-/** P16 — body may not choose tenant / brand / layer. */
-export function rejectCaptureBodyScope(body: unknown): void {
-  if (body == null || typeof body !== 'object' || Array.isArray(body)) return;
-  const record = body as Record<string, unknown>;
-  for (const field of ['tenantId', 'brandId', 'layerId'] as const) {
+/**
+ * The projection request is a reference, not a capture payload. Any attempt to
+ * smuggle capture state or scope through JSON is rejected rather than ignored.
+ */
+export function captureLeadIdFromConvertBody(body: unknown): string {
+  const record = body && typeof body === 'object' && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
+  for (const field of [
+    'tenantId', 'brandId', 'organizationId', 'layerId', 'captureLayerId',
+    'captureStage', 'title', 'email', 'rawPayload', 'contactId', 'accountId',
+  ] as const) {
     if (record[field] !== undefined && record[field] !== null && record[field] !== '') {
       throw new CaptureScopeRejected(field);
     }
   }
+  const captureLeadId = typeof record.captureLeadId === 'string' ? record.captureLeadId.trim() : '';
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(captureLeadId)) {
+    throw new LeadValidationError('captureLeadId', 'captureLeadId must be a valid identifier.');
+  }
+  return captureLeadId;
 }
 
-export function snapshotFromConvertBody(
-  body: unknown,
-  tenantId: string,
-): CaptureConvertSnapshot {
-  rejectCaptureBodyScope(body);
-  const record = (body ?? {}) as Record<string, unknown>;
-  const captureLeadId = typeof record.captureLeadId === 'string' ? record.captureLeadId.trim() : '';
-  const captureStage = typeof record.captureStage === 'string' ? record.captureStage.trim() : '';
-  if (captureLeadId === '') {
-    throw new LeadValidationError('captureLeadId', 'captureLeadId is required.');
-  }
-  if (captureStage === '') {
-    throw new LeadValidationError('captureStage', 'captureStage is required.');
-  }
-  const rawPayload =
-    record.rawPayload && typeof record.rawPayload === 'object' && !Array.isArray(record.rawPayload)
-      ? (record.rawPayload as Record<string, unknown>)
-      : {};
+/**
+ * Load authoritative capture state under RLS. Selected-workspace subtree scope is
+ * enforced by lead_capture_leads/source policies; this query also pins tenant_id.
+ */
+export async function loadTrustedCaptureProjection(
+  client: CaptureSqlClient,
+  input: { readonly tenantId: string; readonly captureLeadId: string },
+): Promise<TrustedCaptureProjection | null> {
+  const result = await client.query<{
+    capture_lead_id: string;
+    tenant_id: string;
+    organization_id: string;
+    title: string | null;
+    email: string | null;
+    stage: string;
+    raw_payload: Record<string, unknown>;
+    owner_subject_id: string | null;
+    layer_key: string | null;
+  }>(
+    `SELECT l.capture_lead_id, l.tenant_id, l.organization_id, l.title, l.email,
+            l.stage, l.raw_payload, l.owner_subject_id, s.layer_key
+       FROM platform.lead_capture_leads l
+       JOIN platform.lead_capture_sources s
+         ON s.source_id = l.source_id
+        AND s.tenant_id = l.tenant_id
+        AND s.organization_id = l.organization_id
+      WHERE l.capture_lead_id = $1::uuid
+        AND l.tenant_id = $2::uuid`,
+    [input.captureLeadId, input.tenantId],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
   return {
-    captureLeadId,
-    tenantId,
-    title: typeof record.title === 'string' ? record.title : undefined,
-    email: typeof record.email === 'string' ? record.email : undefined,
-    captureStage,
-    captureLayerId: typeof record.captureLayerId === 'string' ? record.captureLayerId : undefined,
-    contactId: typeof record.contactId === 'string' ? record.contactId : undefined,
-    accountId: typeof record.accountId === 'string' ? record.accountId : undefined,
-    rawPayload,
+    organizationId: row.organization_id,
+    ownerSubjectId: row.owner_subject_id,
+    snapshot: {
+      captureLeadId: row.capture_lead_id,
+      tenantId: row.tenant_id,
+      title: row.title ?? undefined,
+      email: row.email ?? undefined,
+      captureStage: row.stage,
+      captureLayerId: row.layer_key ?? undefined,
+      rawPayload: row.raw_payload ?? {},
+    },
   };
 }
 
 export const UPSERT_CAPTURE_CRM_LEAD_SQL = `
 INSERT INTO platform.crm_leads
-  (tenant_id, account_id, contact_id, title, stage, amount_minor_units, currency,
+  (tenant_id, organization_id, account_id, contact_id, title, stage, amount_minor_units, currency,
    source, raw_payload, owner_subject_id, capture_lead_id, capture_layer_id)
 VALUES
-  ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11::uuid, $12)
+  ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12::uuid, $13)
 ON CONFLICT (tenant_id, capture_lead_id) WHERE capture_lead_id IS NOT NULL
 DO UPDATE SET
   stage = EXCLUDED.stage,
   raw_payload = EXCLUDED.raw_payload,
-  capture_layer_id = COALESCE(EXCLUDED.capture_layer_id, platform.crm_leads.capture_layer_id),
+  capture_layer_id = EXCLUDED.capture_layer_id,
   updated_at = now()
-RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
+RETURNING lead_id, tenant_id, organization_id, account_id, contact_id, title, stage,
           amount_minor_units, currency, source, raw_payload, owner_subject_id,
           capture_lead_id, capture_layer_id, created_at, updated_at,
           (xmax = 0) AS inserted
@@ -98,11 +136,13 @@ RETURNING lead_id, tenant_id, account_id, contact_id, title, stage,
 
 export function captureConvertBindParams(
   tenantId: string,
+  organizationId: string,
   ownerSubjectId: string,
   input: ValidatedLeadInput,
 ): unknown[] {
   return [
     tenantId,
+    organizationId,
     input.accountId,
     input.contactId,
     input.title,
@@ -117,19 +157,24 @@ export function captureConvertBindParams(
   ];
 }
 
-export function buildCaptureConvertWrite(
-  body: unknown,
+export function buildTrustedCaptureConvertWrite(
+  projection: TrustedCaptureProjection,
   context: ResolvedRequestContext,
 ): {
   readonly principal: ReturnType<typeof principalFromResolvedContext>;
+  readonly organizationId: string;
+  readonly ownerSubjectId: string;
   readonly input: ValidatedLeadInput;
   readonly capturePreserved: true;
   readonly deleteCapture: false;
 } {
   const principal = principalFromResolvedContext(context);
-  const mapped = buildCrmLeadFromCapture(snapshotFromConvertBody(body, principal.tenantId));
+  if (projection.snapshot.tenantId !== principal.tenantId) throw new CaptureScopeRejected('tenantId');
+  const mapped = buildCrmLeadFromCapture(projection.snapshot);
   return {
     principal,
+    organizationId: projection.organizationId,
+    ownerSubjectId: projection.ownerSubjectId ?? context.subjectId,
     input: mapped.input,
     capturePreserved: true,
     deleteCapture: false,
@@ -139,6 +184,7 @@ export function buildCaptureConvertWrite(
 export function toCaptureCrmLead(row: {
   lead_id: string;
   tenant_id: string;
+  organization_id: string;
   account_id?: string | null;
   contact_id?: string | null;
   title: string;
@@ -152,22 +198,20 @@ export function toCaptureCrmLead(row: {
   capture_layer_id?: string | null;
   created_at: string | Date;
   updated_at: string | Date;
-}): CrmLead {
+}): CrmLead & { organizationId: string } {
   const payload = row.raw_payload;
   return {
     leadId: row.lead_id,
     tenantId: row.tenant_id,
+    organizationId: row.organization_id,
     accountId: row.account_id ?? null,
     contactId: row.contact_id ?? null,
     title: row.title,
     stage: row.stage,
-    amountMinorUnits:
-      row.amount_minor_units === null || row.amount_minor_units === undefined
-        ? null
-        : Number(row.amount_minor_units),
+    amountMinorUnits: row.amount_minor_units == null ? null : Number(row.amount_minor_units),
     currency: row.currency,
     source: row.source ?? null,
-    rawPayload: payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {},
+    rawPayload: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {},
     ownerSubjectId: row.owner_subject_id ?? null,
     captureLeadId: row.capture_lead_id ?? null,
     captureLayerId: row.capture_layer_id ?? null,
