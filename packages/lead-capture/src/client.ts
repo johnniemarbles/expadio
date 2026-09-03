@@ -5,11 +5,13 @@ import {
   publicVerifyUrl,
   serializeSubmission,
 } from './contract.ts';
-import { normalizeSubmission } from './normalize.ts';
+import { normalizeInterestSubmission, normalizeSubmission } from './normalize.ts';
 import type {
   BrowserCaptureClientOptions,
   CaptureAttribution,
+  CaptureInterestSubmissionInput,
   CaptureResult,
+  CaptureSubmission,
   CaptureSubmissionInput,
   VerifyResult,
 } from './contract.ts';
@@ -71,14 +73,13 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
   const ingressUrl = publicCaptureUrl(options.baseUrl, options.tenantId, options.sourceId);
   const verifyEndpoint = publicVerifyUrl(options.baseUrl, options.tenantId, options.sourceId);
 
-  async function submit(input: CaptureSubmissionInput): Promise<CaptureResult> {
-    const attribution = withAttribution
+  function attributionFor(input: { readonly attribution?: CaptureAttribution }): CaptureAttribution | undefined {
+    return withAttribution
       ? mergeAttribution(input.attribution ?? {}, pageAttribution())
       : input.attribution;
-    const submission = normalizeSubmission({
-      ...input,
-      ...(attribution !== undefined ? { attribution } : {}),
-    });
+  }
+
+  async function postSubmission(submission: CaptureSubmission): Promise<CaptureResult> {
     const body = serializeSubmission(submission);
     const response = await doFetch(ingressUrl, {
       method: 'POST',
@@ -101,6 +102,25 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
     };
   }
 
+  async function submit(input: CaptureSubmissionInput): Promise<CaptureResult> {
+    const attribution = attributionFor(input);
+    return postSubmission(normalizeSubmission({
+      ...input,
+      ...(attribution !== undefined ? { attribution } : {}),
+    }));
+  }
+
+  /** Submit a governed commercial-interest form. Unlike the generic submit path,
+   * this requires the Tier 1 + Tier 2 interest payload, consent evidence, and
+   * attribution metadata before the browser SDK posts to the public ingress. */
+  async function submitInterest(input: CaptureInterestSubmissionInput): Promise<CaptureResult> {
+    const attribution = attributionFor(input);
+    return postSubmission(normalizeInterestSubmission({
+      ...input,
+      ...(attribution !== undefined ? { attribution } : {}),
+    }));
+  }
+
   /** Complete the OTP gate for a captured lead. A non-2xx (wrong/expired/locked
    *  code) resolves to `{ verified: false, reason }` rather than throwing. */
   async function verify(captureLeadId: string, code: string): Promise<VerifyResult> {
@@ -121,5 +141,5 @@ export function createBrowserCaptureClient(options: BrowserCaptureClientOptions)
     };
   }
 
-  return { submit, verify };
+  return { submit, submitInterest, verify };
 }
