@@ -39,7 +39,10 @@
     "@expadio/ai-gateway": "workspace:*",
     "@expadio/provider-registry": "workspace:*",
     "@expadio/storage": "workspace:*",
-    "@expadio/entity": "workspace:*"
+    "@expadio/entity": "workspace:*",
+    "@expadio/agent-runtime": "workspace:*",
+    "@expadio/capabilities": "workspace:*",
+    "@expadio/knowledge": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

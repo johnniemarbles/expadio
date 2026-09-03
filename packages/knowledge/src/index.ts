@@ -320,3 +320,4 @@ export * from './repository.ts';
 export * from './publication-index-request.ts';
 
 export * from './correction-publication-coordinator.ts';
+export * from './seed-personas.ts';
