@@ -7,6 +7,7 @@ DECLARE
   tenant_b uuid := '64f7c7d2-a001-4e32-a201-000000000002';
   hq uuid; state_a uuid; state_b uuid; operator uuid; unit_a uuid; unit_b uuid;
   owner_a uuid; owner_b uuid;
+  missing_rls text;
 BEGIN
   INSERT INTO platform.tenants(tenant_id,name) VALUES
     (tenant_a,'Entity Graph Soak A'),(tenant_b,'Entity Graph Soak B');
@@ -94,8 +95,12 @@ BEGIN
     (tenant_id,owned_node_id,owning_node_id,percentage,created_by)
   VALUES(tenant_a,unit_a,owner_b,40,'entity-soak');
 
-  IF EXISTS(SELECT 1 FROM platform.tenant_scoped_tables_missing_rls()) THEN
-    RAISE EXCEPTION 'FAIL Gate 11: tenant table missing RLS';
+  SELECT string_agg(format('%I:%s', table_name, reason), ', ' ORDER BY table_name)
+    INTO missing_rls
+    FROM platform.tenant_scoped_tables_missing_rls();
+
+  IF missing_rls IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL Gate 11: tenant table missing RLS: %', missing_rls;
   END IF;
   RAISE NOTICE 'PASS Gate 11: RLS drift check';
 
