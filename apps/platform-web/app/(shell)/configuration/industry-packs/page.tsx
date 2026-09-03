@@ -4,6 +4,7 @@ import { isDenied } from '@expadio/ui/contracts';
 import { fetchApi } from '../../../../lib/live-adapter';
 import type { RouteSearchParams } from '../../../../lib/request-context';
 import styles from './page.module.css';
+import { MotionPanel, MotionTabs, MotionFeedback } from '@expadio/ui';
 import { CloneActiveDraftButton } from './CloneActiveDraftButton';
 import { ReturnIndustryPackToDraftButton } from './ReturnIndustryPackToDraftButton';
 import { PublishIndustryPackButton } from './PublishIndustryPackButton';
