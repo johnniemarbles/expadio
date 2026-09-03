@@ -147,6 +147,83 @@ function TaskCard({
   );
 }
 
+// ── Log discovery form ────────────────────────────────────────────────────
+
+const DISCOVERY_OUTCOMES = ['QUALIFIED', 'UNQUALIFIED', 'NO_SHOW', 'RESCHEDULED', 'OTHER'] as const;
+
+function LogDiscoveryForm({ captureLeadId, onAdded }: { captureLeadId: string; onAdded: () => void }) {
+  const [body, setBody] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState('');
+  const [outcome, setOutcome] = useState<typeof DISCOVERY_OUTCOMES[number]>('QUALIFIED');
+  const [working, setWorking] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (working) return;
+    setWorking(true);
+    const duration = durationMinutes ? parseInt(durationMinutes, 10) : undefined;
+    await fetch(`/api/leads/capture/${captureLeadId}/activities`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        type: 'DISCOVERY',
+        body: body.trim() || null,
+        metadata: { outcome, ...(duration ? { duration_minutes: duration } : {}) },
+      }),
+    });
+    setBody('');
+    setDurationMinutes('');
+    setOutcome('QUALIFIED');
+    setWorking(false);
+    onAdded();
+  }
+
+  return (
+    <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 160px', gap: 8 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, display: 'grid', gap: 4 }}>
+          Notes
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Call notes…"
+            rows={3}
+            maxLength={4000}
+            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', resize: 'vertical', fontSize: 13, fontFamily: 'inherit' }}
+          />
+        </label>
+        <label style={{ fontSize: 11, fontWeight: 700, display: 'grid', gap: 4, alignContent: 'start' }}>
+          Duration (min)
+          <input
+            type="number"
+            min={1}
+            max={480}
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(e.target.value)}
+            placeholder="e.g. 30"
+            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}
+          />
+        </label>
+        <label style={{ fontSize: 11, fontWeight: 700, display: 'grid', gap: 4, alignContent: 'start' }}>
+          Outcome
+          <select
+            value={outcome}
+            onChange={(e) => setOutcome(e.target.value as typeof DISCOVERY_OUTCOMES[number])}
+            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}
+          >
+            {DISCOVERY_OUTCOMES.map((o) => <option key={o}>{o}</option>)}
+          </select>
+        </label>
+      </div>
+      <div>
+        <button type="submit" disabled={working} className={styles.button} style={{ padding: '8px 16px', fontSize: 12 }}>
+          {working ? 'Saving…' : 'Log discovery call'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ── Note form ─────────────────────────────────────────────────────────────
 
 function AddNoteForm({ captureLeadId, onAdded }: { captureLeadId: string; onAdded: () => void }) {
@@ -235,7 +312,7 @@ export default function LeadDetailClient({ captureLeadId }: { captureLeadId: str
   const [lead, setLead] = useState<Lead | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [tab, setTab] = useState<'timeline' | 'tasks'>('timeline');
+  const [tab, setTab] = useState<'timeline' | 'tasks' | 'discovery'>('timeline');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
 
@@ -328,6 +405,9 @@ export default function LeadDetailClient({ captureLeadId }: { captureLeadId: str
         <button onClick={() => setTab('tasks')} style={{ all: 'unset', cursor: 'pointer', padding: '10px 12px', borderBottom: `2px solid ${tab === 'tasks' ? 'var(--theme-primary)' : 'transparent'}`, color: tab === 'tasks' ? 'var(--theme-primary)' : 'var(--theme-text-muted)', fontSize: 12, fontWeight: 700 }}>
           Tasks ({openTasks.length} open)
         </button>
+        <button onClick={() => setTab('discovery')} style={{ all: 'unset', cursor: 'pointer', padding: '10px 12px', borderBottom: `2px solid ${tab === 'discovery' ? 'var(--theme-primary)' : 'transparent'}`, color: tab === 'discovery' ? 'var(--theme-primary)' : 'var(--theme-text-muted)', fontSize: 12, fontWeight: 700 }}>
+          Discovery calls
+        </button>
       </div>
 
       {/* Timeline */}
@@ -342,6 +422,30 @@ export default function LeadDetailClient({ captureLeadId }: { captureLeadId: str
               {activities.length === 0
                 ? <div className={styles.empty}>No activity recorded yet.</div>
                 : activities.map((a) => <ActivityItem key={a.activityId} activity={a} />)
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discovery calls */}
+      {tab === 'discovery' && (
+        <div className={styles.panel}>
+          <div className={styles.panelHead}>
+            <h2>Log discovery call</h2>
+            <span style={{ fontSize: 11, color: 'var(--theme-text-muted)' }}>
+              Records outcome, duration, and notes as a DISCOVERY activity on this lead
+            </span>
+          </div>
+          <div className={styles.panelBody}>
+            <LogDiscoveryForm captureLeadId={captureLeadId} onAdded={() => { setTab('timeline'); loadActivities(); }} />
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--theme-border)', paddingTop: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--theme-text-muted)', marginBottom: 10 }}>
+                Previous discovery activities ({activities.filter((a) => a.activityType === 'DISCOVERY').length})
+              </div>
+              {activities.filter((a) => a.activityType === 'DISCOVERY').length === 0
+                ? <div className={styles.empty}>No discovery calls logged yet.</div>
+                : activities.filter((a) => a.activityType === 'DISCOVERY').map((a) => <ActivityItem key={a.activityId} activity={a} />)
               }
             </div>
           </div>

@@ -96,3 +96,21 @@ test('capture page header links to the analytics dashboard', () => {
   assert.match(capturePage, /leads\/analytics/);
   assert.match(capturePage, /Analytics/);
 });
+
+test('LeadDetailClient has a discovery call tab with LogDiscoveryForm', () => {
+  assert.match(detailClient, /Discovery calls/);
+  assert.match(detailClient, /LogDiscoveryForm/);
+  assert.match(detailClient, /type.*DISCOVERY|DISCOVERY.*type/s);
+});
+
+test('LogDiscoveryForm posts outcome, duration_minutes and body to activities API', () => {
+  assert.match(detailClient, /duration_minutes/);
+  assert.match(detailClient, /outcome/);
+  assert.match(detailClient, /QUALIFIED|UNQUALIFIED|NO_SHOW/);
+  assert.match(detailClient, /Log discovery call/);
+});
+
+test('discovery tab filters activities by DISCOVERY type for history list', () => {
+  assert.match(detailClient, /activityType.*DISCOVERY|DISCOVERY.*activityType/s);
+  assert.match(detailClient, /Previous discovery activities/);
+});
