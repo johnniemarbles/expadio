@@ -21,8 +21,12 @@ test('Brand Demand Capture reads stay inside selected workspace RLS', () => {
   assert.match(detail, /lead_capture_status_history/);
 });
 
-test('stage and status mutations use governed actor context, never request authority scope', () => {
+test('stage and status mutations require active Lead Management and governed actor context', () => {
   for (const source of [stage, status]) {
+    assert.match(source, /loadTenantProductModule/);
+    assert.match(source, /moduleKey: 'lead-management'/);
+    assert.match(source, /availability !== 'ACTIVE'/);
+    assert.match(source, /LEAD_MODULE_NOT_ACTIVE/);
     assert.match(source, /hasBrandGovernanceForOrganization/);
     assert.match(source, /app\.lead_capture_transition_actor/);
     assert.match(source, /context\.subjectId/);
@@ -36,10 +40,12 @@ test('stage and status mutations use governed actor context, never request autho
   assert.match(status, /TERMINAL_STAGE_STATUS_LOCKED/);
 });
 
-test('database records every lifecycle mutation and fails closed on non-standard stage moves', () => {
+test('database records every lifecycle mutation and fails closed on non-standard or terminally inconsistent moves', () => {
   assert.match(migration, /lead_capture_standard_next_stage/);
   assert.match(migration, /non-standard lead capture stage transition requires reason/);
   assert.match(migration, /terminal lead capture stage requires close reason/);
+  assert.match(migration, /terminal lead capture stage requires aligned operational status/);
+  assert.match(migration, /clock_timestamp\(\)/);
   assert.match(migration, /lead_capture_stage_history/);
   assert.match(migration, /lead_capture_status_history/);
   assert.match(migration, /append-only/);
