@@ -16,6 +16,7 @@ INSERT INTO platform.product_modules (
   'Capture, qualify and progress organization-scoped leads into customers.',
   'SHARED_TENANT_MODULE',
   jsonb_build_object(
+    'route', '/leads',
     'shell',
     jsonb_build_object(
       'category', 'Growth',
