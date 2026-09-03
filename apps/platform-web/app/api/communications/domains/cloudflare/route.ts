@@ -29,9 +29,9 @@ export async function POST(request: Request) {
     }
 
     const address = `notifications@${domain}`;
-    const preflight = await withTenantClient(context, async (client) => {
+    const authorized = await withTenantClient(context, async (client) => {
       if (!(await requireCommunicationDomainAdmin(client, context.subjectId, context.tenantId))) {
-        return { authorized: false as const, suspended: false };
+        return { allowed: false as const, suspended: false };
       }
       const existing = await client.query<{ status: string }>(
         `SELECT status
@@ -44,14 +44,14 @@ export async function POST(request: Request) {
         [context.tenantId, address],
       );
       return {
-        authorized: true as const,
+        allowed: true as const,
         suspended: existing.rows[0]?.status === 'SUSPENDED',
       };
     });
-    if (!preflight.authorized) {
+    if (!authorized.allowed) {
       return NextResponse.json({ denied: true, reasonKey: 'FORBIDDEN', message: 'Sending-domain administration is required.' }, { status: 403 });
     }
-    if (preflight.suspended) {
+    if (authorized.suspended) {
       return NextResponse.json(
         { error: 'This sender is suspended and can only be restored through Platform governance.' },
         { status: 409 },
