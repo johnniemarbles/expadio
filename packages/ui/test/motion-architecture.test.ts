@@ -15,7 +15,8 @@ test('panel retains a closing state before unmount',()=>{
   const source=read('src/motion/MotionPanel.tsx');
   assert.match(source,/setTimeout/u);
   assert.match(source,/data-state=\{open \? 'open' : 'closing'\}/u);
-  assert.doesNotMatch(source,/hidden=\{!open\}/u);
+  assert.doesNotMatch(source,/\shidden=\{!open\}/u);
+  assert.match(source,/inert=\{!open \? true : undefined\}/u);
 });
 
 test('list staggering is uncapped and card delay is bounded',()=>{
