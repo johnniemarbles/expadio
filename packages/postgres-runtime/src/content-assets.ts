@@ -383,3 +383,18 @@ export async function resolveQuarantinedContentAssetScan(
   });
   return { asset: next, scan };
 }
+
+
+export async function loadContentAsset(
+  client: PostgresClient,
+  input: { readonly tenantId: string; readonly assetId: string },
+): Promise<ContentAssetRecord> {
+  const result = await client.query<AssetRow>(
+    `SELECT ${SELECT} FROM platform.content_assets
+      WHERE tenant_id = $1::uuid AND asset_id = $2::uuid`,
+    [input.tenantId, input.assetId],
+  );
+  const asset = result.rows[0];
+  if (!asset) throw new Error('CONTENT_ASSET_NOT_FOUND');
+  return record(asset, false);
+}
