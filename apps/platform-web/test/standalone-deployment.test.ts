@@ -72,4 +72,11 @@ test('Platform health endpoint is dependency-free and unauthenticated',()=>{
   assert.match(health,/ok: true/);
   assert.match(health,/service: 'platform-web'/);
   assert.doesNotMatch(health,/resolveRequestContext|auth\(|dbPool|DATABASE_URL/);
+
+  const proxy=read('../proxy.ts');
+  assert.match(proxy,/['"]\/api\/health\(\.\*\)['"]/);
+  assert.ok(
+    proxy.indexOf('/api/health(.*)') < proxy.indexOf('if (!isPublicRoute(req))'),
+    'health route must be public before Clerk protection is applied',
+  );
 });
