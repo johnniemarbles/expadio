@@ -44,7 +44,7 @@ CREATE TABLE platform.entity_nodes (
   -- A BRAND_HQ node often corresponds to the tenant's root organization.
   -- A UNIT node may or may not have a corresponding workspace organization.
   -- NULL is valid: most operational nodes have no workspace.
-  organization_id  uuid        REFERENCES platform.organizations(organization_id) ON DELETE SET NULL,
+  organization_id  uuid,
 
   status           text        NOT NULL DEFAULT 'ACTIVE'
                    CHECK (status IN ('DRAFT', 'ACTIVE', 'SUSPENDED', 'DISSOLVED')),
@@ -52,10 +52,10 @@ CREATE TABLE platform.entity_nodes (
   -- DISSOLVED is terminal. A dissolved node cannot be reactivated.
   -- Dissolution must carry when and by whom.
   dissolved_at     timestamptz,
-  dissolved_by     uuid,
+  dissolved_by     text,
 
   metadata         jsonb       NOT NULL DEFAULT '{}'::jsonb,
-  created_by       uuid        NOT NULL,
+  created_by       text        NOT NULL CHECK (btrim(created_by) <> ''),
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),
 
