@@ -20,3 +20,4 @@ export * from './client.ts';
 export * from './sign.ts';
 export * from './lead-management-config.ts';
 export * from './governance-escalation.ts';
+export * from './qualification-provenance.ts';
