@@ -14,6 +14,7 @@
 export * from './contract.ts';
 export * from './interest-payload.ts';
 export * from './interest-type-registry.ts';
+export * from './capture-source-config.ts';
 export * from './normalize.ts';
 export * from './public-source.ts';
 export * from './client.ts';
