@@ -6,6 +6,16 @@ import styles from '../../workspace.module.css';
 const PLATFORM_DOMAIN = 'expadio.com';
 const CNAME_TARGET = 'forms.expadio.com';
 
+async function checkCloudflareConnector(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/settings/brand/cloudflare', { cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    return body?.connectorAvailable === true;
+  } catch {
+    return false;
+  }
+}
+
 interface BrandSettings {
   brandSlug: string | null;
   brandDisplayName: string | null;
@@ -31,12 +41,18 @@ export default function BrandSettingsClient({
   const [verifiedAt, setVerifiedAt] = useState<string | null>(initialSettings.brandDomainVerifiedAt);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [cfConfiguring, setCfConfiguring] = useState(false);
+  const [cfConnectorAvailable, setCfConnectorAvailable] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [verifyResult, setVerifyResult] = useState<{ verified: boolean; message?: string } | null>(null);
 
   const cleanDomain = domain.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
   const platformUrl = slug.trim() ? `https://${slug.trim()}.${PLATFORM_DOMAIN}/enquire` : null;
   const customUrl = verifiedAt && cleanDomain ? `https://${cleanDomain}/enquire` : null;
+
+  useEffect(() => {
+    void checkCloudflareConnector().then(setCfConnectorAvailable);
+  }, []);
 
   async function save() {
     if (saving) return;
@@ -85,6 +101,30 @@ export default function BrandSettingsClient({
       if (verified) setVerifiedAt(new Date().toISOString());
     } finally {
       setVerifying(false);
+    }
+  }
+
+  async function cfConfigure() {
+    if (cfConfiguring) return;
+    setCfConfiguring(true);
+    setVerifyResult(null);
+    try {
+      const res = await fetch('/api/settings/brand/cloudflare', { method: 'POST' });
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      if (!res.ok) {
+        setVerifyResult({ verified: false, message: typeof body.error === 'string' ? body.error : 'Cloudflare configuration failed.' });
+        return;
+      }
+      const verified = body.verified === true;
+      setVerifyResult({
+        verified,
+        message: verified
+          ? `CNAME ${body.domain ?? ''} → ${body.expected ?? CNAME_TARGET} confirmed${body.action === 'created' ? ' (record created)' : body.action === 'updated' ? ' (record updated)' : ''}.`
+          : `Record written but CNAME content mismatch — found: ${body.cname ?? '(none)'}.`,
+      });
+      if (verified) setVerifiedAt(new Date().toISOString());
+    } finally {
+      setCfConfiguring(false);
     }
   }
 
@@ -224,10 +264,20 @@ export default function BrandSettingsClient({
         ) : null}
 
         {cleanDomain ? (
-          <div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {cfConnectorAvailable ? (
+              <button
+                onClick={() => void cfConfigure()}
+                disabled={cfConfiguring || saving}
+                className={styles.button}
+                style={{ width: 'fit-content' }}
+              >
+                {cfConfiguring ? 'Configuring…' : '⚡ Auto-configure with Cloudflare'}
+              </button>
+            ) : null}
             <button
               onClick={() => void verify()}
-              disabled={verifying || saving}
+              disabled={verifying || saving || cfConfiguring}
               className={styles.secondaryButton}
               style={{ width: 'fit-content' }}
             >
