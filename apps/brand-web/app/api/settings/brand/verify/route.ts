@@ -43,7 +43,7 @@ export async function POST() {
         domain,
         expected: CNAME_TARGET,
         found: [],
-        message: `No CNAME record found for ${domain}. Add a CNAME pointing to ${CNAME_TARGET} and try again.`,
+        message: `No CNAME record found for ${domain}. If you use Cloudflare, set the record to DNS-only (grey cloud, not proxied) — proxied records hide the CNAME and block verification. Otherwise, add a CNAME pointing to ${CNAME_TARGET} and try again.`,
       });
     }
 
