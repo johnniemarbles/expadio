@@ -234,7 +234,7 @@ export default function PlatformMissionsPage() {
           disabled={submitting || !intent.trim()}
           style={{
             padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: 'var(--theme-primary)', color: 'var(--theme-surface)', border: 'none',
+background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', border: 'none',
             cursor: submitting || !intent.trim() ? 'not-allowed' : 'pointer',
             opacity: submitting || !intent.trim() ? 0.6 : 1, minWidth: 150,
           }}
@@ -281,7 +281,7 @@ export default function PlatformMissionsPage() {
                   <button
                     style={{
                       padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
-                      background: 'var(--theme-success)', color: 'var(--theme-surface)', border: 'none', cursor: 'pointer',
+background: 'var(--theme-success)', color: 'var(--theme-text-inverse)', border: 'none', cursor: 'pointer',
                     }}
                     onClick={() => resolveApproval(a.mission_id, a.approval_id, true)}
                   >
