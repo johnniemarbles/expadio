@@ -56,9 +56,9 @@ jobs:
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
-          echo "=== Applying http_request_transform ruleset ==="
+          echo "=== Applying http_request_late_transform ruleset (header modification) ==="
           RESULT=$(curl -sS -X PUT \
-            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_transform/entrypoint" \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_late_transform/entrypoint" \
             -H "Authorization: Bearer ${CF_TOKEN}" \
             -H "Content-Type: application/json" \
             --data @/tmp/transform_payload.json)
