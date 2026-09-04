@@ -3,99 +3,89 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '../../../workspace.module.css';
 
-// Interest type + opportunity type combinations from the registry
-const INTEREST_TYPE_OPTIONS = [
-  { interestType: 'FRANCHISEE', opportunityType: 'SINGLE_UNIT', label: 'Franchise — Single Unit' },
-  { interestType: 'FRANCHISEE', opportunityType: 'MULTI_UNIT', label: 'Franchise — Multi-Unit' },
-  { interestType: 'FRANCHISEE', opportunityType: 'AREA_DEVELOPMENT', label: 'Franchise — Area Development' },
-  { interestType: 'FRANCHISEE', opportunityType: 'CONVERSION', label: 'Franchise — Conversion' },
-  { interestType: 'FRANCHISEE', opportunityType: 'RESALE', label: 'Franchise — Resale' },
-  { interestType: 'MASTER_FRANCHISEE', opportunityType: null, label: 'Master Franchise' },
-  { interestType: 'DISTRIBUTOR', opportunityType: 'EXCLUSIVE_DISTRIBUTOR', label: 'Distribution — Exclusive' },
-  { interestType: 'DISTRIBUTOR', opportunityType: 'NON_EXCLUSIVE_DISTRIBUTOR', label: 'Distribution — Non-Exclusive' },
-  { interestType: 'DISTRIBUTOR', opportunityType: 'MASTER_DISTRIBUTOR', label: 'Distribution — Master Distributor' },
-  { interestType: 'DISTRIBUTOR', opportunityType: 'SUB_DISTRIBUTOR', label: 'Distribution — Sub-Distributor' },
-  { interestType: 'AFFILIATE', opportunityType: null, label: 'Affiliate Partner' },
-  { interestType: 'LICENSEE', opportunityType: null, label: 'License' },
-  { interestType: 'AGENT', opportunityType: null, label: 'Sales Agent' },
+const OFFERINGS = [
+  { key: 'FRANCHISEE:SINGLE_UNIT', group: 'Franchise', label: 'Single unit', desc: 'One franchise location', slug: 'su' },
+  { key: 'FRANCHISEE:MULTI_UNIT', group: 'Franchise', label: 'Multi-unit', desc: 'Multiple locations, one investor', slug: 'mu' },
+  { key: 'FRANCHISEE:AREA_DEVELOPMENT', group: 'Franchise', label: 'Area development', desc: 'Exclusive territory rights', slug: 'ad' },
+  { key: 'FRANCHISEE:CONVERSION', group: 'Franchise', label: 'Conversion', desc: 'Convert an existing business', slug: 'cv' },
+  { key: 'FRANCHISEE:RESALE', group: 'Franchise', label: 'Resale', desc: 'Buy an existing franchise unit', slug: 'rs' },
+  { key: 'MASTER_FRANCHISEE', group: 'Franchise', label: 'Master franchise', desc: 'Sub-license rights across a region', slug: 'mf' },
+  { key: 'DISTRIBUTOR:EXCLUSIVE_DISTRIBUTOR', group: 'Distribution', label: 'Exclusive', desc: 'Sole rights in a territory', slug: 'ed' },
+  { key: 'DISTRIBUTOR:NON_EXCLUSIVE_DISTRIBUTOR', group: 'Distribution', label: 'Non-exclusive', desc: 'Shared territory rights', slug: 'nd' },
+  { key: 'DISTRIBUTOR:MASTER_DISTRIBUTOR', group: 'Distribution', label: 'Master distributor', desc: 'Manage regional sub-distributors', slug: 'md' },
+  { key: 'DISTRIBUTOR:SUB_DISTRIBUTOR', group: 'Distribution', label: 'Sub-distributor', desc: 'Distribute under a master', slug: 'sd' },
+  { key: 'AFFILIATE', group: 'Partner', label: 'Affiliate', desc: 'Commission-based referrals', slug: 'af' },
+  { key: 'LICENSEE', group: 'Partner', label: 'License', desc: 'Use intellectual property', slug: 'lc' },
+  { key: 'AGENT', group: 'Partner', label: 'Sales agent', desc: 'Represent the brand', slug: 'ag' },
 ] as const;
 
-type Config = {
-  configId: string;
-  interestType: string;
-  opportunityType: string | null;
-  schemaKey: string;
-  qualificationProfileKey: string;
-  workflowBlueprintKey: string;
-  evidenceProfileKey: string;
-  defaultRoutingProfileKey: string;
-  supportedPublicationModes: string[];
-  reviewSlaBusinessDays: number;
-  status: string;
-  version: number;
-  createdAt: string;
-  publishedAt: string | null;
-  submittedForReviewAt: string | null;
-};
+const GROUPS = ['Franchise', 'Distribution', 'Partner'] as const;
 
+function parseKey(key: string): { interestType: string; opportunityType: string | null } {
+  const [a, b] = key.split(':');
+  return { interestType: a ?? key, opportunityType: b ?? null };
+}
+
+type ActiveForm = { key: string; configId: string; formUrl: string | null };
 type Notice = { kind: 'success' | 'error'; text: string } | null;
 
 async function readJson(r: Response): Promise<Record<string, unknown>> {
   const v = await r.json().catch(() => ({}));
-  return v && typeof v === 'object' ? v as Record<string, unknown> : {};
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'color-mix(in srgb,var(--theme-text-muted) 60%,transparent)',
-  PENDING_PARENT_REVIEW: 'orange',
-  ESCALATED: 'crimson',
-  APPROVED: 'var(--theme-primary)',
-  PUBLISHED: 'green',
-  SUPERSEDED: 'var(--theme-text-muted)',
-  EXPIRED_UNRESOLVED: 'crimson',
-};
-
-const INTEREST_LABELS: Record<string, string> = {
-  'FRANCHISEE:SINGLE_UNIT': 'Franchise — Single Unit',
-  'FRANCHISEE:MULTI_UNIT': 'Franchise — Multi-Unit',
-  'FRANCHISEE:AREA_DEVELOPMENT': 'Franchise — Area Development',
-  'FRANCHISEE:CONVERSION': 'Franchise — Conversion',
-  'FRANCHISEE:RESALE': 'Franchise — Resale',
-  'MASTER_FRANCHISEE': 'Master Franchise',
-  'DISTRIBUTOR:EXCLUSIVE_DISTRIBUTOR': 'Distribution — Exclusive',
-  'DISTRIBUTOR:NON_EXCLUSIVE_DISTRIBUTOR': 'Distribution — Non-Exclusive',
-  'DISTRIBUTOR:MASTER_DISTRIBUTOR': 'Distribution — Master',
-  'DISTRIBUTOR:SUB_DISTRIBUTOR': 'Distribution — Sub-Distributor',
-  'AFFILIATE': 'Affiliate Partner',
-  'LICENSEE': 'License',
-  'AGENT': 'Sales Agent',
-};
-
-function interestLabel(interestType: string, opportunityType: string | null): string {
-  const key = opportunityType ? `${interestType}:${opportunityType}` : interestType;
-  return INTEREST_LABELS[key] ?? key;
+  return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
 }
 
 export default function CaptureConfigurationClient() {
-  const [configs, setConfigs] = useState<Config[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeForms, setActiveForms] = useState<ActiveForm[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [domain, setDomain] = useState('');
+  const [activating, setActivating] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
-  const [creating, setCreating] = useState(false);
-  const [publishing, setPublishing] = useState<string | null>(null);
-
-  // Form state
-  const [selectedOption, setSelectedOption] = useState('FRANCHISEE:SINGLE_UNIT');
-  const [reviewSla, setReviewSla] = useState(5);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/leads/management/configurations', { cache: 'no-store' });
-      const body = await readJson(r);
-      if (!r.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Failed to load configurations.');
-      setConfigs(Array.isArray(body.configurations) ? body.configurations as Config[] : []);
+      const [cfgRes, pubRes] = await Promise.all([
+        fetch('/api/leads/management/configurations', { cache: 'no-store' }),
+        fetch('/api/leads/publications', { cache: 'no-store' }),
+      ]);
+      const cfgBody = await readJson(cfgRes);
+      const pubBody = await readJson(pubRes);
+
+      const configs = Array.isArray(cfgBody.configurations)
+        ? (cfgBody.configurations as Array<Record<string, unknown>>)
+        : [];
+      const pubs = Array.isArray(pubBody.publications)
+        ? (pubBody.publications as Array<Record<string, unknown>>)
+        : [];
+
+      const forms: ActiveForm[] = configs
+        .filter((c) => ['PUBLISHED', 'DRAFT'].includes(String(c.status ?? '')))
+        .map((c) => {
+          const interestType = String(c.interestType ?? '');
+          const opportunityType = typeof c.opportunityType === 'string' ? c.opportunityType : null;
+          const key = opportunityType ? `${interestType}:${opportunityType}` : interestType;
+          const configId = String(c.configId ?? '');
+          const pub = pubs.find(
+            (p) => p.captureConfigId === configId && p.publicationMode === 'HOSTED_FORM',
+          );
+          return {
+            key,
+            configId,
+            formUrl: typeof pub?.hostedFormUrl === 'string' ? pub.hostedFormUrl : null,
+          };
+        });
+
+      setActiveForms(forms);
+      setSelected(new Set(forms.map((f) => f.key)));
+
+      const existingDomain = pubs.find((p) => typeof p.brandDomain === 'string')?.brandDomain;
+      if (typeof existingDomain === 'string' && existingDomain) {
+        setDomain((prev) => prev || existingDomain);
+      }
     } catch (err) {
-      setNotice({ kind: 'error', text: err instanceof Error ? err.message : 'Failed to load configurations.' });
+      setNotice({ kind: 'error', text: err instanceof Error ? err.message : 'Failed to load.' });
     } finally {
       setLoading(false);
     }
@@ -103,60 +93,109 @@ export default function CaptureConfigurationClient() {
 
   useEffect(() => { void load(); }, [load]);
 
-  async function publishConfig(configId: string) {
-    if (publishing) return;
-    setPublishing(configId);
+  function toggle(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function copyLink(url: string) {
+    try { await navigator.clipboard.writeText(url); } catch { /* non-fatal */ }
+    setCopied(url);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  async function activate() {
+    if (activating) return;
+    setActivating(true);
     setNotice(null);
+
+    const activeKeys = new Set(activeForms.map((f) => f.key));
+    const toAdd = [...selected].filter((k) => !activeKeys.has(k));
+
+    if (toAdd.length === 0) {
+      setNotice({ kind: 'success', text: 'Everything is already up to date.' });
+      setActivating(false);
+      return;
+    }
+
+    const cleanDomain = domain.trim().replace(/^https?:\/\//, '');
+    const totalAfter = activeForms.length + toAdd.length;
+
     try {
-      const r = await fetch(`/api/leads/management/configurations/${configId}/publish`, { method: 'POST' });
-      const body = await readJson(r);
-      if (!r.ok) {
-        setNotice({ kind: 'error', text: typeof body.error === 'string' ? body.error : 'Publish failed.' });
-      } else {
-        setNotice({ kind: 'success', text: typeof body.message === 'string' ? body.message : 'Configuration published.' });
-        await load();
+      let added = 0;
+      for (const key of toAdd) {
+        const opt = OFFERINGS.find((o) => o.key === key);
+        const { interestType, opportunityType } = parseKey(key);
+
+        // Create config
+        const cfgRes = await fetch('/api/leads/management/configurations', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ interestType, opportunityType, reviewSlaBusinessDays: 5 }),
+        });
+        const cfgBody = await readJson(cfgRes);
+        if (!cfgRes.ok && cfgRes.status !== 409) {
+          throw new Error(
+            typeof cfgBody.error === 'string' ? cfgBody.error : `Could not activate ${opt?.label ?? key}.`,
+          );
+        }
+        if (cfgRes.status === 409) { added++; continue; }
+        const configId = String(cfgBody.configId ?? '');
+
+        // Publish config
+        const pubCfgRes = await fetch(
+          `/api/leads/management/configurations/${configId}/publish`,
+          { method: 'POST' },
+        );
+        if (!pubCfgRes.ok) {
+          const e = await readJson(pubCfgRes);
+          throw new Error(
+            typeof e.error === 'string' ? e.error : `Could not publish config for ${opt?.label ?? key}.`,
+          );
+        }
+
+        // Create hosted-form publication (non-fatal if no domain or if it fails)
+        if (cleanDomain && opt) {
+          const slug = totalAfter > 1 ? `/enquire-${opt.slug}` : '/enquire';
+          await fetch('/api/leads/publications', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              captureConfigId: configId,
+              publicationMode: 'HOSTED_FORM',
+              captureSourceLabel: `Website — ${opt.label}`,
+              publicationSlug: slug,
+              brandDomain: cleanDomain,
+            }),
+          }).catch(() => { /* non-fatal */ });
+        }
+
+        added++;
       }
-    } catch {
-      setNotice({ kind: 'error', text: 'Network error. Please try again.' });
+
+      const parts = [`${added} offering${added !== 1 ? 's' : ''} activated.`];
+      if (!cleanDomain) parts.push('Enter your form domain above to get shareable links.');
+      setNotice({ kind: 'success', text: parts.join(' ') });
+      await load();
+    } catch (err) {
+      setNotice({ kind: 'error', text: err instanceof Error ? err.message : 'Activation failed. Please try again.' });
     } finally {
-      setPublishing(null);
+      setActivating(false);
     }
   }
 
-  async function createConfig(e: React.FormEvent) {
-    e.preventDefault();
-    if (creating) return;
-    setCreating(true);
-    setNotice(null);
-    try {
-      const [interestType, opportunityType] = selectedOption.includes(':')
-        ? selectedOption.split(':')
-        : [selectedOption, null];
-      const r = await fetch('/api/leads/management/configurations', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          interestType,
-          opportunityType: opportunityType || null,
-          reviewSlaBusinessDays: reviewSla,
-        }),
-      });
-      const body = await readJson(r);
-      if (!r.ok) {
-        setNotice({ kind: 'error', text: typeof body.error === 'string' ? body.error : 'Creation failed.' });
-      } else {
-        setNotice({
-          kind: 'success',
-          text: 'Configuration saved as DRAFT. Click Publish below to make it active.',
-        });
-        await load();
-      }
-    } catch {
-      setNotice({ kind: 'error', text: 'Network error. Please try again.' });
-    } finally {
-      setCreating(false);
-    }
-  }
+  const activeKeys = new Set(activeForms.map((f) => f.key));
+  const newCount = [...selected].filter((k) => !activeKeys.has(k)).length;
+
+  const chipBase: React.CSSProperties = {
+    display: 'flex', alignItems: 'flex-start', gap: 10,
+    padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+    transition: 'border-color 0.1s, background 0.1s',
+  };
 
   return <>
     {notice ? (
@@ -166,106 +205,152 @@ export default function CaptureConfigurationClient() {
       </div>
     ) : null}
 
-    {/* ── Create configuration ──────────────────────────────────────────── */}
+    {/* ── What you offer ─────────────────────────────────────────────── */}
     <section className={styles.panel}>
-      <div className={styles.panelHead}><h2>Add interest type</h2></div>
+      <div className={styles.panelHead}><h2>What can people enquire about?</h2></div>
       <div className={styles.panelBody}>
-        <p style={{ fontSize: 13, color: 'var(--theme-text-muted)', marginTop: 0 }}>
-          Each configuration activates one commercial interest type (e.g. Franchise Unit, Affiliate, Agent). The platform resolves the schema, qualification profile, workflow blueprint, and evidence profile from the registry — these are governed keys and cannot be replaced with free-form values.
+        <p style={{ fontSize: 13, color: 'var(--theme-text-muted)', marginTop: 0, marginBottom: 20 }}>
+          Tick the types of opportunity you offer. A ready-to-share form is created for each one automatically.
         </p>
-        <form onSubmit={createConfig} style={{ display: 'grid', gap: 12, maxWidth: 480 }}>
-          <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
-            Interest type
-            <select
-              value={selectedOption}
-              onChange={(e) => setSelectedOption(e.target.value)}
-              disabled={creating}
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}
-            >
-              {INTEREST_TYPE_OPTIONS.map((opt) => {
-                const key = opt.opportunityType ? `${opt.interestType}:${opt.opportunityType}` : opt.interestType;
-                return <option key={key} value={key}>{opt.label}</option>;
-              })}
-            </select>
-          </label>
-          <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
-            Review SLA (business days)
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={reviewSla}
-              onChange={(e) => setReviewSla(Number(e.target.value))}
-              disabled={creating}
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: 100 }}
-            />
-          </label>
-          <button type="submit" disabled={creating} className={styles.button} style={{ width: 'fit-content' }}>
-            {creating ? 'Creating…' : 'Create configuration'}
-          </button>
-        </form>
-      </div>
-    </section>
 
-    {/* ── Configuration list ────────────────────────────────────────────── */}
-    <section className={styles.panel}>
-      <div className={styles.panelHead}>
-        <h2>Configurations</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span className={styles.pill}>{loading ? 'LOADING' : `${configs.length} TOTAL`}</span>
-          <button className={styles.secondaryButton} onClick={() => void load()} disabled={loading}>Refresh</button>
-        </div>
-      </div>
-
-      {!loading && configs.length === 0 ? (
-        <div className={styles.empty}>No configurations yet. Add an interest type above to get started.</div>
-      ) : null}
-
-      {configs.length > 0 ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Interest type</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {configs.map((cfg) => (
-                <tr key={cfg.configId}>
-                  <td>
-                    <strong>{interestLabel(cfg.interestType, cfg.opportunityType)}</strong>
-                    {cfg.publishedAt ? <><br /><small style={{ color: 'var(--theme-text-muted)' }}>Published {new Date(cfg.publishedAt).toLocaleDateString()}</small></> : null}
-                  </td>
-                  <td>
-                    <span className={styles.pill} style={{ background: 'color-mix(in srgb,' + (STATUS_COLORS[cfg.status] ?? 'var(--theme-text-muted)') + ' 15%,transparent)', color: STATUS_COLORS[cfg.status] ?? 'var(--theme-text-muted)' }}>
-                      {cfg.status}
-                    </span>
-                    {cfg.submittedForReviewAt ? <><br /><small>Submitted {new Date(cfg.submittedForReviewAt).toLocaleDateString()}</small></> : null}
-                  </td>
-                  <td><small>{new Date(cfg.createdAt).toLocaleDateString()}</small></td>
-                  <td>
-                    {(cfg.status === 'DRAFT' || cfg.status === 'APPROVED') ? (
-                      <button
-                        className={styles.button}
-                        style={{ fontSize: 12, padding: '4px 10px' }}
-                        disabled={publishing === cfg.configId}
-                        onClick={() => void publishConfig(cfg.configId)}
+        {loading ? <p style={{ fontSize: 13, color: 'var(--theme-text-muted)' }}>Loading…</p> : (
+          <>
+            {GROUPS.map((group) => (
+              <div key={group} style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--theme-text-muted)', margin: '0 0 8px' }}>
+                  {group}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                  {OFFERINGS.filter((o) => o.group === group).map((opt) => {
+                    const isActive = activeKeys.has(opt.key);
+                    const isSelected = selected.has(opt.key);
+                    return (
+                      <label
+                        key={opt.key}
+                        style={{
+                          ...chipBase,
+                          border: `1px solid ${isSelected ? 'var(--theme-primary)' : 'var(--theme-border)'}`,
+                          background: isSelected
+                            ? 'color-mix(in srgb,var(--theme-primary) 8%,transparent)'
+                            : 'var(--theme-surface)',
+                          opacity: isActive ? 0.85 : 1,
+                          cursor: isActive ? 'default' : 'pointer',
+                        }}
                       >
-                        {publishing === cfg.configId ? 'Publishing…' : 'Publish'}
-                      </button>
-                    ) : cfg.status === 'PUBLISHED' ? (
-                      <span style={{ color: 'green', fontSize: 12 }}>Active</span>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isActive}
+                          onChange={() => { if (!isActive) toggle(opt.key); }}
+                          style={{ marginTop: 3, flexShrink: 0 }}
+                        />
+                        <span>
+                          <span style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {opt.label}
+                            {isActive ? (
+                              <span style={{ fontSize: 9, fontWeight: 800, color: 'green', letterSpacing: '0.04em' }}>
+                                ACTIVE
+                              </span>
+                            ) : null}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--theme-text-muted)', display: 'block', marginTop: 2 }}>
+                            {opt.desc}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Domain field */}
+            <div style={{ borderTop: '1px solid var(--theme-border)', paddingTop: 16, marginTop: 4 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, display: 'grid', gap: 4, maxWidth: 400 }}>
+                Your form domain{' '}
+                <span style={{ fontWeight: 400, color: 'var(--theme-text-muted)' }}>(optional — for shareable links)</span>
+                <input
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  placeholder="apply.yourbrand.com"
+                  disabled={activating}
+                  style={{
+                    padding: '8px 10px', borderRadius: 8,
+                    border: '1px solid var(--theme-border)',
+                    background: 'var(--theme-surface)',
+                    color: 'var(--theme-text-primary)', fontSize: 13,
+                  }}
+                />
+              </label>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <button
+                className={styles.button}
+                onClick={() => void activate()}
+                disabled={activating || newCount === 0}
+                style={{ width: 'fit-content' }}
+              >
+                {activating
+                  ? 'Activating…'
+                  : newCount > 0
+                    ? `Activate ${newCount} offering${newCount !== 1 ? 's' : ''}`
+                    : 'Up to date'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </section>
+
+    {/* ── Your forms ─────────────────────────────────────────────────── */}
+    {activeForms.length > 0 ? (
+      <section className={styles.panel}>
+        <div className={styles.panelHead}>
+          <h2>Your forms</h2>
+          <span className={styles.pill}>{activeForms.length}</span>
+        </div>
+        <div style={{ display: 'grid', gap: 8, padding: '0 16px 16px' }}>
+          {activeForms.map((form) => {
+            const opt = OFFERINGS.find((o) => o.key === form.key);
+            return (
+              <div
+                key={form.configId}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px', borderRadius: 8,
+                  border: '1px solid var(--theme-border)',
+                  background: 'var(--theme-surface)',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>
+                    {opt ? `${opt.group} — ${opt.label}` : form.key}
+                  </div>
+                  {form.formUrl ? (
+                    <code style={{ fontSize: 11, color: 'var(--theme-text-muted)', wordBreak: 'break-all' }}>
+                      {form.formUrl}
+                    </code>
+                  ) : (
+                    <small style={{ color: 'var(--theme-text-muted)' }}>
+                      Enter your domain above to get a shareable link
+                    </small>
+                  )}
+                </div>
+                {form.formUrl ? (
+                  <button
+                    onClick={() => void copyLink(form.formUrl!)}
+                    className={styles.secondaryButton}
+                    style={{ flexShrink: 0, fontSize: 12 }}
+                  >
+                    {copied === form.formUrl ? 'Copied!' : 'Copy link'}
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    ) : null}
   </>;
 }
