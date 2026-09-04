@@ -70,7 +70,9 @@ export default async function EnquiryPage(
   { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   const reqHeaders = await headers();
-  const hostname = reqHeaders.get('host') ?? '';
+  // x-forwarded-host is set by the nginx proxy (accepts any tenant domain,
+  // forwards to brand-web internally). Fall back to host for direct Railway access.
+  const hostname = reqHeaders.get('x-forwarded-host') ?? reqHeaders.get('host') ?? '';
   const { slug: slugParts } = await params;
   // slugParts is undefined for /enquire, ['su'] for /enquire/su, etc.
   const offeringSlug = slugParts?.[0] ?? null;
