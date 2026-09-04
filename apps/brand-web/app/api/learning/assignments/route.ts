@@ -12,6 +12,8 @@ export async function POST(request: Request) {
     if (typeof body?.courseVersionId !== 'string' || !UUID.test(body.courseVersionId)
       || typeof body.assignmentKey !== 'string' || typeof body.title !== 'string'
       || typeof body.instructions !== 'string' || typeof body.maxPoints !== 'number'
+      || (body.allowAttachments !== undefined && typeof body.allowAttachments !== 'boolean')
+      || (body.maxAttachments !== undefined && typeof body.maxAttachments !== 'number')
       || (body.dueAt !== undefined && body.dueAt !== null && typeof body.dueAt !== 'string')) {
       return NextResponse.json({ error: 'LEARNING_ASSIGNMENT_DRAFT_INVALID' }, { status: 400 });
     }
@@ -21,6 +23,8 @@ export async function POST(request: Request) {
         tenantId: context.tenantId, courseVersionId: body.courseVersionId as string,
         assignmentKey: body.assignmentKey as string, title: body.title as string,
         instructions: body.instructions as string, maxPoints: body.maxPoints as number,
+        allowAttachments: body.allowAttachments as boolean | undefined,
+        maxAttachments: body.maxAttachments as number | undefined,
         dueAt: body.dueAt as string | null | undefined, actorSubjectId: context.subjectId,
       });
     });

@@ -14,7 +14,8 @@ export async function POST(request: Request) {
       || typeof body.lessonId !== 'string' || !UUID.test(body.lessonId)
       || typeof body.assignmentKey !== 'string' || !KEY.test(body.assignmentKey)
       || typeof body.submissionKey !== 'string' || body.submissionKey.trim() === ''
-      || typeof body.responseText !== 'string') {
+      || typeof body.responseText !== 'string'
+      || (body.attachmentAssetIds !== undefined && (!Array.isArray(body.attachmentAssetIds) || !body.attachmentAssetIds.every((value) => typeof value === 'string' && UUID.test(value))))) {
       return NextResponse.json({ error: 'LEARNING_ASSIGNMENT_SUBMISSION_INVALID' }, { status: 400 });
     }
     const result = await withBrandTransaction(context, (client) => submitMyLearningAssignment(client, {
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       assignmentKey: body.assignmentKey as string,
       submissionKey: body.submissionKey as string,
       responseText: body.responseText as string,
+      attachmentAssetIds: body.attachmentAssetIds as string[] | undefined,
       correlationId: request.headers.get('x-correlation-id')?.trim() || randomUUID(),
     }));
     return NextResponse.json(result, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
