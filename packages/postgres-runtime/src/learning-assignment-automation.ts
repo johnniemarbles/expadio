@@ -415,7 +415,7 @@ export interface LearningAssignmentExecutionSummary {
 
 export async function listLearningAssignmentRuleExecutions(
   client: PostgresClient,
-  input: { readonly tenantId: string; readonly limit?: number },
+  input: { readonly tenantId: string; readonly learnerId?: string; readonly limit?: number },
 ): Promise<readonly LearningAssignmentExecutionSummary[]> {
   await requireLearning(client, input.tenantId);
   const limit = Math.min(500, Math.max(1, input.limit ?? 100));
@@ -454,9 +454,10 @@ export async function listLearningAssignmentRuleExecutions(
          ON learner.learner_id=execution.learner_id
         AND learner.tenant_id=execution.tenant_id
       WHERE execution.tenant_id=$1::uuid
+        AND ($3::uuid IS NULL OR execution.learner_id = $3::uuid)
       ORDER BY execution.evaluated_at DESC, execution.assignment_rule_execution_id DESC
       LIMIT $2`,
-    [input.tenantId, limit],
+    [input.tenantId, limit, input.learnerId ?? null],
   );
   return result.rows.map((row) => ({
     assignmentRuleExecutionId: row.assignment_rule_execution_id,
