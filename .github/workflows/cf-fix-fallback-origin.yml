@@ -1,0 +1,63 @@
+name: CF — Fix fallback origin to Railway
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_token:
+        description: "Cloudflare API token"
+        required: true
+        type: string
+      railway_hostname:
+        description: "Railway brand-web hostname (no https://)"
+        required: true
+        type: string
+        default: "glorious-enchantment-production.up.railway.app"
+
+env:
+  ZONE_ID: a871277903f98da014626efd5abe9a17
+
+jobs:
+  fix-fallback-origin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mask token
+        run: echo "::add-mask::${{ inputs.cf_token }}"
+
+      - name: Update fallback origin to Railway
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+          RAILWAY_HOST: ${{ inputs.railway_hostname }}
+        run: |
+          set -euo pipefail
+          RESULT=$(curl -sS -X PUT \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"origin\":\"${RAILWAY_HOST}\"}")
+          echo "$RESULT" | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              print('✅ Fallback origin updated to: ' + r['result']['origin'])
+          else:
+              print('ERROR: ' + str(r.get('errors')))
+              sys.exit(1)
+          "
+
+      - name: Verify fallback origin
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          RESULT=$(curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
+            -H "Authorization: Bearer $CF_TOKEN")
+          echo "$RESULT" | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              res = r.get('result', {})
+              print('Origin:  ' + res.get('origin','?'))
+              print('Status:  ' + res.get('status','?'))
+          else:
+              print('ERROR: ' + str(r))
+          "
