@@ -1,0 +1,134 @@
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
+import pg from 'pg';
+import EnquiryFormClient from './EnquiryFormClient';
+
+export const dynamic = 'force-dynamic';
+
+declare global { var _enquiryDbPool: pg.Pool | undefined; }
+
+const enquiryDbPool = global._enquiryDbPool ?? new pg.Pool(
+  process.env.DATABASE_URL ? { connectionString: process.env.DATABASE_URL } : {
+    host: process.env.PGHOST || 'localhost',
+    port: Number(process.env.PGPORT || '5432'),
+    user: process.env.PGUSER || 'expadio',
+    password: process.env.PGPASSWORD || 'expadio_password',
+    database: process.env.PGDATABASE || 'expadio',
+  },
+);
+if (process.env.NODE_ENV === 'development') global._enquiryDbPool = enquiryDbPool;
+
+const EXPADIO_APEX = process.env.EXPADIO_APEX_DOMAIN || 'expadio.com';
+
+interface OrgRow {
+  tenant_id: string;
+  organization_id: string;
+  org_name: string;
+  brand_display_name: string | null;
+  brand_slug: string | null;
+  brand_domain: string | null;
+}
+
+interface PublicationRow {
+  publication_id: string;
+  capture_config_id: string;
+  interest_type: string;
+  opportunity_type: string | null;
+  publication_slug: string | null;
+  brand_domain: string | null;
+  capture_source_id: string;
+  publishable_key: string;
+}
+
+async function resolveOrg(hostname: string): Promise<OrgRow | null> {
+  const client = await enquiryDbPool.connect();
+  try {
+    // Strip port for local dev
+    const host = hostname.split(':')[0];
+    // Check if it's a subdomain of the expadio apex
+    const slugMatch = host.endsWith(`.${EXPADIO_APEX}`) && host !== EXPADIO_APEX;
+    let result;
+    if (slugMatch) {
+      const slug = host.slice(0, host.length - EXPADIO_APEX.length - 1);
+      result = await client.query<OrgRow>(
+        `SELECT * FROM platform.lookup_org_by_brand_slug($1)`,
+        [slug],
+      );
+    } else {
+      result = await client.query<OrgRow>(
+        `SELECT * FROM platform.lookup_org_by_brand_domain($1)`,
+        [host],
+      );
+    }
+    return result.rows[0] ?? null;
+  } finally {
+    client.release();
+  }
+}
+
+async function resolvePublications(tenantId: string, organizationId: string): Promise<PublicationRow[]> {
+  const client = await enquiryDbPool.connect();
+  try {
+    const result = await client.query<PublicationRow>(
+      `SELECT * FROM platform.lookup_public_hosted_forms($1::uuid, $2::uuid)`,
+      [tenantId, organizationId],
+    );
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export default async function EnquiryPage(
+  { params }: { params: Promise<{ slug?: string[] }> },
+) {
+  const reqHeaders = await headers();
+  const hostname = reqHeaders.get('host') ?? '';
+  const { slug: slugParts } = await params;
+  // slugParts is undefined for /enquire, ['su'] for /enquire/su, etc.
+  const offeringSlug = slugParts?.[0] ?? null;
+
+  const org = await resolveOrg(hostname);
+  if (!org) return notFound();
+
+  const publications = await resolvePublications(org.tenant_id, org.organization_id);
+  if (publications.length === 0) return notFound();
+
+  // Find the matching publication: if no slug pick the only one, otherwise match
+  let pub: PublicationRow | undefined;
+  if (!offeringSlug) {
+    pub = publications[0];
+  } else {
+    pub = publications.find((p) => {
+      const s = p.publication_slug ?? '';
+      // publication_slug is /enquire or /enquire-su; the URL path gives just 'su'
+      return s === `/enquire-${offeringSlug}` || s === '/enquire';
+    });
+  }
+  if (!pub) return notFound();
+
+  const platformWebUrl = process.env.PLATFORM_WEB_BASE_URL ?? '';
+
+  return (
+    <EnquiryFormClient
+      tenantId={org.tenant_id}
+      organizationId={org.organization_id}
+      brandDisplayName={org.brand_display_name}
+      organizationName={org.org_name}
+      sourceId={pub.capture_source_id}
+      publishableKey={pub.publishable_key}
+      interestType={pub.interest_type}
+      opportunityType={pub.opportunity_type}
+      platformWebUrl={platformWebUrl}
+      publications={publications.map((p) => ({
+        publicationId: p.publication_id,
+        interestType: p.interest_type,
+        opportunityType: p.opportunity_type,
+        publicationSlug: p.publication_slug,
+        captureSourceId: p.capture_source_id,
+        publishableKey: p.publishable_key,
+      }))}
+      selectedPublicationId={pub.publication_id}
+    />
+  );
+}
