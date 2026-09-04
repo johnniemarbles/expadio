@@ -249,6 +249,21 @@ export async function previewLearningAssignmentRule(
 ): Promise<LearningAssignmentRulePreview> {
   await requireLearning(client, input.tenantId);
   const draft = validateLearningAssignmentRuleDraft(input.draft);
+  const target = draft.targetType === 'COURSE'
+    ? await client.query(
+        `SELECT 1 FROM platform.learning_courses
+          WHERE tenant_id=$1::uuid AND course_id=$2::uuid
+            AND status='ACTIVE' AND current_published_version IS NOT NULL`,
+        [input.tenantId, draft.courseId],
+      )
+    : await client.query(
+        `SELECT 1 FROM platform.learning_programs
+          WHERE tenant_id=$1::uuid AND program_id=$2::uuid
+            AND status='ACTIVE' AND current_published_version IS NOT NULL`,
+        [input.tenantId, draft.programId],
+      );
+  if (target.rows[0] === undefined) throw new Error('LEARNING_ASSIGNMENT_RULE_PREVIEW_TARGET_NOT_AVAILABLE');
+
   const sampleLimit = Math.min(100, Math.max(1, input.sampleLimit ?? 25));
   const result = await client.query<LearnerRow & { readonly full_name: string }>(
     `SELECT learner_id, subject_id, audience_type, status, metadata, full_name
