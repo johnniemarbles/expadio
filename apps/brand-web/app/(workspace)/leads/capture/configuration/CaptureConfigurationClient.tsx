@@ -28,15 +28,23 @@ function parseKey(key: string): { interestType: string; opportunityType: string 
 
 type ActiveForm = { key: string; configId: string; formUrl: string | null };
 type Notice = { kind: 'success' | 'error'; text: string } | null;
+type DraftMap = Map<string, string>; // offering key → configId
 
 async function readJson(r: Response): Promise<Record<string, unknown>> {
   const v = await r.json().catch(() => ({}));
   return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
 }
 
-export default function CaptureConfigurationClient({ initialDomain }: { initialDomain?: string | null }) {
+export default function CaptureConfigurationClient({
+  initialDomain,
+  brandSlug,
+}: {
+  initialDomain?: string | null;
+  brandSlug?: string | null;
+}) {
   const [loading, setLoading] = useState(true);
   const [activeForms, setActiveForms] = useState<ActiveForm[]>([]);
+  const [draftConfigs, setDraftConfigs] = useState<DraftMap>(new Map());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [domain, setDomain] = useState(initialDomain ?? '');
   const [activating, setActivating] = useState(false);
@@ -60,12 +68,16 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
         ? (pubBody.publications as Array<Record<string, unknown>>)
         : [];
 
+      function configKey(c: Record<string, unknown>): string {
+        const interestType = String(c.interestType ?? '');
+        const opportunityType = typeof c.opportunityType === 'string' ? c.opportunityType : null;
+        return opportunityType ? `${interestType}:${opportunityType}` : interestType;
+      }
+
       const forms: ActiveForm[] = configs
-        .filter((c) => ['PUBLISHED', 'DRAFT'].includes(String(c.status ?? '')))
+        .filter((c) => String(c.status ?? '') === 'PUBLISHED')
         .map((c) => {
-          const interestType = String(c.interestType ?? '');
-          const opportunityType = typeof c.opportunityType === 'string' ? c.opportunityType : null;
-          const key = opportunityType ? `${interestType}:${opportunityType}` : interestType;
+          const key = configKey(c);
           const configId = String(c.configId ?? '');
           const pub = pubs.find(
             (p) => p.captureConfigId === configId && p.publicationMode === 'HOSTED_FORM',
@@ -77,7 +89,14 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
           };
         });
 
+      // Track DRAFT configs separately so activate() can resume them via the publish endpoint.
+      const drafts: DraftMap = new Map();
+      configs
+        .filter((c) => String(c.status ?? '') === 'DRAFT')
+        .forEach((c) => drafts.set(configKey(c), String(c.configId ?? '')));
+
       setActiveForms(forms);
+      setDraftConfigs(drafts);
       setSelected(new Set(forms.map((f) => f.key)));
 
       const existingDomain = pubs.find((p) => typeof p.brandDomain === 'string')?.brandDomain;
@@ -122,6 +141,8 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
     }
 
     const cleanDomain = domain.trim().replace(/^https?:\/\//, '');
+    // Fall back to the platform slug domain so platform-hosted brands get a publication.
+    const effectiveDomain = cleanDomain || (brandSlug ? `${brandSlug}.expadio.com` : '');
     const totalAfter = activeForms.length + toAdd.length;
 
     try {
@@ -130,7 +151,7 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
         const opt = OFFERINGS.find((o) => o.key === key);
         const { interestType, opportunityType } = parseKey(key);
 
-        // Create config
+        // Create config (or detect existing DRAFT for resume path).
         const cfgRes = await fetch('/api/leads/management/configurations', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -142,8 +163,16 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
             typeof cfgBody.error === 'string' ? cfgBody.error : `Could not activate ${opt?.label ?? key}.`,
           );
         }
-        if (cfgRes.status === 409) { added++; continue; }
-        const configId = String(cfgBody.configId ?? '');
+
+        let configId: string;
+        if (cfgRes.status === 409) {
+          // Resume an existing DRAFT config instead of skipping it.
+          const draftId = draftConfigs.get(key);
+          if (!draftId) { added++; continue; }
+          configId = draftId;
+        } else {
+          configId = String(cfgBody.configId ?? '');
+        }
 
         // Publish config
         const pubCfgRes = await fetch(
@@ -157,10 +186,10 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
           );
         }
 
-        // Create hosted-form publication (non-fatal if no domain or if it fails)
-        if (cleanDomain && opt) {
+        // Create hosted-form publication.
+        if (effectiveDomain && opt) {
           const slug = totalAfter > 1 ? `/enquire-${opt.slug}` : '/enquire';
-          await fetch('/api/leads/publications', {
+          const pubRes = await fetch('/api/leads/publications', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
@@ -168,16 +197,20 @@ export default function CaptureConfigurationClient({ initialDomain }: { initialD
               publicationMode: 'HOSTED_FORM',
               captureSourceLabel: `Website — ${opt.label}`,
               publicationSlug: slug,
-              brandDomain: cleanDomain,
+              brandDomain: effectiveDomain,
             }),
-          }).catch(() => { /* non-fatal */ });
+          });
+          if (!pubRes.ok) {
+            const pubErr = await readJson(pubRes);
+            console.warn(`Publication creation failed for ${opt.label}:`, pubErr.error ?? pubRes.status);
+          }
         }
 
         added++;
       }
 
       const parts = [`${added} offering${added !== 1 ? 's' : ''} activated.`];
-      if (!cleanDomain) parts.push('Enter your form domain above to get shareable links.');
+      if (!effectiveDomain) parts.push('Enter your form domain above to get shareable links.');
       setNotice({ kind: 'success', text: parts.join(' ') });
       await load();
     } catch (err) {

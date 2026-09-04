@@ -206,18 +206,29 @@ export async function POST(request: Request) {
 
         // For HOSTED_FORM publications: also create a PUBLIC lead_capture_source
         // so the browser form can submit to platform-web without a signing secret.
+        // Include both the custom brand domain and the platform slug domain (when
+        // the org has a brand slug) so either URL passes the origin check.
         let publishableKey: string | null = null;
-        if (pub.publicationMode === 'HOSTED_FORM' && pub.hostedFormConfig?.brandDomain) {
-          publishableKey = generatePublishableKey();
-          const origin = `https://${pub.hostedFormConfig.brandDomain}`;
-          await client.query(
-            `INSERT INTO platform.lead_capture_sources
-               (source_id, tenant_id, organization_id, source_key, surface, channel,
-                trust_rail, require_signed_ticket, publishable_key, allowed_origins, status)
-             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'WEB', 'WEB',
-                     'PUBLIC', false, $5, ARRAY[$6]::text[], 'ACTIVE')`,
-            [srcId, pub.tenantId, pub.organizationId, `pub:${pub.publicationId}`, publishableKey, origin],
-          );
+        if (pub.publicationMode === 'HOSTED_FORM') {
+          const origins: string[] = [];
+          if (pub.hostedFormConfig?.brandDomain) {
+            origins.push(`https://${pub.hostedFormConfig.brandDomain}`);
+          }
+          if (context.brandSlug) {
+            const slugOrigin = `https://${context.brandSlug}.expadio.com`;
+            if (!origins.includes(slugOrigin)) origins.push(slugOrigin);
+          }
+          if (origins.length > 0) {
+            publishableKey = generatePublishableKey();
+            await client.query(
+              `INSERT INTO platform.lead_capture_sources
+                 (source_id, tenant_id, organization_id, source_key, surface, channel,
+                  trust_rail, require_signed_ticket, publishable_key, allowed_origins, status)
+               VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'WEB', 'WEB',
+                       'PUBLIC', false, $5, $6::text[], 'ACTIVE')`,
+              [srcId, pub.tenantId, pub.organizationId, `pub:${pub.publicationId}`, publishableKey, origins],
+            );
+          }
         }
 
         const hostedFormUrl = pub.hostedFormConfig
