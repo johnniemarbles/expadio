@@ -1,7 +1,10 @@
 import Link from 'next/link';
+import { listLearningCourses } from '@expadio/postgres-runtime/learning';
 import { listLearningAssignmentSubmissions } from '@expadio/postgres-runtime/learning-assignment';
 import { listLearningAssignmentRuleExecutions } from '@expadio/postgres-runtime/learning-assignment-automation';
+import { listLearningPrograms } from '@expadio/postgres-runtime/learning-program-certification';
 import { AssignmentGradingQueue } from '../../../../components/AssignmentGradingQueue';
+import { LearningSectionAdminPanel } from '../../../../components/LearningSectionAdminPanel';
 import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
 
@@ -11,27 +14,54 @@ export default async function LearningAssignmentsPage() {
   const context = await resolveBrandContext();
   const data = await withBrandTransaction(context, async (client) => {
     if (!(await hasLearningAdmin(client, context.subjectId))) return null;
-    const [submissions, executions] = await Promise.all([
+    const [submissions, executions, courses, programs] = await Promise.all([
       listLearningAssignmentSubmissions(client, context.tenantId),
       listLearningAssignmentRuleExecutions(client, { tenantId: context.tenantId, limit: 100 }),
+      listLearningCourses(client, context.tenantId),
+      listLearningPrograms(client, context.tenantId),
     ]);
-    return { submissions, executions };
+    return {
+      submissions,
+      executions,
+      courseTargets: courses
+        .filter((course) => course.status === 'ACTIVE' && course.currentPublishedVersion !== null)
+        .map((course) => ({
+          id: course.courseId,
+          label: course.publishedTitle ?? course.draftTitle ?? course.courseKey,
+        })),
+      programTargets: programs
+        .filter((program) => program.status === 'ACTIVE' && program.currentPublishedVersion !== null)
+        .map((program) => ({
+          id: program.programId,
+          label: program.publishedTitle ?? program.programKey,
+        })),
+    };
   });
 
   if (data === null) return <>
-    <section className={styles.pageHead}><div><p className={styles.eyebrow}>Learning · Assignments</p><h1>Grading workspace</h1></div></section>
-    <div className={styles.notice}><strong>Learning administration is required.</strong><p>Your current Brand membership cannot review learner submissions.</p></div>
+    <section className={styles.pageHead}><div><p className={styles.eyebrow}>Learning · Assignments</p><h1>Assignment workspace</h1></div></section>
+    <div className={styles.notice}><strong>Learning administration is required.</strong><p>Your current Brand membership cannot manage assignment rules or review learner submissions.</p></div>
   </>;
 
-  const { submissions, executions } = data;
+  const { submissions, executions, courseTargets, programTargets } = data;
   const awaiting = submissions.filter((item) => item.status === 'SUBMITTED' || item.status === 'RETURNED').length;
   const assigned = executions.filter((item) => item.outcome === 'ASSIGNED').length;
   const satisfied = executions.filter((item) => item.outcome === 'SATISFIED').length;
   const notMatched = executions.filter((item) => item.outcome === 'NOT_MATCHED').length;
   return <>
     <section className={styles.pageHead}>
-      <div><p className={styles.eyebrow}>Learning · Assignments</p><h1>Grading workspace</h1><p>Review real learner submissions, return actionable feedback, and record bounded final grades.</p></div>
+      <div><p className={styles.eyebrow}>Learning · Assignments</p><h1>Assignment workspace</h1><p>Create governed allocation rules, preview their audience, monitor execution, and review learner submissions.</p></div>
       <Link className={styles.secondaryButton} href="/learning">Back to Learning</Link>
+    </section>
+    <section className={styles.panel}>
+      <div className={styles.panelHead}><h2>Assignment rules</h2><span className={styles.pill}>Tenant governed</span></div>
+      <div className={styles.panelBody}>
+        <LearningSectionAdminPanel
+          section="assignments"
+          courseTargets={courseTargets}
+          programTargets={programTargets}
+        />
+      </div>
     </section>
     <section className={styles.grid}>
       <article className={styles.metric}><div className={styles.metricLabel}>Awaiting review</div><div className={styles.metricValue}>{awaiting}</div><div className={styles.metricDetail}>Submitted or returned work</div></article>
