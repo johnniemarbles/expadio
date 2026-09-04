@@ -81,11 +81,14 @@ export async function submitMyLearningAssignment(
     readonly assignmentKey: string;
     readonly submissionKey: string;
     readonly responseText: string;
+    readonly attachmentAssetIds?: readonly string[];
     readonly correlationId: string;
   },
 ): Promise<LearningAssignmentSubmission> {
   await requireLearning(client, input.tenantId);
   const responseText = input.responseText.trim();
+  const attachmentAssetIds = [...new Set(input.attachmentAssetIds ?? [])];
+  if (attachmentAssetIds.length > 20) throw new Error('LEARNING_ASSIGNMENT_ATTACHMENTS_TOO_MANY');
   if (responseText.length > 100_000) throw new Error('LEARNING_ASSIGNMENT_RESPONSE_TOO_LONG');
 
   const target = await client.query<{
@@ -97,10 +100,11 @@ export async function submitMyLearningAssignment(
     readonly max_points: string | number;
     readonly allow_text: boolean;
     readonly allow_attachments: boolean;
+    readonly max_attachments: number;
     readonly due_at: Date | string | null;
   }>(
     `SELECT learner.learner_id, enrollment.course_version_id, assignment.assignment_id,
-            version.assignment_version_id, version.title, version.max_points, version.allow_text, version.allow_attachments, version.due_at
+            version.assignment_version_id, version.title, version.max_points, version.allow_text, version.allow_attachments, version.max_attachments, version.due_at
        FROM platform.learning_enrollments enrollment
        JOIN platform.learning_learners learner
          ON learner.learner_id = enrollment.learner_id AND learner.tenant_id = enrollment.tenant_id
@@ -148,7 +152,21 @@ export async function submitMyLearningAssignment(
   if (!row) throw new Error('LEARNING_ASSIGNMENT_NOT_AVAILABLE');
   if (row.due_at !== null && new Date(row.due_at).getTime() < Date.now()) throw new Error('LEARNING_ASSIGNMENT_DUE_DATE_PASSED');
   if (!row.allow_text && responseText !== '') throw new Error('LEARNING_ASSIGNMENT_TEXT_NOT_ALLOWED');
-  if (row.allow_text && !row.allow_attachments && responseText === '') throw new Error('LEARNING_ASSIGNMENT_RESPONSE_REQUIRED');
+  if (!row.allow_attachments && attachmentAssetIds.length > 0) throw new Error('LEARNING_ASSIGNMENT_ATTACHMENTS_NOT_ALLOWED');
+  if (attachmentAssetIds.length > row.max_attachments) throw new Error('LEARNING_ASSIGNMENT_ATTACHMENTS_TOO_MANY');
+  if (row.allow_text && responseText === '' && attachmentAssetIds.length === 0) throw new Error('LEARNING_ASSIGNMENT_RESPONSE_REQUIRED');
+  if (!row.allow_text && attachmentAssetIds.length === 0) throw new Error('LEARNING_ASSIGNMENT_ATTACHMENT_REQUIRED');
+
+  if (attachmentAssetIds.length > 0) {
+    const assets = await client.query<{ readonly asset_id: string }>(
+      `SELECT asset_id FROM platform.content_assets
+        WHERE tenant_id = $1::uuid AND asset_id = ANY($2::uuid[])
+          AND purpose = 'LEARNING_SUBMISSION' AND state = 'AVAILABLE'
+          AND created_by_subject_id = $3`,
+      [input.tenantId, attachmentAssetIds, input.subjectId],
+    );
+    if (assets.rows.length !== attachmentAssetIds.length) throw new Error('LEARNING_ASSIGNMENT_ATTACHMENT_NOT_AVAILABLE');
+  }
 
   const existing = await client.query<SubmissionRow>(
     `SELECT ${SUBMISSION_SELECT}
@@ -182,6 +200,19 @@ export async function submitMyLearningAssignment(
   );
   const submission = inserted.rows[0];
   if (!submission) throw new Error('LEARNING_ASSIGNMENT_SUBMISSION_INSERT_FAILED');
+
+  if (attachmentAssetIds.length > 0) {
+    await client.query(
+      `INSERT INTO platform.learning_assignment_submission_assets (
+         submission_id, tenant_id, asset_id, organization_id, position
+       )
+       SELECT $1::uuid, asset.tenant_id, asset.asset_id, asset.organization_id, ordinal::integer
+         FROM unnest($2::uuid[]) WITH ORDINALITY AS selected(asset_id, ordinal)
+         JOIN platform.content_assets asset ON asset.asset_id = selected.asset_id
+        WHERE asset.tenant_id = $3::uuid`,
+      [submission.submission_id, attachmentAssetIds, input.tenantId],
+    );
+  }
 
   await appendDomainEventWithOutbox(client, { event: {
     eventId: randomUUID(), tenantId: input.tenantId, aggregateType: 'learning.assignment.submission',
@@ -447,4 +478,49 @@ export async function publishLearningAssignmentVersion(
     metadata: { source: 'learning.assignment.authoring' },
   }});
   return { assignmentVersionId: target.assignment_version_id, idempotent: false };
+}
+
+
+export async function authorizeMyLearningAssignmentAttachment(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly subjectId: string;
+    readonly subjectIssuer: string | null;
+    readonly enrollmentId: string;
+    readonly lessonId: string;
+    readonly assignmentKey: string;
+  },
+): Promise<void> {
+  await requireLearning(client, input.tenantId);
+  const result = await client.query(
+    `SELECT 1
+       FROM platform.learning_enrollments enrollment
+       JOIN platform.learning_learners learner
+         ON learner.learner_id=enrollment.learner_id AND learner.tenant_id=enrollment.tenant_id
+        AND learner.subject_id=$3 AND learner.subject_issuer IS NOT DISTINCT FROM $4
+        AND learner.status='ACTIVE'
+       JOIN platform.learning_lessons lesson
+         ON lesson.lesson_id=$5::uuid AND lesson.tenant_id=enrollment.tenant_id
+        AND lesson.course_version_id=enrollment.course_version_id
+       JOIN platform.learning_assignments assignment
+         ON assignment.tenant_id=enrollment.tenant_id AND assignment.assignment_key=$6
+        AND assignment.status='ACTIVE'
+       JOIN platform.learning_assignment_versions version
+         ON version.assignment_id=assignment.assignment_id AND version.tenant_id=assignment.tenant_id
+        AND version.course_version_id=enrollment.course_version_id
+        AND version.state='PUBLISHED' AND version.allow_attachments=true
+      WHERE enrollment.tenant_id=$1::uuid AND enrollment.enrollment_id=$2::uuid
+        AND enrollment.status IN ('ASSIGNED','IN_PROGRESS')
+        AND (version.due_at IS NULL OR version.due_at >= now())
+        AND EXISTS (
+          SELECT 1 FROM jsonb_array_elements(
+            CASE WHEN jsonb_typeof(lesson.content->'blocks')='array'
+              THEN lesson.content->'blocks' ELSE '[]'::jsonb END
+          ) block WHERE block->>'type'='ASSIGNMENT'
+            AND block->'data'->>'definitionId'=assignment.assignment_key
+        ) LIMIT 1`,
+    [input.tenantId,input.enrollmentId,input.subjectId,input.subjectIssuer,input.lessonId,input.assignmentKey],
+  );
+  if (!result.rows[0]) throw new Error('LEARNING_ASSIGNMENT_ATTACHMENT_FORBIDDEN');
 }
