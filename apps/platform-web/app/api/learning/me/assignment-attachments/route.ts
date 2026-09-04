@@ -62,6 +62,9 @@ export async function POST(request: Request) {
         correlationId,
       });
     });
+    if (asset.idempotent && asset.state === 'AVAILABLE') {
+      return contentAssetJson({ assetId: asset.assetId, state: asset.state, filename, contentType }, 200);
+    }
     await withTenantTransaction(context, (client) => uploadContentAsset(client, createContentAssetBinaryStore(), {
       tenantId: context.tenantId, assetId: asset.assetId, content: bytes,
       actorSubjectId: context.subjectId, correlationId,
