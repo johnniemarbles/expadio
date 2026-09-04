@@ -60,6 +60,14 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ inputs.cf_token }}
         run: |
+          set -euo pipefail
+
+          # Derive account ID from the zone so wrangler doesn't prompt.
+          ACCOUNT_ID=$(curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['account']['id'])")
+          echo "Account ID: $ACCOUNT_ID"
+
           mkdir -p worker-deploy
           cat > worker-deploy/worker.js << 'WORKER'
           export default {
@@ -84,6 +92,7 @@ jobs:
           cat > worker-deploy/wrangler.toml << TOML
           name = "expadio-forms-proxy"
           main = "worker.js"
+          account_id = "$ACCOUNT_ID"
           compatibility_date = "2024-09-23"
           [[routes]]
           pattern = "forms.expadio.com/*"
@@ -91,26 +100,31 @@ jobs:
           TOML
 
           cd worker-deploy
-          npx wrangler deploy
+          CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" npx wrangler deploy
 
       - name: Set BRAND_WEB_ORIGIN Worker secret
         env:
           CLOUDFLARE_API_TOKEN: ${{ inputs.cf_token }}
         run: |
+          set -euo pipefail
+          ACCOUNT_ID=$(curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['account']['id'])")
           cd worker-deploy
-          echo "${{ inputs.brand_web_origin }}" | npx wrangler secret put BRAND_WEB_ORIGIN --name expadio-forms-proxy
+          echo "${{ inputs.brand_web_origin }}" | \
+            CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" npx wrangler secret put BRAND_WEB_ORIGIN --name expadio-forms-proxy
 
       - name: Summary
         run: |
           echo ""
           echo "========================================"
-          echo "✅ Cloudflare for SaaS setup complete!"
+          echo "✅ Setup complete!"
           echo ""
           echo "One manual step remaining:"
-          echo "  In Cloudflare dashboard → SSL/TLS → Custom Hostnames"
-          echo "  Enable 'Custom Hostnames' if not already on."
+          echo "  Cloudflare dashboard → SSL/TLS → Custom Hostnames"
+          echo "  Enable 'Custom Hostnames' if not already toggled on."
           echo ""
-          echo "Set these on Railway brand-web:"
+          echo "Set on Railway brand-web service:"
           echo "  CLOUDFLARE_ZONE_ID=$ZONE_ID"
-          echo "  CLOUDFLARE_API_TOKEN=<the token>"
+          echo "  CLOUDFLARE_API_TOKEN=<the token you used>"
           echo "========================================"
