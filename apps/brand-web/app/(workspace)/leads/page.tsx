@@ -72,6 +72,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     <section className={styles.pageHead}>
       <div><p className={styles.eyebrow}>Growth · {context.organizationName}</p><h1>Lead Management</h1><p>Organization-scoped CRM projection for active demand. Demand Capture’s 19-stage journey remains a separate governed layer.</p></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Link className={styles.secondaryButton} href="/leads/contacts">Contacts</Link>
+        <Link className={styles.secondaryButton} href="/leads/accounts">Accounts</Link>
         <Link className={styles.secondaryButton} href="/leads/capture/configuration">Capture Config</Link>
         <Link className={styles.secondaryButton} href="/leads/publications">Publications</Link>
         <Link className={styles.secondaryButton} href="/leads/capture">Demand Capture</Link>

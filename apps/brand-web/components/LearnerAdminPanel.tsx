@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface LearnerOption { readonly learnerId: string; readonly fullName: string; }
+interface LearnerOption { readonly learnerId: string; readonly fullName: string; readonly email?: string | null; }
 interface CourseOption { readonly courseId: string; readonly title: string; }
 
 export function LearnerAdminPanel({
@@ -18,6 +18,9 @@ export function LearnerAdminPanel({
   const [email, setEmail] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [audienceType, setAudienceType] = useState('INTERNAL');
+  const existingByEmail = email.trim()
+    ? learners.filter((l) => l.email && l.email.toLowerCase() === email.trim().toLowerCase())
+    : [];
   const [learnerId, setLearnerId] = useState(learners[0]?.learnerId ?? '');
   const [courseId, setCourseId] = useState(courses[0]?.courseId ?? '');
   const [dueAt, setDueAt] = useState('');
@@ -70,7 +73,14 @@ export function LearnerAdminPanel({
       <form className="learningForm" onSubmit={(event) => void createLearner(event)}>
         <h3 className="wide">Add learner</h3>
         <label>Full name<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
-        <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+        <label>Email
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+          {existingByEmail.length > 0 ? (
+            <small style={{ color: 'darkorange', marginTop: 2, display: 'block' }}>
+              ⚠ Existing learner: {existingByEmail.map((l) => l.fullName).join(', ')}
+            </small>
+          ) : null}
+        </label>
         <label>Clerk subject ID<input value={subjectId} onChange={(event) => setSubjectId(event.target.value)} placeholder="Optional: links sign-in identity" /></label>
         <label>Audience<select value={audienceType} onChange={(event) => setAudienceType(event.target.value)}><option>INTERNAL</option><option>PARTNER</option><option>CUSTOMER</option><option>EXTERNAL</option></select></label>
         <div className="wide"><button type="submit" disabled={busy !== null}>{busy === 'learner' ? 'Adding…' : 'Add learner'}</button></div>
