@@ -30,14 +30,15 @@ jobs:
               'expression': 'not ends_with(http.host, \".expadio.com\")',
               'action': 'rewrite',
               'action_parameters': {
+                  'uri': {
+                      'host': {
+                          'value': 'glorious-enchantment-production.up.railway.app'
+                      }
+                  },
                   'headers': {
                       'X-Forwarded-Host': {
                           'operation': 'set',
                           'expression': 'http.host'
-                      },
-                      'host': {
-                          'operation': 'set',
-                          'value': 'glorious-enchantment-production.up.railway.app'
                       }
                   }
               }
