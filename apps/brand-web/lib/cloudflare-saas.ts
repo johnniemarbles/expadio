@@ -98,7 +98,6 @@ export async function upsertCustomHostname(hostname: string): Promise<CustomHost
         bundle_method: "ubiquitous",
         wildcard: false,
       },
-      custom_metadata: { managed: "expadio" },
     }),
   });
 
