@@ -101,7 +101,7 @@ const MANAGEMENT_TEAM: PlatformQualificationCriterion = {
 const EXISTING_BUSINESS_COMPATIBILITY: PlatformQualificationCriterion = {
   criterionKey: 'existing_business_compatibility',
   label: 'Existing Business Compatibility',
-  description: 'The applicant\'s existing business operations are compatible with conversion to this franchise.',
+  description: 'The applicant\'s existing business operations are compatible with conversion to this business model.',
 };
 
 // Multi-unit development plan
