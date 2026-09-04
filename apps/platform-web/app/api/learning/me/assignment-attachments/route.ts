@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       return contentAssetJson({ assetId: asset.assetId, state: asset.state, reasonKey: 'LEARNING_ASSIGNMENT_ATTACHMENT_UNAVAILABLE' }, 422);
     }
 
-    let state = asset.state;
+    let state: string = asset.state;
     if (state === 'PENDING_UPLOAD') {
       const uploaded = await withTenantTransaction(context, (client) => uploadContentAsset(client, createContentAssetBinaryStore(), {
         tenantId: context.tenantId, assetId: asset.assetId, content: bytes,
