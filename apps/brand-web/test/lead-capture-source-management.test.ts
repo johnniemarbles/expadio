@@ -35,3 +35,12 @@ test('the publishable key is a public identifier the operator can wire into the 
   // No private-key material is generated or returned for the public rail.
   assert.doesNotMatch(route, /privateKey|private_key|verification_private/);
 });
+
+
+test('source publication policy is normalized, persisted, and returned', () => {
+  assert.match(route, /normalizeCaptureSourcePublicationConfig\(body\.publicationConfig \?\? \{\}\)/);
+  assert.match(route, /JSON\.stringify\(\{ publicationConfig \}\)/);
+  assert.match(route, /publicationConfig: normalizeCaptureSourcePublicationConfig\(row\.metadata\?\.publicationConfig \?\? \{\}\)/);
+  assert.match(route, /CaptureSourceConfigError/);
+  assert.doesNotMatch(route, /body\.(tenantId|organizationId)/);
+});
