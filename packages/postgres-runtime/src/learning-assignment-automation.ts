@@ -461,6 +461,89 @@ export async function publishLearningAssignmentRuleVersion(
   };
 }
 
+export interface LearningAssignmentExecutionSummary {
+  readonly assignmentRuleExecutionId: string;
+  readonly assignmentRuleId: string;
+  readonly assignmentRuleVersionId: string;
+  readonly ruleKey: string;
+  readonly ruleVersion: number;
+  readonly ruleName: string;
+  readonly learnerId: string;
+  readonly learnerName: string;
+  readonly outcome: 'NOT_MATCHED' | 'ASSIGNED' | 'SATISFIED';
+  readonly targetType: LearningAssignmentTargetType;
+  readonly enrollmentId: string | null;
+  readonly programEnrollmentId: string | null;
+  readonly triggerEventId: string | null;
+  readonly correlationId: string;
+  readonly evaluatedAt: string;
+}
+
+export async function listLearningAssignmentRuleExecutions(
+  client: PostgresClient,
+  input: { readonly tenantId: string; readonly learnerId?: string; readonly limit?: number },
+): Promise<readonly LearningAssignmentExecutionSummary[]> {
+  await requireLearning(client, input.tenantId);
+  const limit = Math.min(500, Math.max(1, input.limit ?? 100));
+  const result = await client.query<{
+    readonly assignment_rule_execution_id: string;
+    readonly assignment_rule_id: string;
+    readonly assignment_rule_version_id: string;
+    readonly rule_key: string;
+    readonly rule_version: number;
+    readonly rule_name: string;
+    readonly learner_id: string;
+    readonly learner_name: string;
+    readonly outcome: LearningAssignmentExecutionSummary['outcome'];
+    readonly target_type: LearningAssignmentTargetType;
+    readonly enrollment_id: string | null;
+    readonly program_enrollment_id: string | null;
+    readonly trigger_event_id: string | null;
+    readonly correlation_id: string;
+    readonly evaluated_at: Date | string;
+  }>(
+    `SELECT execution.assignment_rule_execution_id,
+            version.assignment_rule_id, execution.assignment_rule_version_id,
+            rule.rule_key, version.version AS rule_version, version.name AS rule_name,
+            execution.learner_id, learner.full_name AS learner_name,
+            execution.outcome, execution.target_type, execution.enrollment_id,
+            execution.program_enrollment_id, execution.trigger_event_id,
+            execution.correlation_id, execution.evaluated_at
+       FROM platform.learning_assignment_rule_executions execution
+       JOIN platform.learning_assignment_rule_versions version
+         ON version.assignment_rule_version_id=execution.assignment_rule_version_id
+        AND version.tenant_id=execution.tenant_id
+       JOIN platform.learning_assignment_rules rule
+         ON rule.assignment_rule_id=version.assignment_rule_id
+        AND rule.tenant_id=execution.tenant_id
+       JOIN platform.learning_learners learner
+         ON learner.learner_id=execution.learner_id
+        AND learner.tenant_id=execution.tenant_id
+      WHERE execution.tenant_id=$1::uuid
+        AND ($3::uuid IS NULL OR execution.learner_id = $3::uuid)
+      ORDER BY execution.evaluated_at DESC, execution.assignment_rule_execution_id DESC
+      LIMIT $2`,
+    [input.tenantId, limit, input.learnerId ?? null],
+  );
+  return result.rows.map((row) => ({
+    assignmentRuleExecutionId: row.assignment_rule_execution_id,
+    assignmentRuleId: row.assignment_rule_id,
+    assignmentRuleVersionId: row.assignment_rule_version_id,
+    ruleKey: row.rule_key,
+    ruleVersion: row.rule_version,
+    ruleName: row.rule_name,
+    learnerId: row.learner_id,
+    learnerName: row.learner_name,
+    outcome: row.outcome,
+    targetType: row.target_type,
+    enrollmentId: row.enrollment_id,
+    programEnrollmentId: row.program_enrollment_id,
+    triggerEventId: row.trigger_event_id,
+    correlationId: row.correlation_id,
+    evaluatedAt: iso(row.evaluated_at),
+  }));
+}
+
 export async function evaluateLearningAssignmentRulesForLearner(
   client: PostgresClient,
   input: {
@@ -798,70 +881,4 @@ function result(
     evaluatedAt: iso(execution.evaluated_at),
     idempotent,
   };
-}
-
-export async function listLearningAssignmentRuleExecutions(
-  client: PostgresClient,
-  input: {
-    readonly tenantId: string;
-    readonly learnerId?: string;
-  },
-): Promise<readonly {
-  readonly assignmentRuleExecutionId: string;
-  readonly assignmentRuleVersionId: string;
-  readonly ruleKey: string;
-  readonly ruleVersion: number;
-  readonly learnerId: string;
-  readonly outcome: 'NOT_MATCHED' | 'ASSIGNED' | 'SATISFIED';
-  readonly targetType: LearningAssignmentTargetType;
-  readonly enrollmentId: string | null;
-  readonly programEnrollmentId: string | null;
-  readonly triggerEventId: string | null;
-  readonly evaluatedBySubjectId: string;
-  readonly correlationId: string;
-  readonly evaluatedAt: string;
-}[]> {
-  await requireLearning(client, input.tenantId);
-  const rows = await client.query<ExecutionRow & {
-    readonly rule_key: string;
-    readonly rule_version: number;
-  }>(
-    `SELECT execution.assignment_rule_execution_id,
-            execution.assignment_rule_version_id,
-            execution.learner_id, execution.trigger_event_id,
-            execution.evaluated_by_subject_id, execution.correlation_id,
-            execution.outcome, execution.target_type,
-            execution.enrollment_id, execution.program_enrollment_id,
-            execution.evaluated_at, rule.rule_key,
-            version.version AS rule_version
-       FROM platform.learning_assignment_rule_executions execution
-       JOIN platform.learning_assignment_rule_versions version
-         ON version.assignment_rule_version_id =
-            execution.assignment_rule_version_id
-        AND version.tenant_id = execution.tenant_id
-       JOIN platform.learning_assignment_rules rule
-         ON rule.assignment_rule_id = version.assignment_rule_id
-        AND rule.tenant_id = version.tenant_id
-      WHERE execution.tenant_id = $1::uuid
-        AND ($2::uuid IS NULL OR execution.learner_id = $2::uuid)
-      ORDER BY execution.evaluated_at DESC,
-               execution.assignment_rule_execution_id`,
-    [input.tenantId, input.learnerId ?? null],
-  );
-
-  return rows.rows.map((row) => ({
-    assignmentRuleExecutionId: row.assignment_rule_execution_id,
-    assignmentRuleVersionId: row.assignment_rule_version_id,
-    ruleKey: row.rule_key,
-    ruleVersion: row.rule_version,
-    learnerId: row.learner_id,
-    outcome: row.outcome,
-    targetType: row.target_type,
-    enrollmentId: row.enrollment_id,
-    programEnrollmentId: row.program_enrollment_id,
-    triggerEventId: row.trigger_event_id,
-    evaluatedBySubjectId: row.evaluated_by_subject_id,
-    correlationId: row.correlation_id,
-    evaluatedAt: iso(row.evaluated_at),
-  }));
 }
