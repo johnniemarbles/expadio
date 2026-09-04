@@ -41,6 +41,6 @@ export default async function CaptureConfigurationPage() {
       </div>
     </section>
 
-    <CaptureConfigurationClient initialDomain={context.brandDomain} />
+    <CaptureConfigurationClient initialDomain={context.brandDomain} brandSlug={context.brandSlug} />
   </>;
 }
