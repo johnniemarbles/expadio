@@ -106,8 +106,23 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <div className={styles.panelHead}><h2>Create lead</h2></div>
       <div className={styles.panelBody}>
         <form action={createLeadAction} className="learningForm">
-          <label className="wide">Lead title<input name="title" maxLength={200} required /></label>
-          <label>Amount (minor units)<input name="amountMinorUnits" type="number" min="0" step="1" /></label>
+          <label className="wide">Contact name<input name="contactName" maxLength={200} placeholder="Full name" /></label>
+          <label>Email<input name="contactEmail" type="email" maxLength={254} placeholder="email@example.com" /></label>
+          <label>Phone<input name="contactPhone" maxLength={50} placeholder="+1 555 000 0000" /></label>
+          <label>
+            Interest type
+            <select name="enquiryInterestType">
+              <option value="">— Select interest —</option>
+              <option value="FRANCHISEE">Franchise</option>
+              <option value="MASTER_FRANCHISEE">Master Franchise</option>
+              <option value="DISTRIBUTOR">Distribution</option>
+              <option value="AFFILIATE">Affiliate Partner</option>
+              <option value="LICENSEE">License</option>
+              <option value="AGENT">Sales Agent</option>
+            </select>
+          </label>
+          <label className="wide">Lead title / notes<input name="title" maxLength={200} required placeholder="e.g. John Smith — franchise enquiry" /></label>
+          <label>Est. value (minor units)<input name="amountMinorUnits" type="number" min="0" step="1" placeholder="0" /></label>
           <label>Currency<input name="currency" defaultValue="USD" maxLength={3} /></label>
           <div className="wide"><button className={styles.button} type="submit">Create lead</button></div>
         </form>
@@ -120,11 +135,16 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         <Link className={selectedStage === '' ? styles.button : styles.secondaryButton} href="/leads">All</Link>
         {BRAND_LEAD_STAGES.map((stage) => <Link key={stage} className={selectedStage === stage ? styles.button : styles.secondaryButton} href={`/leads?stage=${stage}`}>{stage}</Link>)}
       </div>
-      {leads.length === 0 ? <div className={styles.empty}>No leads are visible for this filter in the selected organization scope.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Lead</th><th>Stage</th><th>Value</th><th>Account</th><th>Source</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.leadId}>
-        <td><strong>{lead.title}</strong><br /><small>{new Date(lead.createdAt).toLocaleDateString()}</small></td>
+      {leads.length === 0 ? <div className={styles.empty}>No leads are visible for this filter in the selected organization scope.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Contact</th><th>Interest</th><th>Stage</th><th>Value</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.leadId}>
+        <td>
+          <strong>{lead.contactName ?? lead.title}</strong>
+          {lead.contactEmail ? <><br /><small>{lead.contactEmail}</small></> : null}
+          {lead.contactPhone ? <><br /><small>{lead.contactPhone}</small></> : null}
+          <br /><small style={{color:'var(--theme-text-muted)'}}>{new Date(lead.createdAt).toLocaleDateString()}</small>
+        </td>
+        <td>{lead.enquiryInterestType ?? '—'}</td>
         <td><span className={styles.pill}>{lead.stage}</span></td>
         <td>{lead.amountMinorUnits == null ? '—' : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}</td>
-        <td>{lead.accountName ?? '—'}</td><td>{lead.source ?? '—'}</td>
         <td><form action={updateStageAction} style={{display:'flex',gap:6,flexWrap:'wrap'}}><input type="hidden" name="leadId" value={lead.leadId}/><select name="stage" defaultValue={lead.stage}>{BRAND_LEAD_STAGES.map((stage) => <option value={stage} key={stage}>{stage}</option>)}</select><button type="submit">Update</button></form>{lead.stage !== 'LOST' && lead.stage !== 'WON' ? <form action={convertLeadAction} style={{marginTop:6}}><input type="hidden" name="leadId" value={lead.leadId}/><button type="submit">Convert to customer</button></form> : null}</td>
       </tr>)}</tbody></table></div>}
     </section>
