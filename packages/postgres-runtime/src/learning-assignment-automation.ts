@@ -227,6 +227,57 @@ export async function createLearningAssignmentRule(
   }
 }
 
+export interface LearningAssignmentRulePreview {
+  readonly totalLearners: number;
+  readonly matchedLearners: number;
+  readonly unmatchedLearners: number;
+  readonly sample: readonly {
+    readonly learnerId: string;
+    readonly fullName: string;
+    readonly audienceType: LearnerAudienceType;
+    readonly subjectLinked: boolean;
+  }[];
+}
+
+export async function previewLearningAssignmentRule(
+  client: PostgresClient,
+  input: {
+    readonly tenantId: string;
+    readonly draft: unknown;
+    readonly sampleLimit?: number;
+  },
+): Promise<LearningAssignmentRulePreview> {
+  await requireLearning(client, input.tenantId);
+  const draft = validateLearningAssignmentRuleDraft(input.draft);
+  const sampleLimit = Math.min(100, Math.max(1, input.sampleLimit ?? 25));
+  const result = await client.query<LearnerRow & { readonly full_name: string }>(
+    `SELECT learner_id, subject_id, audience_type, status, metadata, full_name
+       FROM platform.learning_learners
+      WHERE tenant_id = $1::uuid AND status = 'ACTIVE'
+      ORDER BY full_name, learner_id`,
+    [input.tenantId],
+  );
+  const matches = result.rows.filter((learner) => matchesLearningAssignmentRule(
+    draft.conditions,
+    {
+      audienceType: learner.audience_type,
+      subjectId: learner.subject_id,
+      metadata: learner.metadata,
+    },
+  ));
+  return {
+    totalLearners: result.rows.length,
+    matchedLearners: matches.length,
+    unmatchedLearners: result.rows.length - matches.length,
+    sample: matches.slice(0, sampleLimit).map((learner) => ({
+      learnerId: learner.learner_id,
+      fullName: learner.full_name,
+      audienceType: learner.audience_type,
+      subjectLinked: learner.subject_id !== null,
+    })),
+  };
+}
+
 export async function listLearningAssignmentRules(
   client: PostgresClient,
   tenantId: string,
