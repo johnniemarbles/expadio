@@ -23,10 +23,12 @@ jobs:
         run: |
           python3 -c "
           import json
-          # Single transform rule: preserve original hostname in X-Forwarded-Host,
-          # then override Host to the Railway hostname so Hikari accepts the request.
+          # Set X-Forwarded-Host to the original custom hostname so brand-web can resolve
+          # the tenant even when the Host header is later rewritten by the Worker.
+          # Note: the 'host' header cannot be set here (CF error 20087 - protected header).
+          # Host rewriting is handled by the expadio-custom-hostname-proxy Worker instead.
           transform_rule = {
-              'description': 'expadio: rewrite Host for custom domain traffic',
+              'description': 'expadio: set X-Forwarded-Host for custom domain traffic',
               'expression': 'not ends_with(http.host, \".expadio.com\")',
               'action': 'rewrite',
               'action_parameters': {
@@ -34,10 +36,6 @@ jobs:
                       'X-Forwarded-Host': {
                           'operation': 'set',
                           'expression': 'http.host'
-                      },
-                      'host': {
-                          'operation': 'set',
-                          'value': 'glorious-enchantment-production.up.railway.app'
                       }
                   }
               }

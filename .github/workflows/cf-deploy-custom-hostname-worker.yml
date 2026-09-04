@@ -1,0 +1,133 @@
+name: CF — Deploy custom-hostname proxy Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_token:
+        description: "Cloudflare API token"
+        required: true
+        type: string
+
+env:
+  ZONE_ID: a871277903f98da014626efd5abe9a17
+  ACCOUNT_ID: 9fa4dc0a90be4759feb579c5c0895faf
+  WORKER_NAME: expadio-custom-hostname-proxy
+  RAILWAY_HOST: glorious-enchantment-production.up.railway.app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mask token
+        run: echo "::add-mask::${{ inputs.cf_token }}"
+
+      - name: Write Worker script
+        run: |
+          cat > /tmp/worker.js << 'JSEOF'
+          addEventListener('fetch', event => {
+            event.respondWith(handleRequest(event.request));
+          });
+
+          const RAILWAY_HOST = 'glorious-enchantment-production.up.railway.app';
+
+          async function handleRequest(request) {
+            const host = request.headers.get('host') || '';
+
+            // Only rewrite for custom hostname traffic (not *.expadio.com or expadio.com)
+            if (!host.endsWith('.expadio.com') && host !== 'expadio.com') {
+              const url = new URL(request.url);
+              url.hostname = RAILWAY_HOST;
+              url.port = '';
+              url.protocol = 'https:';
+
+              const newHeaders = new Headers(request.headers);
+              newHeaders.set('host', RAILWAY_HOST);
+              newHeaders.set('X-Forwarded-Host', host);
+
+              const method = request.method;
+              const body = (method === 'GET' || method === 'HEAD') ? undefined : request.body;
+
+              return fetch(url.toString(), {
+                method,
+                headers: newHeaders,
+                body,
+                redirect: 'manual',
+              });
+            }
+
+            // *.expadio.com traffic: pass through (handled by separate Worker route)
+            return fetch(request);
+          }
+          JSEOF
+          echo "Worker script written:"
+          cat /tmp/worker.js
+
+      - name: Deploy Worker script
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Deploying Worker: ${WORKER_NAME} ==="
+          RESULT=$(curl -sS -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
+            -H "Authorization: Bearer ${CF_TOKEN}" \
+            -H "Content-Type: application/javascript" \
+            --data-binary @/tmp/worker.js)
+          echo "$RESULT" | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              print('Worker deployed OK: ' + r.get('result', {}).get('id', '?'))
+          else:
+              print('FAILED: ' + str(r.get('errors', [])))
+              sys.exit(1)
+          "
+
+      - name: Add Worker route */* for custom hostname traffic
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Listing existing routes ==="
+          ROUTES=$(curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+            -H "Authorization: Bearer ${CF_TOKEN}")
+          echo "$ROUTES"
+
+          EXISTING_ID=$(echo "$ROUTES" | python3 -c "
+          import sys, json
+          for r in json.load(sys.stdin).get('result', []):
+              if r.get('pattern') == '*/*':
+                  print(r.get('id', ''))
+          ")
+
+          if [ -n "$EXISTING_ID" ]; then
+            echo "Route */* already exists (id=${EXISTING_ID}), updating..."
+            RESULT=$(curl -sS -X PUT \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes/${EXISTING_ID}" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "{\"pattern\": \"*/*\", \"script\": \"${WORKER_NAME}\"}")
+          else
+            echo "Creating new */* route..."
+            RESULT=$(curl -sS -X POST \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "{\"pattern\": \"*/*\", \"script\": \"${WORKER_NAME}\"}")
+          fi
+
+          echo "$RESULT" | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              print('Route OK: ' + str(r.get('result', {})))
+          else:
+              print('FAILED: ' + str(r.get('errors', [])))
+              sys.exit(1)
+          "
+
+      - name: Verify live (curl apply.mydreamware.org)
+        run: |
+          sleep 10
+          echo "=== curl apply.mydreamware.org ==="
+          curl -sv --max-time 15 "https://apply.mydreamware.org/" 2>&1 \
+            | grep -E "^[<>]|HTTP/|x-forwarded|x-railway|server:|cf-ray:|location:" || true
