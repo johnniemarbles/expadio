@@ -26,6 +26,10 @@ export interface BrandWorkspaceOption {
 }
 export interface BrandContext extends BrandWorkspaceOption {
   readonly subjectId:string;readonly issuer:string;readonly workspaces:readonly BrandWorkspaceOption[];
+  readonly brandSlug:string|null;
+  readonly brandDisplayName:string|null;
+  readonly brandDomain:string|null;
+  readonly brandDomainVerifiedAt:string|null;
 }
 export class BrandContextError extends Error {
   readonly code:'UNAUTHENTICATED'|'NO_BRAND_MEMBERSHIP';
@@ -44,7 +48,18 @@ export async function resolveBrandContext():Promise<BrandContext>{
   const jar=await cookies();const selectedTenant=jar.get(TENANT_COOKIE)?.value;const selectedOrg=jar.get(ORG_COOKIE)?.value;
   const selected=workspaces.find((entry)=>entry.tenantId===selectedTenant&&entry.organizationId===selectedOrg)??workspaces[0];
   if(!selected)throw new BrandContextError('NO_BRAND_MEMBERSHIP');
-  return {subjectId:userId,issuer:ISSUER,...selected,workspaces};
+  const orgRow=await dbPool.query<{brand_slug:string|null;brand_display_name:string|null;brand_domain:string|null;brand_domain_verified_at:Date|null}>(
+    `SELECT brand_slug,brand_display_name,brand_domain,brand_domain_verified_at FROM platform.organizations WHERE organization_id=$1::uuid`,
+    [selected.organizationId],
+  );
+  const org=orgRow.rows[0];
+  return {
+    subjectId:userId,issuer:ISSUER,...selected,workspaces,
+    brandSlug:org?.brand_slug??null,
+    brandDisplayName:org?.brand_display_name??null,
+    brandDomain:org?.brand_domain??null,
+    brandDomainVerifiedAt:org?.brand_domain_verified_at?.toISOString()??null,
+  };
 }
 
 export async function withBrandTransaction<T>(context:BrandContext,work:(client:pg.PoolClient)=>Promise<T>):Promise<T>{
