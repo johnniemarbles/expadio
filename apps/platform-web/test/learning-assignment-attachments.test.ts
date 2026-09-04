@@ -15,6 +15,14 @@ test('attachment ingestion authorizes before buffering and keeps provider author
   assert.match(platform, /MAX_BYTES = 25 \* 1024 \* 1024/);
 });
 
+test('idempotent retries resume each persisted ingestion state', () => {
+  assert.match(platform, /asset\.state === 'AVAILABLE'/);
+  assert.match(platform, /state === 'PENDING_UPLOAD'/);
+  assert.match(platform, /state === 'UPLOADED'/);
+  assert.match(platform, /state !== 'QUARANTINED'/);
+  assert.match(platform, /asset\.state === 'REJECTED' \|\| asset\.state === 'DELETED'/);
+});
+
 test('attachment authorization binds learner, enrollment, lesson, definition, due date and prerequisites', () => {
   assert.match(runtime, /authorizeMyLearningAssignmentAttachment/);
   assert.match(runtime, /learner\.subject_id=\$3/);
