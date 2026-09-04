@@ -144,14 +144,62 @@ export function CourseBlockEditor({
     return () => { window.clearTimeout(timeout); controller.abort(); };
   }, [draft, dirty, editable, validationKey]);
 
-  function insertCommand() {
+  async function insertCommand() {
+    const text = command.trim();
+    if (text.toLowerCase().startsWith('/ai ')) {
+      const prompt = text.substring(4).trim();
+      if (!prompt) { setError('Provide a prompt for the AI.'); return; }
+      
+      setCommand('');
+      setStatus('SAVING');
+      try {
+        const response = await fetch('/api/learning/ai/requests', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            requestType: 'AUTHOR_DRAFT',
+            prompt,
+            courseId,
+            idempotencyKey: crypto.randomUUID(),
+            metadata: { surface: 'course-block-editor' },
+          }),
+        });
+        const created = await response.json() as { learningAiRequestId?: string; error?: string };
+        if (!response.ok || !created.learningAiRequestId) throw new Error(created.error ?? 'AI request failed');
+
+        let outputContent = null;
+        for (let attempt = 0; attempt < 60; attempt += 1) {
+          const statusRes = await fetch(`/api/learning/ai/requests/${created.learningAiRequestId}`, { cache: 'no-store' });
+          const current = await statusRes.json() as any;
+          if (['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(current.jobStatus)) {
+            if (current.jobStatus === 'SUCCEEDED' && current.output?.content) {
+              outputContent = current.output.content;
+            } else {
+              throw new Error(current.lastFailureCode ?? 'AI job failed');
+            }
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        if (outputContent) {
+          updateBlocks((blocks) => [...blocks, { ...initialBlock('RICH_TEXT'), data: { text: outputContent } }]);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'AI generation failed');
+      } finally {
+        setStatus('SAVED');
+      }
+      return;
+    }
+
     const commands: Record<string, BlockType> = {
       '/text': 'RICH_TEXT',
       '/heading': 'HEADING',
       '/callout': 'CALLOUT',
     };
-    const type = commands[command.trim().toLowerCase()];
-    if (!type) { setError('Use /text, /heading or /callout.'); return; }
+    const type = commands[text.toLowerCase()];
+    if (!type) { setError('Use /text, /heading, /callout, or /ai <prompt>.'); return; }
     updateBlocks((blocks) => [...blocks, initialBlock(type)]);
     setCommand('');
   }
