@@ -60,6 +60,7 @@ export function BrandShellFrame({
         <Link className={styles.allAppsLink} href="/">＋ All Apps</Link>
         <p className={styles.navGroup}>Administration</p>
         <Link className={pathname==='/appearance'?styles.navActive:''} href="/appearance">Appearance</Link>
+        <Link className={pathname==='/settings/brand'||pathname.startsWith('/settings/brand/')?styles.navActive:''} href="/settings/brand">Brand settings</Link>
       </nav>
 
       <div className={styles.sidebarBottom}>

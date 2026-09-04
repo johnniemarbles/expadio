@@ -1,6 +1,15 @@
+import { randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { buildPublication, resolveHostedFormUrl } from '@expadio/lead-capture';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
+
+function generatePublishableKey(): string {
+  const BASE62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = randomBytes(40);
+  let body = '';
+  for (const byte of bytes) body += BASE62[byte % 62];
+  return `cpk_${body}`;
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,12 +31,16 @@ export async function GET() {
                 p.publication_mode, p.publication_slug, p.brand_domain,
                 p.post_submit_redirect_url, p.enable_pre_fill,
                 p.status, p.created_at, p.activated_at, p.archived_at,
-                s.capture_source_id, s.label AS source_label
+                s.capture_source_id, s.label AS source_label,
+                cs.publishable_key
            FROM platform.lead_publications p
            LEFT JOIN platform.lead_publication_sources s
              ON s.publication_id = p.publication_id
             AND s.tenant_id = p.tenant_id
             AND s.organization_id = p.organization_id
+           LEFT JOIN platform.lead_capture_sources cs
+             ON cs.source_id = s.capture_source_id
+            AND cs.tenant_id = p.tenant_id
           WHERE p.tenant_id = $1::uuid AND p.organization_id = $2::uuid
           ORDER BY p.created_at DESC`,
         [context.tenantId, context.organizationId],
@@ -54,6 +67,7 @@ export async function GET() {
           status: row.status,
           captureSourceId: row.capture_source_id,
           captureSourceLabel: row.source_label,
+          publishableKey: row.publishable_key ?? null,
           createdAt: new Date(row.created_at).toISOString(),
           activatedAt: row.activated_at ? new Date(row.activated_at).toISOString() : null,
           archivedAt: row.archived_at ? new Date(row.archived_at).toISOString() : null,
@@ -190,6 +204,22 @@ export async function POST(request: Request) {
           [srcId, pub.tenantId, pub.organizationId, pub.publicationId, pub.captureSource.label],
         );
 
+        // For HOSTED_FORM publications: also create a PUBLIC lead_capture_source
+        // so the browser form can submit to platform-web without a signing secret.
+        let publishableKey: string | null = null;
+        if (pub.publicationMode === 'HOSTED_FORM' && pub.hostedFormConfig?.brandDomain) {
+          publishableKey = generatePublishableKey();
+          const origin = `https://${pub.hostedFormConfig.brandDomain}`;
+          await client.query(
+            `INSERT INTO platform.lead_capture_sources
+               (source_id, tenant_id, organization_id, source_key, surface, channel,
+                trust_rail, require_signed_ticket, publishable_key, allowed_origins, status)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'WEB', 'WEB',
+                     'PUBLIC', false, $5, ARRAY[$6]::text[], 'ACTIVE')`,
+            [srcId, pub.tenantId, pub.organizationId, `pub:${pub.publicationId}`, publishableKey, origin],
+          );
+        }
+
         const hostedFormUrl = pub.hostedFormConfig
           ? resolveHostedFormUrl(pub)
           : null;
@@ -201,6 +231,7 @@ export async function POST(request: Request) {
           status: 'DRAFT',
           publicationMode: pub.publicationMode,
           hostedFormUrl,
+          publishableKey,
           captureSourceLabel: pub.captureSource.label,
           createdAt: now,
         }, { status: 201 });

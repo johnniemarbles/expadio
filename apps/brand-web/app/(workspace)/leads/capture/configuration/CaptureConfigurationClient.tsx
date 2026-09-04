@@ -34,11 +34,11 @@ async function readJson(r: Response): Promise<Record<string, unknown>> {
   return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
 }
 
-export default function CaptureConfigurationClient() {
+export default function CaptureConfigurationClient({ initialDomain }: { initialDomain?: string | null }) {
   const [loading, setLoading] = useState(true);
   const [activeForms, setActiveForms] = useState<ActiveForm[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [domain, setDomain] = useState('');
+  const [domain, setDomain] = useState(initialDomain ?? '');
   const [activating, setActivating] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -81,9 +81,8 @@ export default function CaptureConfigurationClient() {
       setSelected(new Set(forms.map((f) => f.key)));
 
       const existingDomain = pubs.find((p) => typeof p.brandDomain === 'string')?.brandDomain;
-      if (typeof existingDomain === 'string' && existingDomain) {
-        setDomain((prev) => prev || existingDomain);
-      }
+      const fallback = typeof existingDomain === 'string' && existingDomain ? existingDomain : (initialDomain ?? '');
+      setDomain((prev) => prev || fallback);
     } catch (err) {
       setNotice({ kind: 'error', text: err instanceof Error ? err.message : 'Failed to load.' });
     } finally {

@@ -26,6 +26,10 @@ export interface BrandWorkspaceOption {
 }
 export interface BrandContext extends BrandWorkspaceOption {
   readonly subjectId:string;readonly issuer:string;readonly workspaces:readonly BrandWorkspaceOption[];
+  readonly brandSlug:string|null;
+  readonly brandDisplayName:string|null;
+  readonly brandDomain:string|null;
+  readonly brandDomainVerifiedAt:string|null;
 }
 export class BrandContextError extends Error {
   readonly code:'UNAUTHENTICATED'|'NO_BRAND_MEMBERSHIP';
@@ -44,7 +48,28 @@ export async function resolveBrandContext():Promise<BrandContext>{
   const jar=await cookies();const selectedTenant=jar.get(TENANT_COOKIE)?.value;const selectedOrg=jar.get(ORG_COOKIE)?.value;
   const selected=workspaces.find((entry)=>entry.tenantId===selectedTenant&&entry.organizationId===selectedOrg)??workspaces[0];
   if(!selected)throw new BrandContextError('NO_BRAND_MEMBERSHIP');
-  return {subjectId:userId,issuer:ISSUER,...selected,workspaces};
+  const _orgClient=await dbPool.connect();
+  let org:{brand_slug:string|null;brand_display_name:string|null;brand_domain:string|null;brand_domain_verified_at:Date|null}|undefined;
+  try{
+    await _orgClient.query('BEGIN');
+    await _orgClient.query(
+      `SELECT set_config('app.tenant_id',$1,true),set_config('app.organization_id',$2,true),set_config('app.subject_id',$3,true),set_config('app.issuer',$4,true)`,
+      [selected.tenantId,selected.organizationId,userId,ISSUER],
+    );
+    const orgRow=await _orgClient.query<{brand_slug:string|null;brand_display_name:string|null;brand_domain:string|null;brand_domain_verified_at:Date|null}>(
+      `SELECT brand_slug,brand_display_name,brand_domain,brand_domain_verified_at FROM platform.organizations WHERE organization_id=$1::uuid`,
+      [selected.organizationId],
+    );
+    await _orgClient.query('COMMIT');
+    org=orgRow.rows[0];
+  }catch{try{await _orgClient.query('ROLLBACK')}catch{}}finally{_orgClient.release()}
+  return {
+    subjectId:userId,issuer:ISSUER,...selected,workspaces,
+    brandSlug:org?.brand_slug??null,
+    brandDisplayName:org?.brand_display_name??null,
+    brandDomain:org?.brand_domain??null,
+    brandDomainVerifiedAt:org?.brand_domain_verified_at?.toISOString()??null,
+  };
 }
 
 export async function withBrandTransaction<T>(context:BrandContext,work:(client:pg.PoolClient)=>Promise<T>):Promise<T>{
