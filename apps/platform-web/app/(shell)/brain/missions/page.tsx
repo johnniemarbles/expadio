@@ -40,10 +40,10 @@ interface MissionsData {
 
 function statusColor(status: string): string {
   const s = status.toUpperCase();
-  if (s === 'COMPLETED' || s === 'APPROVED') return 'var(--theme-success, #16a34a)';
-  if (s === 'FAILED' || s === 'REJECTED') return 'var(--theme-danger, #dc2626)';
+  if (s === 'COMPLETED' || s === 'APPROVED') return 'var(--theme-success)';
+  if (s === 'FAILED' || s === 'REJECTED') return 'var(--theme-danger)';
   if (s === 'IN_PROGRESS' || s === 'RUNNING') return 'var(--theme-primary)';
-  if (s === 'AWAITING_APPROVAL' || s === 'PENDING') return 'var(--theme-warning, #d97706)';
+  if (s === 'AWAITING_APPROVAL' || s === 'PENDING') return 'var(--theme-warning)';
   return 'var(--theme-text-secondary)';
 }
 
@@ -234,7 +234,7 @@ export default function PlatformMissionsPage() {
           disabled={submitting || !intent.trim()}
           style={{
             padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: 'var(--theme-primary)', color: '#fff', border: 'none',
+            background: 'var(--theme-primary)', color: 'var(--theme-surface)', border: 'none',
             cursor: submitting || !intent.trim() ? 'not-allowed' : 'pointer',
             opacity: submitting || !intent.trim() ? 0.6 : 1, minWidth: 150,
           }}
@@ -247,10 +247,10 @@ export default function PlatformMissionsPage() {
         <div style={{
           padding: '10px 14px', borderRadius: 8, fontSize: 13,
           background: noticeKind === 'error'
-            ? 'color-mix(in srgb,var(--theme-danger, #dc2626) 8%,var(--theme-surface))'
+            ? 'color-mix(in srgb,var(--theme-danger) 8%,var(--theme-surface))'
             : 'var(--theme-surface)',
-          border: `1px solid ${noticeKind === 'error' ? 'var(--theme-danger, #dc2626)' : 'var(--theme-border)'}`,
-          color: noticeKind === 'error' ? 'var(--theme-danger, #dc2626)' : 'var(--theme-text-primary)',
+          border: `1px solid ${noticeKind === 'error' ? 'var(--theme-danger)' : 'var(--theme-border)'}`,
+          color: noticeKind === 'error' ? 'var(--theme-danger)' : 'var(--theme-text-primary)',
         }}>
           {notice}
         </div>
@@ -259,7 +259,7 @@ export default function PlatformMissionsPage() {
       {pendingApprovals.length > 0 && (
         <div style={card}>
           <div style={cardHead}>
-            <h3 style={{ ...headingStyle, color: 'var(--theme-warning, #d97706)' }}>
+            <h3 style={{ ...headingStyle, color: 'var(--theme-warning)' }}>
               Pending Approvals ({pendingApprovals.length})
             </h3>
           </div>
@@ -281,7 +281,7 @@ export default function PlatformMissionsPage() {
                   <button
                     style={{
                       padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
-                      background: 'var(--theme-success, #16a34a)', color: '#fff', border: 'none', cursor: 'pointer',
+                      background: 'var(--theme-success)', color: 'var(--theme-surface)', border: 'none', cursor: 'pointer',
                     }}
                     onClick={() => resolveApproval(a.mission_id, a.approval_id, true)}
                   >
@@ -291,8 +291,8 @@ export default function PlatformMissionsPage() {
                     style={{
                       padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                       background: 'transparent', cursor: 'pointer',
-                      color: 'var(--theme-danger, #dc2626)',
-                      border: '1px solid var(--theme-danger, #dc2626)',
+                      color: 'var(--theme-danger)',
+                      border: '1px solid var(--theme-danger)',
                     }}
                     onClick={() => resolveApproval(a.mission_id, a.approval_id, false)}
                   >
@@ -405,7 +405,7 @@ export default function PlatformMissionsPage() {
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 600 }}>{t.title}</div>
                         {t.error && (
-                          <div style={{ fontSize: 11, color: 'var(--theme-danger, #dc2626)', marginTop: 3 }}>
+                          <div style={{ fontSize: 11, color: 'var(--theme-danger)', marginTop: 3 }}>
                             {t.error}
                           </div>
                         )}
