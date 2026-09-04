@@ -13,7 +13,10 @@
  */
 export * from './contract.ts';
 export * from './interest-payload.ts';
+export * from './interest-type-registry.ts';
 export * from './normalize.ts';
 export * from './public-source.ts';
 export * from './client.ts';
 export * from './sign.ts';
+export * from './lead-management-config.ts';
+export * from './governance-escalation.ts';
