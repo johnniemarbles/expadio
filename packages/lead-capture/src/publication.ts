@@ -2,12 +2,13 @@
  * Publication — ADR-017 Invariant 4.
  *
  * Publication is DISTINCT from:
- *   - Capture Configuration  (the governed behavioral key set)
- *   - Capture Source         (the attribution anchor; one source per publication, never shared)
+ *   - Capture Configuration   (the governed behavioral key set)
+ *   - Publication Source      (the attribution anchor; one source per publication, never shared)
  *
  * A Capture Configuration may produce many Publications. Each Publication
  * is one independently attributable channel. Each Publication owns exactly
- * one Capture Source. A Capture Source may not be shared across Publications.
+ * one Publication Source (lead_publication_sources, migration 0154).
+ * This is distinct from the pre-ADR-017 lead_capture_sources table (migration 0125).
  *
  * Hosted-form URL shape:  apply.<brand>.com/opportunity
  *   The slug is brand-configured and interest-type-neutral.

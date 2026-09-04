@@ -103,12 +103,15 @@ CREATE INDEX lead_publications_config_idx
 CREATE INDEX lead_publications_status_idx
   ON platform.lead_publications (tenant_id, organization_id, status);
 
--- ── Capture Sources ──────────────────────────────────────────────────────────
+-- ── Publication Sources ───────────────────────────────────────────────────────
 --
--- A Capture Source is the attribution anchor for a Publication.
+-- A Publication Source is the attribution anchor for a Publication.
 -- One source per publication, never shared. Created atomically with the Publication.
+--
+-- Named lead_publication_sources to distinguish from the pre-ADR-017
+-- platform.lead_capture_sources table (migration 0125, source_key/surface model).
 
-CREATE TABLE platform.lead_capture_sources (
+CREATE TABLE platform.lead_publication_sources (
   capture_source_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
   organization_id uuid NOT NULL,
@@ -126,15 +129,15 @@ CREATE TABLE platform.lead_capture_sources (
   UNIQUE (capture_source_id, tenant_id, organization_id)
 );
 
-CREATE INDEX lead_capture_sources_publication_idx
-  ON platform.lead_capture_sources (tenant_id, organization_id, publication_id);
+CREATE INDEX lead_publication_sources_publication_idx
+  ON platform.lead_publication_sources (tenant_id, organization_id, publication_id);
 
 -- ── Row-level security ───────────────────────────────────────────────────────
 
 ALTER TABLE platform.lead_publications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform.lead_publications FORCE ROW LEVEL SECURITY;
-ALTER TABLE platform.lead_capture_sources ENABLE ROW LEVEL SECURITY;
-ALTER TABLE platform.lead_capture_sources FORCE ROW LEVEL SECURITY;
+ALTER TABLE platform.lead_publication_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.lead_publication_sources FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY lead_publications_organization_all
   ON platform.lead_publications FOR ALL
@@ -147,8 +150,8 @@ CREATE POLICY lead_publications_organization_all
     AND platform.current_context_can_access_organization(tenant_id, organization_id)
   );
 
-CREATE POLICY lead_capture_sources_organization_all
-  ON platform.lead_capture_sources FOR ALL
+CREATE POLICY lead_publication_sources_organization_all
+  ON platform.lead_publication_sources FOR ALL
   USING (
     tenant_id = platform.current_tenant_id()
     AND platform.current_context_can_access_organization(tenant_id, organization_id)
@@ -163,8 +166,8 @@ CREATE POLICY lead_capture_sources_organization_all
 COMMENT ON TABLE platform.lead_publications IS
   'ADR-017 Publication layer. Each publication is one independently attributable channel derived from a Capture Configuration. Behavioral keys are copied at publish time and immutable thereafter.';
 
-COMMENT ON TABLE platform.lead_capture_sources IS
-  'Attribution anchors for Publications. One source per publication (UNIQUE on publication_id), never shared. Created atomically with the publication; capture_source_id is stored on every lead submission for per-channel analytics.';
+COMMENT ON TABLE platform.lead_publication_sources IS
+  'Attribution anchors for Publications (ADR-017). One source per publication (UNIQUE on publication_id), never shared. Created atomically with the publication; capture_source_id is stored on every lead submission for per-channel analytics. Distinct from the pre-ADR-017 platform.lead_capture_sources table (migration 0125).';
 
 COMMENT ON COLUMN platform.lead_publications.publication_slug IS
   'Brand-configured URL path for HOSTED_FORM publications (e.g. /opportunity, /join). Must be interest-type-neutral — the application layer rejects /franchise, /distributor, etc. The full URL is https://<brand_domain><publication_slug>.';

@@ -28,6 +28,8 @@ export default async function DemandCapturePage() {
         <p>Operate the full 19-stage journey separately from the five-stage CRM projection. Journey stage, operational status, and ownership are independently governed and historically auditable.</p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Link className={styles.secondaryButton} href="/leads/capture/configuration">Capture Config</Link>
+        <Link className={styles.secondaryButton} href="/leads/publications">Publications</Link>
         <Link className={styles.secondaryButton} href="/leads/capture/routing">Routing rules</Link>
         <Link className={styles.secondaryButton} href="/leads/analytics">Analytics</Link>
         <Link className={styles.secondaryButton} href="/leads">CRM leads</Link>
