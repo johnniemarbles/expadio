@@ -63,7 +63,7 @@ export type PublicationMode =
 
 /** All publication modes. Used as the default for interest types that impose
  *  no restrictions on channel; individual entries may restrict the set. */
-const ALL_PUBLICATION_MODES: readonly PublicationMode[] = [
+export const PUBLICATION_MODES: readonly PublicationMode[] = [
   'HOSTED_FORM',
   'JS_WIDGET',
   'IFRAME',
@@ -74,6 +74,10 @@ const ALL_PUBLICATION_MODES: readonly PublicationMode[] = [
   'WHATSAPP_SMS_LINK',
   'QR_CODE',
 ];
+
+export function isPublicationMode(value: unknown): value is PublicationMode {
+  return typeof value === 'string' && PUBLICATION_MODES.includes(value as PublicationMode);
+}
 
 export interface InterestTypeRegistryEntry {
   readonly interestType: RegistryInterestType;
@@ -111,7 +115,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:franchise:unit:v1',
     evidenceProfileKey: 'evidence:franchise:unit:v1',
     defaultRoutingProfileKey: 'routing:franchise:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
   {
     interestType: 'FRANCHISEE',
@@ -122,7 +126,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:franchise:multi-unit:v1',
     evidenceProfileKey: 'evidence:franchise:multi-unit:v1',
     defaultRoutingProfileKey: 'routing:franchise:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
   {
     interestType: 'FRANCHISEE',
@@ -133,7 +137,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:franchise:area-development:v1',
     evidenceProfileKey: 'evidence:franchise:area-development:v1',
     defaultRoutingProfileKey: 'routing:franchise:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
   {
     interestType: 'FRANCHISEE',
@@ -144,7 +148,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:franchise:conversion:v1',
     evidenceProfileKey: 'evidence:franchise:conversion:v1',
     defaultRoutingProfileKey: 'routing:franchise:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
   {
     interestType: 'FRANCHISEE',
@@ -155,7 +159,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:franchise:resale:v1',
     evidenceProfileKey: 'evidence:franchise:resale:v1',
     defaultRoutingProfileKey: 'routing:franchise:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
 
   // ── MASTER FRANCHISEE ────────────────────────────────────────────────────────
@@ -180,7 +184,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:distribution:standard:v1',
     evidenceProfileKey: 'evidence:distribution:standard:v1',
     defaultRoutingProfileKey: 'routing:distribution:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
   {
     interestType: 'DISTRIBUTOR',
@@ -191,7 +195,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:distribution:standard:v1',
     evidenceProfileKey: 'evidence:distribution:standard:v1',
     defaultRoutingProfileKey: 'routing:distribution:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
   {
     interestType: 'DISTRIBUTOR',
@@ -213,7 +217,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:distribution:standard:v1',
     evidenceProfileKey: 'evidence:distribution:standard:v1',
     defaultRoutingProfileKey: 'routing:distribution:territory:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
 
   // ── AFFILIATE ────────────────────────────────────────────────────────────────
@@ -225,7 +229,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:affiliate:standard:v1',
     evidenceProfileKey: 'evidence:affiliate:standard:v1',
     defaultRoutingProfileKey: 'routing:affiliate:standard:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
 
   // ── LICENSEE ─────────────────────────────────────────────────────────────────
@@ -249,7 +253,7 @@ const ENTRIES: readonly InterestTypeRegistryEntry[] = [
     workflowBlueprintKey: 'workflow:agent:standard:v1',
     evidenceProfileKey: 'evidence:agent:standard:v1',
     defaultRoutingProfileKey: 'routing:agent:standard:v1',
-    supportedPublicationModes: ALL_PUBLICATION_MODES,
+    supportedPublicationModes: PUBLICATION_MODES,
   },
 ];
 

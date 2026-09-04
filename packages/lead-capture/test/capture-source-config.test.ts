@@ -87,3 +87,49 @@ test('brand configuration workspace can list every platform-supported interest o
   assert.ok(options.some((entry) => entry.interestType === 'DISTRIBUTOR' && entry.opportunityType === 'MASTER_DISTRIBUTOR'));
   assert.ok(options.some((entry) => entry.interestType === 'LICENSEE'));
 });
+
+
+test('generic source rejects publication modes outside the runtime catalog', () => {
+  assert.throws(
+    () => normalizeCaptureSourcePublicationConfig({
+      captureMode: 'GENERIC',
+      publicationMode: 'FTP' as never,
+    }),
+    hasCode('CAPTURE_SOURCE_PUBLICATION_MODE_INVALID'),
+  );
+});
+
+test('source publication cannot exceed the effective governed configuration', () => {
+  const effectiveConfigs = [{
+    interestType: 'FRANCHISEE' as const,
+    opportunityType: 'SINGLE_UNIT' as const,
+    supportedPublicationModes: ['HOSTED_FORM'] as const,
+  }];
+
+  assert.throws(
+    () => normalizeCaptureSourcePublicationConfig({
+      captureMode: 'INTEREST',
+      publicationMode: 'JS_WIDGET',
+      allowedInterests: [{ interestType: 'FRANCHISEE', opportunityType: 'SINGLE_UNIT' }],
+    }, { effectiveConfigs }),
+    hasCode('CAPTURE_SOURCE_GOVERNED_PUBLICATION_MODE_UNSUPPORTED'),
+  );
+
+  const config = normalizeCaptureSourcePublicationConfig({
+    captureMode: 'INTEREST',
+    publicationMode: 'HOSTED_FORM',
+    allowedInterests: [{ interestType: 'FRANCHISEE', opportunityType: 'SINGLE_UNIT' }],
+  }, { effectiveConfigs });
+  assert.equal(config.publicationMode, 'HOSTED_FORM');
+});
+
+test('source publication fails closed when no effective governed configuration exists', () => {
+  assert.throws(
+    () => normalizeCaptureSourcePublicationConfig({
+      captureMode: 'INTEREST',
+      publicationMode: 'HOSTED_FORM',
+      allowedInterests: [{ interestType: 'LICENSEE' }],
+    }, { effectiveConfigs: [] }),
+    hasCode('CAPTURE_SOURCE_EFFECTIVE_CONFIG_REQUIRED'),
+  );
+});
