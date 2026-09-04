@@ -14,6 +14,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.8.2",
     "@expadio/postgres-runtime": "workspace:*",
+    "@expadio/provider-registry": "workspace:*",
     "@expadio/tenancy": "workspace:*",
     "@expadio/lead-capture": "workspace:*",
     "@expadio/lead-identity": "workspace:*",
