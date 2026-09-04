@@ -1,4 +1,5 @@
 import {
+  isPublicationMode,
   listInterestTypes,
   resolveInterestType,
   supportsPublicationMode,
@@ -6,6 +7,7 @@ import {
   type RegistryInterestType,
   type RegistryOpportunityType,
 } from './interest-type-registry.ts';
+import type { EffectiveLeadManagementConfig } from './lead-management-config.ts';
 
 export type CaptureSourceMode = 'GENERIC' | 'INTEREST';
 
@@ -26,6 +28,13 @@ export interface CaptureSourcePublicationConfigInput {
   readonly captureMode?: CaptureSourceMode;
   readonly publicationMode?: PublicationMode;
   readonly allowedInterests?: readonly CaptureSourceInterestSelectionInput[];
+}
+
+export interface CaptureSourceGovernanceContext {
+  readonly effectiveConfigs: readonly Pick<
+    EffectiveLeadManagementConfig,
+    'interestType' | 'opportunityType' | 'supportedPublicationModes'
+  >[];
 }
 
 export interface CaptureSourcePublicationConfig {
@@ -59,6 +68,7 @@ function selectionKey(selection: CaptureSourceInterestSelectionInput): string {
  */
 export function normalizeCaptureSourcePublicationConfig(
   input: CaptureSourcePublicationConfigInput = {},
+  governance?: CaptureSourceGovernanceContext,
 ): CaptureSourcePublicationConfig {
   const captureMode = input.captureMode ?? (input.allowedInterests?.length ? 'INTEREST' : 'GENERIC');
   if (captureMode !== 'GENERIC' && captureMode !== 'INTEREST') {
@@ -66,6 +76,12 @@ export function normalizeCaptureSourcePublicationConfig(
   }
 
   const publicationMode = input.publicationMode ?? DEFAULT_PUBLICATION_MODE;
+  if (!isPublicationMode(publicationMode)) {
+    throw new CaptureSourceConfigError(
+      'CAPTURE_SOURCE_PUBLICATION_MODE_INVALID',
+      'Unsupported capture source publication mode.',
+    );
+  }
   const rawSelections = input.allowedInterests ?? [];
 
   if (captureMode === 'GENERIC') {
@@ -106,6 +122,24 @@ export function normalizeCaptureSourcePublicationConfig(
         'CAPTURE_SOURCE_PUBLICATION_MODE_UNSUPPORTED',
         `${selectionKey(selection)} cannot be published through ${publicationMode}.`,
       );
+    }
+    if (governance) {
+      const effective = governance.effectiveConfigs.find(
+        (config) => config.interestType === selection.interestType
+          && (config.opportunityType ?? undefined) === selection.opportunityType,
+      );
+      if (!effective) {
+        throw new CaptureSourceConfigError(
+          'CAPTURE_SOURCE_EFFECTIVE_CONFIG_REQUIRED',
+          `No effective governed configuration exists for ${selectionKey(selection)}.`,
+        );
+      }
+      if (!effective.supportedPublicationModes.includes(publicationMode)) {
+        throw new CaptureSourceConfigError(
+          'CAPTURE_SOURCE_GOVERNED_PUBLICATION_MODE_UNSUPPORTED',
+          `${selectionKey(selection)} is not governed for publication through ${publicationMode}.`,
+        );
+      }
     }
     const key = selectionKey(selection);
     if (seen.has(key)) continue;
