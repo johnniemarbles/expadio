@@ -1,4 +1,4 @@
-name: CF — Fix fallback origin to Railway
+name: CF — Fix DNS and fallback origin
 
 on:
   workflow_dispatch:
@@ -15,49 +15,115 @@ on:
 
 env:
   ZONE_ID: a871277903f98da014626efd5abe9a17
+  FALLBACK_HOSTNAME: forms.expadio.com
 
 jobs:
-  fix-fallback-origin:
+  fix:
     runs-on: ubuntu-latest
     steps:
       - name: Mask token
         run: echo "::add-mask::${{ inputs.cf_token }}"
 
-      - name: Update fallback origin to Railway
+      - name: Replace AAAA 100 with proxied CNAME to Railway
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
           RAILWAY_HOST: ${{ inputs.railway_hostname }}
         run: |
           set -euo pipefail
-          RESULT=$(curl -sS -X PUT \
-            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
+
+          # Delete any existing AAAA record for forms.expadio.com
+          AAAA_IDS=$(curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=AAAA&name=${FALLBACK_HOSTNAME}" \
             -H "Authorization: Bearer $CF_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "{\"origin\":\"${RAILWAY_HOST}\"}")
+            | python3 -c "import sys,json; [print(r['id']) for r in json.load(sys.stdin).get('result',[])]")
+          for ID in $AAAA_IDS; do
+            echo "Deleting AAAA record: $ID"
+            curl -sS -X DELETE \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${ID}" \
+              -H "Authorization: Bearer $CF_TOKEN" > /dev/null
+          done
+
+          # Check for existing CNAME
+          EXISTING=$(curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=CNAME&name=${FALLBACK_HOSTNAME}" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "import sys,json; r=json.load(sys.stdin).get('result',[]); print(r[0]['id'] if r else '')")
+
+          DATA="{\"type\":\"CNAME\",\"name\":\"${FALLBACK_HOSTNAME}\",\"content\":\"${RAILWAY_HOST}\",\"ttl\":1,\"proxied\":true}"
+
+          if [ -n "$EXISTING" ]; then
+            echo "Updating existing CNAME record $EXISTING"
+            RESULT=$(curl -sS -X PUT \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${EXISTING}" \
+              -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+              --data "$DATA")
+          else
+            echo "Creating new CNAME record"
+            RESULT=$(curl -sS -X POST \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+              -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+              --data "$DATA")
+          fi
+
           echo "$RESULT" | python3 -c "
           import sys, json
           r = json.load(sys.stdin)
           if r.get('success'):
-              print('✅ Fallback origin updated to: ' + r['result']['origin'])
+              d = r['result']
+              print('DNS OK: ' + d.get('name','') + ' CNAME to ' + d.get('content','') + ' proxied=' + str(d.get('proxied')))
           else:
-              print('ERROR: ' + str(r.get('errors')))
+              print('DNS ERROR: ' + str(r.get('errors')))
               sys.exit(1)
           "
 
-      - name: Verify fallback origin
+      - name: Reset fallback origin to forms.expadio.com
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
-          RESULT=$(curl -sS \
+          set -euo pipefail
+          RESULT=$(curl -sS -X PUT \
             "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
-            -H "Authorization: Bearer $CF_TOKEN")
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            --data "{\"origin\":\"${FALLBACK_HOSTNAME}\"}")
           echo "$RESULT" | python3 -c "
           import sys, json
           r = json.load(sys.stdin)
           if r.get('success'):
-              res = r.get('result', {})
-              print('Origin:  ' + res.get('origin','?'))
-              print('Status:  ' + res.get('status','?'))
+              res = r['result']
+              print('Fallback OK: ' + res.get('origin','?') + ' status=' + res.get('status','?'))
           else:
-              print('ERROR: ' + str(r))
+              print('Fallback ERROR: ' + str(r.get('errors')))
+              sys.exit(1)
+          "
+
+      - name: Verify final state
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          sleep 5
+
+          echo "=== DNS records for forms.expadio.com ==="
+          curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=${FALLBACK_HOSTNAME}" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          records = json.load(sys.stdin).get('result', [])
+          for r in records:
+              print('  ' + r['type'] + ' ' + r['name'] + ' to ' + r['content'] + ' proxied=' + str(r['proxied']))
+          "
+
+          echo "=== Fallback origin ==="
+          curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              res = r['result']
+              print('  origin=' + res.get('origin','?'))
+              print('  status=' + res.get('status','?'))
+              for e in res.get('errors', []):
+                  print('  error: ' + str(e))
           "
