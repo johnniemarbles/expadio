@@ -101,7 +101,7 @@ AS $$
          p.opportunity_type,
          p.publication_slug,
          p.brand_domain,
-         s.source_id   AS capture_source_id,
+         s.capture_source_id,
          cs.publishable_key
     FROM platform.lead_publications p
     JOIN platform.lead_publication_sources s
@@ -119,6 +119,9 @@ AS $$
      AND p.publication_mode = 'HOSTED_FORM'
    ORDER BY p.created_at ASC;
 $$;
+
+-- (s.capture_source_id is the PK of lead_publication_sources;
+--  cs.source_id is the PK of lead_capture_sources — they share the same UUID)
 
 REVOKE ALL ON FUNCTION platform.lookup_public_hosted_forms(uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION platform.lookup_public_hosted_forms(uuid, uuid) TO PUBLIC;
