@@ -19,6 +19,8 @@ export function AssignmentAuthoring({
   const [instructions, setInstructions] = useState('');
   const [maxPoints, setMaxPoints] = useState('100');
   const [dueAt, setDueAt] = useState('');
+  const [allowAttachments, setAllowAttachments] = useState(false);
+  const [maxAttachments, setMaxAttachments] = useState('5');
   const [status, setStatus] = useState<'IDLE' | 'CREATING' | 'SAVING_BLOCK' | 'PUBLISHING' | 'PUBLISHED'>('IDLE');
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +32,8 @@ export function AssignmentAuthoring({
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           courseVersionId: version.courseVersionId, assignmentKey: key, title,
-          instructions, maxPoints: Number(maxPoints),
+          instructions, maxPoints: Number(maxPoints), allowAttachments,
+          maxAttachments: allowAttachments ? Number(maxAttachments) : 0,
           dueAt: dueAt ? new Date(dueAt).toISOString() : null,
         }),
       });
@@ -95,6 +98,8 @@ export function AssignmentAuthoring({
     <label className="wide">Title<input required maxLength={500} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
     <label className="wide">Instructions<textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
     <label>Maximum points<input required type="number" min="0.01" max="1000000" step="0.01" value={maxPoints} onChange={(event) => setMaxPoints(event.target.value)} /></label>
+    <label>Attachments<select value={allowAttachments ? 'YES' : 'NO'} onChange={(event) => setAllowAttachments(event.target.value === 'YES')}><option value="NO">Text only</option><option value="YES">Allow files</option></select></label>
+    {allowAttachments ? <label>Maximum files<input type="number" min="1" max="20" value={maxAttachments} onChange={(event) => setMaxAttachments(event.target.value)} /></label> : null}
     <label>Due date<input type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} /></label>
     <div className="wide assetActions"><button type="submit" disabled={status !== 'IDLE'}>{status === 'IDLE' ? 'Create and publish assignment' : 'Working…'}</button></div>
     <div className="wide" role="status" aria-live="polite">{status === 'PUBLISHED' ? 'Assignment published and attached to the lesson.' : status}</div>
