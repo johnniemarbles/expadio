@@ -102,10 +102,11 @@ test('Demand Capture score recalculation is deterministic and replay-safe', asyn
     await admin.query(
       `INSERT INTO platform.lead_qualifications (
          tenant_id,organization_id,capture_lead_id,qualification_template_id,
-         template_version,criterion_key,response,note,assessed_by_subject_id,assessed_at
+         template_version,criterion_key,response,note,assessed_by_subject_id,assessed_at,
+         evidence_source
        ) VALUES
-         ($1,$2,$3,$4,1,'fit','MEETS','fit evidence','itest',clock_timestamp()-interval '2 seconds'),
-         ($1,$2,$3,$4,1,'readiness','PARTIALLY_MEETS','readiness evidence','itest',clock_timestamp()-interval '1 second')`,
+         ($1,$2,$3,$4,1,'fit','MEETS','fit evidence','itest',clock_timestamp()-interval '2 seconds','OPERATOR_ASSESSED'),
+         ($1,$2,$3,$4,1,'readiness','PARTIALLY_MEETS','readiness evidence','itest',clock_timestamp()-interval '1 second','OPERATOR_ASSESSED')`,
       [tenantId, organizationId, captureLeadId, templateId],
     );
 
@@ -152,8 +153,9 @@ test('Demand Capture score recalculation is deterministic and replay-safe', asyn
       await c.query(
         `INSERT INTO platform.lead_qualifications (
            tenant_id,organization_id,capture_lead_id,qualification_template_id,
-           template_version,criterion_key,response,note,assessed_by_subject_id
-         ) VALUES ($1,$2,$3,$4,1,'readiness','MEETS','readiness improved',$5)`,
+           template_version,criterion_key,response,note,assessed_by_subject_id,
+           evidence_source
+         ) VALUES ($1,$2,$3,$4,1,'readiness','MEETS','readiness improved',$5,'OPERATOR_ASSESSED')`,
         [tenantId, organizationId, captureLeadId, templateId, subjectId],
       );
       const changed = await calculateAndPersistDemandCaptureScore(c, {
