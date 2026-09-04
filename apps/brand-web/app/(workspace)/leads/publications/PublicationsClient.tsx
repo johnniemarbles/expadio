@@ -33,6 +33,7 @@ type Publication = {
 };
 
 type Notice = { kind: 'success' | 'error'; text: string } | null;
+type PublicationAction = 'ACTIVATE' | 'PAUSE' | 'ARCHIVE';
 
 async function readJson(r: Response): Promise<Record<string, unknown>> {
   const v = await r.json().catch(() => ({}));
@@ -91,6 +92,7 @@ export default function PublicationsClient() {
   const [configsLoading, setConfigsLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
   const [creating, setCreating] = useState(false);
+  const [actioning, setActioning] = useState<string | null>(null); // publicationId being actioned
 
   // Form state
   const [captureConfigId, setCaptureConfigId] = useState('');
@@ -187,6 +189,29 @@ export default function PublicationsClient() {
       setNotice({ kind: 'error', text: 'Network error. Please try again.' });
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function performAction(publicationId: string, action: PublicationAction) {
+    if (actioning) return;
+    setActioning(publicationId);
+    setNotice(null);
+    try {
+      const r = await fetch(`/api/leads/publications/${publicationId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const body = await readJson(r);
+      if (!r.ok) {
+        setNotice({ kind: 'error', text: typeof body.error === 'string' ? body.error : 'Action failed.' });
+      } else {
+        await load();
+      }
+    } catch {
+      setNotice({ kind: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setActioning(null);
     }
   }
 
@@ -365,6 +390,7 @@ export default function PublicationsClient() {
                 <th>Attribution source</th>
                 <th>Status</th>
                 <th>Created</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -395,6 +421,38 @@ export default function PublicationsClient() {
                     {pub.activatedAt ? <><br /><small>Since {new Date(pub.activatedAt).toLocaleDateString()}</small></> : null}
                   </td>
                   <td><small>{new Date(pub.createdAt).toLocaleDateString()}</small></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {(pub.status === 'DRAFT' || pub.status === 'PAUSED') && (
+                        <button
+                          className={styles.button}
+                          style={{ fontSize: 11, padding: '4px 8px' }}
+                          disabled={actioning === pub.publicationId}
+                          onClick={() => void performAction(pub.publicationId, 'ACTIVATE')}
+                        >Activate</button>
+                      )}
+                      {pub.status === 'ACTIVE' && (
+                        <button
+                          className={styles.secondaryButton}
+                          style={{ fontSize: 11, padding: '4px 8px' }}
+                          disabled={actioning === pub.publicationId}
+                          onClick={() => void performAction(pub.publicationId, 'PAUSE')}
+                        >Pause</button>
+                      )}
+                      {pub.status !== 'ARCHIVED' && (
+                        <button
+                          className={styles.secondaryButton}
+                          style={{ fontSize: 11, padding: '4px 8px', color: 'var(--theme-text-muted)' }}
+                          disabled={actioning === pub.publicationId}
+                          onClick={() => {
+                            if (confirm('Archive this publication? The form URL will stop resolving.')) {
+                              void performAction(pub.publicationId, 'ARCHIVE');
+                            }
+                          }}
+                        >Archive</button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

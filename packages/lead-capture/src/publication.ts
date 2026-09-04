@@ -262,6 +262,16 @@ export function buildPublication(options: BuildPublicationOptions): LeadPublicat
 
 // ── Computed helpers ──────────────────────────────────────────────────────────
 
+/**
+ * Converts a stored publication_slug to the actual URL path served by brand-web.
+ * Slugs under /enquire use a hyphen convention in storage (/enquire-mf) but are
+ * served at a slash-delimited path (/enquire/mf) via the [[...slug]] catch-all route.
+ */
+export function publicationSlugToUrlPath(slug: string): string {
+  const m = /^\/enquire-(.+)$/.exec(slug);
+  return m ? `/enquire/${m[1]}` : slug;
+}
+
 /** The full public URL for a HOSTED_FORM publication. Throws if not a hosted form. */
 export function resolveHostedFormUrl(publication: LeadPublication): string {
   if (publication.publicationMode !== 'HOSTED_FORM' || publication.hostedFormConfig === null) {
@@ -271,7 +281,7 @@ export function resolveHostedFormUrl(publication: LeadPublication): string {
     );
   }
   const { brandDomain, publicationSlug } = publication.hostedFormConfig;
-  return `https://${brandDomain}${publicationSlug}`;
+  return `https://${brandDomain}${publicationSlugToUrlPath(publicationSlug)}`;
 }
 
 /** Whether a Publication has a live Capture Source ready to receive submissions. */

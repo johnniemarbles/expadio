@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { buildPublication, resolveHostedFormUrl } from '@expadio/lead-capture';
+import { buildPublication, publicationSlugToUrlPath, resolveHostedFormUrl } from '@expadio/lead-capture';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 
 function generatePublishableKey(): string {
@@ -60,7 +60,7 @@ export async function GET() {
           publicationSlug: row.publication_slug,
           brandDomain: row.brand_domain,
           hostedFormUrl: row.publication_mode === 'HOSTED_FORM' && row.brand_domain && row.publication_slug
-            ? `https://${row.brand_domain}${row.publication_slug}`
+            ? `https://${row.brand_domain}${publicationSlugToUrlPath(row.publication_slug)}`
             : null,
           postSubmitRedirectUrl: row.post_submit_redirect_url,
           enablePreFill: row.enable_pre_fill,
