@@ -141,7 +141,7 @@ export type DistributionOpportunityType =
 
 export interface DistributorPayload extends CaptureInterestBase {
   readonly interestType: 'DISTRIBUTOR';
-  readonly opportunityType?: DistributionOpportunityType;
+  readonly opportunityType: DistributionOpportunityType;
   readonly business: CaptureBusinessProfile;
   readonly productCategories?: readonly string[];
   readonly existingDistributionChannels?: readonly string[];
