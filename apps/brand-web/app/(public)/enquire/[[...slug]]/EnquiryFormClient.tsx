@@ -161,19 +161,19 @@ export default function EnquiryFormClient({
     display: 'grid',
     placeItems: 'center',
     padding: '32px 16px',
-    background: 'var(--theme-canvas, #f7f7f8)',
-    color: 'var(--theme-text-primary, #111)',
+    background: 'var(--theme-canvas)',
+    color: 'var(--theme-text-primary)',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   };
 
   const card: React.CSSProperties = {
     width: '100%',
     maxWidth: 520,
-    background: 'var(--theme-surface, #fff)',
-    border: '1px solid var(--theme-border, #e5e5e5)',
+    background: 'var(--theme-surface)',
+    border: '1px solid var(--theme-border)',
     borderRadius: 16,
     padding: 32,
-    boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
+    boxShadow: '0 8px 32px color-mix(in srgb, var(--theme-text-primary) 8%, transparent)',
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -185,10 +185,10 @@ export default function EnquiryFormClient({
 
   const inputStyle: React.CSSProperties = {
     padding: '10px 12px',
-    border: '1px solid var(--theme-border, #e5e5e5)',
+    border: '1px solid var(--theme-border)',
     borderRadius: 8,
-    background: 'var(--theme-surface, #fff)',
-    color: 'var(--theme-text-primary, #111)',
+    background: 'var(--theme-surface)',
+    color: 'var(--theme-text-primary)',
     fontSize: 14,
     fontWeight: 400,
     width: '100%',
@@ -199,8 +199,8 @@ export default function EnquiryFormClient({
     display: 'block',
     width: '100%',
     padding: '12px 16px',
-    background: 'var(--theme-primary, #4f46e5)',
-    color: '#fff',
+    background: 'var(--theme-primary)',
+    color: 'var(--theme-primary-foreground, var(--theme-surface))',
     border: 'none',
     borderRadius: 8,
     fontSize: 14,
@@ -214,12 +214,12 @@ export default function EnquiryFormClient({
       <div style={shell}>
         <div style={card}>
           <div style={{ marginBottom: 24 }}>
-            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--theme-text-muted, #888)' }}>
+            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--theme-text-muted)' }}>
               {displayName}
             </p>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em' }}>Thank you!</h1>
           </div>
-          <p style={{ color: 'var(--theme-text-secondary, #555)', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--theme-text-secondary)', lineHeight: 1.6 }}>
             Your enquiry has been received. Our team will be in touch soon.
           </p>
         </div>
@@ -232,11 +232,11 @@ export default function EnquiryFormClient({
       <div style={shell}>
         <div style={card}>
           <div style={{ marginBottom: 24 }}>
-            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--theme-text-muted, #888)' }}>
+            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--theme-text-muted)' }}>
               {displayName}
             </p>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em' }}>Check your email</h1>
-            <p style={{ marginTop: 8, color: 'var(--theme-text-secondary, #555)', lineHeight: 1.6 }}>
+            <p style={{ marginTop: 8, color: 'var(--theme-text-secondary)', lineHeight: 1.6 }}>
               We sent a verification code to <strong>{email}</strong>. Enter it below to confirm your enquiry.
             </p>
           </div>
@@ -256,7 +256,7 @@ export default function EnquiryFormClient({
               />
             </label>
             {otpError ? (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--theme-danger, #dc2626)' }}>{otpError}</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--theme-danger)' }}>{otpError}</p>
             ) : null}
             <button type="submit" disabled={verifying || otp.trim().length < 4} style={primaryBtn}>
               {verifying ? 'Verifying…' : 'Confirm'}
@@ -271,11 +271,11 @@ export default function EnquiryFormClient({
     <div style={shell}>
       <div style={card}>
         <div style={{ marginBottom: 28 }}>
-          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--theme-text-muted, #888)' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--theme-text-muted)' }}>
             {displayName}
           </p>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em' }}>Enquire now</h1>
-          <p style={{ marginTop: 8, margin: '8px 0 0', color: 'var(--theme-text-secondary, #555)', fontSize: 14, lineHeight: 1.6 }}>
+          <p style={{ marginTop: 8, margin: '8px 0 0', color: 'var(--theme-text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
             Fill in your details and we&apos;ll be in touch to discuss your interest.
           </p>
         </div>
@@ -297,7 +297,7 @@ export default function EnquiryFormClient({
             </select>
           </div>
         ) : (
-          <p style={{ marginTop: 0, marginBottom: 20, fontSize: 13, color: 'var(--theme-text-secondary, #555)' }}>
+          <p style={{ marginTop: 0, marginBottom: 20, fontSize: 13, color: 'var(--theme-text-secondary)' }}>
             {INTEREST_LABELS[interestKey(activeInterest, activeOpportunity)] ?? activeInterest}
           </p>
         )}
@@ -329,7 +329,7 @@ export default function EnquiryFormClient({
           </div>
 
           <label style={fieldStyle}>
-            Email <span style={{ fontWeight: 400, color: 'var(--theme-text-muted, #888)' }}>*</span>
+            Email <span style={{ fontWeight: 400, color: 'var(--theme-text-muted)' }}>*</span>
             <input
               type="email"
               required
@@ -354,7 +354,7 @@ export default function EnquiryFormClient({
           </label>
 
           <label style={fieldStyle}>
-            Message <span style={{ fontWeight: 400, color: 'var(--theme-text-muted, #888)' }}>(optional)</span>
+            Message <span style={{ fontWeight: 400, color: 'var(--theme-text-muted)' }}>(optional)</span>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -365,7 +365,7 @@ export default function EnquiryFormClient({
           </label>
 
           {error ? (
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--theme-danger, #dc2626)' }}>{error}</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--theme-danger)' }}>{error}</p>
           ) : null}
 
           <button
@@ -376,7 +376,7 @@ export default function EnquiryFormClient({
             {state === 'submitting' ? 'Sending…' : 'Send enquiry'}
           </button>
 
-          <p style={{ margin: 0, fontSize: 11, color: 'var(--theme-text-muted, #888)', lineHeight: 1.5, textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--theme-text-muted)', lineHeight: 1.5, textAlign: 'center' }}>
             By submitting you agree to be contacted about your enquiry. We won&apos;t share your details.
           </p>
         </form>
