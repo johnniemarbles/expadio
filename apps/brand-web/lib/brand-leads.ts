@@ -20,9 +20,17 @@ const VALID_OPPORTUNITY_TYPES = new Set([
 function manualLeadInput(body: unknown) {
   const record = body && typeof body === 'object' ? body as Record<string, unknown> : {};
 
-  const contactName = typeof record.contactName === 'string' && record.contactName.trim()
-    ? record.contactName.trim().slice(0, 200)
+  const firstName = typeof record.firstName === 'string' && record.firstName.trim()
+    ? record.firstName.trim().slice(0, 100)
     : null;
+  const lastName = typeof record.lastName === 'string' && record.lastName.trim()
+    ? record.lastName.trim().slice(0, 100)
+    : null;
+  const contactName = [firstName, lastName].filter(Boolean).join(' ') ||
+    (typeof record.contactName === 'string' && record.contactName.trim()
+      ? record.contactName.trim().slice(0, 200)
+      : null);
+
   const contactEmail = typeof record.contactEmail === 'string' && record.contactEmail.trim()
     ? record.contactEmail.trim().toLowerCase()
     : null;
@@ -35,6 +43,19 @@ function manualLeadInput(body: unknown) {
   const enquiryInterestType = rawInterestType && VALID_INTEREST_TYPES.has(rawInterestType) ? rawInterestType : null;
   const rawOpportunityType = typeof record.enquiryOpportunityType === 'string' ? record.enquiryOpportunityType.trim().toUpperCase() : null;
   const enquiryOpportunityType = rawOpportunityType && VALID_OPPORTUNITY_TYPES.has(rawOpportunityType) ? rawOpportunityType : null;
+
+  const rawCountry = typeof record.countryCode === 'string' ? record.countryCode.trim().toUpperCase() : null;
+  const countryCode = rawCountry && /^[A-Z]{2}$/.test(rawCountry) ? rawCountry : null;
+  const regionOrState = typeof record.regionOrState === 'string' && record.regionOrState.trim()
+    ? record.regionOrState.trim().slice(0, 100) : null;
+  const city = typeof record.city === 'string' && record.city.trim()
+    ? record.city.trim().slice(0, 100) : null;
+  const postalCode = typeof record.postalCode === 'string' && record.postalCode.trim()
+    ? record.postalCode.trim().slice(0, 20) : null;
+
+  const enquiryPayload = record.enquiryPayload && typeof record.enquiryPayload === 'object'
+    ? record.enquiryPayload as Record<string, unknown>
+    : null;
 
   const title = typeof record.title === 'string' ? record.title.trim() : '';
   if (title.length < 1 || title.length > 200) throw new Error('LEAD_TITLE_INVALID');
@@ -49,7 +70,12 @@ function manualLeadInput(body: unknown) {
     if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error('LEAD_AMOUNT_INVALID');
     amountMinorUnits = parsed;
   }
-  return { title, stage: leadStage, currency, amountMinorUnits, contactName, contactEmail, contactPhone, enquiryInterestType, enquiryOpportunityType } as const;
+  return {
+    firstName, lastName, contactName, contactEmail, contactPhone,
+    enquiryInterestType, enquiryOpportunityType,
+    countryCode, regionOrState, city, postalCode, enquiryPayload,
+    title, stage: leadStage, currency, amountMinorUnits,
+  } as const;
 }
 
 export interface BrandLeadSummary {
@@ -60,11 +86,16 @@ export interface BrandLeadSummary {
   readonly currency: string;
   readonly source: string | null;
   readonly accountName: string | null;
+  readonly firstName: string | null;
+  readonly lastName: string | null;
   readonly contactName: string | null;
   readonly contactEmail: string | null;
   readonly contactPhone: string | null;
   readonly enquiryInterestType: string | null;
   readonly enquiryOpportunityType: string | null;
+  readonly countryCode: string | null;
+  readonly regionOrState: string | null;
+  readonly city: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -78,11 +109,16 @@ function toSummary(row: any): BrandLeadSummary {
     currency: row.currency,
     source: row.source ?? null,
     accountName: row.account_name ?? null,
+    firstName: row.first_name ?? null,
+    lastName: row.last_name ?? null,
     contactName: row.contact_name ?? null,
     contactEmail: row.contact_email ?? null,
     contactPhone: row.contact_phone ?? null,
     enquiryInterestType: row.enquiry_interest_type ?? null,
     enquiryOpportunityType: row.enquiry_opportunity_type ?? null,
+    countryCode: row.country_code ?? null,
+    regionOrState: row.region_or_state ?? null,
+    city: row.city ?? null,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
   };
@@ -96,8 +132,9 @@ export async function listBrandLeads(
   if (selectedStage !== '') stage(selectedStage);
   const result = await client.query(
     `SELECT l.lead_id, l.title, l.stage, l.amount_minor_units, l.currency, l.source,
-            l.contact_name, l.contact_email, l.contact_phone,
+            l.first_name, l.last_name, l.contact_name, l.contact_email, l.contact_phone,
             l.enquiry_interest_type, l.enquiry_opportunity_type,
+            l.country_code, l.region_or_state, l.city,
             l.created_at, l.updated_at, a.name AS account_name
        FROM platform.crm_leads l
        LEFT JOIN platform.crm_accounts a ON a.account_id = l.account_id
@@ -122,19 +159,31 @@ export async function createBrandLead(
   const inserted = await client.query(
     `INSERT INTO platform.crm_leads
        (tenant_id, organization_id, title, stage, amount_minor_units, currency, source,
-        contact_name, contact_email, contact_phone, enquiry_interest_type, enquiry_opportunity_type,
+        first_name, last_name, contact_name, contact_email, contact_phone,
+        enquiry_interest_type, enquiry_opportunity_type,
+        country_code, region_or_state, city, postal_code, enquiry_payload,
         raw_payload, owner_subject_id)
      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, 'manual',
              $7, $8, $9, $10, $11,
-             '{}'::jsonb, $12)
+             $12, $13,
+             $14, $15, $16, $17, $18::jsonb,
+             '{}'::jsonb, $19)
      RETURNING lead_id, title, stage, amount_minor_units, currency, source,
-               contact_name, contact_email, contact_phone, enquiry_interest_type, enquiry_opportunity_type,
+               first_name, last_name, contact_name, contact_email, contact_phone,
+               enquiry_interest_type, enquiry_opportunity_type,
+               country_code, region_or_state, city,
                created_at, updated_at, NULL::text AS account_name`,
-    [input.tenantId, input.organizationId, validated.title, validated.stage,
+    [
+      input.tenantId, input.organizationId, validated.title, validated.stage,
       validated.amountMinorUnits, validated.currency,
-      validated.contactName, validated.contactEmail, validated.contactPhone,
+      validated.firstName, validated.lastName, validated.contactName,
+      validated.contactEmail, validated.contactPhone,
       validated.enquiryInterestType, validated.enquiryOpportunityType,
-      input.actorSubjectId],
+      validated.countryCode, validated.regionOrState, validated.city,
+      validated.postalCode,
+      validated.enquiryPayload ? JSON.stringify(validated.enquiryPayload) : null,
+      input.actorSubjectId,
+    ],
   );
   return toSummary(inserted.rows[0]);
 }
@@ -149,7 +198,9 @@ export async function updateBrandLeadStage(
         SET stage = $2, updated_at = now()
       WHERE lead_id = $1::uuid
       RETURNING lead_id, title, stage, amount_minor_units, currency, source,
-                contact_name, contact_email, contact_phone, enquiry_interest_type, enquiry_opportunity_type,
+                first_name, last_name, contact_name, contact_email, contact_phone,
+                enquiry_interest_type, enquiry_opportunity_type,
+                country_code, region_or_state, city,
                 created_at, updated_at, NULL::text AS account_name`,
     [input.leadId, selectedStage],
   );

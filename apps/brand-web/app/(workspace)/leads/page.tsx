@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../lib/brand-context';
-import { BRAND_LEAD_STAGES, convertBrandLeadToCustomer, createBrandLead, listBrandLeads, updateBrandLeadStage } from '../../../lib/brand-leads';
+import { BRAND_LEAD_STAGES, convertBrandLeadToCustomer, listBrandLeads, updateBrandLeadStage } from '../../../lib/brand-leads';
+import CreateLeadForm from './CreateLeadForm';
 import styles from '../workspace.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -14,29 +15,6 @@ async function requireLeadModule() {
     moduleKey: 'lead-management',
   }));
   return { context, module };
-}
-
-async function createLeadAction(formData: FormData) {
-  'use server';
-  const { context, module } = await requireLeadModule();
-  if (module?.availability !== 'ACTIVE') throw new Error('LEAD_MODULE_NOT_ACTIVE');
-  await withBrandTransaction(context, async (client) => {
-    if (!(await hasBrandGovernanceForOrganization(client, context.subjectId, context.organizationId))) {
-      throw new Error('LEAD_WRITE_FORBIDDEN');
-    }
-    await createBrandLead(client, {
-      tenantId: context.tenantId,
-      organizationId: context.organizationId,
-      actorSubjectId: context.subjectId,
-      body: {
-        title: formData.get('title'),
-        stage: 'NEW',
-        amountMinorUnits: formData.get('amountMinorUnits'),
-        currency: formData.get('currency'),
-      },
-    });
-  });
-  revalidatePath('/leads');
 }
 
 async function updateStageAction(formData: FormData) {
@@ -105,27 +83,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     <section id="new-lead" className={styles.panel}>
       <div className={styles.panelHead}><h2>Create lead</h2></div>
       <div className={styles.panelBody}>
-        <form action={createLeadAction} className="learningForm">
-          <label className="wide">Contact name<input name="contactName" maxLength={200} placeholder="Full name" /></label>
-          <label>Email<input name="contactEmail" type="email" maxLength={254} placeholder="email@example.com" /></label>
-          <label>Phone<input name="contactPhone" maxLength={50} placeholder="+1 555 000 0000" /></label>
-          <label>
-            Interest type
-            <select name="enquiryInterestType">
-              <option value="">— Select interest —</option>
-              <option value="FRANCHISEE">Franchise</option>
-              <option value="MASTER_FRANCHISEE">Master Franchise</option>
-              <option value="DISTRIBUTOR">Distribution</option>
-              <option value="AFFILIATE">Affiliate Partner</option>
-              <option value="LICENSEE">License</option>
-              <option value="AGENT">Sales Agent</option>
-            </select>
-          </label>
-          <label className="wide">Lead title / notes<input name="title" maxLength={200} required placeholder="e.g. John Smith — franchise enquiry" /></label>
-          <label>Est. value (minor units)<input name="amountMinorUnits" type="number" min="0" step="1" placeholder="0" /></label>
-          <label>Currency<input name="currency" defaultValue="USD" maxLength={3} /></label>
-          <div className="wide"><button className={styles.button} type="submit">Create lead</button></div>
-        </form>
+        <CreateLeadForm />
       </div>
     </section>
 
