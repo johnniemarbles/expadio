@@ -46,7 +46,7 @@ export default async function LearnersPage() {
       </section>
       {data.module?.availability !== 'ACTIVE' ? <div className={styles.notice}>Activate Learning before managing learners.</div> : (
         <>
-          {data.admin ? <section className={styles.panel}><div className={styles.panelHead}><h2>Administration</h2></div><div className={styles.panelBody}><LearnerAdminPanel learners={data.learners} courses={data.courses} /></div></section> : null}
+          {data.admin ? <section className={styles.panel}><div className={styles.panelHead}><h2>Administration</h2></div><div className={styles.panelBody}><LearnerAdminPanel learners={data.learners.map((l) => ({ learnerId: l.learnerId, fullName: l.fullName, email: l.email ?? null }))} courses={data.courses} /></div></section> : null}
           <section className={styles.panel}>
             <div className={styles.panelHead}><h2>Learners</h2><span>{data.learners.length}</span></div>
             {data.learners.length === 0 ? <div className={styles.empty}>No learners yet.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Name</th><th>Audience</th><th>Status</th><th>Identity</th><th>Email</th></tr></thead><tbody>{data.learners.map((learner) => <tr key={learner.learnerId}><td><strong>{learner.fullName}</strong></td><td>{learner.audienceType}</td><td><span className={styles.pill}>{learner.status}</span></td><td>{learner.subjectId ? 'Signed-in user' : learner.externalRef ?? '—'}</td><td>{learner.email ?? '—'}</td></tr>)}</tbody></table></div>}
