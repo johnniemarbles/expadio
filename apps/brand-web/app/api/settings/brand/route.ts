@@ -4,6 +4,7 @@ import {
   resolveBrandContext,
   withBrandTransaction,
 } from '../../../../lib/brand-context';
+import { upsertCustomHostname, deleteCustomHostname, CloudflareSaasError } from '../../../../lib/cloudflare-saas';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -102,6 +103,8 @@ export async function PATCH(request: Request) {
         brandDisplayName: displayName,
         brandDomain: rawDomain,
         brandDomainVerifiedAt: verifiedAt?.toISOString() ?? null,
+        domainChanged,
+        previousDomain: domainChanged ? (cur?.brand_domain ?? null) : null,
       } as const;
     });
 
@@ -111,7 +114,29 @@ export async function PATCH(request: Request) {
     if ('invalid' in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
-    return NextResponse.json(result);
+
+    // Register/deregister the custom hostname in Cloudflare for SaaS so
+    // Cloudflare provisions an SSL certificate and routes traffic through
+    // the Worker proxy for this tenant domain.
+    if ('domainChanged' in result && result.domainChanged) {
+      try {
+        if (result.previousDomain) {
+          await deleteCustomHostname(result.previousDomain);
+        }
+        if (result.brandDomain) {
+          await upsertCustomHostname(result.brandDomain);
+        }
+      } catch (saasErr) {
+        if (saasErr instanceof CloudflareSaasError && saasErr.status === 503) {
+          // CLOUDFLARE_ZONE_ID / CLOUDFLARE_API_TOKEN not configured — skip silently.
+        } else {
+          console.error('Cloudflare for SaaS hostname registration failed', saasErr);
+        }
+      }
+    }
+
+    const { domainChanged: _dc, previousDomain: _pd, ...response } = result as any;
+    return NextResponse.json(response);
   } catch (error: unknown) {
     if (
       error instanceof Error &&
