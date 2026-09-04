@@ -4,7 +4,9 @@ import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand
 import {
   ChiefOfStaffOrchestrator,
   type AgentToolAuthorizationPort,
+  type AgentToolAuthorizationQuery,
   type AgentToolAdapter,
+  type AgentToolAdapterInput,
 } from '@expadio/agent-runtime';
 import { PostgresChiefOfStaffRepository } from '@expadio/postgres-runtime/chief-of-staff';
 
@@ -69,7 +71,7 @@ export async function POST(request: Request) {
     }
 
     const authorizationPort: AgentToolAuthorizationPort = {
-      async authorize(query) {
+      async authorize(query: AgentToolAuthorizationQuery) {
         const decisionId = randomUUID();
         if (query.tenantId !== context.tenantId) {
           return { decisionId, allowed: false, reasonKey: 'TENANT_MISMATCH' };
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
     const contextObserveTool: AgentToolAdapter = {
       toolKey: 'cbos.context.observe',
       effect: 'OBSERVE',
-      async invoke(input) {
+      async invoke(input: AgentToolAdapterInput) {
         return {
           executionId: input.executionId,
           tenantId: input.tenantId,
