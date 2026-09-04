@@ -230,7 +230,7 @@ export async function submitMyLearningAssignment(
     eventId: randomUUID(), tenantId: input.tenantId, aggregateType: 'learning.assignment.submission',
     aggregateId: submission.submission_id, eventType: 'learning.assignment.submitted', eventVersion: 1,
     occurredAt: new Date(), actorSubjectId: input.subjectId, correlationId: input.correlationId,
-    payload: { assignmentVersionId: row.assignment_version_id, enrollmentId: input.enrollmentId, lessonId: input.lessonId },
+    payload: { assignmentVersionId: row.assignment_version_id, enrollmentId: input.enrollmentId, lessonId: input.lessonId, attachmentAssetIds },
     metadata: { source: 'learning.assignment.learner' },
   }});
   return project(submission);
