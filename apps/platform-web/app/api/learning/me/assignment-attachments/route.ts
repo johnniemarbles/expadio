@@ -62,17 +62,31 @@ export async function POST(request: Request) {
         correlationId,
       });
     });
-    if (asset.idempotent && asset.state === 'AVAILABLE') {
+    if (asset.state === 'AVAILABLE') {
       return contentAssetJson({ assetId: asset.assetId, state: asset.state, filename, contentType }, 200);
     }
-    await withTenantTransaction(context, (client) => uploadContentAsset(client, createContentAssetBinaryStore(), {
-      tenantId: context.tenantId, assetId: asset.assetId, content: bytes,
-      actorSubjectId: context.subjectId, correlationId,
-    }));
-    await withTenantTransaction(context, (client) => quarantineContentAssetForScan(client, {
-      tenantId: context.tenantId, assetId: asset.assetId,
-      actorSubjectId: context.subjectId, correlationId,
-    }));
+    if (asset.state === 'REJECTED' || asset.state === 'DELETED') {
+      return contentAssetJson({ assetId: asset.assetId, state: asset.state, reasonKey: 'LEARNING_ASSIGNMENT_ATTACHMENT_UNAVAILABLE' }, 422);
+    }
+
+    let state = asset.state;
+    if (state === 'PENDING_UPLOAD') {
+      const uploaded = await withTenantTransaction(context, (client) => uploadContentAsset(client, createContentAssetBinaryStore(), {
+        tenantId: context.tenantId, assetId: asset.assetId, content: bytes,
+        actorSubjectId: context.subjectId, correlationId,
+      }));
+      state = uploaded.state;
+    }
+    if (state === 'UPLOADED') {
+      const quarantined = await withTenantTransaction(context, (client) => quarantineContentAssetForScan(client, {
+        tenantId: context.tenantId, assetId: asset.assetId,
+        actorSubjectId: context.subjectId, correlationId,
+      }));
+      state = quarantined.state;
+    }
+    if (state !== 'QUARANTINED') {
+      return contentAssetJson({ assetId: asset.assetId, state, reasonKey: 'LEARNING_ASSIGNMENT_ATTACHMENT_STATE_INVALID' }, 409);
+    }
     const resolved = await withTenantTransaction(context, (client) =>
       resolveQuarantinedContentAssetScan(client, createContentAssetScanner(), {
         tenantId: context.tenantId, assetId: asset.assetId,
@@ -82,7 +96,7 @@ export async function POST(request: Request) {
     if (resolved.asset.state !== 'AVAILABLE') {
       return contentAssetJson({ assetId: asset.assetId, state: resolved.asset.state, reasonKey: resolved.scan.reasonKey }, 422);
     }
-    return contentAssetJson({ assetId: asset.assetId, state: resolved.asset.state, filename, contentType }, 201);
+    return contentAssetJson({ assetId: asset.assetId, state: resolved.asset.state, filename, contentType }, asset.idempotent ? 200 : 201);
   } catch (error) {
     return contentAssetError(error);
   }
