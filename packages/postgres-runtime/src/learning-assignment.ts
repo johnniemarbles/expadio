@@ -24,6 +24,7 @@ export interface LearningAssignmentSubmission {
   readonly feedback: string;
   readonly submittedAt: string;
   readonly gradedAt: string | null;
+  readonly attachments: readonly { readonly assetId: string; readonly filename: string; readonly contentType: string }[];
 }
 
 interface SubmissionRow {
@@ -42,6 +43,7 @@ interface SubmissionRow {
   readonly feedback: string;
   readonly submitted_at: Date | string;
   readonly graded_at: Date | string | null;
+  readonly attachments: readonly { readonly assetId: string; readonly filename: string; readonly contentType: string }[] | null;
 }
 
 function project(row: SubmissionRow): LearningAssignmentSubmission {
@@ -61,6 +63,7 @@ function project(row: SubmissionRow): LearningAssignmentSubmission {
     feedback: row.feedback,
     submittedAt: new Date(row.submitted_at).toISOString(),
     gradedAt: row.graded_at === null ? null : new Date(row.graded_at).toISOString(),
+    attachments: row.attachments ?? [],
   };
 }
 
@@ -68,7 +71,16 @@ const SUBMISSION_SELECT = `submission.submission_id, submission.assignment_versi
   assignment.assignment_key, version.title, submission.learner_id,
   submission.enrollment_id, submission.lesson_id, submission.attempt_number,
   submission.status, submission.response_text, submission.score_points,
-  version.max_points, submission.feedback, submission.submitted_at, submission.graded_at`;
+  version.max_points, submission.feedback, submission.submitted_at, submission.graded_at,
+  COALESCE((
+    SELECT jsonb_agg(jsonb_build_object(
+      'assetId', asset.asset_id, 'filename', asset.filename, 'contentType', asset.content_type
+    ) ORDER BY link.position)
+      FROM platform.learning_assignment_submission_assets link
+      JOIN platform.content_assets asset
+        ON asset.asset_id=link.asset_id AND asset.tenant_id=link.tenant_id
+     WHERE link.tenant_id=submission.tenant_id AND link.submission_id=submission.submission_id
+  ), '[]'::jsonb) AS attachments`;
 
 export async function submitMyLearningAssignment(
   client: PostgresClient,
