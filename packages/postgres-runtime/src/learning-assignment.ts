@@ -365,6 +365,8 @@ export async function createLearningAssignment(
     readonly title: string;
     readonly instructions: string;
     readonly maxPoints: number;
+    readonly allowAttachments?: boolean;
+    readonly maxAttachments?: number;
     readonly dueAt?: string | null;
     readonly actorSubjectId: string;
   },
@@ -377,6 +379,9 @@ export async function createLearningAssignment(
   if (!Number.isFinite(input.maxPoints) || input.maxPoints <= 0 || input.maxPoints > 1_000_000) {
     throw new Error('LEARNING_ASSIGNMENT_MAX_POINTS_INVALID');
   }
+  const allowAttachments = input.allowAttachments === true;
+  const maxAttachments = allowAttachments ? Math.min(20, Math.max(1, input.maxAttachments ?? 5)) : 0;
+
   const course = await client.query<{ readonly academy_id: string }>(
     `SELECT course.academy_id
        FROM platform.learning_course_versions version
@@ -402,10 +407,10 @@ export async function createLearningAssignment(
        tenant_id, assignment_id, version, title, instructions, course_version_id,
        max_points, allow_text, allow_attachments, max_attachments, due_at,
        created_by_subject_id, updated_by_subject_id
-     ) VALUES ($1::uuid,$2::uuid,1,$3,$4,$5::uuid,$6,true,false,0,$7,$8,$8)
+     ) VALUES ($1::uuid,$2::uuid,1,$3,$4,$5::uuid,$6,true,$7,$8,$9,$10,$10)
      RETURNING assignment_version_id`,
     [input.tenantId, assignmentId, title, input.instructions.trim(), input.courseVersionId,
-      input.maxPoints, input.dueAt ?? null, input.actorSubjectId],
+      input.maxPoints, allowAttachments, maxAttachments, input.dueAt ?? null, input.actorSubjectId],
   );
   const assignmentVersionId = version.rows[0]?.assignment_version_id;
   if (!assignmentVersionId) throw new Error('LEARNING_ASSIGNMENT_VERSION_INSERT_FAILED');
