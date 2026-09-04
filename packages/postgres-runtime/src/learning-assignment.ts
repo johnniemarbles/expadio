@@ -536,6 +536,22 @@ export async function authorizeMyLearningAssignmentAttachment(
               THEN lesson.content->'blocks' ELSE '[]'::jsonb END
           ) block WHERE block->>'type'='ASSIGNMENT'
             AND block->'data'->>'definitionId'=assignment.assignment_key
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM platform.learning_lessons prior
+          JOIN platform.learning_course_modules prior_module
+            ON prior_module.course_module_id=prior.course_module_id AND prior_module.tenant_id=prior.tenant_id
+          JOIN platform.learning_course_modules target_module
+            ON target_module.course_module_id=lesson.course_module_id AND target_module.tenant_id=lesson.tenant_id
+          WHERE prior.tenant_id=enrollment.tenant_id
+            AND prior.course_version_id=enrollment.course_version_id AND prior.required=true
+            AND (prior_module.position,prior.position)<(target_module.position,lesson.position)
+            AND NOT EXISTS (
+              SELECT 1 FROM platform.learning_lesson_progress progress
+              WHERE progress.tenant_id=enrollment.tenant_id
+                AND progress.enrollment_id=enrollment.enrollment_id
+                AND progress.lesson_id=prior.lesson_id AND progress.status='COMPLETED'
+            )
         ) LIMIT 1`,
     [input.tenantId,input.enrollmentId,input.subjectId,input.subjectIssuer,input.lessonId,input.assignmentKey],
   );
