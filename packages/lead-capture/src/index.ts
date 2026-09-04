@@ -21,3 +21,7 @@ export * from './client.ts';
 export * from './sign.ts';
 export * from './lead-management-config.ts';
 export * from './governance-escalation.ts';
+export * from './qualification-provenance.ts';
+export * from './evidence-profile.ts';
+export * from './commercial-opportunity-pack.ts';
+export * from './publication.ts';

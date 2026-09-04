@@ -135,7 +135,7 @@ This is what makes per-channel analytics separable:
 
 ```
 Ontario Franchise v3
-  ├─ Website /franchise          → source_id: src_aaa  → 198 enquiries, 18 agreements
+  ├─ Website /opportunity         → source_id: src_aaa  → 198 enquiries, 18 agreements
   ├─ Google Ads Canada           → source_id: src_bbb  → 312 enquiries, 11 agreements
   ├─ Meta Toronto                → source_id: src_ccc  → 428 enquiries, 11 agreements
   └─ LinkedIn campaign           → source_id: src_ddd  → 87 enquiries, 6 agreements
@@ -220,7 +220,7 @@ Evidence / compliance model
  ↓
 Commercial Opportunity Industry Pack (Franchise, Master Franchise, Distribution, Affiliate, License, Agent)
  ↓
-Hosted forms (apply.brand.com/franchise, apply.brand.com/distributor, ...)
+Hosted forms (apply.<brand>.com/opportunity — one neutral slug per brand)
  ↓
 Gate B: lead lifecycle proof
  ↓

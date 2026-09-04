@@ -125,10 +125,11 @@ export async function POST(
         const result = await client.query<{ qualification_id: string; assessed_at: Date | string }>(
           `INSERT INTO platform.lead_qualifications (
              tenant_id, organization_id, capture_lead_id, qualification_template_id,
-             template_version, criterion_key, response, note, assessed_by_subject_id
-           ) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9)
+             template_version, criterion_key, response, note, assessed_by_subject_id,
+             evidence_source
+           ) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10)
            RETURNING qualification_id, assessed_at`,
-          [context.tenantId, lead.organization_id, captureLeadId, template.qualification_template_id, template.version, assessment.criterionKey, assessment.response, assessment.note, context.subjectId],
+          [context.tenantId, lead.organization_id, captureLeadId, template.qualification_template_id, template.version, assessment.criterionKey, assessment.response, assessment.note, context.subjectId, (assessment as any).evidenceSource ?? 'OPERATOR_ASSESSED'],
         );
         inserted.push({
           qualificationId: result.rows[0]?.qualification_id,

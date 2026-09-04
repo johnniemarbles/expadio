@@ -116,8 +116,8 @@ export interface CaptureSubmissionInput {
   readonly fields?: Readonly<Record<string, CaptureFieldValue>>;
 }
 
-/** Strict form-to-API contract for franchise/distributor/affiliate/license/agent
- *  capture. Storage already treats consent and attribution separately; requiring
+/** Strict form-to-API contract for commercial opportunity capture (all interest
+ *  types). Storage already treats consent and attribution separately; requiring
  *  them here prevents new interest forms from silently omitting that evidence. */
 export interface CaptureInterestSubmissionInput
   extends Omit<CaptureSubmissionInput, 'consent' | 'attribution' | 'interest'> {

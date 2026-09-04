@@ -151,8 +151,8 @@ test('Demand Capture scoring evidence is organization-scoped and immutable', asy
       await c.query(
         `INSERT INTO platform.lead_qualifications (
            tenant_id,organization_id,capture_lead_id,qualification_template_id,template_version,
-           criterion_key,response,note,assessed_by_subject_id
-         ) VALUES ($1,$2,$3,$4,1,'fit','MEETS','Strong fit',$5)`,
+           criterion_key,response,note,assessed_by_subject_id,evidence_source
+         ) VALUES ($1,$2,$3,$4,1,'fit','MEETS','Strong fit',$5,'OPERATOR_ASSESSED')`,
         [tenantId, organizationId, captureLeadId, qualificationId, subjectId],
       );
 
