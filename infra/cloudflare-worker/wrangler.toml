@@ -1,0 +1,15 @@
+name = "expadio-forms-proxy"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Route: handles ALL custom hostnames registered via Cloudflare for SaaS
+# on the expadio.com zone, plus the fallback forms.expadio.com origin.
+# Zone name and ID must match the zone where Custom Hostnames are enabled.
+[[routes]]
+pattern = "forms.expadio.com/*"
+zone_name = "expadio.com"
+
+# BRAND_WEB_ORIGIN is set as a secret:
+#   wrangler secret put BRAND_WEB_ORIGIN
+# Value: https://<your-railway-brand-web-public-url>
