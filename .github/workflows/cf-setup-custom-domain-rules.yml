@@ -19,153 +19,93 @@ jobs:
       - name: Mask token
         run: echo "::add-mask::${{ inputs.cf_token }}"
 
-      - name: Apply Transform Rule (set X-Forwarded-Host for custom domains)
+      - name: Write payloads
+        run: |
+          python3 -c "
+import json
+
+transform_rule = {
+    'description': 'expadio: set X-Forwarded-Host for custom domains',
+    'expression': 'not ends_with(http.host, \".expadio.com\")',
+    'action': 'rewrite',
+    'action_parameters': {
+        'headers': {
+            'X-Forwarded-Host': {
+                'operation': 'set',
+                'expression': 'http.host'
+            }
+        }
+    }
+}
+
+origin_rule = {
+    'description': 'expadio: route custom domains to Railway origin',
+    'expression': 'not ends_with(http.host, \".expadio.com\")',
+    'action': 'route',
+    'action_parameters': {
+        'host_header': 'glorious-enchantment-production.up.railway.app'
+    }
+}
+
+with open('/tmp/transform_payload.json', 'w') as f:
+    json.dump({'rules': [transform_rule]}, f)
+
+with open('/tmp/origin_payload.json', 'w') as f:
+    json.dump({'rules': [origin_rule]}, f)
+
+print('Payloads written.')
+print('Transform:', json.dumps({'rules': [transform_rule]}, indent=2))
+print('Origin:', json.dumps({'rules': [origin_rule]}, indent=2))
+"
+
+      - name: Apply Transform Rule
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
-          set -euo pipefail
-          echo "=== Fetching existing http_request_transform ruleset ==="
-          EXISTING=$(curl -sS \
-            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_transform/entrypoint" \
-            -H "Authorization: Bearer ${CF_TOKEN}")
-
-          python3 << 'PYEOF'
-import json, os, subprocess, sys
-
-raw = os.environ.get("EXISTING_JSON", "")
-if not raw:
-    # read from stdin isn't available; use file approach below
-    existing_rules = []
-else:
-    r = json.loads(raw)
-    rules = r.get("result", {}).get("rules", [])
-    existing_rules = [x for x in rules if x.get("description") != "expadio: set X-Forwarded-Host for custom domains"]
-
-new_rule = {
-    "description": "expadio: set X-Forwarded-Host for custom domains",
-    "expression": 'not ends_with(http.host, ".expadio.com")',
-    "action": "rewrite",
-    "action_parameters": {
-        "headers": {
-            "X-Forwarded-Host": {
-                "operation": "set",
-                "expression": "http.host"
-            }
-        }
-    }
-}
-existing_rules.append(new_rule)
-print(json.dumps({"rules": existing_rules}))
-PYEOF
-
-          # Write payload to file to avoid quoting issues
-          EXISTING_JSON="${EXISTING}" python3 << 'PYEOF' > /tmp/transform_payload.json
-import json, os, sys
-
-raw = os.environ.get("EXISTING_JSON", "{}")
-try:
-    r = json.loads(raw)
-    existing_rules = r.get("result", {}).get("rules", [])
-except Exception:
-    existing_rules = []
-
-existing_rules = [x for x in existing_rules if x.get("description") != "expadio: set X-Forwarded-Host for custom domains"]
-new_rule = {
-    "description": "expadio: set X-Forwarded-Host for custom domains",
-    "expression": 'not ends_with(http.host, ".expadio.com")',
-    "action": "rewrite",
-    "action_parameters": {
-        "headers": {
-            "X-Forwarded-Host": {
-                "operation": "set",
-                "expression": "http.host"
-            }
-        }
-    }
-}
-existing_rules.append(new_rule)
-print(json.dumps({"rules": existing_rules}))
-PYEOF
-
-          echo "Payload: $(cat /tmp/transform_payload.json)"
-          echo "=== Applying Transform Rule ==="
+          echo "=== Applying http_request_transform rule ==="
           RESULT=$(curl -sS -X PUT \
             "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_transform/entrypoint" \
             -H "Authorization: Bearer ${CF_TOKEN}" \
             -H "Content-Type: application/json" \
             --data @/tmp/transform_payload.json)
-
           echo "$RESULT" | python3 -c "
 import sys, json
 r = json.load(sys.stdin)
 if r.get('success'):
-    rules = r.get('result',{}).get('rules',[])
+    rules = r.get('result', {}).get('rules', [])
     print('Transform Rule OK: ' + str(len(rules)) + ' rule(s)')
     for rule in rules:
-        print('  - ' + rule.get('description','?') + ' [' + rule.get('action','?') + ']')
+        print('  - ' + rule.get('description', '?') + ' [' + rule.get('action', '?') + ']')
 else:
-    print('FAILED: ' + str(r.get('errors',[])))
+    print('FAILED: ' + str(r.get('errors', [])))
     sys.exit(1)
 "
 
-      - name: Apply Origin Rule (override Host to Railway for custom domains)
+      - name: Apply Origin Rule
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
-          set -euo pipefail
-          echo "=== Fetching existing http_request_origin ruleset ==="
-          EXISTING=$(curl -sS \
-            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_origin/entrypoint" \
-            -H "Authorization: Bearer ${CF_TOKEN}")
-
-          EXISTING_JSON="${EXISTING}" RAILWAY_HOST="${RAILWAY_HOST}" python3 << 'PYEOF' > /tmp/origin_payload.json
-import json, os, sys
-
-raw = os.environ.get("EXISTING_JSON", "{}")
-railway = os.environ.get("RAILWAY_HOST", "")
-try:
-    r = json.loads(raw)
-    existing_rules = r.get("result", {}).get("rules", [])
-except Exception:
-    existing_rules = []
-
-existing_rules = [x for x in existing_rules if x.get("description") != "expadio: route custom domains to Railway origin"]
-new_rule = {
-    "description": "expadio: route custom domains to Railway origin",
-    "expression": 'not ends_with(http.host, ".expadio.com")',
-    "action": "route",
-    "action_parameters": {
-        "host_header": railway
-    }
-}
-existing_rules.append(new_rule)
-print(json.dumps({"rules": existing_rules}))
-PYEOF
-
-          echo "Payload: $(cat /tmp/origin_payload.json)"
-          echo "=== Applying Origin Rule ==="
+          echo "=== Applying http_request_origin rule ==="
           RESULT=$(curl -sS -X PUT \
             "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_origin/entrypoint" \
             -H "Authorization: Bearer ${CF_TOKEN}" \
             -H "Content-Type: application/json" \
             --data @/tmp/origin_payload.json)
-
           echo "$RESULT" | python3 -c "
 import sys, json
 r = json.load(sys.stdin)
 if r.get('success'):
-    rules = r.get('result',{}).get('rules',[])
+    rules = r.get('result', {}).get('rules', [])
     print('Origin Rule OK: ' + str(len(rules)) + ' rule(s)')
     for rule in rules:
-        print('  - ' + rule.get('description','?') + ' [' + rule.get('action','?') + ']')
+        print('  - ' + rule.get('description', '?') + ' [' + rule.get('action', '?') + ']')
 else:
-    print('FAILED: ' + str(r.get('errors',[])))
+    print('FAILED: ' + str(r.get('errors', [])))
     sys.exit(1)
 "
 
       - name: Verify (curl apply.mydreamware.org)
         run: |
-          echo "=== Waiting 5s for propagation ==="
           sleep 5
           echo "=== curl apply.mydreamware.org ==="
           curl -sv --max-time 15 "https://apply.mydreamware.org/" 2>&1 \
