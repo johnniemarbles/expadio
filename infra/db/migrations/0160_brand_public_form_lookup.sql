@@ -29,7 +29,7 @@ SET search_path = platform, pg_temp
 AS $$
   SELECT o.tenant_id,
          o.organization_id,
-         o.organization_name,
+         o.name,
          o.brand_display_name,
          o.brand_slug,
          o.brand_domain
@@ -60,7 +60,7 @@ SET search_path = platform, pg_temp
 AS $$
   SELECT o.tenant_id,
          o.organization_id,
-         o.organization_name,
+         o.name,
          o.brand_display_name,
          o.brand_slug,
          o.brand_domain
