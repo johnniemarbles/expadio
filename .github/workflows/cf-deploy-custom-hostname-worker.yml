@@ -10,7 +10,6 @@ on:
 
 env:
   ZONE_ID: a871277903f98da014626efd5abe9a17
-  ACCOUNT_ID: 9fa4dc0a90be4759feb579c5c0895faf
   WORKER_NAME: expadio-custom-hostname-proxy
   RAILWAY_HOST: glorious-enchantment-production.up.railway.app
 
@@ -62,13 +61,33 @@ jobs:
           echo "Worker script written:"
           cat /tmp/worker.js
 
+      - name: Resolve zone account ID
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Resolving account that owns zone ${ZONE_ID} ==="
+          ZONE_INFO=$(curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}" \
+            -H "Authorization: Bearer ${CF_TOKEN}")
+          ZONE_ACCOUNT_ID=$(echo "$ZONE_INFO" | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              print(r['result']['account']['id'])
+          else:
+              print('ERROR: ' + str(r.get('errors', [])), file=sys.stderr)
+              sys.exit(1)
+          ")
+          echo "Zone account ID: ${ZONE_ACCOUNT_ID}"
+          echo "ZONE_ACCOUNT_ID=${ZONE_ACCOUNT_ID}" >> "$GITHUB_ENV"
+
       - name: Deploy Worker script
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
-          echo "=== Deploying Worker: ${WORKER_NAME} ==="
+          echo "=== Deploying Worker: ${WORKER_NAME} to account ${ZONE_ACCOUNT_ID} ==="
           RESULT=$(curl -sS -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
+            "https://api.cloudflare.com/client/v4/accounts/${ZONE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
             -H "Authorization: Bearer ${CF_TOKEN}" \
             -H "Content-Type: application/javascript" \
             --data-binary @/tmp/worker.js)
