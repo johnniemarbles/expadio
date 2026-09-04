@@ -53,7 +53,7 @@ jobs:
             echo "Not found — registering..."
             REG=$(curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames" \
               -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
-              --data "{\"hostname\":\"$HOSTNAME\",\"ssl\":{\"method\":\"http\",\"type\":\"dv\",\"settings\":{\"min_tls_version\":\"1.2\",\"http2\":\"on\"},\"bundle_method\":\"ubiquitous\",\"wildcard\":false},\"custom_metadata\":{\"managed\":\"expadio\"}}")
+              --data "{\"hostname\":\"$HOSTNAME\",\"ssl\":{\"method\":\"http\",\"type\":\"dv\",\"settings\":{\"min_tls_version\":\"1.2\",\"http2\":\"on\"},\"bundle_method\":\"ubiquitous\",\"wildcard\":false}}")
             echo "$REG" | python3 -c "
           import sys, json
           r = json.load(sys.stdin)
