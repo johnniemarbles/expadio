@@ -47,6 +47,7 @@ export function AssignmentGradingQueue({ submissions }: { submissions: readonly 
       return <article key={submission.submissionId}>
         <header><div><strong>{submission.title}</strong><p>{submission.assignmentKey} · attempt {submission.attemptNumber}</p></div><span>{submission.status}</span></header>
         <div className="submissionResponse">{submission.responseText || 'Attachment-only submission'}</div>
+        {submission.attachments.length > 0 ? <ul aria-label="Submission attachments">{submission.attachments.map((asset) => <li key={asset.assetId}>{asset.filename} · {asset.contentType}</li>)}</ul> : null}
         {submission.feedback ? <p><strong>Feedback:</strong> {submission.feedback}</p> : null}
         {editable ? <div className="gradeControls">
           <label>Score<input type="number" min="0" max={submission.maxPoints} step="0.01" value={value.score} onChange={(event) => setDrafts((current) => ({ ...current, [submission.submissionId]: { ...value, score: event.target.value } }))} /></label>
