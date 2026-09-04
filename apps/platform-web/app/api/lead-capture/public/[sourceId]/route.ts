@@ -5,6 +5,7 @@ import {
   CAPTURE_PUBLISHABLE_KEY_HEADER,
   CaptureContractError,
   MAX_CAPTURE_BODY_BYTES,
+  captureSubmissionAllowedBySourceConfig,
   extractLeadFields,
   normalizeSubmission,
   type CaptureSubmission,
@@ -108,6 +109,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
       await client.query('ROLLBACK');
       const message = error instanceof CaptureContractError ? error.message : 'Capture payload is invalid.';
       return NextResponse.json({ error: message }, { status: 400, headers: corsHeaders(origin, true) });
+    }
+    const submittedInterest = submission.interest
+      ? {
+          interestType: submission.interest.interestType,
+          ...('opportunityType' in submission.interest && submission.interest.opportunityType
+            ? { opportunityType: submission.interest.opportunityType }
+            : {}),
+        }
+      : undefined;
+    if (!captureSubmissionAllowedBySourceConfig(source.publication_config, submittedInterest)) {
+      await client.query('ROLLBACK');
+      return NextResponse.json(
+        { error: 'Submission interest is not allowed by this capture source.', reasonKey: 'CAPTURE_SOURCE_INTEREST_NOT_ALLOWED' },
+        { status: 400, headers: corsHeaders(origin, true) },
+      );
     }
     const email = submission.contact.email;
     const emailHash = hashToken(email);
