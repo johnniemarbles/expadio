@@ -1,22 +1,9 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import pg from 'pg';
+import { dbPool } from '../../../../lib/brand-context';
 import EnquiryFormClient from './EnquiryFormClient';
 
 export const dynamic = 'force-dynamic';
-
-declare global { var _enquiryDbPool: pg.Pool | undefined; }
-
-const enquiryDbPool = global._enquiryDbPool ?? new pg.Pool(
-  process.env.DATABASE_URL ? { connectionString: process.env.DATABASE_URL } : {
-    host: process.env.PGHOST || 'localhost',
-    port: Number(process.env.PGPORT || '5432'),
-    user: process.env.PGUSER || 'expadio',
-    password: process.env.PGPASSWORD || 'expadio_password',
-    database: process.env.PGDATABASE || 'expadio',
-  },
-);
-if (process.env.NODE_ENV === 'development') global._enquiryDbPool = enquiryDbPool;
 
 const EXPADIO_APEX = process.env.EXPADIO_APEX_DOMAIN || 'expadio.com';
 
@@ -41,7 +28,7 @@ interface PublicationRow {
 }
 
 async function resolveOrg(hostname: string): Promise<OrgRow | null> {
-  const client = await enquiryDbPool.connect();
+  const client = await dbPool.connect();
   try {
     // Strip port for local dev
     const host = hostname.split(':')[0];
@@ -67,7 +54,7 @@ async function resolveOrg(hostname: string): Promise<OrgRow | null> {
 }
 
 async function resolvePublications(tenantId: string, organizationId: string): Promise<PublicationRow[]> {
-  const client = await enquiryDbPool.connect();
+  const client = await dbPool.connect();
   try {
     const result = await client.query<PublicationRow>(
       `SELECT * FROM platform.lookup_public_hosted_forms($1::uuid, $2::uuid)`,

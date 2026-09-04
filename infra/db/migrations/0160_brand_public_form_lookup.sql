@@ -115,7 +115,7 @@ AS $$
      AND cs.status          = 'ACTIVE'
    WHERE p.tenant_id        = p_tenant_id
      AND p.organization_id  = p_organization_id
-     AND p.status           IN ('PUBLISHED', 'DRAFT')
+     AND p.status           IN ('ACTIVE', 'DRAFT')
      AND p.publication_mode = 'HOSTED_FORM'
    ORDER BY p.created_at ASC;
 $$;
