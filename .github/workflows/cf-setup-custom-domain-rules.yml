@@ -45,7 +45,6 @@ jobs:
           with open('/tmp/transform_payload.json', 'w') as f:
               json.dump({'rules': [transform_rule]}, f)
           print('transform payload:', open('/tmp/transform_payload.json').read())
-          print('origin payload:', open('/tmp/origin_payload.json').read())
           "
 
       - name: Apply Transform Rule (Host + X-Forwarded-Host for custom domains)
