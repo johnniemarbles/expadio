@@ -9,8 +9,33 @@ function stage(value: unknown): BrandLeadStage {
   return normalized as BrandLeadStage;
 }
 
+const VALID_INTEREST_TYPES = new Set([
+  'FRANCHISEE', 'MASTER_FRANCHISEE', 'DISTRIBUTOR', 'AFFILIATE', 'LICENSEE', 'AGENT',
+]);
+const VALID_OPPORTUNITY_TYPES = new Set([
+  'SINGLE_UNIT', 'MULTI_UNIT', 'AREA_DEVELOPMENT', 'CONVERSION', 'RESALE',
+  'EXCLUSIVE_DISTRIBUTOR', 'NON_EXCLUSIVE_DISTRIBUTOR', 'MASTER_DISTRIBUTOR', 'SUB_DISTRIBUTOR',
+]);
+
 function manualLeadInput(body: unknown) {
   const record = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+
+  const contactName = typeof record.contactName === 'string' && record.contactName.trim()
+    ? record.contactName.trim().slice(0, 200)
+    : null;
+  const contactEmail = typeof record.contactEmail === 'string' && record.contactEmail.trim()
+    ? record.contactEmail.trim().toLowerCase()
+    : null;
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) throw new Error('LEAD_EMAIL_INVALID');
+  const contactPhone = typeof record.contactPhone === 'string' && record.contactPhone.trim()
+    ? record.contactPhone.trim().slice(0, 50)
+    : null;
+
+  const rawInterestType = typeof record.enquiryInterestType === 'string' ? record.enquiryInterestType.trim().toUpperCase() : null;
+  const enquiryInterestType = rawInterestType && VALID_INTEREST_TYPES.has(rawInterestType) ? rawInterestType : null;
+  const rawOpportunityType = typeof record.enquiryOpportunityType === 'string' ? record.enquiryOpportunityType.trim().toUpperCase() : null;
+  const enquiryOpportunityType = rawOpportunityType && VALID_OPPORTUNITY_TYPES.has(rawOpportunityType) ? rawOpportunityType : null;
+
   const title = typeof record.title === 'string' ? record.title.trim() : '';
   if (title.length < 1 || title.length > 200) throw new Error('LEAD_TITLE_INVALID');
   const leadStage = record.stage == null || record.stage === '' ? 'NEW' : stage(record.stage);
@@ -24,7 +49,7 @@ function manualLeadInput(body: unknown) {
     if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error('LEAD_AMOUNT_INVALID');
     amountMinorUnits = parsed;
   }
-  return { title, stage: leadStage, currency, amountMinorUnits } as const;
+  return { title, stage: leadStage, currency, amountMinorUnits, contactName, contactEmail, contactPhone, enquiryInterestType, enquiryOpportunityType } as const;
 }
 
 export interface BrandLeadSummary {
@@ -35,6 +60,11 @@ export interface BrandLeadSummary {
   readonly currency: string;
   readonly source: string | null;
   readonly accountName: string | null;
+  readonly contactName: string | null;
+  readonly contactEmail: string | null;
+  readonly contactPhone: string | null;
+  readonly enquiryInterestType: string | null;
+  readonly enquiryOpportunityType: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -48,6 +78,11 @@ function toSummary(row: any): BrandLeadSummary {
     currency: row.currency,
     source: row.source ?? null,
     accountName: row.account_name ?? null,
+    contactName: row.contact_name ?? null,
+    contactEmail: row.contact_email ?? null,
+    contactPhone: row.contact_phone ?? null,
+    enquiryInterestType: row.enquiry_interest_type ?? null,
+    enquiryOpportunityType: row.enquiry_opportunity_type ?? null,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
   };
@@ -61,6 +96,8 @@ export async function listBrandLeads(
   if (selectedStage !== '') stage(selectedStage);
   const result = await client.query(
     `SELECT l.lead_id, l.title, l.stage, l.amount_minor_units, l.currency, l.source,
+            l.contact_name, l.contact_email, l.contact_phone,
+            l.enquiry_interest_type, l.enquiry_opportunity_type,
             l.created_at, l.updated_at, a.name AS account_name
        FROM platform.crm_leads l
        LEFT JOIN platform.crm_accounts a ON a.account_id = l.account_id
@@ -84,12 +121,20 @@ export async function createBrandLead(
   const validated = manualLeadInput(input.body);
   const inserted = await client.query(
     `INSERT INTO platform.crm_leads
-       (tenant_id, organization_id, title, stage, amount_minor_units, currency, source, raw_payload, owner_subject_id)
-     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, 'manual', '{}'::jsonb, $7)
+       (tenant_id, organization_id, title, stage, amount_minor_units, currency, source,
+        contact_name, contact_email, contact_phone, enquiry_interest_type, enquiry_opportunity_type,
+        raw_payload, owner_subject_id)
+     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, 'manual',
+             $7, $8, $9, $10, $11,
+             '{}'::jsonb, $12)
      RETURNING lead_id, title, stage, amount_minor_units, currency, source,
+               contact_name, contact_email, contact_phone, enquiry_interest_type, enquiry_opportunity_type,
                created_at, updated_at, NULL::text AS account_name`,
     [input.tenantId, input.organizationId, validated.title, validated.stage,
-      validated.amountMinorUnits, validated.currency, input.actorSubjectId],
+      validated.amountMinorUnits, validated.currency,
+      validated.contactName, validated.contactEmail, validated.contactPhone,
+      validated.enquiryInterestType, validated.enquiryOpportunityType,
+      input.actorSubjectId],
   );
   return toSummary(inserted.rows[0]);
 }
@@ -104,6 +149,7 @@ export async function updateBrandLeadStage(
         SET stage = $2, updated_at = now()
       WHERE lead_id = $1::uuid
       RETURNING lead_id, title, stage, amount_minor_units, currency, source,
+                contact_name, contact_email, contact_phone, enquiry_interest_type, enquiry_opportunity_type,
                 created_at, updated_at, NULL::text AS account_name`,
     [input.leadId, selectedStage],
   );
