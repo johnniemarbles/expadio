@@ -21,6 +21,7 @@ export function LearnerAssignmentForm({
     readonly maxPoints: number;
     readonly feedback: string;
     readonly submittedAt: string;
+    readonly attachments: readonly { readonly assetId: string; readonly filename: string; readonly contentType: string }[];
   };
 }) {
   const router = useRouter();
@@ -85,7 +86,8 @@ export function LearnerAssignmentForm({
       {submission ? <section className="assignmentFeedback" aria-label="Latest submission status">
         <p><strong>{submission.status}</strong> · attempt {submission.attemptNumber} · {new Date(submission.submittedAt).toLocaleString()}</p>
         {graded ? <p>Score: {submission.scorePoints}/{submission.maxPoints}</p> : null}
-        {submission.feedback ? <p><strong>Feedback:</strong> {submission.feedback}</p> : null}
+{submission.feedback ? <p><strong>Feedback:</strong> {submission.feedback}</p> : null}
+        {submission.attachments.length > 0 ? <ul>{submission.attachments.map((asset) => <li key={asset.assetId}>{asset.filename}</li>)}</ul> : null}
       </section> : null}
       <label>
         <span>Your response</span>
@@ -100,7 +102,7 @@ export function LearnerAssignmentForm({
             setFileKeys(selected.map(() => crypto.randomUUID()));
           }} />
       </label>
-      <button type="submit" disabled={status !== 'IDLE' || responseText.trim() === '' && files.length === 0 || awaitingReview || graded}>
+      <button type="submit" disabled={status !== 'IDLE' || (responseText.trim() === '' && files.length === 0) || awaitingReview || graded}>
         {status === 'SUBMITTING' ? 'Submitting…' : status === 'SUBMITTED' ? 'Submitted' : 'Submit assignment'}
       </button>
       <div role="status" aria-live="polite">{status === 'SUBMITTED' ? 'Your work was submitted for review.' : ''}</div>
