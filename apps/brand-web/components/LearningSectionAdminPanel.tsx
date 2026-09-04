@@ -8,6 +8,18 @@ interface TargetOption {
   readonly label: string;
 }
 
+interface AssignmentRulePreview {
+  readonly totalLearners: number;
+  readonly matchedLearners: number;
+  readonly unmatchedLearners: number;
+  readonly sample: readonly {
+    readonly learnerId: string;
+    readonly fullName: string;
+    readonly audienceType: string;
+    readonly subjectLinked: boolean;
+  }[];
+}
+
 type ManagedSection = 'skills' | 'assignments';
 
 const endpointBySection: Record<ManagedSection, string> = {
@@ -35,6 +47,7 @@ export function LearningSectionAdminPanel({
   const [subjectRequired, setSubjectRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<AssignmentRulePreview | null>(null);
 
   const targets = useMemo(
     () => targetType === 'COURSE' ? courseTargets : programTargets,
@@ -68,6 +81,26 @@ export function LearningSectionAdminPanel({
         },
       },
     };
+  }
+
+  async function previewAudience() {
+    setBusy(true);
+    setError(null);
+    setPreview(null);
+    try {
+      const response = await fetch('/api/learning/assignment-rules/preview', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ draft: payload().draft }),
+      });
+      const body = await response.json() as { preview?: AssignmentRulePreview; error?: string };
+      if (!response.ok || !body.preview) throw new Error(body.error ?? 'Assignment preview failed.');
+      setPreview(body.preview);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Assignment preview failed.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -128,7 +161,29 @@ export function LearningSectionAdminPanel({
         </>
       )}
 
-      <div className="wide"><button type="submit" disabled={busy || (section === 'assignments' && !targetId)}>{busy ? 'Creating…' : 'Create draft'}</button></div>
+      <div className="wide">
+        {section === 'assignments' ? (
+          <button type="button" disabled={busy || !targetId || !key || !title} onClick={() => void previewAudience()}>
+            {busy ? 'Checking…' : 'Preview audience'}
+          </button>
+        ) : null}
+        {' '}
+        <button type="submit" disabled={busy || (section === 'assignments' && !targetId)}>{busy ? 'Creating…' : 'Create draft'}</button>
+      </div>
+      {preview ? (
+        <section className="wide" aria-label="Assignment audience preview">
+          <h4>{preview.matchedLearners} of {preview.totalLearners} active learners match</h4>
+          <p>{preview.unmatchedLearners} learners do not match. Preview is read-only and creates no assignments.</p>
+          {preview.sample.length > 0 ? (
+            <ul>{preview.sample.map((learner) => (
+              <li key={learner.learnerId}>
+                {learner.fullName} · {learner.audienceType} · {learner.subjectLinked ? 'identity linked' : 'identity not linked'}
+              </li>
+            ))}</ul>
+          ) : <p>No active learners match these conditions.</p>}
+          {preview.matchedLearners > preview.sample.length ? <p>Showing the first {preview.sample.length} matches.</p> : null}
+        </section>
+      ) : null}
       {error ? <div className="aiError wide" role="alert">{error}</div> : null}
     </form>
   );

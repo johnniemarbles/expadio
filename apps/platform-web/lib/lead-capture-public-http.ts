@@ -4,7 +4,12 @@
  * The two routes (ingress + verify) both go through these so the trust checks
  * cannot drift apart.
  */
-import { CAPTURE_IDEMPOTENCY_HEADER, CAPTURE_PUBLISHABLE_KEY_HEADER } from '@expadio/lead-capture';
+import {
+  CAPTURE_IDEMPOTENCY_HEADER,
+  CAPTURE_PUBLISHABLE_KEY_HEADER,
+  normalizeCaptureSourcePublicationConfig,
+  type CaptureSourcePublicationConfig,
+} from '@expadio/lead-capture';
 import { originAllowed } from './lead-capture-public-source.ts';
 import { isValidPublishableKey } from './lead-capture-public-guard.ts';
 
@@ -24,6 +29,7 @@ export interface PublicSourceRow {
   allowed_origins: string[] | null;
   status: string;
   trust_rail: string;
+  publication_config: CaptureSourcePublicationConfig;
 }
 
 export function corsHeaders(origin: string | null, allowed: boolean): Record<string, string> {
@@ -47,13 +53,18 @@ export async function setPublicIngressContext(client: CaptureClient, tenantId: s
 export async function loadPublicSource(client: CaptureClient, tenantId: string, sourceId: string): Promise<PublicSourceRow | null> {
   const result = await client.query<PublicSourceRow>(
     `SELECT source_id, tenant_id, organization_id, source_key, layer_key, publishable_key,
-            allowed_origins, status, trust_rail
+            allowed_origins, status, trust_rail, metadata
        FROM platform.lead_capture_sources
       WHERE tenant_id = $1::uuid AND source_id = $2::uuid AND trust_rail = 'PUBLIC'
       LIMIT 1`,
     [tenantId, sourceId],
   );
-  return result.rows[0] ?? null;
+  const row = result.rows[0] as (PublicSourceRow & { metadata?: { publicationConfig?: unknown } }) | undefined;
+  if (!row) return null;
+  return {
+    ...row,
+    publication_config: normalizeCaptureSourcePublicationConfig(row.metadata?.publicationConfig ?? {}),
+  };
 }
 
 export type KeyOriginCheck = { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string };

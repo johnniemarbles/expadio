@@ -1,6 +1,11 @@
 import { createHash, createPublicKey } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { generatePublishableKey, normalizeOrigins } from '@expadio/lead-capture';
+import {
+  CaptureSourceConfigError,
+  generatePublishableKey,
+  normalizeCaptureSourcePublicationConfig,
+  normalizeOrigins,
+} from '@expadio/lead-capture';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
@@ -29,7 +34,7 @@ export async function GET() {
     return await withBrandTransaction(context, async (client) => {
       const result = await client.query(
         `SELECT source_id, source_key, surface, channel, trust_rail, layer_key, status,
-                publishable_key, allowed_origins,
+                publishable_key, allowed_origins, metadata,
                 verification_algorithm, verification_key_id, max_clock_skew_seconds,
                 created_at, updated_at
            FROM platform.lead_capture_sources
@@ -49,6 +54,7 @@ export async function GET() {
         // signed rail's verification key id is likewise non-secret.
         publishableKey: row.publishable_key,
         allowedOrigins: row.allowed_origins ?? [],
+        publicationConfig: normalizeCaptureSourcePublicationConfig(row.metadata?.publicationConfig ?? {}),
         verificationAlgorithm: row.verification_algorithm,
         verificationKeyId: row.verification_key_id,
         maxClockSkewSeconds: row.max_clock_skew_seconds,
@@ -75,6 +81,15 @@ export async function POST(request: Request) {
     const channel = typeof body.channel === 'string' ? body.channel.trim().toUpperCase() : 'WEB';
     const layerKey = typeof body.layerKey === 'string' && body.layerKey.trim() ? body.layerKey.trim() : null;
     const maxClockSkewSeconds = body.maxClockSkewSeconds === undefined ? 300 : Number(body.maxClockSkewSeconds);
+    let publicationConfig;
+    try {
+      publicationConfig = normalizeCaptureSourcePublicationConfig(body.publicationConfig ?? {});
+    } catch (error) {
+      if (error instanceof CaptureSourceConfigError) {
+        return NextResponse.json({ error: error.message, reasonKey: error.code }, { status: 400 });
+      }
+      throw error;
+    }
 
     if (!/^[a-z0-9][a-z0-9._-]{2,79}$/u.test(sourceKey)) {
       return NextResponse.json({ error: 'sourceKey must be 3-80 safe characters.' }, { status: 400 });
@@ -121,16 +136,16 @@ export async function POST(request: Request) {
              (tenant_id, organization_id, source_key, surface, channel, trust_rail, layer_key,
               require_signed_ticket, status, verification_algorithm,
               verification_public_key, verification_key_id, max_clock_skew_seconds,
-              publishable_key, allowed_origins)
+              publishable_key, allowed_origins, metadata)
            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7,
-                   $8, 'ACTIVE', 'ED25519', $9, $10, $11, $12, $13::text[])
+                   $8, 'ACTIVE', 'ED25519', $9, $10, $11, $12, $13::text[], $14::jsonb)
            RETURNING source_id, source_key, surface, channel, trust_rail, layer_key, status,
-                     publishable_key, allowed_origins, verification_key_id,
+                     publishable_key, allowed_origins, metadata, verification_key_id,
                      max_clock_skew_seconds, created_at`,
           [
             context.tenantId, context.organizationId, sourceKey, surface, channel, trustRail, layerKey,
             trustRail === 'SIGNED', signedKey?.pem ?? null, signedKey?.keyId ?? null, maxClockSkewSeconds,
-            publishableKey, allowedOrigins,
+            publishableKey, allowedOrigins, JSON.stringify({ publicationConfig }),
           ],
         );
         const row = inserted.rows[0];
@@ -148,6 +163,7 @@ export async function POST(request: Request) {
             // embed/SDK. It is a public identifier, not a secret.
             publishableKey: row.publishable_key,
             allowedOrigins: row.allowed_origins ?? [],
+            publicationConfig: normalizeCaptureSourcePublicationConfig(row.metadata?.publicationConfig ?? {}),
             verificationKeyId: row.verification_key_id,
             maxClockSkewSeconds: row.max_clock_skew_seconds,
             createdAt: new Date(row.created_at).toISOString(),
