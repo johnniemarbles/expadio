@@ -19,62 +19,76 @@ jobs:
       - name: Mask token
         run: echo "::add-mask::${{ inputs.cf_token }}"
 
-      - name: Test Railway reachability (direct)
-        run: |
-          echo "=== curl Railway with its own Host ==="
-          curl -sv --max-time 15 "https://${RAILWAY_HOST}/" \
-            -H "Host: ${RAILWAY_HOST}" 2>&1 | tail -20 || true
-
-      - name: Test Railway with custom hostname Host header
-        run: |
-          echo "=== curl Railway with custom Host: apply.mydreamware.org ==="
-          curl -sv --max-time 15 "https://${RAILWAY_HOST}/" \
-            -H "Host: apply.mydreamware.org" 2>&1 | tail -20 || true
-
-      - name: Test Railway with forms.expadio.com Host header
-        run: |
-          echo "=== curl Railway with Host: forms.expadio.com ==="
-          curl -sv --max-time 15 "https://${RAILWAY_HOST}/" \
-            -H "Host: forms.expadio.com" 2>&1 | tail -20 || true
-
-      - name: Check Cloudflare fallback origin status
+      - name: Check Worker routes on zone
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
-          RESULT=$(curl -sS \
+          echo "=== Worker routes on expadio.com zone ==="
+          curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          routes = r.get('result', [])
+          if routes:
+              for rt in routes:
+                  print('  pattern=' + rt.get('pattern','?') + '  script=' + str(rt.get('script','none')))
+          else:
+              print('  No Worker routes found!')
+          "
+
+      - name: Check Worker script exists in account
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Worker scripts in xpadio-saas-proxy account ==="
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/9fa4dc0a90be4759feb579c5c0895faf/workers/scripts" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          scripts = r.get('result', [])
+          if scripts:
+              for s in scripts:
+                  print('  ' + s.get('id','?'))
+          else:
+              print('  No scripts found or access denied: ' + str(r.get('errors',[])))
+          "
+
+      - name: Curl forms.expadio.com directly (should hit Worker)
+        run: |
+          echo "=== curl forms.expadio.com (should show Worker or Railway response) ==="
+          curl -sv --max-time 15 "https://forms.expadio.com/" 2>&1 | grep -E "^[<>]|HTTP/|location:|server:|cf-ray:|x-forwarded|host:" || true
+
+      - name: Curl apply.mydreamware.org (custom hostname)
+        run: |
+          echo "=== curl apply.mydreamware.org (should show Worker or Railway response) ==="
+          curl -sv --max-time 15 "https://apply.mydreamware.org/" 2>&1 | grep -E "^[<>]|HTTP/|location:|server:|cf-ray:|x-forwarded|host:|via:" || true
+
+      - name: Check fallback origin and DNS state
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Fallback origin ==="
+          curl -sS \
             "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
-            -H "Authorization: Bearer $CF_TOKEN")
-          echo "$RESULT" | python3 -c "
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
           import sys, json
           r = json.load(sys.stdin)
           if r.get('success'):
-              res = r.get('result', {})
-              print('Origin:  ' + res.get('origin','?'))
-              print('Status:  ' + res.get('status','?'))
-              errors = res.get('errors', [])
-              if errors:
-                  print('Errors:  ' + str(errors))
-          else:
-              print('API ERROR: ' + str(r))
+              res = r['result']
+              print('  origin=' + res.get('origin','?') + '  status=' + res.get('status','?'))
+              for e in res.get('errors',[]):
+                  print('  error: ' + str(e))
           "
 
-      - name: Check custom hostname statuses
-        env:
-          CF_TOKEN: ${{ inputs.cf_token }}
-        run: |
-          for H in forms.mydreamware.org apply.mydreamware.org; do
-            echo "--- $H ---"
-            curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames?hostname=$H" \
-              -H "Authorization: Bearer $CF_TOKEN" | python3 -c "
+          echo "=== DNS for forms.expadio.com ==="
+          curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=forms.expadio.com" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
           import sys, json
-          r = json.load(sys.stdin)
-          res = r.get('result', [])
-          if res:
-              d = res[0]
-              print('  Status:      ' + d.get('status','?'))
-              print('  SSL Status:  ' + str((d.get('ssl') or {}).get('status')))
-              print('  Ownership:   ' + str(d.get('ownership_verification',{}).get('type','?')))
-          else:
-              print('  Not found')
+          for r in json.load(sys.stdin).get('result',[]):
+              print('  ' + r['type'] + ' ' + r['name'] + ' to ' + r['content'] + ' proxied=' + str(r['proxied']))
           "
-          done
