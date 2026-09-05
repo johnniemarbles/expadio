@@ -27,6 +27,7 @@ export * from './components/agent/ApprovalCard';
 export * from './components/agent/CommandBar';
 
 export * from './theme';
+export * from './tokens';
 export * from './components/ThemeModeControl';
 export * from './module-shell';
 export * from './governed-theme';

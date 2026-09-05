@@ -1,140 +1,189 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Expadio Design Tokens — Color
+ *
+ * Layer 1: Raw --tok-color-* properties derived from expadioTokens (tokens.ts).
+ * Layer 2: Semantic --theme-* aliases consumed by all existing components.
+ *          Existing consumers need zero changes.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── 1. Raw token layer ────────────────────────────────────────────────────── */
+:root {
+  /* Background */
+  --tok-color-bg-base:     #0A0C0F;
+  --tok-color-bg-surface:  #12151A;
+  --tok-color-bg-elevated: #161B22;
+  --tok-color-bg-overlay:  #1C2128;
+
+  /* Border */
+  --tok-color-border-subtle:  #21262D;
+  --tok-color-border-default: #30363D;
+  --tok-color-border-strong:  #484F58;
+  --tok-color-border-focus:   #22D3EE;
+
+  /* Text */
+  --tok-color-text-primary:   #E6EDF3;
+  --tok-color-text-secondary: #C9D1D9;
+  --tok-color-text-tertiary:  #8B949E;
+  --tok-color-text-muted:     #6E7681;
+  --tok-color-text-disabled:  #484F58;
+  --tok-color-text-inverse:   #0A0C0F;
+
+  /* Accent */
+  --tok-color-accent-primary:        #22D3EE;
+  --tok-color-accent-primary-hover:  #67E8F9;
+  --tok-color-accent-primary-muted:  rgba(34, 211, 238, 0.15);
+  --tok-color-accent-primary-subtle: rgba(34, 211, 238, 0.08);
+
+  /* Semantic */
+  --tok-color-semantic-success:       #10B981;
+  --tok-color-semantic-success-muted: rgba(16, 185, 129, 0.15);
+  --tok-color-semantic-warning:       #F59E0B;
+  --tok-color-semantic-warning-muted: rgba(245, 158, 11, 0.15);
+  --tok-color-semantic-critical:      #F43F5E;
+  --tok-color-semantic-critical-muted:rgba(244, 63, 94, 0.15);
+  --tok-color-semantic-info:          #3B82F6;
+
+  /* Status */
+  --tok-color-status-open:  #F59E0B;
+  --tok-color-status-clear: #10B981;
+  --tok-color-status-live:  #22D3EE;
+  --tok-color-status-idle:  #6E7681;
+  --tok-color-status-error: #F43F5E;
+}
+
+/* ── 2. Semantic --theme-* layer (light defaults, token-sourced) ───────────── */
 :root,
 [data-theme="light"],
 [data-theme="system"] {
-  --theme-canvas:#f5f8fb;
-  --theme-surface:#ffffff;
-  --theme-surface-raised:#ffffff;
-  --theme-surface-muted:#eef3f8;
-  --theme-overlay:rgba(7,15,27,.42);
-  --theme-border:rgba(23,49,77,.12);
-  --theme-text-primary:#102033;
-  --theme-text-secondary:#52657a;
-  --theme-text-muted:#74869a;
-  --theme-text-inverse:#f7fbff;
-  --theme-primary:#0891b2;
-  --theme-secondary:#7c3aed;
-  --theme-accent:#06b6d4;
-  --theme-focus:#0284c7;
-  --theme-success:#0f9f73;
-  --theme-warning:#b77906;
-  --theme-danger:#dc3f59;
-  --theme-info:#2563eb;
-  --theme-neutral:#64748b;
-  --theme-sidebar-surface:#ffffff;
-  --theme-navigation-active:rgba(6,182,212,.10);
-  --theme-command-surface:#eef3f8;
-  color-scheme:light;
+  --theme-canvas:         #f5f8fb;
+  --theme-surface:        #ffffff;
+  --theme-surface-raised: #ffffff;
+  --theme-surface-muted:  #eef3f8;
+  --theme-overlay:        rgba(7, 15, 27, 0.42);
+  --theme-border:         rgba(23, 49, 77, 0.12);
+  --theme-text-primary:   #102033;
+  --theme-text-secondary: #52657a;
+  --theme-text-muted:     #74869a;
+  --theme-text-inverse:   #f7fbff;
+  --theme-primary:        #0891b2;
+  --theme-secondary:      #7c3aed;
+  --theme-accent:         #06b6d4;
+  --theme-focus:          #0284c7;
+  --theme-success:        #0f9f73;
+  --theme-warning:        #b77906;
+  --theme-danger:         #dc3f59;
+  --theme-info:           #2563eb;
+  --theme-neutral:        #64748b;
+  --theme-sidebar-surface:        #ffffff;
+  --theme-navigation-active:      rgba(6, 182, 212, 0.10);
+  --theme-command-surface:        #eef3f8;
+  color-scheme: light;
 }
 
+/* ── 3. Dark mode — semantic vars resolve to raw tokens ───────────────────── */
 [data-theme="dark"] {
-  --theme-canvas:#05080d;
-  --theme-surface:#0a1018;
-  --theme-surface-raised:#0e1722;
-  --theme-surface-muted:#111c29;
-  --theme-overlay:rgba(0,4,10,.72);
-  --theme-border:rgba(104,151,190,.18);
-  --theme-text-primary:#edf7ff;
-  --theme-text-secondary:#a8bbcc;
-  --theme-text-muted:#71869a;
-  --theme-text-inverse:#041018;
-  --theme-primary:#22d3ee;
-  --theme-secondary:#8b5cf6;
-  --theme-accent:#06b6d4;
-  --theme-focus:#67e8f9;
-  --theme-success:#2dd4a3;
-  --theme-warning:#fbbf24;
-  --theme-danger:#fb7185;
-  --theme-info:#60a5fa;
-  --theme-neutral:#94a3b8;
-  --theme-sidebar-surface:#060b12;
-  --theme-navigation-active:rgba(34,211,238,.12);
-  --theme-command-surface:#0b141f;
-  color-scheme:dark;
+  --theme-canvas:         var(--tok-color-bg-base);
+  --theme-surface:        var(--tok-color-bg-surface);
+  --theme-surface-raised: var(--tok-color-bg-elevated);
+  --theme-surface-muted:  var(--tok-color-bg-overlay);
+  --theme-overlay:        rgba(0, 4, 10, 0.72);
+  --theme-border:         var(--tok-color-border-default);
+  --theme-text-primary:   var(--tok-color-text-primary);
+  --theme-text-secondary: var(--tok-color-text-secondary);
+  --theme-text-muted:     var(--tok-color-text-muted);
+  --theme-text-inverse:   var(--tok-color-text-inverse);
+  --theme-primary:        var(--tok-color-accent-primary);
+  --theme-secondary:      #8b5cf6;
+  --theme-accent:         var(--tok-color-accent-primary);
+  --theme-focus:          var(--tok-color-accent-primary-hover);
+  --theme-success:        var(--tok-color-semantic-success);
+  --theme-warning:        var(--tok-color-semantic-warning);
+  --theme-danger:         var(--tok-color-semantic-critical);
+  --theme-info:           var(--tok-color-semantic-info);
+  --theme-neutral:        var(--tok-color-text-muted);
+  --theme-sidebar-surface:        var(--tok-color-bg-base);
+  --theme-navigation-active:      var(--tok-color-accent-primary-subtle);
+  --theme-command-surface:        var(--tok-color-bg-surface);
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   [data-theme="system"] {
-    --theme-canvas:#05080d;
-    --theme-surface:#0a1018;
-    --theme-surface-raised:#0e1722;
-    --theme-surface-muted:#111c29;
-    --theme-overlay:rgba(0,4,10,.72);
-    --theme-border:rgba(104,151,190,.18);
-    --theme-text-primary:#edf7ff;
-    --theme-text-secondary:#a8bbcc;
-    --theme-text-muted:#71869a;
-    --theme-text-inverse:#041018;
-    --theme-primary:#22d3ee;
-    --theme-secondary:#8b5cf6;
-    --theme-accent:#06b6d4;
-    --theme-focus:#67e8f9;
-    --theme-success:#2dd4a3;
-    --theme-warning:#fbbf24;
-    --theme-danger:#fb7185;
-    --theme-info:#60a5fa;
-    --theme-neutral:#94a3b8;
-    --theme-sidebar-surface:#060b12;
-    --theme-navigation-active:rgba(34,211,238,.12);
-    --theme-command-surface:#0b141f;
-    color-scheme:dark;
+    --theme-canvas:         var(--tok-color-bg-base);
+    --theme-surface:        var(--tok-color-bg-surface);
+    --theme-surface-raised: var(--tok-color-bg-elevated);
+    --theme-surface-muted:  var(--tok-color-bg-overlay);
+    --theme-overlay:        rgba(0, 4, 10, 0.72);
+    --theme-border:         var(--tok-color-border-default);
+    --theme-text-primary:   var(--tok-color-text-primary);
+    --theme-text-secondary: var(--tok-color-text-secondary);
+    --theme-text-muted:     var(--tok-color-text-muted);
+    --theme-text-inverse:   var(--tok-color-text-inverse);
+    --theme-primary:        var(--tok-color-accent-primary);
+    --theme-secondary:      #8b5cf6;
+    --theme-accent:         var(--tok-color-accent-primary);
+    --theme-focus:          var(--tok-color-accent-primary-hover);
+    --theme-success:        var(--tok-color-semantic-success);
+    --theme-warning:        var(--tok-color-semantic-warning);
+    --theme-danger:         var(--tok-color-semantic-critical);
+    --theme-info:           var(--tok-color-semantic-info);
+    --theme-neutral:        var(--tok-color-text-muted);
+    --theme-sidebar-surface:        var(--tok-color-bg-base);
+    --theme-navigation-active:      var(--tok-color-accent-primary-subtle);
+    --theme-command-surface:        var(--tok-color-bg-surface);
+    color-scheme: dark;
   }
 }
 
+/* ── 4. Shell / layout — mode-independent ─────────────────────────────────── */
 :root {
-  --theme-sidebar-width:228px;
-  --theme-header-height:64px;
-  --theme-radius-control:9px;
-  --theme-radius-card:14px;
-  --theme-radius-modal:18px;
-  --theme-page-padding:28px;
-  --theme-section-gap:20px;
-  --theme-card-gap:14px;
-  --theme-shadow-subtle:0 1px 2px rgba(0,0,0,.16);
-  --theme-shadow-card:0 12px 36px rgba(0,0,0,.18);
-  --theme-shadow-elevated:0 24px 70px rgba(0,0,0,.28);
-  --theme-blur:18px;
-  --theme-translucency:.94;
-  --theme-border-glow:0 0 0 1px rgba(34,211,238,.08);
-  --theme-motion-fast:calc(var(--theme-motion-fast) * 1);
-  --theme-motion-normal:calc(var(--theme-motion-fast) * 1.57);
-  --theme-motion-slow:calc(var(--theme-motion-fast) * 2.43);
-  --theme-easing:var(--theme-easing);
+  --theme-sidebar-width:  228px;
+  --theme-header-height:  64px;
+  --theme-radius-control: 9px;
+  --theme-radius-card:    14px;
+  --theme-radius-modal:   18px;
+  --theme-page-padding:   28px;
+  --theme-section-gap:    20px;
+  --theme-card-gap:       14px;
+  --theme-blur:           18px;
+  --theme-translucency:   0.94;
+  --theme-border-glow:    0 0 0 1px var(--tok-color-accent-primary-subtle);
 
-  /* Compatibility aliases. New application styles should use semantic theme tokens. */
-  --canvas:var(--theme-canvas);
-  --surface:var(--theme-surface);
-  --surface-soft:var(--theme-surface-muted);
-  --surface-muted:var(--theme-surface-muted);
-  --line:var(--theme-border);
-  --text:var(--theme-text-primary);
-  --muted:var(--theme-text-secondary);
-  --brand:var(--theme-primary);
-  --brand-dark:var(--theme-primary);
-  --brand-soft:var(--theme-navigation-active);
-  --positive:var(--theme-success);
-  --green:var(--theme-success);
-  --green-soft:color-mix(in srgb,var(--theme-success) 12%,transparent);
-  --warning:var(--theme-warning);
-  --amber:var(--theme-warning);
-  --amber-soft:color-mix(in srgb,var(--theme-warning) 12%,transparent);
-  --danger:var(--theme-danger);
-  --red:var(--theme-danger);
-  --red-soft:color-mix(in srgb,var(--theme-danger) 12%,transparent);
-  --ink-950:var(--theme-text-primary);
-  --ink-800:var(--theme-text-primary);
-  --ink-600:var(--theme-text-secondary);
-  --ink-500:var(--theme-text-muted);
+  /* ── Legacy compatibility aliases — new code should use --theme-* or --tok-* */
+  --canvas:        var(--theme-canvas);
+  --surface:       var(--theme-surface);
+  --surface-soft:  var(--theme-surface-muted);
+  --surface-muted: var(--theme-surface-muted);
+  --line:          var(--theme-border);
+  --text:          var(--theme-text-primary);
+  --muted:         var(--theme-text-secondary);
+  --brand:         var(--theme-primary);
+  --brand-dark:    var(--theme-primary);
+  --brand-soft:    var(--theme-navigation-active);
+  --positive:      var(--theme-success);
+  --green:         var(--theme-success);
+  --green-soft:    color-mix(in srgb, var(--theme-success) 12%, transparent);
+  --warning:       var(--theme-warning);
+  --amber:         var(--theme-warning);
+  --amber-soft:    color-mix(in srgb, var(--theme-warning) 12%, transparent);
+  --danger:        var(--theme-danger);
+  --red:           var(--theme-danger);
+  --red-soft:      color-mix(in srgb, var(--theme-danger) 12%, transparent);
+  --ink-950:       var(--theme-text-primary);
+  --ink-800:       var(--theme-text-primary);
+  --ink-600:       var(--theme-text-secondary);
+  --ink-500:       var(--theme-text-muted);
 
-  --sidebar-900:var(--theme-sidebar-surface);
-  --sidebar-800:var(--theme-surface-muted);
-  --sidebar-brand:var(--theme-primary);
-  --sidebar-brand-soft:var(--theme-navigation-active);
-  --sidebar-text:var(--theme-text-primary);
-  --sidebar-text-muted:var(--theme-text-secondary);
-  --sidebar-text-soft:var(--theme-text-muted);
-  --sidebar-text-bright:var(--theme-text-primary);
-  --sidebar-icon:var(--theme-text-secondary);
-  --sidebar-icon-bright:var(--theme-text-primary);
-  --sidebar-icon-muted:var(--theme-text-muted);
-  --sidebar-brand-muted:var(--theme-secondary);
+  --sidebar-900:           var(--theme-sidebar-surface);
+  --sidebar-800:           var(--theme-surface-muted);
+  --sidebar-brand:         var(--theme-primary);
+  --sidebar-brand-soft:    var(--theme-navigation-active);
+  --sidebar-text:          var(--theme-text-primary);
+  --sidebar-text-muted:    var(--theme-text-secondary);
+  --sidebar-text-soft:     var(--theme-text-muted);
+  --sidebar-text-bright:   var(--theme-text-primary);
+  --sidebar-icon:          var(--theme-text-secondary);
+  --sidebar-icon-bright:   var(--theme-text-primary);
+  --sidebar-icon-muted:    var(--theme-text-muted);
+  --sidebar-brand-muted:   var(--theme-secondary);
 }
