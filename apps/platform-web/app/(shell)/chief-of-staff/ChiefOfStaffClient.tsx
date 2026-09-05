@@ -215,6 +215,9 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
                     <td>
                       <div style={{ fontWeight: 600 }}>{app.title}</div>
                       <div className={styles.muted}>{app.description}</div>
+                      <pre style={{ maxHeight: 180, overflow: 'auto', marginTop: 10, padding: 10, borderRadius: 6, background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
+                        {JSON.stringify(app.staged_changes, null, 2)}
+                      </pre>
                     </td>
                     <td><span className={statusClass(app.status)}>{app.status}</span></td>
                     <td>

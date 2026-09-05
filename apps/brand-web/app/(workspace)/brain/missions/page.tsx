@@ -29,6 +29,7 @@ interface ApprovalRequest {
   task_id: string;
   title: string;
   description: string;
+  staged_changes: Record<string, unknown>;
   status: string;
   created_at: string;
 }
@@ -114,7 +115,7 @@ export default function BrandMissionsPage() {
   };
 
   const resolveApproval = async (missionId: string, approvalId: string, approved: boolean) => {
-    const res = await fetch(`/api/agent/missions/${missionId}/approve`, {
+    const res = await fetch(`/api/brain/missions/${missionId}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ approvalId, approved }),
@@ -188,6 +189,9 @@ export default function BrandMissionsPage() {
                   <div style={{ fontSize: 11, color: 'var(--theme-text-muted)', marginTop: 3 }}>
                     {a.description}
                   </div>
+                  <pre style={{ maxHeight: 160, overflow: 'auto', marginTop: 8, padding: 8, borderRadius: 6, background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
+                    {JSON.stringify(a.staged_changes, null, 2)}
+                  </pre>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button
