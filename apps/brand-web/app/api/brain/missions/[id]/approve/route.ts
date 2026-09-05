@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import type { PoolClient } from 'pg';
 import { ChiefOfStaffOrchestrator, type AgentToolAuthorizationPort, type AgentToolAdapter } from '@expadio/agent-runtime';
 import { PostgresChiefOfStaffRepository } from '@expadio/postgres-runtime/chief-of-staff';
-import { resolveBrandContext, withBrandTransaction } from '../../../../../lib/brand-context';
+import { resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return { executionId: input.executionId, tenantId: input.tenantId, toolKey: 'cbos.context.observe', kind: 'OBSERVATION', outputReference: `artifact:cbos:context:${input.tenantId}:${input.executionId}`, sourceReferences: [input.contextBundleReference], producedAt: new Date().toISOString() };
       },
     };
-    const status = await withBrandTransaction(context, async (client) => new ChiefOfStaffOrchestrator({
+    const status = await withBrandTransaction(context, async (client: PoolClient) => new ChiefOfStaffOrchestrator({
       executorOptions: { authorizationPort, registeredTools: [contextObserveTool] },
     }).resolveApproval(new PostgresChiefOfStaffRepository(client), {
       approvalId, missionId, tenantId: context.tenantId, approved: Boolean(body.approved),
