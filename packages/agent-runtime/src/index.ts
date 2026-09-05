@@ -291,3 +291,6 @@ export * from './notifications/telegram-webhook-handler.ts';
 export * from './notifications/telegram-approval-notifier.ts';
 export * from './committees/editorial-committee.ts';
 export * from './committees/editorial-committee-tool.ts';
+export * from './committees/voice-callback-tool.ts';
+export * from './committees/lead-osint-tool.ts';
+export * from './committees/outreach-draft-tool.ts';

@@ -44,6 +44,8 @@
     "./agent-tenant-memory": "./src/agent-tenant-memory.ts",
     "./editorial-committee": "./src/editorial-committee.ts",
     "./telegram-links": "./src/telegram-links.ts",
+    "./voice-committee": "./src/voice-committee.ts",
+    "./revenue-committee": "./src/revenue-committee.ts",
     "./domain-events": "./src/domain-events.ts",
     "./domain-event-outbox-worker": "./src/domain-event-outbox-worker.ts",
     "./governed-action-intent": "./src/governed-action-intent.ts",

@@ -44,6 +44,9 @@ importers:
       '@expadio/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@expadio/voice-gateway':
+        specifier: workspace:*
+        version: link:../../packages/voice-gateway
       next:
         specifier: 16.3.3
         version: 16.3.3(@types/node@22.15.3)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -220,6 +223,9 @@ importers:
       '@expadio/postgres-runtime':
         specifier: workspace:*
         version: link:../postgres-runtime
+      '@expadio/voice-gateway':
+        specifier: workspace:*
+        version: link:../voice-gateway
 
   packages/agreement: {}
 
