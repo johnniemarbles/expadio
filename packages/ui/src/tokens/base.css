@@ -217,6 +217,49 @@
 .badge-error      { background: var(--tok-color-semantic-critical-muted);     color: var(--error); }
 .badge-muted      { background: var(--muted);                                 color: var(--muted-foreground); }
 
+/* ── Modals / Sheets ─────────────────────────────────────────────────────────── */
+.modal,
+.sheet {
+  background:    var(--popover);
+  border:        var(--border-width) solid var(--border);
+  border-radius: var(--radius-xl);              /* 8px */
+  box-shadow:    var(--shadow-lg);
+  color:         var(--popover-foreground);
+  transition:    transform var(--tok-motion-gentle) var(--tok-easing-out),
+                 opacity   var(--tok-motion-gentle) var(--tok-easing-out);
+}
+
+/* ── Status rings / Pills ────────────────────────────────────────────────────── */
+.pill {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           var(--space-2);
+  padding:       var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);            /* full / 9999px */
+  border:        none;
+  font-size:     var(--font-size-xs);
+  font-weight:   var(--font-weight-medium);
+  transition:    transform var(--tok-motion-lively) var(--tok-easing-default),
+                 background-color var(--tok-motion-lively) var(--tok-easing-default);
+}
+
+/* ── Topology Nodes ──────────────────────────────────────────────────────────── */
+.topology-node {
+  background:    var(--card);
+  border:        var(--border-width-strong) solid var(--border); /* 1.5px */
+  border-radius: var(--radius-lg);              /* 6–8px (6px) */
+  box-shadow:    var(--shadow-sm);
+  transition:    border-color var(--tok-motion-ui) var(--tok-easing-default),
+                 box-shadow   var(--tok-motion-ui) var(--tok-easing-default),
+                 transform    var(--tok-motion-ui) var(--tok-easing-default);
+}
+
+.topology-node:hover {
+  border-color: var(--primary);
+  box-shadow:   var(--shadow-glow);
+}
+
+
 /* ── Reduced-motion overrides ────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .btn,
