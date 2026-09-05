@@ -187,3 +187,65 @@
   --sidebar-icon-muted:  var(--theme-text-muted);
   --sidebar-brand-muted: var(--theme-secondary);
 }
+
+/* ── 5. Shadcn-style aliases ──────────────────────────────────────────────────
+ * Flat, portable variable names consumed by shadcn/ui-pattern components
+ * and any code using the Motion design token spec verbatim.
+ * All values delegate to the --tok-* / --theme-* layer — no hard-coded hex.
+ * ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --background:         var(--tok-color-bg-base);
+  --foreground:         var(--tok-color-text-primary);
+  --card:               var(--tok-color-bg-surface);
+  --card-foreground:    var(--tok-color-text-primary);
+  --popover:            var(--tok-color-bg-surface);
+  --popover-foreground: var(--tok-color-text-primary);
+
+  /* Brand */
+  --primary:            var(--tok-color-accent-primary);
+  --primary-foreground: var(--tok-color-text-inverse);
+  --primary-hover:      var(--tok-color-accent-primary-hover);
+  --primary-muted:      var(--tok-color-accent-primary-muted);
+
+  /* Secondary */
+  --secondary:            var(--tok-color-bg-overlay);
+  --secondary-foreground: var(--tok-color-text-primary);
+
+  /* Muted */
+  --muted:            var(--tok-color-bg-overlay);
+  --muted-foreground: var(--tok-color-text-muted);
+
+  /* Accent (same as primary in Motion theme) */
+  --accent:            var(--tok-color-accent-primary);
+  --accent-foreground: var(--tok-color-text-inverse);
+
+  /* Destructive */
+  --destructive:            var(--tok-color-semantic-critical);
+  --destructive-foreground: var(--tok-color-text-primary);
+
+  /* Borders & inputs */
+  --border: var(--tok-color-border-default);
+  --input:  var(--tok-color-border-default);
+  --ring:   var(--tok-color-border-focus);
+
+  /* Border widths */
+  --border-width:       1px;
+  --border-width-strong:1.5px;
+  --border-width-focus: 2px;
+
+  /* Sidebar */
+  --sidebar:            var(--tok-color-bg-surface);
+  --sidebar-foreground: var(--tok-color-text-primary);
+  --sidebar-border:     var(--tok-color-border-subtle);
+
+  /* Semantic status */
+  --success: var(--tok-color-semantic-success);
+  --warning: var(--tok-color-semantic-warning);
+  --info:    var(--tok-color-semantic-info);
+  --error:   var(--tok-color-semantic-critical);
+
+  /* Glow */
+  --shadow-glow: var(--tok-shadow-glow-primary);
+}
+

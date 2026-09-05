@@ -14,4 +14,24 @@
   --weight-semibold:600;--weight-semibold-plus:650;--weight-bold:700;--weight-extrabold:750;--weight-black:800;
   --tracking-tight:-0.01em;--tracking-normal:0;
   --leading-none:1;--leading-tight:1.25;--leading-snug:1.375;--leading-normal:1.5;--leading-relaxed:1.625;
+
+  /* Motion-spec typography aliases */
+  --font-size-xs:      11px;
+  --font-size-sm:      12px;
+  --font-size-base:    13px;
+  --font-size-md:      14px;
+  --font-size-lg:      16px;
+  --font-size-xl:      18px;
+  --font-size-2xl:     20px;
+  --font-size-3xl:     24px;
+  --font-size-4xl:     30px;
+  --font-size-5xl:     36px;
+  --font-size-display: 48px;
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  --tracking-wide: 0.025em;
 }
