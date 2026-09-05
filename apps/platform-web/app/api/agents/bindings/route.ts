@@ -68,6 +68,35 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
+
+  try {
+    const effectiveContext = await authenticateAndResolveContext(
+      { identityVerifier, membershipRepository },
+      { credential: userId, tenantId: '00000000-0000-0000-0000-000000000001', organizationId: '00000000-0000-0000-0000-000000000002' }
+    );
+
+    const { binding_id, action } = await request.json();
+    if (!binding_id || !action) return NextResponse.json({ error: 'binding_id and action required' }, { status: 400 });
+
+    const state = action === 'activate' ? 'ACTIVE' : action === 'suspend' ? 'SUSPENDED' : null;
+    if (!state) return NextResponse.json({ error: 'action must be activate or suspend' }, { status: 400 });
+
+    await dbPool.query(
+      `INSERT INTO platform.capability_state (binding_id, state, updated_at)
+       SELECT $1, $2, NOW() FROM platform.tenant_capability_bindings WHERE binding_id = $1 AND tenant_id = $3
+       ON CONFLICT (binding_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
+      [binding_id, state, effectiveContext.tenantId]
+    );
+
+    return NextResponse.json({ success: true, state });
+  } catch (err: any) {
+    return NextResponse.json({ denied: true, reasonKey: 'INTERNAL_ERROR', message: err.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ denied: true }, { status: 401 });
