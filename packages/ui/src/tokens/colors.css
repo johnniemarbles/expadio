@@ -9,30 +9,32 @@
 /* ── 1. Raw token layer ────────────────────────────────────────────────────── */
 :root {
   /* Background */
-  --tok-color-bg-base:     #000000;
-  --tok-color-bg-surface:  #0A0A0A;
-  --tok-color-bg-elevated: #111111;
-  --tok-color-bg-overlay:  #171717;
+  --tok-color-bg-base:     #060707;
+  --tok-color-bg-surface:  #0c0e0d;
+  --tok-color-bg-elevated: #121514;
+  --tok-color-bg-overlay:  #171a19;
 
   /* Border */
-  --tok-color-border-subtle:  #1F1F1F;
-  --tok-color-border-default: #272727;
-  --tok-color-border-strong:  #3F3F3F;
+  --tok-color-border-subtle:  #181b19;
+  --tok-color-border-default: #1e2220;
+  --tok-color-border-strong:  #333936;
   --tok-color-border-focus:   #FACC15;
 
   /* Text */
-  --tok-color-text-primary:   #FAFAFA;
-  --tok-color-text-secondary: #D4D4D8;
-  --tok-color-text-tertiary:  #A1A1AA;
-  --tok-color-text-muted:     #71717A;
-  --tok-color-text-disabled:  #3F3F3F;
-  --tok-color-text-inverse:   #000000;
+  --tok-color-text-primary:   #ededed;
+  --tok-color-text-secondary: #a1a1a1;
+  --tok-color-text-tertiary:  #888888;
+  --tok-color-text-muted:     #666666;
+  --tok-color-text-disabled:  #333936;
+  --tok-color-text-inverse:   #060707;
 
-  /* Accent — Motion yellow */
+  /* Accent — Motion yellow & lavender purple */
   --tok-color-accent-primary:        #FACC15;
   --tok-color-accent-primary-hover:  #FDE047;
   --tok-color-accent-primary-muted:  rgba(250, 204, 21, 0.15);
   --tok-color-accent-primary-subtle: rgba(250, 204, 21, 0.08);
+  --tok-color-accent-purple:         #a88cf8;
+  --tok-color-accent-purple-muted:    rgba(168, 140, 248, 0.15);
 
   /* Semantic */
   --tok-color-semantic-success:        #22C55E;

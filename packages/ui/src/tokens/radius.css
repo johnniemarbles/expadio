@@ -3,11 +3,12 @@
  * Motion UI: sharp edges. sm=2px, md=4px for most UI, lg=6px for cards.
  * ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  --tok-radius-sm:   2px;
-  --tok-radius-md:   4px;
-  --tok-radius-lg:   6px;
-  --tok-radius-xl:   8px;
-  --tok-radius-2xl:  12px;
+  --tok-radius-none: 0px;
+  --tok-radius-sm:   0px;
+  --tok-radius-md:   2px;
+  --tok-radius-lg:   2px;
+  --tok-radius-xl:   4px;
+  --tok-radius-2xl:  4px;
   --tok-radius-full: 9999px;
 
   /* Legacy aliases */

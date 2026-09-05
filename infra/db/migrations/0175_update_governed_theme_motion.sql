@@ -1,12 +1,12 @@
 -- Migration 0175: Update platform baseline governed theme profile to Motion aesthetic
--- Overwrites stored configuration candidate for appearance.theme.profile with Motion theme specification (pure black, yellow accent, sharp radii).
+-- Overwrites stored configuration candidate for appearance.theme.profile with Motion theme specification (#060707 dark charcoal canvas, #0c0e0d surface, #1e2220 border, #facc15 yellow primary, #a88cf8 purple secondary, razor sharp 0-2px radii).
 
 UPDATE platform.configuration_candidates
 SET value = '{
   "schemaVersion": 1,
   "key": "expadio-command-obsidian",
   "name": "EXPADIO Command / Obsidian",
-  "description": "Pure black surfaces with Motion yellow accent, sharp radii, and physics spring transitions.",
+  "description": "Dark charcoal surfaces with Motion yellow and purple accents, sharp 0-2px radii, and physics spring transitions.",
   "light": {
     "canvas": "#f5f8fb", "surface": "#ffffff", "surfaceRaised": "#ffffff", "surfaceMuted": "#eef3f8",
     "overlay": "rgba(7, 15, 27, 0.42)", "border": "rgba(23, 49, 77, 0.12)",
@@ -16,12 +16,12 @@ SET value = '{
     "chart": ["#ca8a04", "#6366f1", "#8b5cf6", "#f59e0b", "#10b981", "#3b82f6", "#e11d48"]
   },
   "dark": {
-    "canvas": "#000000", "surface": "#0a0a0a", "surfaceRaised": "#111111", "surfaceMuted": "#171717",
-    "overlay": "rgba(0, 0, 0, 0.80)", "border": "#272727",
-    "textPrimary": "#fafafa", "textSecondary": "#d4d4d8", "textMuted": "#71717a", "textInverse": "#000000",
-    "primary": "#facc15", "secondary": "#8b5cf6", "accent": "#fde047", "focus": "#fde047",
-    "success": "#22c55e", "warning": "#f59e0b", "danger": "#ef4444", "info": "#3b82f6", "neutral": "#71717a",
-    "chart": ["#facc15", "#a78bfa", "#f472b6", "#34d399", "#60a5fa", "#fb923c", "#f87171"]
+    "canvas": "#060707", "surface": "#0c0e0d", "surfaceRaised": "#121514", "surfaceMuted": "#171a19",
+    "overlay": "rgba(6, 7, 7, 0.85)", "border": "#1e2220",
+    "textPrimary": "#ededed", "textSecondary": "#a1a1a1", "textMuted": "#666666", "textInverse": "#060707",
+    "primary": "#facc15", "secondary": "#a88cf8", "accent": "#fde047", "focus": "#fde047",
+    "success": "#22c55e", "warning": "#f59e0b", "danger": "#ef4444", "info": "#3b82f6", "neutral": "#666666",
+    "chart": ["#facc15", "#a88cf8", "#f472b6", "#34d399", "#60a5fa", "#fb923c", "#f87171"]
   },
   "typography": {
     "uiFamily": "Inter, Geist, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
@@ -31,7 +31,7 @@ SET value = '{
   },
   "geometry": {
     "density": "comfortable", "pagePadding": "28px", "sectionGap": "20px", "cardGap": "14px",
-    "controlRadius": "4px", "cardRadius": "6px", "modalRadius": "8px"
+    "controlRadius": "2px", "cardRadius": "2px", "modalRadius": "4px"
   },
   "material": {
     "shadowSubtle": "0 1px 2px rgba(0, 0, 0, 0.6)", "shadowCard": "0 4px 12px rgba(0, 0, 0, 0.5)",
@@ -45,9 +45,9 @@ SET value = '{
   },
   "shell": {
     "sidebarWidth": "228px", "headerHeight": "64px",
-    "sidebarSurfaceLight": "#ffffff", "sidebarSurfaceDark": "#0a0a0a",
+    "sidebarSurfaceLight": "#ffffff", "sidebarSurfaceDark": "#0c0e0d",
     "navigationActiveLight": "rgba(202, 138, 4, 0.10)", "navigationActiveDark": "rgba(250, 204, 21, 0.15)",
-    "commandSurfaceLight": "#eef3f8", "commandSurfaceDark": "#0a0a0a"
+    "commandSurfaceLight": "#eef3f8", "commandSurfaceDark": "#0c0e0d"
   },
   "assets": { "brandName": "EXPADIO" },
   "overridePolicy": {
