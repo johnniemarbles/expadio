@@ -71,18 +71,60 @@ export class ChiefOfStaffOrchestrator {
       emit('task:queued', { missionId: mission.missionId, taskId: task.taskId, title: task.title });
     }
 
-    await this.runExecutionLoop(persistence, createdTasks, emit);
+    await persistence.updateMissionStatus(mission.missionId, input.tenantId, 'IN_PROGRESS');
+    emit('mission:in_progress', { missionId: mission.missionId });
+
+    const finalStatus = await this.runExecutionLoop(persistence, createdTasks, input.tenantId, emit);
+    await persistence.updateMissionStatus(mission.missionId, input.tenantId, finalStatus);
+    emit('mission:done', { missionId: mission.missionId, status: finalStatus });
 
     return mission;
   }
 
+  async resolveApproval(
+    persistence: ChiefOfStaffPersistencePort,
+    input: {
+      readonly approvalId: string;
+      readonly missionId: string;
+      readonly tenantId: string;
+      readonly approved: boolean;
+    },
+    emit: MissionEventEmitter,
+  ): Promise<'COMPLETED' | 'FAILED' | 'AWAITING_APPROVAL' | null> {
+    const task = await persistence.resolveApproval(input);
+    if (!task) return null;
+
+    if (!input.approved) {
+      await persistence.updateMissionStatus(input.missionId, input.tenantId, 'FAILED');
+      emit('mission:done', { missionId: input.missionId, status: 'FAILED' });
+      return 'FAILED';
+    }
+
+    await persistence.updateMissionStatus(input.missionId, input.tenantId, 'IN_PROGRESS');
+    const tasks = await persistence.listMissionTasks(input.missionId, input.tenantId);
+    const status = await this.runExecutionLoop(
+      persistence,
+      tasks,
+      input.tenantId,
+      emit,
+      new Set([task.taskId]),
+    );
+    await persistence.updateMissionStatus(input.missionId, input.tenantId, status);
+    emit('mission:done', { missionId: input.missionId, status });
+    return status;
+  }
+
   private async runExecutionLoop(
     persistence: ChiefOfStaffPersistencePort,
-    tasksList: AgentTask[],
+    tasksList: readonly AgentTask[],
+    tenantId: string,
     emit: MissionEventEmitter,
-  ): Promise<void> {
-    const completed = new Set<string>();
-    const remaining = [...tasksList];
+    approvedTaskIds: ReadonlySet<string> = new Set(),
+  ): Promise<'COMPLETED' | 'FAILED' | 'AWAITING_APPROVAL'> {
+    const completed = new Set(tasksList.filter((task) => task.status === 'COMPLETED').map((task) => task.taskId));
+    const remaining = tasksList.filter((task) => task.status === 'QUEUED');
+    let anyFailed = false;
+    let awaitingApproval = false;
 
     while (remaining.length > 0) {
       const ready = remaining.filter((t) =>
@@ -90,12 +132,14 @@ export class ChiefOfStaffOrchestrator {
       );
 
       if (ready.length === 0) {
-        emit('mission:error', { error: 'Circular task dependencies detected' });
+        if (awaitingApproval) break;
+        emit('mission:error', { error: 'Blocked or circular task dependencies detected' });
+        anyFailed = true;
         break;
       }
 
       for (const task of ready) {
-        if (task.requiresApproval) {
+        if (task.requiresApproval && !approvedTaskIds.has(task.taskId)) {
           await persistence.createApprovalRequest({
             missionId: task.missionId,
             taskId: task.taskId,
@@ -104,28 +148,38 @@ export class ChiefOfStaffOrchestrator {
             description: task.description,
             stagedChanges: task.actionPayload,
           });
+          await persistence.updateTaskStatus(task.taskId, tenantId, 'AWAITING_APPROVAL');
 
           emit('task:needs_approval', {
             missionId: task.missionId,
             taskId: task.taskId,
             title: task.title,
           });
-          completed.add(task.taskId);
+          awaitingApproval = true;
           remaining.splice(remaining.indexOf(task), 1);
           continue;
         }
 
         emit('task:start', { missionId: task.missionId, taskId: task.taskId, title: task.title });
+        await persistence.updateTaskStatus(task.taskId, tenantId, 'RUNNING');
+
         const result = await this.executor.executeTask(task, task.assignedAgentId, emit);
 
         if (result.success) {
+          await persistence.updateTaskStatus(task.taskId, tenantId, 'COMPLETED', result.output);
           emit('task:completed', { missionId: task.missionId, taskId: task.taskId, output: result.output });
           completed.add(task.taskId);
         } else {
+          await persistence.updateTaskStatus(task.taskId, tenantId, 'FAILED', null, result.error ?? null);
           emit('task:failed', { missionId: task.missionId, taskId: task.taskId, error: result.error });
+          anyFailed = true;
         }
         remaining.splice(remaining.indexOf(task), 1);
       }
     }
+
+    if (anyFailed) return 'FAILED';
+    if (awaitingApproval) return 'AWAITING_APPROVAL';
+    return 'COMPLETED';
   }
 }
