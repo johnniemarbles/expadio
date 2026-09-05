@@ -1,20 +1,20 @@
 BEGIN;
 
--- Migration 0175: Append immutable record_version 2 for appearance.theme.profile
--- Inserts new record_version=2 into platform.configuration_setting_values with Motion theme specification (#060707 dark charcoal canvas, #0c0e0d surface, #1e2220 border, #facc15 yellow primary, #a88cf8 purple secondary, razor sharp 0-2px radii).
+-- Migration 0176: Append immutable record_version 3 for appearance.theme.profile with effective_from = 2026-09-01T00:00:00Z
+-- Ensures Motion yellow theme profile (#060707 canvas, #0c0e0d surface, #1e2220 border, #facc15 primary) is effective immediately regardless of UTC timezone offsets.
 
 INSERT INTO platform.configuration_setting_values (
   value_id, setting_key, definition_version, level, scope_id, tenant_id,
   record_version, value, effective_from, effective_until,
   authored_by_subject_id, authored_at, reason, correlation_id, evidence_refs
 ) VALUES (
-  '17500000-0000-0000-0000-000000000001'::uuid,
+  '17600000-0000-0000-0000-000000000001'::uuid,
   'appearance.theme.profile',
   1,
   'PLATFORM',
   NULL,
   NULL,
-  2,
+  3,
   '{
     "schemaVersion": 1,
     "key": "expadio-command-obsidian",
@@ -72,8 +72,8 @@ INSERT INTO platform.configuration_setting_values (
   NULL,
   'platform-theme-motion-update',
   now(),
-  'Publish Motion theme specification (record_version=2) as Platform baseline.',
-  '17500000-0000-0000-0000-000000000101'::uuid,
+  'Publish Motion theme specification (record_version=3) as immediate Platform baseline.',
+  '17600000-0000-0000-0000-000000000101'::uuid,
   ARRAY['theme:expadio-command-obsidian','preset:platform-motion']
 )
 ON CONFLICT (setting_key, level, COALESCE(scope_id, ''), record_version) DO NOTHING;
