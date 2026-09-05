@@ -1,0 +1,231 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Expadio Design Tokens — Base Component Styles
+ *
+ * Canonical reset + base rules for the 5 core element types:
+ * .btn / .btn-primary / .btn-secondary / .btn-ghost
+ * .card
+ * .input
+ * .sidebar
+ * .badge / .badge-status
+ *
+ * Every value delegates to CSS custom properties — zero hard-coded hex.
+ * These are opt-in utility classes; components can extend or override freely.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Buttons ────────────────────────────────────────────────────────────────── */
+.btn {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             var(--space-2);            /* 8px */
+  padding:         0 var(--space-4);          /* 0 16px */
+  height:          36px;
+  border-radius:   var(--radius-md);          /* 4px — sharp */
+  border:          var(--border-width) solid transparent;
+  font-family:     var(--font-sans);
+  font-size:       var(--font-size-md);       /* 14px */
+  font-weight:     var(--font-weight-medium); /* 500 */
+  line-height:     1;
+  white-space:     nowrap;
+  cursor:          pointer;
+  text-decoration: none;
+  transition:
+    background-color var(--tok-motion-snap) var(--tok-easing-default),
+    border-color     var(--tok-motion-snap) var(--tok-easing-default),
+    color            var(--tok-motion-snap) var(--tok-easing-default),
+    box-shadow       var(--tok-motion-snap) var(--tok-easing-default),
+    transform        var(--tok-motion-snap) var(--tok-easing-default);
+}
+
+.btn:focus-visible {
+  outline:        none;
+  box-shadow:     0 0 0 var(--border-width-focus) var(--ring);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor:  not-allowed;
+  pointer-events: none;
+}
+
+/* Primary — Motion yellow */
+.btn-primary {
+  background:   var(--primary);
+  color:        var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background:   var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  background:   var(--primary);
+}
+
+/* Secondary — surface + border */
+.btn-secondary {
+  background:   var(--secondary);
+  color:        var(--secondary-foreground);
+  border-color: var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background:   var(--muted);
+  border-color: var(--primary);
+  color:        var(--primary);
+}
+
+/* Ghost — transparent */
+.btn-ghost {
+  background:   transparent;
+  color:        var(--muted-foreground);
+  border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--muted);
+  color:      var(--foreground);
+}
+
+/* Destructive */
+.btn-destructive {
+  background:   var(--destructive);
+  color:        var(--destructive-foreground);
+  border-color: var(--destructive);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background:   color-mix(in srgb, var(--destructive) 85%, transparent);
+  border-color: var(--destructive);
+}
+
+/* Size modifiers */
+.btn-sm {
+  height:      28px;
+  padding:     0 var(--space-3);
+  font-size:   var(--font-size-sm);    /* 12px */
+  border-radius: var(--radius-sm);    /* 2px */
+}
+
+.btn-lg {
+  height:      44px;
+  padding:     0 var(--space-6);
+  font-size:   var(--font-size-lg);   /* 16px */
+  border-radius: var(--radius-lg);    /* 6px */
+}
+
+/* ── Cards / Panels ─────────────────────────────────────────────────────────── */
+.card {
+  background:    var(--card);
+  border:        var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);              /* 6px */
+  box-shadow:    var(--shadow-sm);
+  color:         var(--card-foreground);
+  overflow:      hidden;
+}
+
+.card-elevated {
+  background: var(--popover);
+  box-shadow: var(--shadow-md);
+}
+
+.card-interactive {
+  cursor:     pointer;
+  transition:
+    border-color var(--tok-motion-ui) var(--tok-easing-default),
+    box-shadow   var(--tok-motion-ui) var(--tok-easing-default),
+    transform    var(--tok-motion-ui) var(--tok-easing-default);
+}
+
+.card-interactive:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  box-shadow:   var(--shadow-md);
+  transform:    translateY(calc(-1 * var(--tok-travel-hover)));
+}
+
+/* ── Inputs ─────────────────────────────────────────────────────────────────── */
+.input {
+  display:       block;
+  width:         100%;
+  height:        36px;
+  padding:       0 var(--space-3);
+  background:    var(--background);
+  border:        var(--border-width) solid var(--input);
+  border-radius: var(--radius-md);            /* 4px */
+  color:         var(--foreground);
+  font-family:   var(--font-sans);
+  font-size:     var(--font-size-md);         /* 14px */
+  line-height:   1.5;
+  transition:
+    border-color var(--tok-motion-snap) var(--tok-easing-default),
+    box-shadow   var(--tok-motion-snap) var(--tok-easing-default);
+}
+
+.input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.input:focus {
+  outline:      none;
+  border-color: var(--ring);
+  box-shadow:   0 0 0 var(--border-width-focus) var(--primary-muted);
+}
+
+.input:disabled {
+  opacity: 0.45;
+  cursor:  not-allowed;
+}
+
+/* Textarea variant */
+.input-textarea {
+  height:     auto;
+  padding:    var(--space-3);
+  resize:     vertical;
+  min-height: 80px;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+.sidebar {
+  background:   var(--sidebar);
+  border-right: var(--border-width) solid var(--sidebar-border);
+  color:        var(--sidebar-foreground);
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────────── */
+.badge {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           var(--space-1);
+  padding:       2px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size:     var(--font-size-xs);         /* 11px */
+  font-weight:   var(--font-weight-semibold); /* 600 */
+  line-height:   1.4;
+  white-space:   nowrap;
+}
+
+.badge-primary    { background: var(--primary-muted);                        color: var(--primary); }
+.badge-success    { background: var(--tok-color-semantic-success-muted);      color: var(--success); }
+.badge-warning    { background: var(--tok-color-semantic-warning-muted);      color: var(--warning); }
+.badge-error      { background: var(--tok-color-semantic-critical-muted);     color: var(--error); }
+.badge-muted      { background: var(--muted);                                 color: var(--muted-foreground); }
+
+/* ── Reduced-motion overrides ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .input,
+  .card-interactive {
+    transition: none;
+  }
+
+  .card-interactive:hover {
+    transform: none;
+  }
+}
