@@ -7,13 +7,13 @@
 .dnsTableWrap{overflow-x:auto;border-radius:8px;border:1px solid var(--theme-border)}.dnsTable{width:100%;border-collapse:collapse;font-size:11px}.dnsTable th{padding:5px 8px;text-align:left;font-weight:700;border-bottom:1px solid var(--theme-border);background:var(--theme-surface-muted);white-space:nowrap}.dnsTable td{padding:5px 8px;border-bottom:1px solid var(--theme-border);vertical-align:top}.dnsTable tr:last-child td{border-bottom:0}.rowFail td{background:color-mix(in srgb,var(--theme-danger) 6%,transparent)}
 
 /* ── Status badges ── */
-.badgeGreen{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:color-mix(in srgb,var(--theme-success,#16a34a) 15%,transparent);color:var(--theme-success,#16a34a)}.badgeYellow{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:color-mix(in srgb,#ca8a04 15%,transparent);color:#a16207}.badgeGray{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:var(--theme-surface-muted);color:var(--theme-text-muted)}
+.badgeGreen{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:color-mix(in srgb,var(--theme-success) 15%,transparent);color:var(--theme-success)}.badgeYellow{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:color-mix(in srgb,var(--theme-warning) 15%,transparent);color:var(--theme-warning)}.badgeGray{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:var(--theme-surface-muted);color:var(--theme-text-muted)}
 
 /* ── Copy button ── */
 .copyBtn{padding:2px 7px;border:1px solid var(--theme-border);border-radius:5px;background:var(--theme-surface);color:var(--theme-text-muted);font:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap}.copyBtn:hover{background:var(--theme-surface-muted)}
 
 /* ── Status icons ── */
-.iconOk{color:var(--theme-success,#16a34a);font-weight:700;margin-right:3px}.iconFail{color:var(--theme-danger);font-weight:700;margin-right:3px}
+.iconOk{color:var(--theme-success);font-weight:700;margin-right:3px}.iconFail{color:var(--theme-danger);font-weight:700;margin-right:3px}
 
 /* ── Platform default notice ── */
 .platformNotice{border:1px solid var(--theme-border);border-radius:10px;padding:10px 12px;background:var(--theme-surface-muted);font-size:12px}.platformNotice strong{display:block;margin-bottom:4px}.platformNotice p{margin:0;color:var(--theme-text-muted);line-height:1.5}
@@ -25,13 +25,13 @@
 .modeTabs{display:flex;gap:4px;border-bottom:1px solid var(--theme-border);padding-bottom:6px}.modeTab,.modeTabActive{padding:5px 10px;border-radius:7px 7px 0 0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;border-bottom:none}.modeTab{background:none;color:var(--theme-text-muted)}.modeTabActive{background:var(--theme-surface-muted);color:var(--theme-text);border-color:var(--theme-border)}
 
 /* ── Cloudflare pane ── */
-.cfPane{display:grid;gap:10px}.cfBtn{border:1px solid #f6821f;background:#f6821f;color:#fff;border-radius:9px;padding:8px 12px;font:inherit;font-weight:700;cursor:pointer;text-align:left}.cfBtn:disabled{opacity:.55;cursor:not-allowed}.cfSuccess{margin:0;font-size:12px;color:var(--theme-text-muted);line-height:1.5}.cfResults{display:grid;gap:4px;font-size:11px}.cfResultRow{display:flex;align-items:center;gap:8px}.cfAction{color:var(--theme-text-muted);font-style:italic}
+.cfPane{display:grid;gap:10px}.cfBtn{border:1px solid var(--theme-primary);background:var(--theme-primary);color:var(--theme-on-primary);border-radius:9px;padding:8px 12px;font:inherit;font-weight:700;cursor:pointer;text-align:left}.cfBtn:disabled{opacity:.55;cursor:not-allowed}.cfSuccess{margin:0;font-size:12px;color:var(--theme-text-muted);line-height:1.5}.cfResults{display:grid;gap:4px;font-size:11px}.cfResultRow{display:flex;align-items:center;gap:8px}.cfAction{color:var(--theme-text-muted);font-style:italic}
 
 /* ── Verify row ── */
 .verifyRow{display:flex;flex-direction:column;gap:8px;padding-top:4px}.verifyDetails{display:flex;gap:12px;font-size:11px;color:var(--theme-text-muted)}
 
 /* ── Done state ── */
-.wizardDone{display:grid;gap:8px;text-align:center;padding:12px 0}.doneIcon{margin:0;font-size:32px;color:var(--theme-success,#16a34a)}
+.wizardDone{display:grid;gap:8px;text-align:center;padding:12px 0}.doneIcon{margin:0;font-size:32px;color:var(--theme-success)}
 
 /* ── Wizard DNS pane ── */
 .wizardDns{display:grid;gap:12px}
