@@ -24,7 +24,8 @@ const diff = execFileSync(
 
 const rawColor = /(#[0-9a-f]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(|(?:^|[:;,\s(])(?:white|black)(?=[;,\s)]))/i;
 const ignoredFiles = [
-  /(?:^|\/)tokens(?:\/|$)/,
+  /(?:^|\/)tokens(?:\/|$)/,   // tokens/ directory (CSS token files)
+  /(?:^|\/)tokens\.ts$/,       // tokens.ts — the canonical token definition file (raw values by design)
   /\.test\.(?:tsx?|jsx?)$/,
   /\.spec\.(?:tsx?|jsx?)$/,
 ];

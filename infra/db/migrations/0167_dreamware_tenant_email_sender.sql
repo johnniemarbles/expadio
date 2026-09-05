@@ -27,14 +27,21 @@ SELECT
   false,
   'VERIFIED',
   'ACTIVE'
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM platform.communication_sender_identities
-  WHERE scope = 'TENANT'
-    AND tenant_id = '00000000-0000-0000-0000-000000000001'
-    AND channel = 'email'
-    AND is_default = true
-    AND status = 'ACTIVE'
-);
+WHERE
+  -- Skip gracefully in environments where the Dreamware demo tenant has not been seeded
+  -- (e.g. CI integration harness) to avoid FK violations.
+  EXISTS (
+    SELECT 1 FROM platform.tenants
+    WHERE id = '00000000-0000-0000-0000-000000000001'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM platform.communication_sender_identities
+    WHERE scope = 'TENANT'
+      AND tenant_id = '00000000-0000-0000-0000-000000000001'
+      AND channel = 'email'
+      AND is_default = true
+      AND status = 'ACTIVE'
+  );
 
 COMMIT;
