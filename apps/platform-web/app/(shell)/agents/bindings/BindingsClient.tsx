@@ -125,7 +125,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
 
       {notice && (
         <div style={{
-          padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16,
+          padding: '10px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 13, marginBottom: 16,
           background: notice.kind === 'err'
             ? 'color-mix(in srgb,var(--theme-danger) 8%,var(--theme-surface))'
             : 'color-mix(in srgb,var(--theme-success) 8%,var(--theme-surface))',
@@ -149,7 +149,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
             placeholder="e.g. cbos.context.observe"
             disabled={adding}
             style={{
-              flex: 1, padding: '8px 12px', borderRadius: 7, fontSize: 13,
+              flex: 1, padding: '8px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 13,
               border: '1px solid var(--theme-border)', background: 'var(--theme-surface)',
               color: 'var(--theme-text-primary)', outline: 'none',
             }}
@@ -158,7 +158,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
             type="submit"
             disabled={adding || !newKey.trim()}
             style={{
-              padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600,
+              padding: '8px 16px', borderRadius: "var(--theme-radius-card)", fontSize: 13, fontWeight: 600,
               background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', border: 'none', cursor: 'pointer',
               opacity: adding || !newKey.trim() ? 0.5 : 1
             }}
@@ -176,7 +176,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search bound agents…"
             style={{
-              flex: '1 1 220px', padding: '9px 14px', borderRadius: 8, fontSize: 13,
+              flex: '1 1 220px', padding: '9px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 13,
               border: '1px solid var(--theme-border)', background: 'var(--theme-surface)',
               color: 'var(--theme-text-primary)', outline: 'none',
             }}
@@ -186,7 +186,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
               <button
                 onClick={() => setActiveDept(null)}
                 style={{
-                  padding: '6px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                  padding: '6px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
                   background: !activeDept ? 'var(--theme-primary)' : 'var(--theme-surface-muted)',
                   color: !activeDept ? 'var(--theme-text-inverse)' : 'var(--theme-text-secondary)',
                 }}
@@ -194,7 +194,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
               {departments.map((dept) => (
                 <button key={dept} onClick={() => setActiveDept(activeDept === dept ? null : dept)}
                   style={{
-                    padding: '6px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                    padding: '6px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
                     background: activeDept === dept ? 'var(--theme-primary)' : 'var(--theme-surface-muted)',
                     color: activeDept === dept ? 'var(--theme-text-inverse)' : 'var(--theme-text-secondary)',
                   }}
@@ -213,7 +213,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
               {dept}
             </h2>
             <span style={{
-              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: "var(--theme-radius-card)",
               background: 'var(--theme-surface-muted)', color: 'var(--theme-text-muted)',
             }}>
               {items.length} agent{items.length !== 1 ? 's' : ''}
@@ -252,7 +252,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
                             background: active ? 'var(--theme-success)' : 'var(--theme-text-muted)',
                           }} />
                           <span style={{
-                            fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 999,
+                            fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: "var(--theme-radius-card)",
                             background: active
                               ? 'color-mix(in srgb,var(--theme-success) 12%,transparent)'
                               : 'color-mix(in srgb,var(--theme-warning) 12%,transparent)',
@@ -269,7 +269,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
                           disabled={busy}
                           onClick={() => toggle(b)}
                           style={{
-                            padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                            padding: '4px 10px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
                             border: `1px solid ${active
                               ? 'color-mix(in srgb,var(--theme-warning) 40%,var(--theme-border))'
                               : 'color-mix(in srgb,var(--theme-success) 40%,var(--theme-border))'}`,
@@ -285,7 +285,7 @@ export function BindingsClient({ initial }: { initial: Binding[] }) {
                           disabled={busy}
                           onClick={() => remove(b)}
                           style={{
-                            padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                            padding: '4px 10px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
                             border: '1px solid color-mix(in srgb,var(--theme-danger) 30%,var(--theme-border))',
                             background: 'transparent', color: 'var(--theme-danger)',
                             cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1,

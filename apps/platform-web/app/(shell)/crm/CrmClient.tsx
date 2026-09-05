@@ -72,7 +72,7 @@ interface CrmClientProps {
 }
 
 const inp: React.CSSProperties = {
-  width: "100%", padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13, outline: "none",
+  width: "100%", padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", fontSize: 13, outline: "none",
 };
 
 export function CrmClient({ initialAccounts, initialContacts, initialLeads, initialCases, initialAgreements, vocab, caseVocab, caseSchema, caseOntology, verticalKey, verticalLabel, packChoices, packCatalog, queryString = "" }: CrmClientProps) {
@@ -330,7 +330,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               disabled={switchingVertical}
               onChange={(e) => changeVertical(e.target.value)}
               aria-label="Industry pack"
-              style={{ fontSize: 12, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--theme-border)", fontWeight: 700 }}
+              style={{ fontSize: 12, padding: "6px 10px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", fontWeight: 700 }}
             >
               <option value="">Neutral engine</option>
               {packChoices.map((c) => <option key={c.verticalKey} value={c.verticalKey}>{c.label}</option>)}
@@ -341,7 +341,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
               <summary style={{ cursor: "pointer", color: "var(--theme-text-muted)" }}>What each pack configures</summary>
               <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
                 {packCatalog.map((p) => (
-                  <div key={p.verticalKey} style={{ border: `1px solid ${p.verticalKey === verticalKey ? "var(--theme-primary)" : "var(--theme-border)"}`, borderRadius: 8, padding: "8px 10px" }}>
+                  <div key={p.verticalKey} style={{ border: `1px solid ${p.verticalKey === verticalKey ? "var(--theme-primary)" : "var(--theme-border)"}`, borderRadius: "var(--theme-radius-card)", padding: "8px 10px" }}>
                     <div style={{ fontWeight: 800 }}>{p.label}{p.verticalKey === verticalKey ? " · active" : ""}</div>
                     <div style={{ marginTop: 2 }}><span style={{ color: "var(--theme-text-muted)" }}>Entities:</span> {p.entities.account} · {p.entities.contact} · {p.entities.lead} · {p.entities.case} · {p.entities.agreement}</div>
                     <div><span style={{ color: "var(--theme-text-muted)" }}>{p.workType}:</span> {p.stages.map((s) => s.label).join(" → ")}</div>
@@ -352,11 +352,11 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
             </details>
           )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.account.singular)}</button>
-            <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.contact.singular)}</button>
-            <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.lead.singular)}</button>
-            <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.case.singular)}</button>
-            <button type="button" onClick={() => setShowAgreement(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.agreement.singular)}</button>
+            <button type="button" onClick={() => setShowAccount(true)} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.account.singular)}</button>
+            <button type="button" onClick={() => setShowContact(true)} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.contact.singular)}</button>
+            <button type="button" onClick={() => setShowLead(true)} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.lead.singular)}</button>
+            <button type="button" onClick={() => setShowCase(true)} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.case.singular)}</button>
+            <button type="button" onClick={() => setShowAgreement(true)} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", fontWeight: 700, cursor: "pointer" }}>+ New {lc(vocab.agreement.singular)}</button>
           </div>
           {verticalError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)" }}>⚠️ {verticalError}</div>}
         </div>
@@ -389,7 +389,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}><strong>{a.name}</strong></td>
                     <td style={td}>{a.domain ?? "—"}</td>
                     <td style={td}>{a.industry ?? "—"}</td>
-                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{a.lifecycleStage}</span></td>
+                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{a.lifecycleStage}</span></td>
                     <td style={td}>{new Date(a.createdAt).toLocaleDateString()}</td>
                   </tr>
                 );
@@ -430,7 +430,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}>{l.accountName ?? "—"}</td>
                     <td style={td}>{money(l.amountMinorUnits, l.currency)}</td>
                     <td style={td}>{l.source ?? "—"}</td>
-                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{l.stage}</span></td>
+                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{l.stage}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                         {l.stage !== "WON" && l.stage !== "LOST" && (
@@ -438,7 +438,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                             type="button"
                             onClick={() => setConvertTarget(l)}
                             title={`Close-won this ${lc(vocab.lead.singular)} and turn it into a customer ${lc(vocab.account.singular)}`}
-                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: "pointer" }}
+                            style={{ fontSize: 12, padding: "4px 10px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: "pointer" }}
                           >
                             Convert →
                           </button>
@@ -448,7 +448,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                           disabled={movingLead === l.leadId}
                           onChange={(e) => moveLead(l.leadId, e.target.value as LeadStage)}
                           aria-label={`Move ${l.title}`}
-                          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-border)" }}
+                          style={{ fontSize: 12, padding: "4px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)" }}
                         >
                           {LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -488,7 +488,7 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                           onChange={(e) => { if (e.target.value) linkCaseAccount(c.caseId, e.target.value); }}
                           aria-label={`Link an account to ${c.subject}`}
                           title="Link this case to an account (required before it can be resolved)"
-                          style={{ fontSize: 12, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--theme-border)", color: "var(--theme-text-muted)" }}
+                          style={{ fontSize: 12, padding: "3px 6px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", color: "var(--theme-text-muted)" }}
                         >
                           <option value="">Link account…</option>
                           {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.name}</option>)}
@@ -498,14 +498,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}><span style={{ fontWeight: 700, color: PRIORITY_TONE[c.priority] ?? "var(--theme-text-secondary)" }}>{c.priority}</span></td>
                     <td style={td}>{c.blueprintKey ? <code style={{ fontSize: 11 }}>{c.blueprintKey}</code> : <span style={{ color: "var(--theme-text-muted)" }}>—</span>}</td>
                     <td style={td}><WorkflowCell c={c} wf={workflows[c.caseId]} stageLabel={stageLabel} outcomeLabel={outcomeLabel} stageGuidance={stageGuidance} busy={wfBusy === c.caseId} onStart={() => startCaseWorkflow(c.caseId)} onLoad={() => loadCaseWorkflow(c.caseId)} onAdvance={(stage) => advanceCase(c.caseId, stage)} onDecide={(outcome) => decideCase(c.caseId, outcome)} onAssign={(stageKey, pk) => assignMe(c.caseId, stageKey, pk)} onTrace={() => setTraceCase(c)} /></td>
-                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
+                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{c.status}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <select
                         value={c.status}
                         disabled={movingCase === c.caseId}
                         onChange={(e) => moveCase(c.caseId, e.target.value as CaseStatus)}
                         aria-label={`Update ${c.subject}`}
-                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-border)" }}
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)" }}
                       >
                         {CASE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -532,14 +532,14 @@ export function CrmClient({ initialAccounts, initialContacts, initialLeads, init
                     <td style={td}>{g.accountName ?? "—"}</td>
                     <td style={td}>{money(g.valueMinorUnits, g.currency)}</td>
                     <td style={td}>{term}</td>
-                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{g.status}</span></td>
+                    <td style={td}><span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: tone.fg, background: tone.bg }}>{g.status}</span></td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <select
                         value={g.status}
                         disabled={movingAgreement === g.agreementId}
                         onChange={(e) => moveAgreement(g.agreementId, e.target.value as AgreementStatus)}
                         aria-label={`Update ${g.title}`}
-                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-border)" }}
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)" }}
                       >
                         {AGREEMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -629,9 +629,9 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   onAssign: (stageKey: string, participantKey: string) => void;
   onTrace: () => void;
 }) {
-  const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 6, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
+  const btn: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" };
   const traceBtn = (
-    <button type="button" onClick={onTrace} title="View this case's governed workflow trace" style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--theme-border)", background: "transparent", color: "var(--theme-text-secondary)", fontWeight: 700, cursor: "pointer" }}>Trace</button>
+    <button type="button" onClick={onTrace} title="View this case's governed workflow trace" style={{ fontSize: 11, padding: "3px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", color: "var(--theme-text-secondary)", fontWeight: 700, cursor: "pointer" }}>Trace</button>
   );
   if (!c.workflowInstanceId) {
     if (c.blueprintKey) {
@@ -653,7 +653,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   if (wf.state === "COMPLETED") {
     return (
       <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }} title={`Completed at ${stage} · revision ${wf.revision}`}>✓ Completed · {stageLabel(stage)}</span>
+        <span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }} title={`Completed at ${stage} · revision ${wf.revision}`}>✓ Completed · {stageLabel(stage)}</span>
         {traceBtn}
       </div>
     );
@@ -664,7 +664,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
   const unmet = wf.stages.flatMap((s) => s.requiredParticipantKeys.filter((pk) => !isAssigned(s.stageKey, pk)).map((pk) => ({ stageKey: s.stageKey, label: s.label, participantKey: pk })));
   return (
     <div style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "#3730a3", background: "#e0e7ff" }} title={[`${stage} · revision ${wf.revision}`, stageGuidance(stage)].filter(Boolean).join(" — ")}>{stageLabel(stage)}</span>
+      <span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: "#3730a3", background: "#e0e7ff" }} title={[`${stage} · revision ${wf.revision}`, stageGuidance(stage)].filter(Boolean).join(" — ")}>{stageLabel(stage)}</span>
       {unmet.length > 0 && (
         <select
           value=""
@@ -672,14 +672,14 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
           onChange={(e) => { const v = e.target.value; if (v) { const [sk, pk] = v.split("::"); onAssign(sk, pk); } }}
           aria-label="Assign a required participant"
           title="A stage requires a participant before it can be entered. Assign yourself to a slot."
-          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-warning)", color: "var(--theme-warning)", fontWeight: 700 }}
+          style={{ fontSize: 12, padding: "4px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-warning)", color: "var(--theme-warning)", fontWeight: 700 }}
         >
           <option value="">Assign…</option>
           {unmet.map((u) => <option key={`${u.stageKey}::${u.participantKey}`} value={`${u.stageKey}::${u.participantKey}`}>Me → {stageLabel(u.stageKey)}: {u.participantKey}</option>)}
         </select>
       )}
       {wf.currentDecision && (
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
+        <span style={{ padding: "2px 8px", borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }} title={`Recorded decision (immutable) · ${wf.currentDecision.outcome}`}>✓ {outcomeLabel(wf.currentDecision.outcome)}</span>
       )}
       {gated ? (
         <select
@@ -688,7 +688,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
           onChange={(e) => { if (e.target.value) onDecide(e.target.value); }}
           aria-label={`Record decision for ${c.subject}`}
           title="This stage is gated — record a decision to unlock advancing. Four-eyes: whoever advanced the case into this stage cannot approve it."
-          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-warning)", color: "var(--theme-warning)", fontWeight: 700 }}
+          style={{ fontSize: 12, padding: "4px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-warning)", color: "var(--theme-warning)", fontWeight: 700 }}
         >
           <option value="">Decide…</option>
           {(cur?.decisionOutcomes ?? []).map((o) => <option key={o} value={o}>{outcomeLabel(o)}</option>)}
@@ -699,7 +699,7 @@ function WorkflowCell({ c, wf, stageLabel, outcomeLabel, stageGuidance, busy, on
           disabled={busy}
           onChange={(e) => { if (e.target.value) onAdvance(e.target.value); }}
           aria-label={`Advance ${c.subject}`}
-          style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--theme-border)" }}
+          style={{ fontSize: 12, padding: "4px 8px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)" }}
         >
           <option value="">Advance to…</option>
           {wf.stages.filter((s) => s.stageKey !== wf.currentStageKey).map((s) => <option key={s.stageKey} value={s.stageKey}>{stageLabel(s.stageKey)}</option>)}
@@ -721,7 +721,7 @@ function CaseAttrChips({ fields, attributes }: { fields: readonly CaseField[]; a
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
       {filled.map((f) => (
-        <span key={f.key} title={f.label} style={{ display: "inline-flex", gap: 4, fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "var(--theme-surface-muted)", color: "var(--theme-text-secondary)" }}>
+        <span key={f.key} title={f.label} style={{ display: "inline-flex", gap: 4, fontSize: 10, padding: "1px 6px", borderRadius: "var(--theme-radius-card)", background: "var(--theme-surface-muted)", color: "var(--theme-text-secondary)" }}>
           <span style={{ color: "var(--theme-text-muted)" }}>{f.label}:</span>
           <span style={{ fontWeight: 700 }}>{attrs[f.key]}</span>
         </span>
@@ -757,7 +757,7 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
 
   return (
     <Modal title={`Workflow trace — ${caseRow.subject}`} onClose={onClose}>
-      <details style={{ border: "1px solid var(--theme-border)", borderRadius: 10, padding: "8px 12px" }}>
+      <details style={{ border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", padding: "8px 12px" }}>
         <summary style={{ cursor: "pointer", fontSize: 12, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-muted)" }}>
           Domain model — {ontology.entity}
         </summary>
@@ -783,7 +783,7 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
         </div>
       </details>
       {filledFields.length > 0 && (
-        <div style={{ display: "grid", gap: 6, border: "1px solid var(--theme-border)", borderRadius: 10, padding: 12 }}>
+        <div style={{ display: "grid", gap: 6, border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", padding: 12 }}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-muted)" }}>Details</div>
           <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", margin: 0, fontSize: 13 }}>
             {filledFields.map((f) => (
@@ -812,13 +812,13 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
                   </>
                 ) : (
                   <>
-                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }}>DECISION</span>{" "}
+                    <span style={{ padding: "1px 6px", borderRadius: "var(--theme-radius-card)", fontSize: 10, fontWeight: 800, color: "var(--theme-success)", background: "color-mix(in srgb,var(--theme-success) 12%,transparent)" }}>DECISION</span>{" "}
                     <strong>{e.outcome}</strong> on <strong>{e.stageKey}</strong>
                     <span style={{ fontSize: 11, color: "var(--theme-text-muted)" }}> · {e.bySubjectId}</span>
                     {e.evidenceRefs && e.evidenceRefs.length > 0 && (
                       <span style={{ display: "block", marginTop: 2 }}>
                         {e.evidenceRefs.map((ref) => (
-                          <code key={ref} style={{ fontSize: 10, color: "var(--theme-text-muted)", background: "var(--theme-surface-muted)", padding: "1px 5px", borderRadius: 4, marginRight: 4 }}>{ref}</code>
+                          <code key={ref} style={{ fontSize: 10, color: "var(--theme-text-muted)", background: "var(--theme-surface-muted)", padding: "1px 5px", borderRadius: "var(--theme-radius-card)", marginRight: 4 }}>{ref}</code>
                         ))}
                       </span>
                     )}
@@ -830,7 +830,7 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
         </ol>
       )}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Close</button>
+        <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Close</button>
       </div>
     </Modal>
   );
@@ -838,14 +838,14 @@ function CaseTraceModal({ caseRow, fields, ontology, queryString, onClose }: { c
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: "14px 16px" }}>
+    <div style={{ border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", padding: "14px 16px" }}>
       <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--theme-text-muted)" }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
     </div>
   );
 }
 function Panel({ children }: { children: React.ReactNode }) {
-  return <section style={{ border: "1px solid var(--theme-border)", borderRadius: 12, padding: 12, overflowX: "auto" }}>{children}</section>;
+  return <section style={{ border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", padding: 12, overflowX: "auto" }}>{children}</section>;
 }
 function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
@@ -863,7 +863,7 @@ function Empty({ title, desc }: { title: string; desc: string }) {
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.6)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(520px, 100%)", background: "var(--theme-surface-raised)", borderRadius: 16, padding: 24, display: "grid", gap: 12 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(520px, 100%)", background: "var(--theme-surface-raised)", borderRadius: "var(--theme-radius-card)", padding: 24, display: "grid", gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
         {children}
       </div>
@@ -908,8 +908,8 @@ function AccountModal({ vocab, queryString, onClose, onCreated }: { vocab: CrmVo
         </div>
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.account.singular.toLowerCase()}`}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.account.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -958,8 +958,8 @@ function ContactModal({ accounts, vocab, queryString, onClose, onCreated }: { ac
         <p style={{ margin: 0, fontSize: 11, color: "var(--theme-text-muted)" }}>A {vocab.contact.singular.toLowerCase()} needs an email, a phone, or a {vocab.account.singular.toLowerCase()}.</p>
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.contact.singular.toLowerCase()}`}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.contact.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -1014,8 +1014,8 @@ function LeadModal({ accounts, vocab, queryString, onClose, onCreated }: { accou
         </div>
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.lead.singular.toLowerCase()}`}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.lead.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -1073,8 +1073,8 @@ function AgreementModal({ accounts, vocab, queryString, onClose, onCreated }: { 
         </div>
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.agreement.singular.toLowerCase()}`}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.agreement.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>
@@ -1121,8 +1121,8 @@ function ConvertModal({ lead, vocab, queryString, onClose, onConverted }: { lead
         )}
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Converting…" : "Convert to customer"}</button>
         </div>
       </form>
     </Modal>
@@ -1189,8 +1189,8 @@ function CaseModal({ accounts, vocab, fields, queryString, onClose, onCreated }:
         )}
         {error && <p role="alert" style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.case.singular.toLowerCase()}`}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : `Create ${vocab.case.singular.toLowerCase()}`}</button>
         </div>
       </form>
     </Modal>

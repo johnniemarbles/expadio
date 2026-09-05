@@ -94,7 +94,7 @@
 
 .skeletonLine {
   height: 12px;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface-muted);
   animation: pulse calc(var(--theme-motion-data) * 1.71) var(--theme-easing) infinite;
 }

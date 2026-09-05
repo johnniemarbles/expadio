@@ -30,7 +30,7 @@ const outcomeColor = (o: string): string => {
   return 'var(--theme-text-secondary)';
 };
 
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
+const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: "var(--theme-radius-card)", fontSize: 13 };
 
 export function DecisionsClient({ initial, verticalKey = null, queryString = '' }: { initial: GovernedDecision[]; verticalKey?: string | null; queryString?: string }) {
   const pack = findIndustryPack(verticalKey);
@@ -92,7 +92,7 @@ export function DecisionsClient({ initial, verticalKey = null, queryString = '' 
                 <td>{d.decidedBySubjectId}</td>
                 <td>
                   {d.evidenceRefs.length === 0 ? <span className={styles.muted}>—</span> : d.evidenceRefs.map((ref) => (
-                    <code key={ref} style={{ fontSize: 10, color: 'var(--ink-500, #64748b)', background: 'var(--surface-2, #f1f5f9)', padding: '1px 5px', borderRadius: 4, marginRight: 4, display: 'inline-block', marginBottom: 2 }}>{ref}</code>
+                    <code key={ref} style={{ fontSize: 10, color: 'var(--ink-500, #64748b)', background: 'var(--surface-2, #f1f5f9)', padding: '1px 5px', borderRadius: "var(--theme-radius-card)", marginRight: 4, display: 'inline-block', marginBottom: 2 }}>{ref}</code>
                   ))}
                 </td>
               </tr>

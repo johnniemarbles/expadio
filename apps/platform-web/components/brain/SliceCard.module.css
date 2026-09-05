@@ -1,7 +1,7 @@
 .card {
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -35,7 +35,7 @@
   color: var(--theme-primary);
   background: var(--brand-soft);
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--theme-radius-card);
   align-self: flex-start;
 }
 

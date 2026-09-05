@@ -13,7 +13,7 @@ function Badge({ value }: { value: string }) {
     <span style={{
       display: 'inline-block',
       padding: '3px 8px',
-      borderRadius: 999,
+      borderRadius: "var(--theme-radius-card)",
       background: 'var(--theme-surface-muted)',
       color: 'var(--theme-text-secondary)',
       fontSize: 11,
@@ -47,7 +47,7 @@ export default async function ExecutionTracePage({
         </p>
       </section>
 
-      <section style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 16, background: 'var(--theme-surface)' }}>
+      <section style={{ border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: 16, background: 'var(--theme-surface)' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
           <Badge value={trace.event.outbox?.status ?? 'NO_OUTBOX'} />
           {trace.event.packKey ? <Badge value={trace.event.packKey} /> : null}
@@ -61,7 +61,7 @@ export default async function ExecutionTracePage({
           <Field label="Published" value={fmt(trace.event.outbox?.publishedAt ?? null)} />
         </div>
         {trace.event.outbox?.lastError ? (
-          <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: 'color-mix(in srgb,var(--theme-danger) 10%,transparent)', color: 'var(--theme-danger)', fontSize: 12 }}>
+          <div style={{ marginTop: 12, padding: 10, borderRadius: "var(--theme-radius-card)", background: 'color-mix(in srgb,var(--theme-danger) 10%,transparent)', color: 'var(--theme-danger)', fontSize: 12 }}>
             {trace.event.outbox.lastError}
           </div>
         ) : null}
@@ -71,7 +71,7 @@ export default async function ExecutionTracePage({
         <h2 style={{ fontSize: 16, marginBottom: 10 }}>Governed actions</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           {trace.actions.map((action) => (
-            <article key={action.actionIntentId} style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 14, background: 'var(--theme-surface)' }}>
+            <article key={action.actionIntentId} style={{ border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: 14, background: 'var(--theme-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                 <div>
                   <strong>{action.actionKey}</strong>
@@ -84,7 +84,7 @@ export default async function ExecutionTracePage({
               </div>
               <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
                 {action.attempts.map((attempt) => (
-                  <div key={attempt.executionAttemptId} style={{ padding: 9, borderRadius: 8, background: 'var(--theme-surface-muted)', fontSize: 12 }}>
+                  <div key={attempt.executionAttemptId} style={{ padding: 9, borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', fontSize: 12 }}>
                     <strong>{attempt.status}</strong> · {attempt.reasonCode}
                     {attempt.outputReference ? <span> · {attempt.outputReference}</span> : null}
                   </div>
@@ -125,7 +125,7 @@ export default async function ExecutionTracePage({
         <h2 style={{ fontSize: 16, marginBottom: 10 }}>External capability outcomes</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           {trace.deliveries.map((delivery) => (
-            <article key={delivery.deliveryId} style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 14, background: 'var(--theme-surface)' }}>
+            <article key={delivery.deliveryId} style={{ border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: 14, background: 'var(--theme-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <strong>{delivery.connectorKey}</strong>
@@ -138,7 +138,7 @@ export default async function ExecutionTracePage({
                 {delivery.providerMessageId ? ` · provider message ${delivery.providerMessageId}` : ''}
               </div>
               {delivery.providerAttempts.map((attempt) => (
-                <div key={attempt.providerAttemptId} style={{ marginTop: 8, padding: 9, background: 'var(--theme-surface-muted)', borderRadius: 8, fontSize: 12 }}>
+                <div key={attempt.providerAttemptId} style={{ marginTop: 8, padding: 9, background: 'var(--theme-surface-muted)', borderRadius: "var(--theme-radius-card)", fontSize: 12 }}>
                   <strong>{attempt.providerKey}</strong> · {attempt.outcome} · {attempt.reasonCode}
                 </div>
               ))}
@@ -174,7 +174,7 @@ function TraceGroup({ title, empty, children }: { title: string; empty: string; 
 
 function TraceRow({ title, status, detail }: { title: string; status: string; detail: string }) {
   return (
-    <div style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 13, background: 'var(--theme-surface)' }}>
+    <div style={{ border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: 13, background: 'var(--theme-surface)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <strong style={{ fontSize: 13 }}>{title}</strong>
         <Badge value={status} />
@@ -185,5 +185,5 @@ function TraceRow({ title, status, detail }: { title: string; status: string; de
 }
 
 function Empty({ text }: { text: string }) {
-  return <div style={{ padding: 14, color: 'var(--theme-text-secondary)', border: '1px dashed var(--theme-border)', borderRadius: 10, fontSize: 12 }}>{text}</div>;
+  return <div style={{ padding: 14, color: 'var(--theme-text-secondary)', border: '1px dashed var(--theme-border)', borderRadius: "var(--theme-radius-card)", fontSize: 12 }}>{text}</div>;
 }

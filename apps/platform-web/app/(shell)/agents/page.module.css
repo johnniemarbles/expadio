@@ -3,7 +3,7 @@
 .pageHeading h1 { font-size:clamp(26px,3vw,35px); line-height:1.08; letter-spacing:-.035em; margin:0 0 8px; }
 .pageHeading p:last-child { margin:0; color:var(--theme-text-secondary); font-size:14px; line-height:1.5; }
 
-.panel { background:var(--theme-surface); border:1px solid var(--theme-border); border-radius:12px; box-shadow:var(--shadow-lg); overflow:hidden; margin-bottom:16px; animation:agentPanelIn var(--theme-motion-panel) var(--theme-easing) both; }
+.panel { background:var(--theme-surface); border:1px solid var(--theme-border); border-radius: var(--theme-radius-card); box-shadow:var(--shadow-lg); overflow:hidden; margin-bottom:16px; animation:agentPanelIn var(--theme-motion-panel) var(--theme-easing) both; }
 .panelHeading { min-height:70px; padding:17px 19px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--theme-border); }
 .panelHeading h2 { margin:0; font-size:16px; letter-spacing:-.012em; }
 
@@ -15,8 +15,8 @@
 .table tbody tr:hover { background:var(--theme-surface-muted); }
 .table tr:last-child td { border-bottom: none; }
 .muted { color: var(--theme-text-muted); font-size: 13px; }
-.code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; background: var(--theme-border); padding: 2px 6px; border-radius: 4px; }
-.statusBadge { display:inline-flex; align-items:center; min-height:24px; padding:0 8px; border-radius:999px; border:1px solid var(--theme-border); font-size:11px; font-weight:800; letter-spacing:.02em; transition:background var(--theme-motion-fast) var(--theme-easing), color var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing); }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; background: var(--theme-border); padding: 2px 6px; border-radius: var(--theme-radius-card); }
+.statusBadge { display:inline-flex; align-items:center; min-height:24px; padding:0 8px; border-radius: var(--theme-radius-card); border:1px solid var(--theme-border); font-size:11px; font-weight:800; letter-spacing:.02em; transition:background var(--theme-motion-fast) var(--theme-easing), color var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing); }
 .statusSuccess { color:var(--theme-success); background:color-mix(in srgb,var(--theme-success) 12%,transparent); border-color:color-mix(in srgb,var(--theme-success) 28%,var(--theme-border)); }
 .statusDanger { color:var(--theme-danger); background:color-mix(in srgb,var(--theme-danger) 10%,transparent); border-color:color-mix(in srgb,var(--theme-danger) 28%,var(--theme-border)); }
 .statusPending { color:var(--theme-warning); background:color-mix(in srgb,var(--theme-warning) 10%,transparent); border-color:color-mix(in srgb,var(--theme-warning) 28%,var(--theme-border)); }

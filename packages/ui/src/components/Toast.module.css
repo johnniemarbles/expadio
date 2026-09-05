@@ -91,7 +91,7 @@
   padding: 0;
   margin-left: 4px;
   line-height: 1;
-  border-radius: 4px;
+  border-radius: var(--theme-radius-card);
   transition: color var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
 }
 

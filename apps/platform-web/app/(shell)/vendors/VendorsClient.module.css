@@ -37,7 +37,7 @@
 .table tbody tr { transition:background var(--theme-motion-fast) var(--theme-easing); }
 .table tbody tr:hover { background:color-mix(in srgb,var(--theme-primary) 4%,transparent); }
 .table strong { color:var(--theme-text-primary); }
-.pill { display:inline-flex; align-items:center; min-height:24px; border:1px solid var(--theme-border); border-radius:999px; font-size:11px; font-weight:800; padding:0 8px; transition:background var(--theme-motion-fast) var(--theme-easing),border-color var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing); }
+.pill { display:inline-flex; align-items:center; min-height:24px; border:1px solid var(--theme-border); border-radius: var(--theme-radius-card); font-size:11px; font-weight:800; padding:0 8px; transition:background var(--theme-motion-fast) var(--theme-easing),border-color var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing); }
 .pillHealthy { background:color-mix(in srgb,var(--theme-success) 14%,var(--theme-surface)); color:var(--theme-success); border-color:color-mix(in srgb,var(--theme-success) 32%,var(--theme-border)); }
 .pillAttention { background:color-mix(in srgb,var(--theme-warning) 14%,var(--theme-surface)); color:var(--theme-warning); border-color:color-mix(in srgb,var(--theme-warning) 32%,var(--theme-border)); }
 .pillCritical { background:color-mix(in srgb,var(--theme-danger) 12%,var(--theme-surface)); color:var(--theme-danger); border-color:color-mix(in srgb,var(--theme-danger) 32%,var(--theme-border)); }

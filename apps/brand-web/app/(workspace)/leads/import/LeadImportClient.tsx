@@ -104,13 +104,13 @@ export default function LeadImportClient() {
               value={sourceKey}
               onChange={(e) => setSourceKey(e.target.value.trim() || 'IMPORT')}
               maxLength={120}
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, minWidth: 200 }}
+              style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, minWidth: 200 }}
             />
             <span style={{ color: 'var(--theme-text-muted)', fontWeight: 400 }}>Must match an ACTIVE source in this workspace</span>
           </label>
           <label style={{ display: 'grid', gap: 5, fontSize: 12, fontWeight: 700 }}>
             Input mode
-            <select value={mode} onChange={(e) => setMode(e.target.value as 'file' | 'paste')} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}>
+            <select value={mode} onChange={(e) => setMode(e.target.value as 'file' | 'paste')} style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}>
               <option value="file">Upload file</option>
               <option value="paste">Paste CSV</option>
             </select>
@@ -133,7 +133,7 @@ export default function LeadImportClient() {
               <div
                 style={{
                   border: `2px dashed ${file ? 'var(--theme-primary)' : 'var(--theme-border)'}`,
-                  borderRadius: 12,
+                  borderRadius: "var(--theme-radius-card)",
                   padding: '40px 24px',
                   textAlign: 'center',
                   cursor: 'pointer',
@@ -175,7 +175,7 @@ export default function LeadImportClient() {
                 onChange={(e) => setPasteText(e.target.value)}
                 placeholder={'email,name,phone,notes\nalice@example.com,Alice Smith,+15550001111,Met at trade show'}
                 rows={10}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontFamily: 'var(--theme-font-mono)', fontSize: 12, resize: 'vertical', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontFamily: 'var(--theme-font-mono)', fontSize: 12, resize: 'vertical', boxSizing: 'border-box' }}
               />
             )}
           </div>

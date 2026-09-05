@@ -3,7 +3,7 @@
 .banner { border:1px solid var(--theme-border); border-radius:var(--theme-radius-control); padding:12px 14px; font-size:13px; font-weight:700; animation:capacityBannerIn var(--theme-motion-normal) var(--theme-easing) both; }
 .error { color:var(--theme-danger); background:color-mix(in srgb,var(--theme-danger) 10%,var(--theme-surface)); border-color:color-mix(in srgb,var(--theme-danger) 28%,var(--theme-border)); }
 .notice { color:var(--theme-success); background:color-mix(in srgb,var(--theme-success) 10%,var(--theme-surface)); border-color:color-mix(in srgb,var(--theme-success) 28%,var(--theme-border)); }
-.statusPill { display:inline-flex; align-items:center; min-height:26px; border:1px solid var(--theme-border); border-radius:999px; padding:0 12px; font-size:12px; font-weight:850; transition:background var(--theme-motion-fast) var(--theme-easing),border-color var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing),transform var(--theme-motion-fast) var(--theme-easing); }
+.statusPill { display:inline-flex; align-items:center; min-height:26px; border:1px solid var(--theme-border); border-radius: var(--theme-radius-card); padding:0 12px; font-size:12px; font-weight:850; transition:background var(--theme-motion-fast) var(--theme-easing),border-color var(--theme-motion-fast) var(--theme-easing),color var(--theme-motion-fast) var(--theme-easing),transform var(--theme-motion-fast) var(--theme-easing); }
 .healthy { color:var(--theme-success); background:color-mix(in srgb,var(--theme-success) 13%,var(--theme-surface)); border-color:color-mix(in srgb,var(--theme-success) 34%,var(--theme-border)); }
 .warning { color:var(--theme-warning); background:color-mix(in srgb,var(--theme-warning) 13%,var(--theme-surface)); border-color:color-mix(in srgb,var(--theme-warning) 34%,var(--theme-border)); }
 .critical { color:var(--theme-danger); background:color-mix(in srgb,var(--theme-danger) 13%,var(--theme-surface)); border-color:color-mix(in srgb,var(--theme-danger) 34%,var(--theme-border)); }
@@ -19,9 +19,9 @@
 .planeDetail { color:var(--theme-text-secondary); }
 .planeNote { margin-top:4px; font-style:italic; }
 .meter { width:100%; height:10px; margin:0 0 8px; }
-.meter::-webkit-meter-bar { background:var(--theme-surface-muted); border:1px solid var(--theme-border); border-radius:999px; }
-.meter::-webkit-meter-optimum-value { background:var(--theme-primary); border-radius:999px; transition: none; }
-.meter::-moz-meter-bar { background:var(--theme-primary); border-radius:999px; transition: none; }
+.meter::-webkit-meter-bar { background:var(--theme-surface-muted); border:1px solid var(--theme-border); border-radius: var(--theme-radius-card); }
+.meter::-webkit-meter-optimum-value { background:var(--theme-primary); border-radius: var(--theme-radius-card); transition: none; }
+.meter::-moz-meter-bar { background:var(--theme-primary); border-radius: var(--theme-radius-card); transition: none; }
 .meterBulk::-webkit-meter-optimum-value { background:var(--theme-accent); }
 .meterBulk::-moz-meter-bar { background:var(--theme-accent); }
 .statGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }

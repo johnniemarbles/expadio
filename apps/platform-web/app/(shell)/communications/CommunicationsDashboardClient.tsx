@@ -521,7 +521,7 @@ export function CommunicationsDashboardClient({
               </Link>
             </div>
             {toggleError && (
-              <div role="alert" style={{ margin: "0 0 12px", fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: 8 }}>
+              <div role="alert" style={{ margin: "0 0 12px", fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: "var(--theme-radius-card)" }}>
                 ⚠️ {toggleError}
               </div>
             )}
@@ -565,7 +565,7 @@ export function CommunicationsDashboardClient({
                         <button
                           type="button"
                           onClick={() => setActiveConnector(c)}
-                          style={{ fontSize: "11px", padding: "3px 10px", cursor: "pointer", borderRadius: "6px", border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700 }}
+                          style={{ fontSize: "11px", padding: "3px 10px", cursor: "pointer", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--line, #cbd5e1)", background: "transparent", fontWeight: 700 }}
                         >
                           Manage
                         </button>
@@ -579,7 +579,7 @@ export function CommunicationsDashboardClient({
                             display: "inline-flex",
                             alignItems: "center",
                             padding: "3px 10px",
-                            borderRadius: "999px",
+                            borderRadius: "var(--theme-radius-card)",
                             border: 0,
                             cursor: "pointer",
                             fontSize: "12px",

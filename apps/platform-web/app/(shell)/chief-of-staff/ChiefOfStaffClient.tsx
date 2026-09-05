@@ -155,7 +155,7 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
       </section>
 
       {actionMessage && (
-        <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'var(--theme-surface-muted)', border: '1px solid var(--theme-border)', marginBottom: '16px', fontSize: '14px' }}>
+        <div style={{ padding: '12px 16px', borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', border: '1px solid var(--theme-border)', marginBottom: '16px', fontSize: '14px' }}>
           {actionMessage}
         </div>
       )}
@@ -243,7 +243,7 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
                     <td>
                       <div style={{ fontWeight: 600 }}>{app.title}</div>
                       <div className={styles.muted}>{app.description}</div>
-                      <pre style={{ maxHeight: 180, overflow: 'auto', marginTop: 10, padding: 10, borderRadius: 6, background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
+                      <pre style={{ maxHeight: 180, overflow: 'auto', marginTop: 10, padding: 10, borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
                         {JSON.stringify(app.staged_changes, null, 2)}
                       </pre>
                     </td>

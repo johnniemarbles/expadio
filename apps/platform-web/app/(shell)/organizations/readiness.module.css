@@ -4,7 +4,7 @@
 }
 .item {
   border: 1px solid var(--theme-border);
-  border-radius: 12px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
   padding: 15px;
 }
@@ -36,7 +36,7 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-muted);
   color: var(--theme-text-secondary);
@@ -53,7 +53,7 @@
   height: 7px;
   margin-top: 13px;
   border: 1px solid var(--theme-border);
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   overflow: hidden;
   background: var(--theme-surface-muted);
 }
@@ -73,7 +73,7 @@
 }
 .activate {
   min-height: 32px;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   border: 1px solid var(--theme-primary);
   padding: 6px 11px;
   background: var(--theme-primary);

@@ -29,7 +29,7 @@ export default async function ExecutionTracePage({
           <h2>Trace one business event through the execution spine</h2>
           <p>Load a bounded event, correlation or aggregate trace across domain events, outbox, governed actions, schedules, communications, provider attempts, webhooks and operational tasks.</p>
         </div>
-        <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 10px", borderRadius: 999, background: "#eef2ff", color: "#3730a3" }}>
+        <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 10px", borderRadius: "var(--theme-radius-card)", background: "#eef2ff", color: "#3730a3" }}>
           Uses GET /api/execution/trace
         </span>
       </div>

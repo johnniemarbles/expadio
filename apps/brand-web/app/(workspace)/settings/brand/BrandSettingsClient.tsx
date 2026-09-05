@@ -173,7 +173,7 @@ export default function BrandSettingsClient({
             placeholder="Acme Franchise Group"
             disabled={saving}
             style={{
-              padding: '8px 10px', borderRadius: 8,
+              padding: '8px 10px', borderRadius: "var(--theme-radius-card)",
               border: '1px solid var(--theme-border)',
               background: 'var(--theme-surface)',
               color: 'var(--theme-text-primary)', fontSize: 13,
@@ -192,7 +192,7 @@ export default function BrandSettingsClient({
             placeholder="acme-franchise"
             disabled={saving}
             style={{
-              padding: '8px 10px', borderRadius: 8,
+              padding: '8px 10px', borderRadius: "var(--theme-radius-card)",
               border: '1px solid var(--theme-border)',
               background: 'var(--theme-surface)',
               color: 'var(--theme-text-primary)', fontSize: 13, fontFamily: 'monospace',
@@ -231,7 +231,7 @@ export default function BrandSettingsClient({
             placeholder="apply.yourbrand.com"
             disabled={saving}
             style={{
-              padding: '8px 10px', borderRadius: 8,
+              padding: '8px 10px', borderRadius: "var(--theme-radius-card)",
               border: '1px solid var(--theme-border)',
               background: 'var(--theme-surface)',
               color: 'var(--theme-text-primary)', fontSize: 13, fontFamily: 'monospace',
@@ -243,7 +243,7 @@ export default function BrandSettingsClient({
           <div style={{
             background: 'var(--theme-surface)',
             border: '1px solid var(--theme-border)',
-            borderRadius: 8, padding: '12px 14px',
+            borderRadius: "var(--theme-radius-card)", padding: '12px 14px',
             display: 'grid', gap: 8, maxWidth: 500,
           }}>
             <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>DNS setup</p>
@@ -341,7 +341,7 @@ export default function BrandSettingsClient({
             placeholder="e.g. 123456789"
             disabled={telegramLinking || saving}
             style={{
-              padding: '8px 10px', borderRadius: 8,
+              padding: '8px 10px', borderRadius: "var(--theme-radius-card)",
               border: '1px solid var(--theme-border)',
               background: 'var(--theme-surface)',
               color: 'var(--theme-text-primary)', fontSize: 13, fontFamily: 'monospace',
@@ -471,7 +471,7 @@ function UrlRow({ label, url }: { label: string; url: string }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      padding: '12px 14px', borderRadius: 8,
+      padding: '12px 14px', borderRadius: "var(--theme-radius-card)",
       border: '1px solid var(--theme-border)',
       background: 'var(--theme-surface)',
     }}>

@@ -31,7 +31,7 @@
 .table th { color:var(--theme-text-muted); font:800 10px/1.2 var(--theme-font-mono); letter-spacing:.08em; text-transform:uppercase; background:var(--theme-surface-muted); }
 .table td { color:var(--theme-text-secondary); }
 .table strong { color:var(--theme-text-primary); }
-.pill { display:inline-flex; align-items:center; min-height:24px; border:1px solid var(--theme-border); border-radius:999px; background:var(--theme-surface-raised); color:var(--theme-text-secondary); font-size:11px; font-weight:800; padding:0 8px; }
+.pill { display:inline-flex; align-items:center; min-height:24px; border:1px solid var(--theme-border); border-radius: var(--theme-radius-card); background:var(--theme-surface-raised); color:var(--theme-text-secondary); font-size:11px; font-weight:800; padding:0 8px; }
 .empty { padding:16px; color:var(--theme-text-muted); font-size:13px; }
 .callout { padding:16px; border-color:color-mix(in srgb,var(--theme-primary) 28%,var(--theme-border)); background:color-mix(in srgb,var(--theme-primary) 6%,var(--theme-surface)); }
 .callout h2 { margin:0; font-size:18px; }

@@ -37,7 +37,7 @@ const sinceLabel = (iso: string): string => {
   return `${Math.floor(h / 24)}d`;
 };
 
-const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: 8, fontSize: 13 };
+const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--line, #cbd5e1)', borderRadius: "var(--theme-radius-card)", fontSize: 13 };
 
 export function WorkflowsClient({ initial, verticalKey = null, queryString = '' }: { initial: GovernedInstance[]; verticalKey?: string | null; queryString?: string }) {
   const pack = findIndustryPack(verticalKey);

@@ -27,7 +27,7 @@
 .brandMark {
   width: 36px;
   height: 36px;
-  border-radius: 11px;
+  border-radius: var(--theme-radius-card);
   display: grid;
   place-items: center;
   background: var(--theme-easing-linear)-gradient(145deg, var(--theme-secondary), var(--theme-primary));
@@ -98,7 +98,7 @@
   box-shadow: var(--theme-shadow-subtle);
 }
 .contextCard {
-  border-radius: 16px;
+  border-radius: var(--theme-radius-card);
   padding: 20px;
   text-decoration: none;
   color: inherit;
@@ -138,7 +138,7 @@
   align-items: center;
   min-height: 25px;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   border: 1px solid var(--theme-border);
   font-size: 11px;
   font-weight: 750;
@@ -171,7 +171,7 @@
 .progressTrack {
   height: 8px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface-muted);
   border: 1px solid var(--theme-border);
 }
@@ -191,7 +191,7 @@
 .empty,
 .error {
   border: 1px solid var(--theme-border);
-  border-radius: 16px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
   padding: 28px;
 }
@@ -223,7 +223,7 @@
   align-items: start;
 }
 .panel {
-  border-radius: 16px;
+  border-radius: var(--theme-radius-card);
   overflow: hidden;
 }
 .panelHeading {
@@ -244,7 +244,7 @@
   gap: 11px;
 }
 .requirementCard {
-  border-radius: 12px;
+  border-radius: var(--theme-radius-card);
   padding: 15px;
   box-shadow: none;
 }
@@ -279,7 +279,7 @@
 .secondaryButton,
 .dangerButton {
   min-height: 34px;
-  border-radius: 9px;
+  border-radius: var(--theme-radius-card);
   padding: 7px 12px;
   font-size: 12px;
   font-weight: 750;
@@ -330,7 +330,7 @@
 .notice {
   margin-top: 14px;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--theme-radius-card);
   background: color-mix(in srgb, var(--theme-primary) 7%, var(--theme-surface));
   border: 1px solid color-mix(in srgb, var(--theme-primary) 20%, var(--theme-border));
   color: var(--theme-text-secondary);
@@ -356,7 +356,7 @@
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--theme-border);
-  border-radius: 9px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
   color: var(--theme-text-primary);
   padding: 9px 10px;

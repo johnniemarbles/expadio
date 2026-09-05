@@ -17,7 +17,7 @@
 
 .control {
   border: 1px solid var(--theme-border);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
   color: var(--theme-text-primary);
   font: inherit;
@@ -46,7 +46,7 @@
 
 .alert {
   border: 1px solid color-mix(in srgb,var(--theme-danger) 28%,transparent);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   background: color-mix(in srgb,var(--theme-danger) 10%,transparent);
   color: var(--theme-danger);
   font-size: 13px;
@@ -64,7 +64,7 @@
 }
 
 .outcomePill {
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
@@ -107,7 +107,7 @@
 .inspectButton,
 .closeButton {
   border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   background: transparent;
   color: var(--theme-text-primary);
   cursor: pointer;
@@ -157,7 +157,7 @@
   max-height: 90vh;
   overflow-y: auto;
   border: 1px solid var(--theme-border);
-  border-radius: 16px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface-raised);
   box-shadow: var(--theme-shadow-floating);
   padding: 28px;
@@ -208,7 +208,7 @@
 
 .gateCard {
   border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   padding: 12px;
   transition: transform var(--theme-motion-fast) var(--theme-easing), border-color var(--theme-motion-fast) var(--theme-easing), background var(--theme-motion-fast) var(--theme-easing);
   animation: traceCardIn var(--theme-motion-panel) var(--theme-easing) both;

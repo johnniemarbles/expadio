@@ -99,7 +99,7 @@ function BulkTaskPanel({
       margin: '14px 0',
       background: 'var(--theme-surface-raised)',
       border: '1px solid var(--theme-primary)',
-      borderRadius: 14,
+      borderRadius: "var(--theme-radius-card)",
       boxShadow: '0 8px 32px color-mix(in srgb,var(--theme-primary) 18%,transparent)',
       overflow: 'hidden',
     }}>
@@ -113,21 +113,21 @@ function BulkTaskPanel({
       <form onSubmit={submit} style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr auto auto auto', gap: 10, alignItems: 'end' }}>
         <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
           Task title *
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} required placeholder="Follow up…" style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }} />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} required placeholder="Follow up…" style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }} />
         </label>
         <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
           Description
-          <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} placeholder="Optional…" style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }} />
+          <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} placeholder="Optional…" style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }} />
         </label>
         <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
           Priority
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}>
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}>
             {['LOW','MEDIUM','HIGH','URGENT'].map((p) => <option key={p}>{p}</option>)}
           </select>
         </label>
         <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
           Due date
-          <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }} />
+          <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }} />
         </label>
         <button type="submit" disabled={loading || !title.trim()} className={styles.button} style={{ padding: '8px 18px' }}>
           {loading ? 'Creating…' : `Create for ${selectedIds.size}`}

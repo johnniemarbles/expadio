@@ -22,7 +22,7 @@ interface Queue {
 }
 
 const tile: React.CSSProperties = {
-  border: '1px solid var(--line, #e2e8f0)', borderRadius: 12, padding: '14px 16px',
+  border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: '14px 16px',
   background: 'var(--surface, #fff)', minWidth: 150, flex: '1 1 150px',
 };
 const num: React.CSSProperties = { fontSize: 26, fontWeight: 700, lineHeight: 1.1 };

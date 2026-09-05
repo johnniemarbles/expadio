@@ -68,7 +68,7 @@ export function CloneActiveDraftButton() {
         disabled={busy}
         style={{
           border: 'none',
-          borderRadius: 8,
+          borderRadius: "var(--theme-radius-card)",
           padding: '8px 12px',
           background: 'var(--brand)',
           color: '#fff',

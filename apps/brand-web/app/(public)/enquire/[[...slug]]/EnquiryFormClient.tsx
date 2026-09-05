@@ -171,7 +171,7 @@ export default function EnquiryFormClient({
     maxWidth: 520,
     background: 'var(--theme-surface)',
     border: '1px solid var(--theme-border)',
-    borderRadius: 16,
+    borderRadius: "var(--theme-radius-card)",
     padding: 32,
     boxShadow: '0 8px 32px color-mix(in srgb, var(--theme-text-primary) 8%, transparent)',
   };
@@ -186,7 +186,7 @@ export default function EnquiryFormClient({
   const inputStyle: React.CSSProperties = {
     padding: '10px 12px',
     border: '1px solid var(--theme-border)',
-    borderRadius: 8,
+    borderRadius: "var(--theme-radius-card)",
     background: 'var(--theme-surface)',
     color: 'var(--theme-text-primary)',
     fontSize: 14,
@@ -202,7 +202,7 @@ export default function EnquiryFormClient({
     background: 'var(--theme-primary)',
     color: 'var(--theme-primary-foreground, var(--theme-surface))',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: "var(--theme-radius-card)",
     fontSize: 14,
     fontWeight: 750,
     cursor: 'pointer',

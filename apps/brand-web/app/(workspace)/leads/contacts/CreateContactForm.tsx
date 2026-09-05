@@ -21,7 +21,7 @@ type ContactCandidate = {
 
 type AccountOption = { accountId: string; name: string };
 
-const INP: React.CSSProperties = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' };
+const INP: React.CSSProperties = { padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' };
 const INP_ERR: React.CSSProperties = { ...INP, borderColor: 'crimson' };
 const SEL: React.CSSProperties = { ...INP };
 function inp(err?: string): React.CSSProperties { return err ? INP_ERR : INP; }
@@ -223,7 +223,7 @@ export default function CreateContactForm({ accounts }: { accounts: readonly Acc
 
         {/* Duplicate candidate panel */}
         {showCandidates ? (
-          <div style={{ border: '1px solid orange', borderRadius: 8, padding: 12, background: 'color-mix(in srgb,orange 8%,transparent)' }}>
+          <div style={{ border: '1px solid orange', borderRadius: "var(--theme-radius-card)", padding: 12, background: 'color-mix(in srgb,orange 8%,transparent)' }}>
             <strong style={{ fontSize: 12 }}>⚠ Possible duplicate — {candidates.length} existing contact{candidates.length > 1 ? 's' : ''} found</strong>
             <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
               {candidates.map((c) => (
@@ -239,7 +239,7 @@ export default function CreateContactForm({ accounts }: { accounts: readonly Acc
               ))}
             </div>
             <button type="button" onClick={() => setSearchDismissed(true)}
-              style={{ marginTop: 10, fontSize: 11, cursor: 'pointer', background: 'none', border: '1px solid var(--theme-border)', borderRadius: 6, padding: '4px 10px', color: 'var(--theme-text-primary)' }}>
+              style={{ marginTop: 10, fontSize: 11, cursor: 'pointer', background: 'none', border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: '4px 10px', color: 'var(--theme-text-primary)' }}>
               Create new record anyway
             </button>
           </div>
@@ -276,7 +276,7 @@ export default function CreateContactForm({ accounts }: { accounts: readonly Acc
             onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
             placeholder="City" disabled={submitting} />
           {showCitySuggestions && citySuggestions.length > 0 ? (
-            <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, margin: 0, padding: 0, listStyle: 'none', background: 'var(--theme-surface)', border: '1px solid var(--theme-border)', borderRadius: 6, fontSize: 12 }}>
+            <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, margin: 0, padding: 0, listStyle: 'none', background: 'var(--theme-surface)', border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", fontSize: 12 }}>
               {citySuggestions.map((s, i) => (
                 <li key={i} onMouseDown={() => { setCity(s); setCitySuggestions([]); setShowCitySuggestions(false); }}
                   style={{ padding: '6px 10px', cursor: 'pointer' }}

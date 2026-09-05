@@ -23,7 +23,7 @@
   width: 9px;
   height: 9px;
   margin-top: 5px;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-neutral);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-neutral) 12%, transparent);
 }

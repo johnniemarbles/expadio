@@ -22,7 +22,7 @@
 .status::before {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   background: currentColor;
   box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 28%, transparent);
   content: "";

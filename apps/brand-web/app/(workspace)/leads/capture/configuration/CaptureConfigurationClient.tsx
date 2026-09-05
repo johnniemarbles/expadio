@@ -225,7 +225,7 @@ export default function CaptureConfigurationClient({
 
   const chipBase: React.CSSProperties = {
     display: 'flex', alignItems: 'flex-start', gap: 10,
-    padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+    padding: '10px 12px', borderRadius: "var(--theme-radius-card)", cursor: 'pointer',
     transition: 'border-color 0.1s, background 0.1s',
   };
 
@@ -307,7 +307,7 @@ export default function CaptureConfigurationClient({
                   placeholder="apply.yourbrand.com"
                   disabled={activating}
                   style={{
-                    padding: '8px 10px', borderRadius: 8,
+                    padding: '8px 10px', borderRadius: "var(--theme-radius-card)",
                     border: '1px solid var(--theme-border)',
                     background: 'var(--theme-surface)',
                     color: 'var(--theme-text-primary)', fontSize: 13,
@@ -350,7 +350,7 @@ export default function CaptureConfigurationClient({
                 key={form.configId}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 14px', borderRadius: 8,
+                  padding: '12px 14px', borderRadius: "var(--theme-radius-card)",
                   border: '1px solid var(--theme-border)',
                   background: 'var(--theme-surface)',
                 }}

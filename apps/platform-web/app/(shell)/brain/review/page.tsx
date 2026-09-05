@@ -25,7 +25,7 @@ export default async function BrainReviewQueuePage({ searchParams }: { searchPar
         </h2>
         
         {queue.length > 0 ? (
-          <div style={{ background: 'var(--surface-soft)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--line)' }}>
+          <div style={{ background: 'var(--surface-soft)', padding: '2rem', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--line)' }}>
             <CorrectionList corrections={queue} />
           </div>
         ) : (

@@ -194,7 +194,7 @@ export default function LeadAnalyticsClient() {
                           <td style={{ color: 'var(--theme-success)' }}>{r.verifiedCount}</td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ width: 60, height: 6, borderRadius: 999, background: 'var(--theme-surface-muted)', overflow: 'hidden' }}>
+                              <div style={{ width: 60, height: 6, borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', overflow: 'hidden' }}>
                                 <div style={{ width: `${rate}%`, height: '100%', background: 'var(--theme-primary)' }} />
                               </div>
                               <span style={{ fontSize: 11 }}>{rate}%</span>

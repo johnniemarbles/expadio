@@ -1,14 +1,14 @@
-.loadingState { width:min(100%,760px); margin:28px auto; padding:24px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow-lg); }
-.loadingHeader,.loadingLine,.loadingPanel { border-radius:8px; background:var(--theme-easing-linear)-gradient(90deg,var(--canvas),color-mix(in srgb,var(--theme-surface-muted,var(--canvas)) 70%,var(--theme-text-primary,var(--ink-950)) 15%),var(--canvas)); background-size:220% 100%; animation:routePulse calc(var(--theme-motion-data) * 2) var(--theme-easing) infinite; }
+.loadingState { width:min(100%,760px); margin:28px auto; padding:24px; border:1px solid var(--line); border-radius: var(--theme-radius-card); background:var(--surface); box-shadow:var(--shadow-lg); }
+.loadingHeader,.loadingLine,.loadingPanel { border-radius: var(--theme-radius-card); background:var(--theme-easing-linear)-gradient(90deg,var(--canvas),color-mix(in srgb,var(--theme-surface-muted,var(--canvas)) 70%,var(--theme-text-primary,var(--ink-950)) 15%),var(--canvas)); background-size:220% 100%; animation:routePulse calc(var(--theme-motion-data) * 2) var(--theme-easing) infinite; }
 .loadingHeader { width:min(280px,65%); height:28px; }
 .loadingLine { width:min(430px,90%); height:14px; margin-top:14px; }
 .loadingPanel { height:190px; margin-top:24px; }
-.errorState { width:min(100%,640px); margin:32px auto; padding:32px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow-lg); text-align:center; }
-.errorMark { width:44px; height:44px; margin:0 auto 16px; border-radius:12px; display:grid; place-items:center; color:var(--brand-dark); background:var(--brand-soft); font-size:20px; font-weight:800; }
+.errorState { width:min(100%,640px); margin:32px auto; padding:32px; border:1px solid var(--line); border-radius: var(--theme-radius-card); background:var(--surface); box-shadow:var(--shadow-lg); text-align:center; }
+.errorMark { width:44px; height:44px; margin:0 auto 16px; border-radius: var(--theme-radius-card); display:grid; place-items:center; color:var(--brand-dark); background:var(--brand-soft); font-size:20px; font-weight:800; }
 .errorState h2 { margin:0; font-size:20px; }
 .errorState p { margin:10px auto 0; max-width:470px; color:var(--ink-600); font-size:14px; line-height:1.55; }
 .errorState .correlation { font-size:12px; color:var(--ink-500); }
-.retryButton { min-height:44px; margin-top:22px; padding:0 18px; border:0; border-radius:8px; color:white; background:var(--brand); font-weight:700; cursor:pointer; }
+.retryButton { min-height:44px; margin-top:22px; padding:0 18px; border:0; border-radius: var(--theme-radius-card); color:white; background:var(--brand); font-weight:700; cursor:pointer; }
 .retryButton:hover { background:var(--brand-dark); }
 @keyframes routePulse { 0%,100% { background-position:100% 0; } 50% { background-position:0 0; } }
 @media (prefers-reduced-motion:reduce) { .loadingHeader,.loadingLine,.loadingPanel { animation:none; } }

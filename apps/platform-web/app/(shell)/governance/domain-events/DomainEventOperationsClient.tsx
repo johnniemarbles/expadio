@@ -70,14 +70,14 @@ export function DomainEventOperationsClient({ initial }: { initial: Payload }) {
 
       <nav style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} aria-label="Domain Event status filters">
         {FILTERS.map((status) => (
-          <button type="button" key={status} onClick={() => setFilter(status)} className={motionStyles.filter} style={{ border: '1px solid var(--theme-border)', borderRadius: 999, padding: '6px 11px', background: filter === status ? 'color-mix(in srgb,var(--theme-primary) 10%,transparent)' : 'var(--theme-surface)', color: filter === status ? 'var(--theme-primary)' : 'var(--theme-text-secondary)', fontWeight: 700, cursor: 'pointer' }}>{status}</button>
+          <button type="button" key={status} onClick={() => setFilter(status)} className={motionStyles.filter} style={{ border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: '6px 11px', background: filter === status ? 'color-mix(in srgb,var(--theme-primary) 10%,transparent)' : 'var(--theme-surface)', color: filter === status ? 'var(--theme-primary)' : 'var(--theme-text-secondary)', fontWeight: 700, cursor: 'pointer' }}>{status}</button>
         ))}
       </nav>
 
-      {error ? <div role="alert" className={motionStyles.feedback} style={{ padding: 10, borderRadius: 8, background: 'color-mix(in srgb,var(--theme-danger) 10%,transparent)', color: 'var(--theme-danger)' }}>{error}</div> : null}
-      {notice ? <div className={motionStyles.feedback} style={{ padding: 10, borderRadius: 8, background: 'color-mix(in srgb,var(--theme-success) 10%,transparent)', color: 'var(--theme-success)' }}>{notice}</div> : null}
+      {error ? <div role="alert" className={motionStyles.feedback} style={{ padding: 10, borderRadius: "var(--theme-radius-card)", background: 'color-mix(in srgb,var(--theme-danger) 10%,transparent)', color: 'var(--theme-danger)' }}>{error}</div> : null}
+      {notice ? <div className={motionStyles.feedback} style={{ padding: 10, borderRadius: "var(--theme-radius-card)", background: 'color-mix(in srgb,var(--theme-success) 10%,transparent)', color: 'var(--theme-success)' }}>{notice}</div> : null}
 
-      <section style={{ overflowX: 'auto', border: '1px solid var(--theme-border)', borderRadius: 12, background: 'var(--theme-surface)' }}>
+      <section style={{ overflowX: 'auto', border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface)' }}>
         <table className={motionStyles.table} style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
           <thead><tr style={{ textAlign: 'left', background: 'var(--theme-surface-muted)' }}>{['Status', 'Event', 'Aggregate', 'Attempts', 'Available', 'Last error', 'Action'].map((label) => <th key={label} style={{ padding: '10px 12px', fontSize: 11, color: 'var(--theme-text-secondary)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</th>)}</tr></thead>
           <tbody>
@@ -92,7 +92,7 @@ export function DomainEventOperationsClient({ initial }: { initial: Payload }) {
                 <td style={{ padding: 12 }}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <a className={motionStyles.traceLink} href={`/governance/execution-traces/${encodeURIComponent(item.eventId)}`} style={{ color: 'var(--theme-primary)', fontWeight: 800, fontSize: 12 }}>Trace</a>
-                    {item.status === 'DEAD' ? <button type="button" disabled={busy !== null} onClick={() => void requeue(item)} className={motionStyles.requeueButton} style={{ border: 0, borderRadius: 8, padding: '7px 10px', background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>{busy === item.outboxId ? 'Requeueing…' : 'Requeue'}</button> : null}
+                    {item.status === 'DEAD' ? <button type="button" disabled={busy !== null} onClick={() => void requeue(item)} className={motionStyles.requeueButton} style={{ border: 0, borderRadius: "var(--theme-radius-card)", padding: '7px 10px', background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)', fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>{busy === item.outboxId ? 'Requeueing…' : 'Requeue'}</button> : null}
                   </div>
                 </td>
               </tr>
@@ -106,7 +106,7 @@ export function DomainEventOperationsClient({ initial }: { initial: Payload }) {
 }
 
 function Stat({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
-  return <div className={motionStyles.stat} style={{ border: '1px solid var(--theme-border)', borderRadius: 12, padding: 14, background: 'var(--theme-surface)' }}><div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--theme-text-secondary)' }}>{label}</div><div style={{ fontSize: 24, fontWeight: 850, color: danger ? 'var(--theme-danger)' : 'var(--theme-text-primary)' }}>{value}</div></div>;
+  return <div className={motionStyles.stat} style={{ border: '1px solid var(--theme-border)', borderRadius: "var(--theme-radius-card)", padding: 14, background: 'var(--theme-surface)' }}><div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--theme-text-secondary)' }}>{label}</div><div style={{ fontSize: 24, fontWeight: 850, color: danger ? 'var(--theme-danger)' : 'var(--theme-text-primary)' }}>{value}</div></div>;
 }
 
 function StatusBadge({ status }: { status: DomainEventOperationItem['status'] }) {
@@ -119,5 +119,5 @@ function StatusBadge({ status }: { status: DomainEventOperationItem['status'] })
   };
   const tone = tones[status];
   const live = status === 'CLAIMED';
-  return <span className={`${motionStyles.status} ${live ? motionStyles.statusLive : ''}`} style={{ padding: '3px 8px', borderRadius: 999, background: tone.bg, color: tone.fg, fontSize: 11, fontWeight: 800 }}>{status}</span>;
+  return <span className={`${motionStyles.status} ${live ? motionStyles.statusLive : ''}`} style={{ padding: '3px 8px', borderRadius: "var(--theme-radius-card)", background: tone.bg, color: tone.fg, fontSize: 11, fontWeight: 800 }}>{status}</span>;
 }

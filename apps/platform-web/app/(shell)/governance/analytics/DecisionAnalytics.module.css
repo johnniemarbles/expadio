@@ -25,26 +25,26 @@
   flex: 1;
   height: 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface-muted);
   overflow: hidden;
 }
 
 .meter::-webkit-meter-bar {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface-muted);
 }
 
 .meter::-webkit-meter-optimum-value,
 .meter::-webkit-meter-suboptimum-value,
 .meter::-webkit-meter-even-less-good-value {
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   transition: background var(--theme-motion-normal) var(--theme-easing);
 }
 
 .meter::-moz-meter-bar {
-  border-radius: 999px;
+  border-radius: var(--theme-radius-card);
   transition: background var(--theme-motion-normal) var(--theme-easing);
 }
 

@@ -104,7 +104,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
 
       {notice && (
         <div style={{
-          padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16,
+          padding: '10px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 13, marginBottom: 16,
           background: notice.kind === 'err'
             ? 'color-mix(in srgb,var(--theme-danger) 8%,var(--theme-surface))'
             : 'color-mix(in srgb,var(--theme-success) 8%,var(--theme-surface))',
@@ -129,7 +129,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agents…"
               style={{
-                flex: '1 1 220px', padding: '9px 14px', borderRadius: 8, fontSize: 13,
+                flex: '1 1 220px', padding: '9px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 13,
                 border: '1px solid var(--theme-border)', background: 'var(--theme-surface)',
                 color: 'var(--theme-text-primary)', outline: 'none',
               }}
@@ -139,7 +139,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                 <button
                   onClick={() => setActiveDept(null)}
                   style={{
-                    padding: '6px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                    padding: '6px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
                     background: !activeDept ? 'var(--theme-primary)' : 'var(--theme-surface-muted)',
                     color: !activeDept ? 'var(--theme-text-inverse)' : 'var(--theme-text-secondary)',
                   }}
@@ -149,7 +149,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                     key={dept}
                     onClick={() => setActiveDept(activeDept === dept ? null : dept)}
                     style={{
-                      padding: '6px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                      padding: '6px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
                       background: activeDept === dept ? 'var(--theme-primary)' : 'var(--theme-surface-muted)',
                       color: activeDept === dept ? 'var(--theme-text-inverse)' : 'var(--theme-text-secondary)',
                     }}
@@ -170,7 +170,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                   {dept}
                 </h2>
                 <span style={{
-                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: "var(--theme-radius-card)",
                   background: 'var(--theme-surface-muted)', color: 'var(--theme-text-muted)',
                 }}>
                   {items.length}
@@ -183,7 +183,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                   const busy = working === b.binding_id;
                   return (
                     <div key={b.binding_id} style={{
-                      padding: '14px 16px', borderRadius: 10,
+                      padding: '14px 16px', borderRadius: "var(--theme-radius-card)",
                       border: `1px solid ${active ? 'color-mix(in srgb,var(--theme-success) 22%,var(--theme-border))' : 'var(--theme-border)'}`,
                       background: 'var(--theme-surface)',
                       display: 'flex', flexDirection: 'column', gap: 8,
@@ -197,7 +197,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                             }} />
                             <strong style={{ fontSize: 13 }}>{b.display_name || b.capability_key}</strong>
                             <span style={{
-                              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999,
+                              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: "var(--theme-radius-card)",
                               background: active
                                 ? 'color-mix(in srgb,var(--theme-success) 12%,transparent)'
                                 : 'color-mix(in srgb,var(--theme-warning) 12%,transparent)',
@@ -225,7 +225,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                           disabled={busy}
                           onClick={() => toggle(b)}
                           style={{
-                            padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                            padding: '5px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
                             border: 'none', cursor: busy ? 'not-allowed' : 'pointer',
                             background: active ? 'var(--theme-warning)' : 'var(--theme-success)',
                             color: 'var(--theme-text-inverse)',
@@ -238,7 +238,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
                           disabled={busy}
                           onClick={() => remove(b)}
                           style={{
-                            padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                            padding: '5px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
                             background: 'transparent', border: '1px solid color-mix(in srgb,var(--theme-danger) 35%,var(--theme-border))',
                             color: 'var(--theme-danger)', cursor: busy ? 'not-allowed' : 'pointer',
                             opacity: busy ? 0.5 : 1,

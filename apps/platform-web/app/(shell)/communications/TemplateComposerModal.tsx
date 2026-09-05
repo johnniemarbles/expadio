@@ -67,7 +67,7 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
 
   return (
     <div role="presentation" onClick={onClose} className={motionStyles.backdrop} style={{ position: "fixed", inset: 0, zIndex: 125, background: "var(--theme-overlay)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className={`${motionStyles.dialog} ${motionStyles.formControls}`} style={{ width: "min(640px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", borderRadius: 16, padding: 28, display: "grid", gap: 12 }}>
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className={`${motionStyles.dialog} ${motionStyles.formControls}`} style={{ width: "min(640px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--theme-surface-raised)", borderRadius: "var(--theme-radius-card)", padding: 28, display: "grid", gap: 12 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--theme-text-secondary)" }}>Platform communications</p>
           <h2 style={{ margin: "4px 0 0" }}>New template</h2>
@@ -105,8 +105,8 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
 
         {error && <p role="alert" className={motionStyles.error} style={{ color: "var(--theme-danger)", margin: 0, fontSize: 13 }}>{error}</p>}
         <div className={motionStyles.actions} style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create draft"}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Creating…" : "Create draft"}</button>
         </div>
       </form>
     </div>
@@ -116,7 +116,7 @@ export function TemplateComposerModal({ isOpen, onClose, onCreated, queryString 
 const inp: React.CSSProperties = {
   padding: "8px 12px",
   border: "1px solid var(--theme-border)",
-  borderRadius: 8,
+  borderRadius: "var(--theme-radius-card)",
   fontSize: 13,
   outline: "none",
   width: "100%",

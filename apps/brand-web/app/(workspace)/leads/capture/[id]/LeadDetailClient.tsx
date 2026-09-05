@@ -114,7 +114,7 @@ function TaskCard({
   return (
     <div style={{
       border: '1px solid var(--theme-border)',
-      borderRadius: 10,
+      borderRadius: "var(--theme-radius-card)",
       padding: 14,
       background: task.status === 'DONE' ? 'var(--theme-surface-muted)' : 'var(--theme-surface)',
       opacity: task.status === 'CANCELLED' ? 0.55 : 1,
@@ -137,7 +137,7 @@ function TaskCard({
           <button
             onClick={cycle}
             disabled={working}
-            style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11, cursor: 'pointer', borderRadius: 6, border: '1px solid var(--theme-border)', background: 'var(--theme-surface-muted)', color: 'var(--theme-text-secondary)' }}
+            style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11, cursor: 'pointer', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface-muted)', color: 'var(--theme-text-secondary)' }}
           >
             {working ? '…' : task.status === 'DONE' ? 'Reopen' : 'Mark done'}
           </button>
@@ -189,7 +189,7 @@ function LogDiscoveryForm({ captureLeadId, onAdded }: { captureLeadId: string; o
             placeholder="Call notes…"
             rows={3}
             maxLength={4000}
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', resize: 'vertical', fontSize: 13, fontFamily: 'inherit' }}
+            style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', resize: 'vertical', fontSize: 13, fontFamily: 'inherit' }}
           />
         </label>
         <label style={{ fontSize: 11, fontWeight: 700, display: 'grid', gap: 4, alignContent: 'start' }}>
@@ -201,7 +201,7 @@ function LogDiscoveryForm({ captureLeadId, onAdded }: { captureLeadId: string; o
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(e.target.value)}
             placeholder="e.g. 30"
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}
+            style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}
           />
         </label>
         <label style={{ fontSize: 11, fontWeight: 700, display: 'grid', gap: 4, alignContent: 'start' }}>
@@ -209,7 +209,7 @@ function LogDiscoveryForm({ captureLeadId, onAdded }: { captureLeadId: string; o
           <select
             value={outcome}
             onChange={(e) => setOutcome(e.target.value as typeof DISCOVERY_OUTCOMES[number])}
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}
+            style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}
           >
             {DISCOVERY_OUTCOMES.map((o) => <option key={o}>{o}</option>)}
           </select>
@@ -252,7 +252,7 @@ function AddNoteForm({ captureLeadId, onAdded }: { captureLeadId: string; onAdde
         placeholder="Add a note…"
         rows={2}
         maxLength={2000}
-        style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', resize: 'vertical', fontSize: 13 }}
+        style={{ flex: 1, padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', resize: 'vertical', fontSize: 13 }}
       />
       <button type="submit" disabled={working || !body.trim()} className={styles.button} style={{ padding: '8px 14px', fontSize: 12 }}>
         {working ? '…' : 'Save'}
@@ -293,12 +293,12 @@ function AddTaskForm({ captureLeadId, onAdded }: { captureLeadId: string; onAdde
         placeholder="Task title…"
         maxLength={200}
         required
-        style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}
+        style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13 }}
       />
-      <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}>
+      <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }}>
         {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => <option key={p}>{p}</option>)}
       </select>
-      <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }} />
+      <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} style={{ padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 12 }} />
       <button type="submit" disabled={working || !title.trim()} className={styles.button} style={{ padding: '8px 14px', fontSize: 12 }}>
         {working ? '…' : 'Add task'}
       </button>

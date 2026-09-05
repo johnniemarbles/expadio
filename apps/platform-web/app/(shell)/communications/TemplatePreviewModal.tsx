@@ -195,7 +195,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
         style={{
           background: "var(--theme-surface-raised)",
           border: "1px solid var(--theme-border)",
-          borderRadius: "16px",
+          borderRadius: "var(--theme-radius-card)",
           width: "100%",
           maxWidth: "840px",
           maxHeight: "90vh",
@@ -220,7 +220,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
             style={{
               border: "1px solid var(--theme-border)",
               background: "transparent",
-              borderRadius: "8px",
+              borderRadius: "var(--theme-radius-card)",
               width: "32px",
               height: "32px",
               cursor: "pointer",
@@ -241,28 +241,28 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
           <div style={{ display: "grid", gap: "14px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: "12px" }}>
               <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Subject
-                <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13 }} />
+                <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", fontSize: 13 }} />
               </label>
               <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Format
-                <select value={draft.contentFormat} onChange={(e) => setDraft({ ...draft, contentFormat: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13 }}>
+                <select value={draft.contentFormat} onChange={(e) => setDraft({ ...draft, contentFormat: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", fontSize: 13 }}>
                   {["TEXT", "HTML", "MARKDOWN"].map((f) => <option key={f} value={f}>{f}</option>)}
                 </select>
               </label>
             </div>
             <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Title
-              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13 }} />
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", fontSize: 13 }} />
             </label>
             <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Body
-              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={12} style={{ padding: "10px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13, fontFamily: "monospace", resize: "vertical" }} />
+              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={12} style={{ padding: "10px 12px", border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", fontSize: 13, fontFamily: "monospace", resize: "vertical" }} />
             </label>
             <label style={{ display: "grid", gap: 4, fontSize: 12 }}>Required variables (comma-separated)
-              <input value={draft.requiredVariables} onChange={(e) => setDraft({ ...draft, requiredVariables: e.target.value })} placeholder="name, code" style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: 8, fontSize: 13 }} />
+              <input value={draft.requiredVariables} onChange={(e) => setDraft({ ...draft, requiredVariables: e.target.value })} placeholder="name, code" style={{ padding: "8px 12px", border: "1px solid var(--theme-border)", borderRadius: "var(--theme-radius-card)", fontSize: 13 }} />
             </label>
             {actionError && <div role="alert" style={{ fontSize: 12, color: "var(--theme-danger)" }}>⚠️ {actionError}</div>}
             {actionNotice && <div style={{ fontSize: 12, color: "var(--theme-success)" }}>✅ {actionNotice}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button type="button" onClick={() => setEditing(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-              <button type="button" onClick={saveDraft} disabled={working} style={{ padding: "8px 16px", borderRadius: 8, border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: working ? "not-allowed" : "pointer" }}>{working ? "Saving…" : "Save draft"}</button>
+              <button type="button" onClick={() => setEditing(false)} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={saveDraft} disabled={working} style={{ padding: "8px 16px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-primary)", color: "var(--theme-text-inverse)", fontWeight: 700, cursor: working ? "not-allowed" : "pointer" }}>{working ? "Saving…" : "Save draft"}</button>
             </div>
           </div>
         ) : template ? (
@@ -273,14 +273,14 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink-700, var(--theme-text-secondary))" }}>
                   Subject: <span style={{ fontWeight: 500 }}>{template.subject || "—"}</span>
                 </div>
-                <div style={{ display: "inline-flex", background: "var(--theme-surface-muted)", borderRadius: "6px", padding: "2px" }}>
+                <div style={{ display: "inline-flex", background: "var(--theme-surface-muted)", borderRadius: "var(--theme-radius-card)", padding: "2px" }}>
                   <button
                     type="button"
                     onClick={() => setPreviewMode("rendered")}
                     style={{
                       border: 0,
                       padding: "4px 10px",
-                      borderRadius: "4px",
+                      borderRadius: "var(--theme-radius-card)",
                       fontSize: "11px",
                       fontWeight: 700,
                       cursor: "pointer",
@@ -297,7 +297,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                     style={{
                       border: 0,
                       padding: "4px 10px",
-                      borderRadius: "4px",
+                      borderRadius: "var(--theme-radius-card)",
                       fontSize: "11px",
                       fontWeight: 700,
                       cursor: "pointer",
@@ -314,7 +314,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
               <div
                 style={{
                   border: "1px solid var(--theme-border)",
-                  borderRadius: "10px",
+                  borderRadius: "var(--theme-radius-card)",
                   minHeight: "260px",
                   maxHeight: "380px",
                   overflowY: "auto",
@@ -359,7 +359,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                           width: "100%",
                           padding: "6px 10px",
                           border: "1px solid var(--theme-border)",
-                          borderRadius: "6px",
+                          borderRadius: "var(--theme-radius-card)",
                           fontSize: "12px",
                           outline: "none",
                         }}
@@ -385,7 +385,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={publishVersion}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "var(--theme-radius-card)", border: 0, background: "var(--theme-success)", color: "var(--theme-text-inverse)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       {working ? "Working…" : `Publish v${template.version}`}
                     </button>
@@ -395,7 +395,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={startEditing}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--theme-primary)", background: "transparent", color: "var(--theme-primary)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-primary)", background: "transparent", color: "var(--theme-primary)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       Edit draft
                     </button>
@@ -405,7 +405,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={createDraftVersion}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--theme-primary)", background: "transparent", color: "var(--theme-primary)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-primary)", background: "transparent", color: "var(--theme-primary)", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       {working ? "Working…" : "Create new draft version"}
                     </button>
@@ -415,7 +415,7 @@ export function TemplatePreviewModal({ isOpen, onClose, triggerKey, onChanged }:
                       type="button"
                       onClick={cloneToBrand}
                       disabled={working}
-                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--theme-border)", background: "transparent", color: "var(--ink-700, var(--theme-text-secondary))", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
+                      style={{ padding: "8px 12px", borderRadius: "var(--theme-radius-card)", border: "1px solid var(--theme-border)", background: "transparent", color: "var(--ink-700, var(--theme-text-secondary))", fontWeight: 700, fontSize: "12px", cursor: working ? "not-allowed" : "pointer" }}
                     >
                       {working ? "Working…" : "Clone to brand draft"}
                     </button>

@@ -54,7 +54,7 @@ function StatusChip({ status }: { status: string }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', padding: '3px 9px',
-      borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: '.04em',
+      borderRadius: "var(--theme-radius-card)", fontSize: 10, fontWeight: 800, letterSpacing: '.04em',
       color, background: `color-mix(in srgb,${color} 12%,transparent)`,
       border: `1px solid color-mix(in srgb,${color} 30%,var(--theme-border))`,
     }}>
@@ -183,7 +183,7 @@ export default function BrandMissionsPage() {
 
       {notice && (
         <div style={{
-          padding: '12px 16px', borderRadius: 10, marginBottom: 18, fontSize: 13,
+          padding: '12px 16px', borderRadius: "var(--theme-radius-card)", marginBottom: 18, fontSize: 13,
           background: 'var(--theme-surface-muted)', border: '1px solid var(--theme-border)',
         }}>
           {notice}
@@ -198,7 +198,7 @@ export default function BrandMissionsPage() {
           disabled={submitting}
           placeholder="e.g. Review brand comms SLA and flag overdue campaigns"
           style={{
-            flex: 1, padding: '11px 14px', borderRadius: 9, fontSize: 13,
+            flex: 1, padding: '11px 14px', borderRadius: "var(--theme-radius-card)", fontSize: 13,
             border: '1px solid var(--theme-border)', background: 'var(--theme-surface-muted)',
             color: 'var(--theme-text-primary)', outline: 'none',
           }}
@@ -210,7 +210,7 @@ export default function BrandMissionsPage() {
             marginLeft: 10,
             padding: '0 14px',
             height: 42,
-            borderRadius: 8,
+            borderRadius: "var(--theme-radius-card)",
             border: '1px solid var(--theme-border)',
             background: 'var(--theme-surface-muted)',
             color: 'var(--theme-text-primary)',
@@ -250,7 +250,7 @@ export default function BrandMissionsPage() {
                   <div style={{ fontSize: 11, color: 'var(--theme-text-muted)', marginTop: 3 }}>
                     {a.description}
                   </div>
-                  <pre style={{ maxHeight: 160, overflow: 'auto', marginTop: 8, padding: 8, borderRadius: 6, background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
+                  <pre style={{ maxHeight: 160, overflow: 'auto', marginTop: 8, padding: 8, borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
                     {JSON.stringify(a.staged_changes, null, 2)}
                   </pre>
                 </div>
@@ -368,7 +368,7 @@ export default function BrandMissionsPage() {
                                 stageTaskApproval(t.mission_id, t.task_id);
                               }}
                               style={{
-                                padding: '4px 8px', fontSize: 11, borderRadius: 4,
+                                padding: '4px 8px', fontSize: 11, borderRadius: "var(--theme-radius-card)",
                                 background: 'var(--theme-surface-raised)', color: 'var(--theme-text-primary)',
                                 border: '1px solid var(--theme-border)', cursor: 'pointer'
                               }}

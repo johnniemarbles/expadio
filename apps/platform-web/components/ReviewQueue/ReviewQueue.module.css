@@ -1,7 +1,7 @@
 .reviewList { padding: 4px 18px 8px; }
 .reviewItem { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .reviewItem:last-child { border-bottom: 0; }
-.reviewIcon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; color: var(--brand); background: var(--brand-soft); font-size: var(--text-11); font-weight: 800; }
+.reviewIcon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--theme-radius-card); color: var(--brand); background: var(--brand-soft); font-size: var(--text-11); font-weight: 800; }
 .reviewCopy strong, .reviewCopy span { display: block; }
 .reviewCopy strong { color: var(--ink-800); font-size: var(--text-12); line-height: 1.35; }
 .reviewCopy span { color: var(--ink-500); font-size: var(--text-11); margin-top: 4px; }

@@ -217,7 +217,7 @@ export default function PublicationsClient() {
 
   const selectedConfig = publishedConfigs.find((c) => c.configId === captureConfigId);
 
-  const inputStyle = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' as const };
+  const inputStyle = { padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' as const };
   const labelStyle = { display: 'grid' as const, gap: 4, fontSize: 12, fontWeight: 700 };
 
   return <>

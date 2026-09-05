@@ -25,7 +25,7 @@ export default async function BrainProvenancePage({ searchParams }: { searchPara
         </h2>
         
         {provenance.length > 0 ? (
-          <div style={{ background: 'var(--surface)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--line)' }}>
+          <div style={{ background: 'var(--surface)', padding: '2rem', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--line)' }}>
             <ProvenanceTimeline entries={provenance} />
           </div>
         ) : (

@@ -315,7 +315,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
                             style={{
                               fontSize: "10px",
                               padding: "2px 6px",
-                              borderRadius: "4px",
+                              borderRadius: "var(--theme-radius-card)",
                               fontWeight: 700,
                               background:
                                 rev.risk === "High"

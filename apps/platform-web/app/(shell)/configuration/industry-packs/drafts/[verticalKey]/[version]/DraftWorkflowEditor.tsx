@@ -48,7 +48,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   border: '1px solid var(--line, #cbd5e1)',
-  borderRadius: 8,
+  borderRadius: "var(--theme-radius-card)",
   fontSize: 13,
 };
 
@@ -321,7 +321,7 @@ export function DraftWorkflowEditor({
               <fieldset
                 key={concept.conceptKey}
                 disabled={saving}
-                style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}
+                style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: 12 }}
               >
                 <legend style={{ fontWeight: 700 }}>{concept.conceptKey}</legend>
                 <div style={{ color: '#64748b', fontSize: 12 }}>
@@ -355,7 +355,7 @@ export function DraftWorkflowEditor({
                     return (
                       <fieldset
                         key={labelIndex}
-                        style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 10 }}
+                        style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: 10 }}
                       >
                         <legend>Locale label {labelIndex + 1}</legend>
                         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -467,7 +467,7 @@ export function DraftWorkflowEditor({
 
       <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
         {state.stages.map((stage, index) => (
-          <fieldset key={stage.key} disabled={saving} style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}>
+          <fieldset key={stage.key} disabled={saving} style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: 12 }}>
             <legend style={{ fontWeight: 700 }}>{stage.key}</legend>
             <label>
               <span>Stage label</span>
@@ -555,7 +555,7 @@ export function DraftWorkflowEditor({
                 <fieldset
                   key={index}
                   disabled={saving}
-                  style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}
+                  style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: 12 }}
                 >
                   <legend style={{ fontWeight: 700 }}>Field {index + 1}</legend>
                   <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
@@ -670,7 +670,7 @@ export function DraftWorkflowEditor({
                 <fieldset
                   key={index}
                   disabled={saving}
-                  style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: 8, padding: 12 }}
+                  style={{ border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: 12 }}
                 >
                   <legend style={{ fontWeight: 700 }}>Rule {index + 1}</legend>
 

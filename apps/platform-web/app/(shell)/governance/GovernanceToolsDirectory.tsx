@@ -18,7 +18,7 @@ const TOOLS: { href: string; title: string; blurb: string }[] = [
 ];
 
 const card: React.CSSProperties = {
-  border: '1px solid var(--line, #e2e8f0)', borderRadius: 12, padding: '14px 16px',
+  border: '1px solid var(--line, #e2e8f0)', borderRadius: "var(--theme-radius-card)", padding: '14px 16px',
   background: 'var(--surface, #fff)', textDecoration: 'none', color: 'inherit', display: 'block',
 };
 

@@ -42,7 +42,7 @@
   margin: 0 0 22px;
   padding: 0;
   border: 1px solid var(--theme-border);
-  border-radius: 12px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
 }
 
@@ -99,7 +99,7 @@
 .card {
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
-  border-radius: 12px;
+  border-radius: var(--theme-radius-card);
   padding: 20px 22px;
   margin-bottom: 16px;
   transition: border-color var(--theme-motion-fast) var(--theme-easing), box-shadow var(--theme-motion-fast) var(--theme-easing), transform var(--theme-motion-fast) var(--theme-easing);
@@ -134,7 +134,7 @@
   text-align: left;
   padding: 14px 16px;
   border: 1.5px solid var(--theme-border);
-  border-radius: 10px;
+  border-radius: var(--theme-radius-card);
   background: var(--theme-surface);
   cursor: pointer;
   font: inherit;
@@ -181,7 +181,7 @@
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--theme-border);
-  border-radius: 7px;
+  border-radius: var(--theme-radius-card);
   font-size: 13px;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   background: var(--theme-surface);
@@ -202,7 +202,7 @@
 .primary {
   display: inline-block;
   padding: 9px 16px;
-  border-radius: 7px;
+  border-radius: var(--theme-radius-card);
   border: 1px solid var(--theme-primary);
   background: var(--theme-primary);
   color: var(--theme-text-inverse);
@@ -218,7 +218,7 @@
 .primary:focus-visible { outline: 2px solid var(--theme-text-primary); outline-offset: 2px; }
 
 /* ── probe feedback ───────────────────────────────────────────────────── */
-.probe { margin-top: 15px; border-radius: 9px; padding: 14px 16px; font-size: 12.5px; }
+.probe { margin-top: 15px; border-radius: var(--theme-radius-card); padding: 14px 16px; font-size: 12.5px; }
 .probeRunning { background: var(--theme-navigation-active); color: var(--theme-primary); }
 .probeTitle { display: flex; align-items: center; gap: 9px; font-weight: 640; margin-bottom: 8px; }
 .probe ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
@@ -242,7 +242,7 @@
 /* ── findings and fingerprint ─────────────────────────────────────────── */
 .findings { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 9px; }
 .findings li { display: grid; grid-template-columns: 18px 1fr; gap: 9px; font-size: 12.5px; line-height: 1.5; }
-.findings code { font-size: 11.5px; background: color-mix(in srgb,var(--theme-text-primary) 4.5%,transparent); padding: 1px 5px; border-radius: 4px; }
+.findings code { font-size: 11.5px; background: color-mix(in srgb,var(--theme-text-primary) 4.5%,transparent); padding: 1px 5px; border-radius: var(--theme-radius-card); }
 .tick { color: var(--theme-success); font-weight: 700; }
 .warn { color: var(--theme-warning); font-weight: 700; }
 
@@ -255,7 +255,7 @@
   padding: 12px 15px;
   background: var(--theme-surface);
   border: 1px solid color-mix(in srgb,var(--theme-success) 28%,transparent);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
 }
 
 .fpLabel {
@@ -284,7 +284,7 @@
   color: var(--theme-text-secondary);
   background: var(--theme-surface-muted);
   border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   padding: 12px 14px;
   margin-top: 16px;
   line-height: 1.6;
@@ -295,7 +295,7 @@
   border: 1px solid color-mix(in srgb,var(--theme-danger) 28%,transparent);
   border-left-width: 3px;
   color: var(--theme-danger);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-card);
   padding: 11px 14px;
   font-size: 12.5px;
   margin-bottom: 16px;

@@ -34,7 +34,7 @@ export default async function BrainHistoryPage({ searchParams }: { searchParams:
         </h2>
         
         {timelineItems.length > 0 ? (
-          <div style={{ background: 'var(--surface)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--line)' }}>
+          <div style={{ background: 'var(--surface)', padding: '2rem', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--line)' }}>
             <ActivityTimeline items={timelineItems} />
           </div>
         ) : (
