@@ -83,7 +83,7 @@
 .skeletonCell {
   height: 12px;
   border-radius: var(--theme-radius-card);
-  background: var(--theme-easing-linear)-gradient(
+  background: linear-gradient(
     90deg,
     var(--theme-surface-muted),
     var(--theme-navigation-active),

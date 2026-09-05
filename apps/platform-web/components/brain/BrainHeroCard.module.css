@@ -1,7 +1,7 @@
 .card {
   background:
     radial-gradient(circle at top right, color-mix(in srgb,var(--theme-primary) 14%,transparent), transparent 38%),
-    var(--theme-easing-linear)-gradient(145deg, var(--theme-surface-raised), var(--theme-surface));
+    linear-gradient(145deg, var(--theme-surface-raised), var(--theme-surface));
   border: 1px solid var(--theme-border);
   border-radius: var(--theme-radius-card);
   padding: 2rem;

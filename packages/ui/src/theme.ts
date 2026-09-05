@@ -183,7 +183,7 @@ export const EXPADIO_COMMAND_OBSIDIAN: ExpadioThemeDefinition = {
   schemaVersion: 1,
   key: 'expadio-command-obsidian',
   name: 'EXPADIO Command / Obsidian',
-  description: 'Deep operational surfaces with restrained cyan/violet telemetry accents.',
+  description: 'Deep operational surfaces with restrained Motion Yellow/violet telemetry accents.',
   light: OBSIDIAN_LIGHT,
   dark: OBSIDIAN_DARK,
   typography: {

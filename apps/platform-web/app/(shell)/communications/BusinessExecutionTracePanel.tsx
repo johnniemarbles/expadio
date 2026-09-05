@@ -44,11 +44,11 @@ interface BusinessExecutionTracePanelProps {
 }
 
 const KIND_TONE: Record<string, { fg: string; bg: string }> = {
-  DOMAIN_EVENT: { fg: "#1d4ed8", bg: "#dbeafe" },
-  DOMAIN_EVENT_OUTBOX: { fg: "#3730a3", bg: "#e0e7ff" },
-  GOVERNED_ACTION: { fg: "#7c2d12", bg: "#ffedd5" },
+  DOMAIN_EVENT: { fg: "var(--theme-primary)", bg: "color-mix(in srgb,var(--theme-primary) 12%,transparent)" },
+  DOMAIN_EVENT_OUTBOX: { fg: "var(--theme-secondary)", bg: "color-mix(in srgb,var(--theme-secondary) 12%,transparent)" },
+  GOVERNED_ACTION: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
   GOVERNED_ACTION_ATTEMPT: { fg: "var(--theme-warning)", bg: "color-mix(in srgb,var(--theme-warning) 12%,transparent)" },
-  SCHEDULED_ACTION: { fg: "#6d28d9", bg: "#ede9fe" },
+  SCHEDULED_ACTION: { fg: "var(--theme-secondary)", bg: "color-mix(in srgb,var(--theme-secondary) 12%,transparent)" },
   COMMUNICATION_DELIVERY: { fg: "var(--theme-success)", bg: "color-mix(in srgb,var(--theme-success) 12%,transparent)" },
   COMMUNICATION_PROVIDER_ATTEMPT: { fg: "var(--theme-primary)", bg: "color-mix(in srgb,var(--theme-primary) 12%,transparent)" },
   OPERATIONAL_TASK: { fg: "var(--theme-text-secondary)", bg: "var(--theme-surface-muted)" },

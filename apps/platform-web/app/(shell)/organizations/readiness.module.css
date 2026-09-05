@@ -60,7 +60,7 @@
 .progressFill {
   height: 100%;
   border-radius: inherit;
-  background: var(--theme-easing-linear)-gradient(90deg, var(--theme-primary), var(--theme-secondary));
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-secondary));
 }
 .progressMeta {
   margin-top: 7px;

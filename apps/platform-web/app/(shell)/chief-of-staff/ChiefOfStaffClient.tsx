@@ -246,8 +246,8 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
             <div style={{ padding: 8, borderRadius: 6, background: 'rgba(168,140,248,0.05)', borderLeft: '3px solid #a88cf8' }}>
               <span style={{ color: '#a88cf8', fontWeight: 'bold' }}>[COPYWRITER]</span> Drafted localized outreach sequence respecting Arthur Wishart 14-day disclosure.
             </div>
-            <div style={{ padding: 8, borderRadius: 6, background: 'rgba(59,130,246,0.05)', borderLeft: '3px solid #3B82F6' }}>
-              <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>[CRITIC]</span> Verified cooling-off compliance. Consensus score: <strong style={{ color: '#22C55E' }}>9.6/10</strong>.
+            <div style={{ padding: 8, borderRadius: 6, background: 'color-mix(in srgb, var(--theme-primary) 8%, transparent)', borderLeft: '3px solid var(--theme-primary)' }}>
+              <span style={{ color: 'var(--theme-primary)', fontWeight: 'bold' }}>[CRITIC]</span> Verified cooling-off compliance. Consensus score: <strong style={{ color: '#22C55E' }}>9.6/10</strong>.
             </div>
           </div>
         </section>

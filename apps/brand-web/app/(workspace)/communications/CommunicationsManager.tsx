@@ -394,7 +394,7 @@ export function CommunicationsManager() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
         <div style={{ padding: 16, borderRadius: 10, background: '#121514', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', color: '#3B82F6', fontWeight: 'bold' }}>⚡ Transactional Plane</span>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', color: 'var(--theme-primary)', fontWeight: 'bold' }}>⚡ Transactional Plane</span>
             <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#22C55E', background: 'rgba(34,197,94,0.1)', padding: '2px 8px', borderRadius: 4 }}>p95 142ms (&lt;380ms)</span>
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--theme-text-primary)', marginTop: 6 }}>OTP &amp; Security Verification Dispatch</div>
