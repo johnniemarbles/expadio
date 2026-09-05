@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { EXPADIO_COMMAND_OBSIDIAN, themeVariableMap, type ThemeMode } from '../theme';
+import type { ThemeMode } from '../theme';
 import styles from './ThemeModeControl.module.css';
 
 const COOKIE = 'expadio-theme-mode';
@@ -15,18 +15,9 @@ function validMode(value: unknown): value is ThemeMode {
   return value === 'light' || value === 'dark' || value === 'system';
 }
 
-function apply(next: ThemeMode) {
-  document.documentElement.dataset.theme = next;
-  document.cookie = `${COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
-
-  const effectiveMode = next === 'system'
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : next;
-
-  const vars = themeVariableMap(EXPADIO_COMMAND_OBSIDIAN, effectiveMode);
-  for (const [key, value] of Object.entries(vars)) {
-    document.documentElement.style.setProperty(key, value);
-  }
+function apply(next:ThemeMode){
+  document.documentElement.dataset.theme=next;
+  document.cookie=`${COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 
 export function ThemeModeControl({ persistenceUrl='/api/appearance/mode' }:{ persistenceUrl?:string }) {
