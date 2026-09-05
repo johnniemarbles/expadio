@@ -406,6 +406,9 @@ importers:
       '@expadio/domain-events':
         specifier: workspace:*
         version: link:../domain-events
+      '@expadio/entity':
+        specifier: workspace:*
+        version: link:../entity
       '@expadio/governed-actions':
         specifier: workspace:*
         version: link:../governed-actions
