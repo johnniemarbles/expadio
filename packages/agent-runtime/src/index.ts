@@ -287,3 +287,5 @@ export * from './correction-changeset.ts';
 export * from './chief-of-staff-types.ts';
 export * from './governed-task-executor.ts';
 export * from './chief-of-staff-orchestrator.ts';
+export * from './committees/editorial-committee.ts';
+export * from './committees/editorial-committee-tool.ts';
