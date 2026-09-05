@@ -81,4 +81,13 @@ export interface ChiefOfStaffPersistencePort {
     readonly description?: string;
     readonly stagedChanges?: Record<string, unknown>;
   }): Promise<AgentApprovalRequest>;
+
+  listMissionTasks(missionId: string, tenantId: string): Promise<readonly AgentTask[]>;
+
+  resolveApproval(input: {
+    readonly approvalId: string;
+    readonly missionId: string;
+    readonly tenantId: string;
+    readonly approved: boolean;
+  }): Promise<AgentTask | null>;
 }
