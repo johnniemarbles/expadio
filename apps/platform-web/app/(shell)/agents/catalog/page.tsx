@@ -1,9 +1,10 @@
-import { fetchApi, isDenied, DeniedState } from '../../../../lib/server-fetch';
+import { fetchApi } from '../../../../lib/live-adapter';
+import { DeniedState } from '@expadio/ui';
+import { isDenied } from '@expadio/ui/contracts';
+import { type RouteSearchParams } from '../../../../lib/request-context';
 import { CatalogClient } from './CatalogClient';
 
 export const dynamic = 'force-dynamic';
-
-type RouteSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function AgentCatalogPage({ searchParams: _sp }: { searchParams: RouteSearchParams }) {
   const data = await fetchApi<any[]>('/api/agents/catalog');
