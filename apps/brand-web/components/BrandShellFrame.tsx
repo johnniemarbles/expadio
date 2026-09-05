@@ -45,7 +45,7 @@ export function BrandShellFrame({
       <nav className={styles.globalNav}>
         <p className={styles.navGroup}>Workspace</p>
         <Link className={pathname==='/'?styles.navActive:''} href="/">Home</Link>
-        <Link className={pathname==='/brain'||pathname.startsWith('/brain/')?styles.navActive:''} href="/brain"><span className={styles.navIcon}>BB</span>Brand Brain</Link>
+        <Link className={pathname==='/brain'?styles.navActive:''} href="/brain"><span className={styles.navIcon}>BB</span>Brand Brain</Link>
         <Link className={pathname==='/brain/missions'?styles.navActive:''} href="/brain/missions"><span className={styles.navIcon}>AM</span>Agent missions</Link>
         <Link
           className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
