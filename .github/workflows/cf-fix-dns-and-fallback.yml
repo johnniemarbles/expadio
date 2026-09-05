@@ -20,7 +20,7 @@ jobs:
       - name: Mask token
         run: echo "::add-mask::${{ inputs.cf_token }}"
 
-      - name: Replace AAAA 100:: with proxied CNAME to Railway
+      - name: "Replace AAAA 100:: with proxied CNAME to Railway"
         env:
           CF_TOKEN: ${{ inputs.cf_token }}
         run: |
