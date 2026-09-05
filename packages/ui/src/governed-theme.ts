@@ -343,7 +343,7 @@ export function createEffectiveThemeService(input: {
 function declarationBlock(values: Readonly<Record<string,string>>): string {
   return Object.entries(values)
     .map(([key,value]) => {
-      if (!/^--theme-[a-z0-9-]+$/i.test(key) || !safeCssValue(value)) {
+      if (!/^--(theme-)?[a-z0-9-]+$/i.test(key) || !safeCssValue(value)) {
         throw new Error('THEME_CSS_VALUE_UNSAFE');
       }
       return `${key}:${value}`;
