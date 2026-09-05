@@ -1,17 +1,14 @@
 /* ─────────────────────────────────────────────────────────────────────────────
  * Expadio Design Tokens — Elevation / Shadow
- *
- * --tok-shadow-* from expadioTokens.shadow (tokens.ts).
- * Legacy --shadow-sm/md/lg aliases preserved.
+ * Motion UI: deep, high-contrast shadows + yellow glow on primary.
  * ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Canonical token names */
-  --tok-shadow-sm:           0 1px 2px rgba(0, 0, 0, 0.4);
-  --tok-shadow-md:           0 4px 12px rgba(0, 0, 0, 0.45);
-  --tok-shadow-lg:           0 8px 24px rgba(0, 0, 0, 0.5);
-  --tok-shadow-glow-primary: 0 0 20px rgba(34, 211, 238, 0.25);
+  --tok-shadow-sm:           0 1px 2px rgba(0, 0, 0, 0.6);
+  --tok-shadow-md:           0 4px 12px rgba(0, 0, 0, 0.5);
+  --tok-shadow-lg:           0 8px 24px rgba(0, 0, 0, 0.55);
+  --tok-shadow-glow-primary: 0 0 24px rgba(250, 204, 21, 0.25);
 
-  /* Semantic aliases used by components */
+  /* Semantic aliases */
   --theme-shadow-subtle:   var(--tok-shadow-sm);
   --theme-shadow-card:     var(--tok-shadow-md);
   --theme-shadow-elevated: var(--tok-shadow-lg);
