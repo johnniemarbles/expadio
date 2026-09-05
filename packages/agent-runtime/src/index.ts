@@ -287,6 +287,8 @@ export * from './correction-changeset.ts';
 export * from './chief-of-staff-types.ts';
 export * from './governed-task-executor.ts';
 export * from './chief-of-staff-orchestrator.ts';
+export * from './notifications/telegram-webhook-handler.ts';
+export * from './notifications/telegram-approval-notifier.ts';
 export * from './committees/editorial-committee.ts';
 export * from './committees/editorial-committee-tool.ts';
 export * from './committees/voice-callback-tool.ts';

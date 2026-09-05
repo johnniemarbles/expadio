@@ -43,6 +43,7 @@
     "./closure": "./src/closure.ts",
     "./agent-tenant-memory": "./src/agent-tenant-memory.ts",
     "./editorial-committee": "./src/editorial-committee.ts",
+    "./telegram-links": "./src/telegram-links.ts",
     "./voice-committee": "./src/voice-committee.ts",
     "./revenue-committee": "./src/revenue-committee.ts",
     "./domain-events": "./src/domain-events.ts",
