@@ -40,6 +40,7 @@
     "./industry-pack-runtime": "./src/industry-pack-runtime.ts",
     "./entity-relationship": "./src/entity-relationship.ts",
     "./entity-governance": "./src/entity-governance.ts",
+    "./closure": "./src/closure.ts",
     "./agent-tenant-memory": "./src/agent-tenant-memory.ts",
     "./editorial-committee": "./src/editorial-committee.ts",
     "./domain-events": "./src/domain-events.ts",
