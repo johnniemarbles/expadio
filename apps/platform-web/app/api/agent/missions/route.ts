@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     const context = await resolveRequestContext(request);
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const intent = typeof body.intent === 'string' ? body.intent.trim() : '';
+    const taskPlans = Array.isArray(body.taskPlans) ? (body.taskPlans as any[]) : undefined;
 
     if (!intent) {
       return NextResponse.json({ error: 'INTENT_REQUIRED' }, { status: 400 });
@@ -98,8 +99,32 @@ export async function POST(request: Request) {
       },
     };
 
+        const createStubTool = (toolKey: string): AgentToolAdapter => ({
+      toolKey,
+      effect: 'OBSERVE',
+      async invoke(input) {
+        return {
+          executionId: input.executionId,
+          tenantId: input.tenantId,
+          toolKey,
+          kind: 'OBSERVATION',
+          outputReference: `artifact:stub:${toolKey}:${input.tenantId}:${input.executionId}`,
+          sourceReferences: [],
+          producedAt: new Date().toISOString(),
+        };
+      },
+    });
+
+    const registeredTools = [
+      contextObserveTool,
+      createStubTool('content.editorial.debate'),
+      createStubTool('revenue.lead.osint'),
+      createStubTool('revenue.outreach.draft_sequence'),
+      createStubTool('voice.callback.prepare'),
+    ];
+
     const orchestrator = new ChiefOfStaffOrchestrator({
-      executorOptions: { authorizationPort, registeredTools: [contextObserveTool] },
+      executorOptions: { authorizationPort, registeredTools },
     });
 
     const mission = await withTenantTransaction(context, async (client) => {
@@ -110,6 +135,7 @@ export async function POST(request: Request) {
           tenantId: context.tenantId,
           userSubjectId: context.subjectId,
           intent,
+          taskPlans,
         },
         () => {},
       );

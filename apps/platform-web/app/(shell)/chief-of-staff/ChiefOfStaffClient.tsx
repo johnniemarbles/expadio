@@ -59,6 +59,7 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
     initialData ?? { missions: [], tasks: [], approvals: [] }
   );
   const [intent, setIntent] = useState('');
+  const [selectedTool, setSelectedTool] = useState('ops-admin-1');
   const [submitting, setSubmitting] = useState(false);
   const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -92,7 +93,15 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
       const res = await fetch('/api/agent/missions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent: intent.trim() }),
+        body: JSON.stringify({
+          intent: intent.trim(),
+          taskPlans: selectedTool !== 'ops-admin-1' ? [{
+            assignedAgentId: 'agent-stub',
+            title: `Execute ${selectedTool}`,
+            description: intent.trim(),
+            actionPayload: { toolKey: selectedTool }
+          }] : undefined
+        }),
       });
 
       const json = await res.json();
@@ -162,6 +171,19 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
             onChange={(e) => setIntent(e.target.value)}
             disabled={submitting}
           />
+          <select
+            value={selectedTool}
+            onChange={(e) => setSelectedTool(e.target.value)}
+            className={styles.intentInput}
+            style={{ marginTop: '10px', display: 'block', width: '100%', maxWidth: '300px' }}
+            disabled={submitting}
+          >
+            <option value="ops-admin-1">Default (Ops Admin)</option>
+            <option value="content.editorial.debate">Editorial Debate (Phase 3)</option>
+            <option value="revenue.lead.osint">Lead OSINT (Phase 5)</option>
+            <option value="revenue.outreach.draft_sequence">Outreach Draft (Phase 5)</option>
+            <option value="voice.callback.prepare">Voice Callback (Phase 6)</option>
+          </select>
           <button type="submit" className={styles.intentBtn} disabled={submitting || !intent.trim()}>
             {submitting ? 'Initiating...' : 'Dispatch Mission'}
           </button>

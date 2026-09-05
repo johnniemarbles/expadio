@@ -66,10 +66,29 @@ function StatusChip({ status }: { status: string }) {
 export default function BrandMissionsPage() {
   const [data, setData] = useState<MissionsData>({ missions: [], tasks: [], approvals: [] });
   const [intent, setIntent] = useState('');
+  const [selectedTool, setSelectedTool] = useState('ops-admin-1');
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
+  const [stagingTaskId, setStagingTaskId] = useState<string | null>(null);
+  const stageTaskApproval = async (missionId: string, taskId: string) => {
+    setStagingTaskId(taskId);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/brain/missions/${missionId}/tasks/${taskId}/stage-approval`, { method: 'POST' });
+      if (res.ok) {
+        setNotice('Approval successfully staged.');
+        await refresh();
+      } else {
+        setNotice(`Failed to stage approval: ${(await res.json()).error}`);
+      }
+    } catch (err) {
+      setNotice(String(err));
+    } finally {
+      setStagingTaskId(null);
+    }
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -98,7 +117,15 @@ export default function BrandMissionsPage() {
       const res = await fetch('/api/brain/missions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent: intent.trim() }),
+        body: JSON.stringify({
+          intent: intent.trim(),
+          taskPlans: selectedTool !== 'ops-admin-1' ? [{
+            assignedAgentId: 'agent-stub',
+            title: `Execute ${selectedTool}`,
+            description: intent.trim(),
+            actionPayload: { toolKey: selectedTool }
+          }] : undefined
+        }),
       });
       const json = await res.json();
       if (res.ok) {
@@ -176,6 +203,27 @@ export default function BrandMissionsPage() {
             color: 'var(--theme-text-primary)', outline: 'none',
           }}
         />
+        <select
+          value={selectedTool}
+          onChange={(e) => setSelectedTool(e.target.value)}
+          style={{
+            marginLeft: 10,
+            padding: '0 14px',
+            height: 42,
+            borderRadius: 8,
+            border: '1px solid var(--theme-border)',
+            background: 'var(--theme-surface-muted)',
+            color: 'var(--theme-text-primary)',
+            outline: 'none',
+          }}
+          disabled={submitting}
+        >
+          <option value="ops-admin-1">Default (Ops Admin)</option>
+          <option value="content.editorial.debate">Editorial Debate (Phase 3)</option>
+          <option value="revenue.lead.osint">Lead OSINT (Phase 5)</option>
+          <option value="revenue.outreach.draft_sequence">Outreach Draft (Phase 5)</option>
+          <option value="voice.callback.prepare">Voice Callback (Phase 6)</option>
+        </select>
         <button
           type="submit"
           disabled={submitting || !intent.trim()}
@@ -308,7 +356,28 @@ export default function BrandMissionsPage() {
                       <td style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 11 }}>
                         {t.assigned_agent_id}
                       </td>
-                      <td><StatusChip status={t.status} /></td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <StatusChip status={t.status} />
+                          {t.status === 'COMPLETED' && (
+                            <button
+                              type="button"
+                              disabled={stagingTaskId === t.task_id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                stageTaskApproval(t.mission_id, t.task_id);
+                              }}
+                              style={{
+                                padding: '4px 8px', fontSize: 11, borderRadius: 4,
+                                background: 'var(--theme-surface-raised)', color: 'var(--theme-text-primary)',
+                                border: '1px solid var(--theme-border)', cursor: 'pointer'
+                              }}
+                            >
+                              {stagingTaskId === t.task_id ? 'Staging...' : 'Stage for Approval'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
