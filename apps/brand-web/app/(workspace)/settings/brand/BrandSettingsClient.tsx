@@ -45,6 +45,10 @@ export default function BrandSettingsClient({
   const [cfConnectorAvailable, setCfConnectorAvailable] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [verifyResult, setVerifyResult] = useState<{ verified: boolean; message?: string } | null>(null);
+  const [telegramUserIdInput, setTelegramUserIdInput] = useState('');
+  const [currentTelegramUserId, setCurrentTelegramUserId] = useState<number | null>(null);
+  const [telegramLinking, setTelegramLinking] = useState(false);
+  const [telegramNotice, setTelegramNotice] = useState<Notice>(null);
 
   const cleanDomain = domain.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
   const platformUrl = slug.trim() ? `https://${slug.trim()}.${PLATFORM_DOMAIN}/enquire` : null;
@@ -52,6 +56,18 @@ export default function BrandSettingsClient({
 
   useEffect(() => {
     void checkCloudflareConnector().then(setCfConnectorAvailable);
+    void (async () => {
+      try {
+        const res = await fetch('/api/telegram/link', { cache: 'no-store' });
+        const body = await readJson(res);
+        if (res.ok && typeof body.telegramUserId === 'number') {
+          setCurrentTelegramUserId(body.telegramUserId);
+          setTelegramUserIdInput(String(body.telegramUserId));
+        }
+      } catch {
+        /* non-fatal */
+      }
+    })();
   }, []);
 
   async function save() {
@@ -288,34 +304,129 @@ export default function BrandSettingsClient({
       </div>
     </section>
 
-        {/* ── Telegram Linking ───────────────────────────────────────── */}
+    {/* ── Telegram Linking ───────────────────────────────────────── */}
     <section className={styles.panel}>
       <div className={styles.panelHead}>
         <h2>Telegram linking</h2>
+        {currentTelegramUserId ? (
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'green', letterSpacing: '0.04em' }}>
+            LINKED (ID: {currentTelegramUserId})
+          </span>
+        ) : (
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
+            NOT LINKED
+          </span>
+        )}
       </div>
       <div className={styles.panelBody} style={{ display: 'grid', gap: 16 }}>
         <p style={{ fontSize: 13, color: 'var(--theme-text-muted)', margin: 0 }}>
-          Link your Telegram account to receive approval requests directly on your device.
+          Link your numeric Telegram User ID to receive approval requests and interactive action cards directly on your device.
         </p>
-        <button
-          onClick={async () => {
-            try {
-              const res = await fetch('/api/telegram/link', { method: 'POST' });
-              if (res.ok) {
-                alert('Successfully linked Telegram.');
-              } else {
-                alert('Failed to link Telegram: ' + (await res.json()).error);
+
+        {telegramNotice ? (
+          <div className={styles.notice} style={{ marginTop: 0 }}>
+            <strong>{telegramNotice.kind === 'success' ? 'Success' : 'Error'}</strong>
+            <p>{telegramNotice.text}</p>
+          </div>
+        ) : null}
+
+        <label style={{ fontSize: 12, fontWeight: 700, display: 'grid', gap: 4, maxWidth: 400 }}>
+          Telegram User ID
+          <span style={{ fontWeight: 400, color: 'var(--theme-text-muted)', fontSize: 11 }}>
+            Find your numeric ID by messaging <code>@userinfobot</code> in Telegram.
+          </span>
+          <input
+            value={telegramUserIdInput}
+            onChange={(e) => setTelegramUserIdInput(e.target.value.replace(/[^\d]/g, ''))}
+            placeholder="e.g. 123456789"
+            disabled={telegramLinking || saving}
+            style={{
+              padding: '8px 10px', borderRadius: 8,
+              border: '1px solid var(--theme-border)',
+              background: 'var(--theme-surface)',
+              color: 'var(--theme-text-primary)', fontSize: 13, fontFamily: 'monospace',
+            }}
+          />
+        </label>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={async () => {
+              const trimmed = telegramUserIdInput.trim();
+              if (!trimmed || !/^\d+$/.test(trimmed)) {
+                setTelegramNotice({ kind: 'error', text: 'Please enter a valid numeric Telegram User ID.' });
+                return;
               }
-            } catch (err) {
-              alert('Error linking Telegram: ' + err);
-            }
-          }}
-          disabled={saving}
-          className={styles.secondaryButton}
-          style={{ width: 'fit-content' }}
-        >
-          Link Telegram Account
-        </button>
+              setTelegramLinking(true);
+              setTelegramNotice(null);
+              try {
+                const res = await fetch('/api/telegram/link', {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({ telegramUserId: parseInt(trimmed, 10) }),
+                });
+                const body = await readJson(res);
+                if (!res.ok) {
+                  setTelegramNotice({
+                    kind: 'error',
+                    text: typeof body.error === 'string' ? body.error : 'Failed to link Telegram account.',
+                  });
+                  return;
+                }
+                const linkedId = typeof body.telegramUserId === 'number' ? body.telegramUserId : parseInt(trimmed, 10);
+                setCurrentTelegramUserId(linkedId);
+                setTelegramNotice({ kind: 'success', text: 'Telegram account successfully linked.' });
+              } catch (err) {
+                setTelegramNotice({
+                  kind: 'error',
+                  text: 'Error linking Telegram: ' + (err instanceof Error ? err.message : String(err)),
+                });
+              } finally {
+                setTelegramLinking(false);
+              }
+            }}
+            disabled={telegramLinking || saving || !telegramUserIdInput.trim()}
+            className={styles.secondaryButton}
+            style={{ width: 'fit-content' }}
+          >
+            {telegramLinking ? 'Saving…' : currentTelegramUserId ? 'Update Telegram Link' : 'Link Telegram Account'}
+          </button>
+
+          {currentTelegramUserId ? (
+            <button
+              onClick={async () => {
+                setTelegramLinking(true);
+                setTelegramNotice(null);
+                try {
+                  const res = await fetch('/api/telegram/link', { method: 'DELETE' });
+                  const body = await readJson(res);
+                  if (!res.ok) {
+                    setTelegramNotice({
+                      kind: 'error',
+                      text: typeof body.error === 'string' ? body.error : 'Failed to unlink Telegram account.',
+                    });
+                    return;
+                  }
+                  setCurrentTelegramUserId(null);
+                  setTelegramUserIdInput('');
+                  setTelegramNotice({ kind: 'success', text: 'Telegram account unlinked.' });
+                } catch (err) {
+                  setTelegramNotice({
+                    kind: 'error',
+                    text: 'Error unlinking Telegram: ' + (err instanceof Error ? err.message : String(err)),
+                  });
+                } finally {
+                  setTelegramLinking(false);
+                }
+              }}
+              disabled={telegramLinking || saving}
+              className={styles.secondaryButton}
+              style={{ width: 'fit-content', color: 'var(--theme-danger, #e53e3e)' }}
+            >
+              Unlink
+            </button>
+          ) : null}
+        </div>
       </div>
     </section>
 
