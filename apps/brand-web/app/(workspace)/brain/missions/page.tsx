@@ -29,6 +29,7 @@ interface ApprovalRequest {
   task_id: string;
   title: string;
   description: string;
+  staged_changes: Record<string, unknown>;
   status: string;
   created_at: string;
 }
@@ -68,6 +69,7 @@ export default function BrandMissionsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
+  const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -114,14 +116,26 @@ export default function BrandMissionsPage() {
   };
 
   const resolveApproval = async (missionId: string, approvalId: string, approved: boolean) => {
-    const res = await fetch(`/api/agent/missions/${missionId}/approve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approvalId, approved }),
-    });
-    if (res.ok) {
-      setNotice(`Approval ${approved ? 'approved' : 'rejected'}.`);
+    if (resolvingApprovalId) return;
+    setResolvingApprovalId(approvalId);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/brain/missions/${missionId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approvalId, approved }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice(`Unable to resolve approval: ${body.error ?? 'Unknown error'}.`);
+        return;
+      }
+      setNotice(`Approval ${approved ? 'approved' : 'rejected'}; mission is now ${body.status}.`);
       await refresh();
+    } catch (err) {
+      setNotice(`Unable to resolve approval: ${err instanceof Error ? err.message : 'Network error'}.`);
+    } finally {
+      setResolvingApprovalId(null);
     }
   };
 
@@ -188,18 +202,25 @@ export default function BrandMissionsPage() {
                   <div style={{ fontSize: 11, color: 'var(--theme-text-muted)', marginTop: 3 }}>
                     {a.description}
                   </div>
+                  <pre style={{ maxHeight: 160, overflow: 'auto', marginTop: 8, padding: 8, borderRadius: 6, background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
+                    {JSON.stringify(a.staged_changes, null, 2)}
+                  </pre>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button
+                    type="button"
                     className={styles.button}
                     style={{ fontSize: 12, padding: '7px 12px', background: 'var(--theme-success)' }}
+                    disabled={resolvingApprovalId !== null}
                     onClick={() => resolveApproval(a.mission_id, a.approval_id, true)}
                   >
-                    Approve
+                    {resolvingApprovalId === a.approval_id ? 'Saving…' : 'Approve'}
                   </button>
                   <button
+                    type="button"
                     className={styles.secondaryButton}
                     style={{ fontSize: 12, padding: '7px 12px', color: 'var(--theme-danger)', borderColor: 'var(--theme-danger)' }}
+                    disabled={resolvingApprovalId !== null}
                     onClick={() => resolveApproval(a.mission_id, a.approval_id, false)}
                   >
                     Reject
