@@ -48,6 +48,12 @@ export interface ChiefOfStaffPersistencePort {
     readonly intent: string;
   }): Promise<AgentMission>;
 
+  updateMissionStatus(
+    missionId: string,
+    tenantId: string,
+    status: AgentMission['status'],
+  ): Promise<void>;
+
   createTask(input: {
     readonly missionId: string;
     readonly tenantId: string;
@@ -59,6 +65,14 @@ export interface ChiefOfStaffPersistencePort {
     readonly requiresApproval?: boolean;
   }): Promise<AgentTask>;
 
+  updateTaskStatus(
+    taskId: string,
+    tenantId: string,
+    status: AgentTask['status'],
+    outputArtifact?: Record<string, unknown> | null,
+    error?: string | null,
+  ): Promise<void>;
+
   createApprovalRequest(input: {
     readonly missionId: string;
     readonly taskId: string;
@@ -67,4 +81,13 @@ export interface ChiefOfStaffPersistencePort {
     readonly description?: string;
     readonly stagedChanges?: Record<string, unknown>;
   }): Promise<AgentApprovalRequest>;
+
+  listMissionTasks(missionId: string, tenantId: string): Promise<readonly AgentTask[]>;
+
+  resolveApproval(input: {
+    readonly approvalId: string;
+    readonly missionId: string;
+    readonly tenantId: string;
+    readonly approved: boolean;
+  }): Promise<AgentTask | null>;
 }
