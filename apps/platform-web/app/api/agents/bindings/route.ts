@@ -14,12 +14,13 @@ export async function GET(request: Request) {
     );
 
     const result = await dbPool.query(
-      `SELECT b.binding_id, c.capability_key, b.mode as mapped_to_resource, COALESCE(s.state, 'NOT_CONFIGURED') as status, b.created_at
-       FROM platform.tenant_capability_bindings b
-       JOIN platform.capabilities c ON b.capability_id = c.capability_id
-       LEFT JOIN platform.capability_state s ON b.binding_id = s.binding_id
-       WHERE b.tenant_id = $1
-       ORDER BY b.created_at DESC`,
+      `SELECT b.binding_id, c.capability_key, c.display_name, c.department, c.description,
+              b.mode as mapped_to_resource, COALESCE(s.state, 'NOT_CONFIGURED') as status, b.created_at
+         FROM platform.tenant_capability_bindings b
+         JOIN platform.capabilities c ON b.capability_id = c.capability_id
+         LEFT JOIN platform.capability_state s ON b.binding_id = s.binding_id
+        WHERE b.tenant_id = $1
+        ORDER BY c.department, c.display_name`,
       [effectiveContext.tenantId]
     );
     
@@ -85,9 +86,18 @@ export async function PATCH(request: Request) {
     if (!state) return NextResponse.json({ error: 'action must be activate or suspend' }, { status: 400 });
 
     await dbPool.query(
-      `INSERT INTO platform.capability_state (binding_id, state, updated_at)
-       SELECT $1, $2, NOW() FROM platform.tenant_capability_bindings WHERE binding_id = $1 AND tenant_id = $3
-       ON CONFLICT (binding_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
+      `INSERT INTO platform.capability_state
+         (binding_id, tenant_id, state, input_hash, version, resolved_at)
+       SELECT $1, b.tenant_id, $2,
+              encode(digest($1::text || $2, 'sha256'), 'hex'),
+              1, NOW()
+         FROM platform.tenant_capability_bindings b
+        WHERE b.binding_id = $1 AND b.tenant_id = $3
+       ON CONFLICT (binding_id) DO UPDATE SET
+         state       = EXCLUDED.state,
+         input_hash  = encode(digest($1::text || $2, 'sha256'), 'hex'),
+         version     = platform.capability_state.version + 1,
+         resolved_at = NOW()`,
       [binding_id, state, effectiveContext.tenantId]
     );
 
