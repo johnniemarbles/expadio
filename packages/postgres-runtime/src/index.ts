@@ -250,3 +250,7 @@ export * from './enterprise-onboarding.ts';
 export * from './enterprise-commercial.ts';
 
 export * from './chief-of-staff.ts';
+export * from './editorial-committee.ts';
+export * from './revenue-committee.ts';
+export * from './voice-committee.ts';
+export * from './voice-transport.ts';
