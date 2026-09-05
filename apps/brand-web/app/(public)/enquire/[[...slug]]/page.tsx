@@ -79,6 +79,18 @@ export default async function EnquiryPage(
   // slugParts is undefined for /enquire, ['su'] for /enquire/su, etc.
   const offeringSlug = slugParts?.[0] ?? null;
 
+  // Diagnostic: log all headers to find which one carries the original custom domain
+  const diagHeaders: Record<string, string> = {};
+  for (const key of ['host', 'x-forwarded-host', 'x-forwarded-for', 'x-real-ip',
+    'cf-ray', 'cf-connecting-ip', 'cf-visitor', 'cf-ipcountry',
+    'x-original-host', 'x-custom-host', 'forwarded', 'via', 'origin',
+    'referer', 'x-railway-request-id',
+  ]) {
+    const v = reqHeaders.get(key);
+    if (v) diagHeaders[key] = v;
+  }
+  console.error('[enquire] headers:', JSON.stringify(diagHeaders));
+
   const org = await resolveOrg(hostname);
   if (!org) {
     console.error('[enquire] org not found for hostname:', hostname);
