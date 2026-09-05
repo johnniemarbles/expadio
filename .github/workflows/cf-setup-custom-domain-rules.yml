@@ -28,7 +28,7 @@ jobs:
           # Note: the 'host' header cannot be set here (CF error 20087 - protected header).
           # Host rewriting is handled by the expadio-custom-hostname-proxy Worker instead.
           transform_rule = {
-              'description': 'expadio: set X-Forwarded-Host for custom domain traffic',
+              'description': 'expadio: set X-Original-Host for custom domain traffic',
               'expression': 'not ends_with(http.host, \".expadio.com\")',
               'action': 'rewrite',
               'action_parameters': {
@@ -39,6 +39,10 @@ jobs:
                   },
                   'headers': {
                       'X-Forwarded-Host': {
+                          'operation': 'set',
+                          'expression': 'http.host'
+                      },
+                      'X-Original-Host': {
                           'operation': 'set',
                           'expression': 'http.host'
                       }
