@@ -17,7 +17,7 @@ type AccountCandidate = {
   city: string | null;
 };
 
-const INP: React.CSSProperties = { padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' };
+const INP: React.CSSProperties = { padding: '8px 10px', borderRadius: "var(--theme-radius-control)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' };
 const INP_ERR: React.CSSProperties = { ...INP, borderColor: 'crimson' };
 const SEL: React.CSSProperties = { ...INP };
 function inp(err?: string): React.CSSProperties { return err ? INP_ERR : INP; }

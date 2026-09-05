@@ -105,7 +105,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         <td>{lead.enquiryInterestType ?? '—'}</td>
         <td><span className={styles.pill}>{lead.stage}</span></td>
         <td>{lead.amountMinorUnits == null ? '—' : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}</td>
-        <td><form action={updateStageAction} style={{display:'flex',gap:6,flexWrap:'wrap'}}><input type="hidden" name="leadId" value={lead.leadId}/><select name="stage" defaultValue={lead.stage}>{BRAND_LEAD_STAGES.map((stage) => <option value={stage} key={stage}>{stage}</option>)}</select><button type="submit">Update</button></form>{lead.stage !== 'LOST' && lead.stage !== 'WON' ? <form action={convertLeadAction} style={{marginTop:6}}><input type="hidden" name="leadId" value={lead.leadId}/><button type="submit">Convert to customer</button></form> : null}</td>
+        <td><form action={updateStageAction} style={{display:'flex',gap:6,flexWrap:'wrap'}}><input type="hidden" name="leadId" value={lead.leadId}/><select name="stage" defaultValue={lead.stage} className={styles.secondaryButton}>{BRAND_LEAD_STAGES.map((stage) => <option value={stage} key={stage}>{stage}</option>)}</select><button type="submit" className={styles.secondaryButton}>Update</button></form>{lead.stage !== 'LOST' && lead.stage !== 'WON' ? <form action={convertLeadAction} style={{marginTop:6}}><input type="hidden" name="leadId" value={lead.leadId}/><button type="submit" className={styles.button}>Convert to customer</button></form> : null}</td>
       </tr>)}</tbody></table></div>}
     </section>
   </>;

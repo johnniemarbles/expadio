@@ -106,7 +106,7 @@ function fieldSet(
 // ── Sub-components: interest-type-specific fields ─────────────────────────────
 
 function FormRow({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  const inp = { padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: `1px solid ${error ? 'crimson' : 'var(--theme-border)'}`, background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' as const };
+  const inp = { padding: '8px 10px', borderRadius: "var(--theme-radius-control)", border: `1px solid ${error ? 'crimson' : 'var(--theme-border)'}`, background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' as const };
   return (
     <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
       {label}
@@ -117,7 +117,7 @@ function FormRow({ label, error, children }: { label: string; error?: string; ch
   );
 }
 
-const INP: React.CSSProperties = { padding: '8px 10px', borderRadius: "var(--theme-radius-card)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' };
+const INP: React.CSSProperties = { padding: '8px 10px', borderRadius: "var(--theme-radius-control)", border: '1px solid var(--theme-border)', background: 'var(--theme-surface)', color: 'var(--theme-text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' };
 const INP_ERR: React.CSSProperties = { ...INP, borderColor: 'crimson' };
 const SEL: React.CSSProperties = { ...INP };
 
