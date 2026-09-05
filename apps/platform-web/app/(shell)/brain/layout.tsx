@@ -10,6 +10,7 @@ const navItems = [
   { href: '/brain/review', label: 'Review Queue' },
   { href: '/brain/history', label: 'Publication History' },
   { href: '/brain/provenance', label: 'Provenance' },
+  { href: '/brain/missions', label: 'Missions' },
 ];
 export default function BrainLayout({ children }: { children: React.ReactNode }) {
   const pathname=usePathname(), params=useSearchParams();

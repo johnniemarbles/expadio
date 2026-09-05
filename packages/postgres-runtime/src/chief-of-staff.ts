@@ -75,6 +75,24 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
     return createAgentTask(this.#client, input);
   }
 
+  async updateMissionStatus(
+    missionId: string,
+    tenantId: string,
+    status: AgentMission['status'],
+  ): Promise<void> {
+    return updateAgentMissionStatus(this.#client, missionId, tenantId, status);
+  }
+
+  async updateTaskStatus(
+    taskId: string,
+    tenantId: string,
+    status: AgentTask['status'],
+    outputArtifact: Record<string, unknown> | null = null,
+    error: string | null = null,
+  ): Promise<void> {
+    return updateAgentTaskStatus(this.#client, taskId, tenantId, status, outputArtifact, error);
+  }
+
   async createApprovalRequest(input: {
     readonly missionId: string;
     readonly taskId: string;
@@ -172,6 +190,51 @@ export async function createAgentTask(
     completedAt: row.completed_at,
     createdAt: row.created_at,
   };
+}
+
+export async function updateAgentMissionStatus(
+  client: PostgresClient,
+  missionId: string,
+  tenantId: string,
+  status: AgentMission['status'],
+): Promise<void> {
+  await client.query(
+    `UPDATE platform.agent_missions
+        SET status = $1, updated_at = now()
+      WHERE mission_id = $2 AND tenant_id = $3`,
+    [status, missionId, tenantId],
+  );
+}
+
+export async function updateAgentTaskStatus(
+  client: PostgresClient,
+  taskId: string,
+  tenantId: string,
+  status: AgentTask['status'],
+  outputArtifact: Record<string, unknown> | null = null,
+  error: string | null = null,
+): Promise<void> {
+  const startedAt = status === 'RUNNING' ? 'now()' : null;
+  const completedAt = status === 'COMPLETED' || status === 'FAILED' ? 'now()' : null;
+
+  await client.query(
+    `UPDATE platform.agent_tasks
+        SET status = $1,
+            output_artifact = COALESCE($2::jsonb, output_artifact),
+            error = $3,
+            started_at = CASE WHEN $4::boolean THEN now() ELSE started_at END,
+            completed_at = CASE WHEN $5::boolean THEN now() ELSE completed_at END
+      WHERE task_id = $6 AND tenant_id = $7`,
+    [
+      status,
+      outputArtifact !== null ? JSON.stringify(outputArtifact) : null,
+      error,
+      startedAt !== null,
+      completedAt !== null,
+      taskId,
+      tenantId,
+    ],
+  );
 }
 
 export async function createAgentApprovalRequest(
