@@ -3,13 +3,16 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import styles from './CommunicationsManager.module.css';
 
+type DnsRecord = {
+  type: string; name: string; value: string; priority?: number; purpose: string;
+};
 type TemplateRow = {
   templateId:string;version:number;triggerKey:string;channel:string;locale:string;
   subject:string|null;title:string|null;body:string;status:string;updatedAt:string;
 };
 type SenderRow = {
   senderId:string;address:string;domain:string;displayName:string|null;purposes:string[];
-  isDefault:boolean;verificationStatus:string;status:string;
+  isDefault:boolean;verificationStatus:string;status:string;dnsRecords:DnsRecord[];
 };
 type SuppressionRow = {
   suppressionId:string;recipientKey:string;channel:string;reason:string;status:string;recordedAt:string;
@@ -19,6 +22,26 @@ async function responseJson(response: Response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.message || data?.error || 'Request failed.');
   return data;
+}
+
+function SenderDnsGuide({ records }: { records: DnsRecord[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className={styles.dnsGuide} open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary className={styles.dnsSummary}>DNS records required for verification</summary>
+      <table className={styles.dnsTable}>
+        <thead><tr><th>Purpose</th><th>Type</th><th>Name</th><th>Value</th></tr></thead>
+        <tbody>{records.map((r) => (
+          <tr key={r.purpose}>
+            <td>{r.purpose}</td>
+            <td>{r.type}{r.priority !== undefined ? ` (${r.priority})` : ''}</td>
+            <td className={styles.mono}>{r.name}</td>
+            <td className={styles.mono}>{r.value}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </details>
+  );
 }
 
 export function CommunicationsManager() {
@@ -59,12 +82,33 @@ export function CommunicationsManager() {
     event.preventDefault();setBusy('sender');setError(null);setNotice(null);
     const form=new FormData(event.currentTarget);
     try{
-      await responseJson(await fetch('/api/communications/senders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      const result=await responseJson(await fetch('/api/communications/senders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         domain:String(form.get('domain')||''),address:String(form.get('address')||'')||undefined,
         displayName:String(form.get('displayName')||'')||undefined,purposes:[String(form.get('purpose')||'transactional')],
       })}));
-      event.currentTarget.reset();setNotice('Sender registered as PENDING. It cannot become default until verification succeeds.');await reload();
+      event.currentTarget.reset();
+      // Auto-verify immediately after registration
+      if(result?.sender?.sender_id){
+        await verifySender(result.sender.sender_id);
+      } else {
+        setNotice('Sender registered. Add the DNS records shown below, then click Verify to enable sending.');
+        await reload();
+      }
     }catch(cause){setError(cause instanceof Error?cause.message:'Could not create sender.');}finally{setBusy(null);}
+  }
+
+  async function verifySender(senderId:string){
+    setBusy(senderId+'verify');setError(null);setNotice(null);
+    try{
+      const result=await responseJson(await fetch(`/api/communications/senders/${encodeURIComponent(senderId)}/verify`,{method:'POST'}));
+      if(result.verificationStatus==='VERIFIED'){
+        setNotice(`Sender verified and set as default. OTP and transactional emails are ready.`);
+      } else {
+        const dns=`SPF: ${result.spfOk?'✓':'✗'}  DMARC: ${result.dmarcOk?'✓':'✗'}${result.providerChecked?`  Resend: ${result.providerOk?'✓':'✗'}`:' Resend: not checked'}`;
+        setNotice(`Verification pending. Add the required DNS records and try again.\n${dns}`);
+      }
+      await reload();
+    }catch(cause){setError(cause instanceof Error?cause.message:'Verification failed.');}finally{setBusy(null);}
   }
 
   async function promoteSender(senderId:string){
@@ -104,9 +148,9 @@ export function CommunicationsManager() {
 
   return <section className={styles.manager} aria-label="Brand communication controls">
     <div className={styles.managerHeader}><div><p className={styles.eyebrow}>Organization controls</p><h2>Messaging configuration</h2></div><button type="button" className={styles.secondary} onClick={()=>reload().catch(()=>{})}>Refresh</button></div>
-    <p className={styles.boundary}>Manage organization content, sender identities, and suppressions here. Delivery infrastructure and verification evidence stay outside this workspace.</p>
-    {error&&<div className={styles.error} role="alert">{error}</div>}
-    {notice&&<div className={styles.notice} role="status">{notice}</div>}
+    <p className={styles.boundary}>Manage organization content, sender identities, and suppressions here.</p>
+    {error&&<div className={styles.error} role="alert" style={{whiteSpace:'pre-line'}}>{error}</div>}
+    {notice&&<div className={styles.notice} role="status" style={{whiteSpace:'pre-line'}}>{notice}</div>}
 
     <div className={styles.columns}>
       <article className={styles.panel}>
@@ -122,15 +166,32 @@ export function CommunicationsManager() {
       </article>
 
       <article className={styles.panel}>
-        <h3>Sending identities</h3><p className={styles.help}>New identities start pending. Only an active verified identity can be selected as default.</p>
+        <h3>Sending identities</h3>
+        <p className={styles.help}>Register a sending address, add the required DNS records, then verify. Verification checks your DNS and Resend account automatically.</p>
         <form className={styles.form} onSubmit={createSender}>
           <label>Domain<input name="domain" required placeholder="mail.example.com" /></label>
           <label>Address<input name="address" type="email" placeholder="notifications@mail.example.com" /></label>
           <label>Display name<input name="displayName" placeholder="Example notifications" /></label>
           <label>Purpose<select name="purpose" defaultValue="transactional"><option value="transactional">transactional</option><option value="marketing">marketing</option></select></label>
-          <button className={styles.primary} disabled={busy==='sender'}>{busy==='sender'?'Saving…':'Register sender'}</button>
+          <button className={styles.primary} disabled={busy==='sender'}>{busy==='sender'?'Registering…':'Register & verify sender'}</button>
         </form>
-        <div className={styles.list}>{senders.map((sender)=><div className={styles.item} key={sender.senderId}><div><strong>{sender.address}</strong><small>{sender.verificationStatus} · {sender.status}{sender.isDefault?' · DEFAULT':''}</small></div><div className={styles.actions}>{sender.status==='ACTIVE'&&sender.verificationStatus==='VERIFIED'&&!sender.isDefault&&<button className={styles.secondary} disabled={busy===sender.senderId} onClick={()=>promoteSender(sender.senderId)}>Make default</button>} {sender.status==='ACTIVE'&&<button className={styles.danger} disabled={busy===sender.senderId} onClick={()=>retireSender(sender.senderId)}>Retire</button>}</div></div>)}{senders.length===0&&<p className={styles.empty}>No organization senders yet.</p>}</div>
+        <div className={styles.list}>{senders.map((sender)=><div className={styles.item} key={sender.senderId}>
+          <div>
+            <strong>{sender.address}</strong>
+            <small>{sender.verificationStatus} · {sender.status}{sender.isDefault?' · DEFAULT':''}</small>
+            {sender.verificationStatus!=='VERIFIED'&&sender.dnsRecords&&<SenderDnsGuide records={sender.dnsRecords}/>}
+          </div>
+          <div className={styles.actions}>
+            {sender.status==='ACTIVE'&&sender.verificationStatus!=='VERIFIED'&&
+              <button className={styles.secondary} disabled={busy===sender.senderId+'verify'} onClick={()=>verifySender(sender.senderId)}>
+                {busy===sender.senderId+'verify'?'Checking…':'Verify'}
+              </button>}
+            {sender.status==='ACTIVE'&&sender.verificationStatus==='VERIFIED'&&!sender.isDefault&&
+              <button className={styles.secondary} disabled={busy===sender.senderId} onClick={()=>promoteSender(sender.senderId)}>Make default</button>}
+            {sender.status==='ACTIVE'&&
+              <button className={styles.danger} disabled={busy===sender.senderId} onClick={()=>retireSender(sender.senderId)}>Retire</button>}
+          </div>
+        </div>)}{senders.length===0&&<p className={styles.empty}>No organization senders yet.</p>}</div>
       </article>
 
       <article className={styles.panel}>

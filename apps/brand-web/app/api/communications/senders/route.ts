@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 
+function dnsRecordsForDomain(domain: string) {
+  return [
+    { type: 'TXT', name: domain, value: 'v=spf1 include:amazonses.com include:_spf.resend.com ~all', purpose: 'SPF' },
+    { type: 'TXT', name: `_dmarc.${domain}`, value: `v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@${domain}`, purpose: 'DMARC' },
+    { type: 'MX', name: `mail.${domain}`, value: 'feedback-smtp.us-east-1.amazonses.com', priority: 10, purpose: 'Return-path (MX)' },
+    { type: 'TXT', name: `resend._domainkey.${domain}`, value: 'Add the DKIM key from your Resend domain settings', purpose: 'DKIM (from Resend)' },
+  ];
+}
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -25,19 +34,23 @@ export async function GET() {
           ORDER BY is_default DESC, created_at DESC`,
         [context.tenantId, context.organizationId],
       );
-      return NextResponse.json(result.rows.map((row) => ({
-        senderId: row.sender_id,
-        address: row.address,
-        domain: String(row.address).split('@')[1] ?? row.address,
-        displayName: row.display_name,
-        replyTo: row.reply_to,
-        purposes: row.purposes,
-        isDefault: row.is_default,
-        verificationStatus: row.verification_status,
-        status: row.status,
-        createdAt: new Date(row.created_at).toISOString(),
-        updatedAt: new Date(row.updated_at).toISOString(),
-      })));
+      return NextResponse.json(result.rows.map((row) => {
+        const domain = String(row.address).split('@')[1] ?? row.address;
+        return {
+          senderId: row.sender_id,
+          address: row.address,
+          domain,
+          displayName: row.display_name,
+          replyTo: row.reply_to,
+          purposes: row.purposes,
+          isDefault: row.is_default,
+          verificationStatus: row.verification_status,
+          status: row.status,
+          dnsRecords: dnsRecordsForDomain(domain),
+          createdAt: new Date(row.created_at).toISOString(),
+          updatedAt: new Date(row.updated_at).toISOString(),
+        };
+      }));
     });
   } catch (error) {
     console.error('Brand sender read failed:', error);
