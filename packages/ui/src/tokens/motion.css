@@ -2,15 +2,35 @@
  * Expadio Design Tokens — Motion
  *
  * --tok-motion-* from expadioTokens.motion (tokens.ts).
- * Existing --theme-motion-* vars aliased for zero component-breakage.
+ * Spring preset CSS properties for use with CSS transitions.
+ * Full spring config objects are in motion-presets.ts for JS animation libs.
  * ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Canonical token names */
-  --tok-motion-fast:     120ms;
-  --tok-motion-normal:   200ms;
-  --tok-motion-slow:     320ms;
-  --tok-easing-default:  cubic-bezier(0.4, 0, 0.2, 1);
-  --tok-easing-out:      cubic-bezier(0, 0, 0.2, 1);
+  /* Canonical duration tokens */
+  --tok-motion-fast:   120ms;
+  --tok-motion-normal: 200ms;
+  --tok-motion-slow:   320ms;
+
+  /* Canonical easing tokens */
+  --tok-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --tok-easing-out:     cubic-bezier(0, 0, 0.2, 1);
+
+  /* Spring preset approximations for CSS transitions */
+  --tok-motion-snap:    80ms;   /* ui: stiffness 1218 / damping 70 */
+  --tok-motion-ui:      200ms;  /* ui: stiffness 305 / damping 33  */
+  --tok-motion-gentle:  360ms;  /* ui: stiffness 110 / damping 20  */
+  --tok-motion-lively:  140ms;  /* ui: stiffness 622 / damping 17  */
+  --tok-motion-ambient: 700ms;  /* ui: stiffness 43  / damping 13  */
+
+  /* Stagger (ms equivalents for CSS, seconds in JS presets) */
+  --tok-stagger-tight:   40ms;
+  --tok-stagger-base:    80ms;
+  --tok-stagger-relaxed: 150ms;
+
+  /* Travel distances */
+  --tok-travel-hover:   4px;
+  --tok-travel-enter:   24px;
+  --tok-travel-section: 48px;
 
   /* Bridge existing --theme-motion-* consumers */
   --theme-motion-instant: 0ms;
@@ -21,8 +41,8 @@
   --theme-motion-data:    700ms;
 
   --theme-motion-distance-micro: 2px;
-  --theme-motion-distance-small: 6px;
-  --theme-motion-distance-panel: 12px;
+  --theme-motion-distance-small: var(--tok-travel-hover);
+  --theme-motion-distance-panel: var(--tok-travel-enter);
 
   --theme-easing:          var(--tok-easing-default);
   --theme-easing-emphasis: cubic-bezier(0.2, 0.9, 0.2, 1.2);
@@ -31,39 +51,39 @@
 
 /* ── Animation utility classes ─────────────────────────────────────────────── */
 .expadioMotionEnter {
-  animation: expadioMotionEnter var(--theme-motion-slow) var(--theme-easing) both;
+  animation: expadioMotionEnter var(--tok-motion-ui) var(--tok-easing-out) both;
 }
 
 .expadioMotionPanelIn {
-  animation: expadioMotionPanelIn var(--theme-motion-panel) var(--theme-easing) both;
+  animation: expadioMotionPanelIn var(--tok-motion-gentle) var(--tok-easing-out) both;
 }
 
 .expadioMotionRowIn {
-  animation: expadioMotionRowIn var(--theme-motion-normal) var(--theme-easing) both;
+  animation: expadioMotionRowIn var(--tok-motion-normal) var(--tok-easing-default) both;
 }
 
 .expadioMotionTab {
   transition:
-    color            var(--tok-motion-fast) var(--tok-easing-default),
-    background-color var(--tok-motion-fast) var(--tok-easing-default),
-    border-color     var(--tok-motion-fast) var(--tok-easing-default),
-    transform        var(--tok-motion-fast) var(--tok-easing-default);
+    color            var(--tok-motion-snap) var(--tok-easing-default),
+    background-color var(--tok-motion-snap) var(--tok-easing-default),
+    border-color     var(--tok-motion-snap) var(--tok-easing-default),
+    transform        var(--tok-motion-snap) var(--tok-easing-default);
 }
 
 .expadioMotionTab:active { transform: translateY(1px); }
 
 @keyframes expadioMotionEnter {
-  from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
+  from { opacity: 0; transform: translateY(var(--tok-travel-hover)); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes expadioMotionPanelIn {
-  from { opacity: 0; transform: translateY(var(--theme-motion-distance-panel)); }
+  from { opacity: 0; transform: translateY(var(--tok-travel-enter)); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes expadioMotionRowIn {
-  from { opacity: 0; transform: translateX(var(--theme-motion-distance-small)); }
+  from { opacity: 0; transform: translateX(var(--tok-travel-hover)); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
@@ -72,18 +92,25 @@
   :root,
   [data-expadio-theme="platform"],
   [data-expadio-theme="brand"] {
-    --tok-motion-fast:   0ms;
-    --tok-motion-normal: 0ms;
-    --tok-motion-slow:   0ms;
-    --theme-motion-fast:    0ms;
-    --theme-motion-normal:  0ms;
-    --theme-motion-slow:    0ms;
-    --theme-motion-panel:   0ms;
-    --theme-motion-data:    0ms;
+    --tok-motion-fast:    0ms;
+    --tok-motion-normal:  0ms;
+    --tok-motion-slow:    0ms;
+    --tok-motion-snap:    0ms;
+    --tok-motion-ui:      0ms;
+    --tok-motion-gentle:  0ms;
+    --tok-motion-lively:  0ms;
+    --tok-motion-ambient: 0ms;
+    --tok-travel-hover:   0px;
+    --tok-travel-enter:   0px;
+    --tok-travel-section: 0px;
+    --theme-motion-fast:  0ms;
+    --theme-motion-normal:0ms;
+    --theme-motion-slow:  0ms;
+    --theme-motion-panel: 0ms;
+    --theme-motion-data:  0ms;
     --theme-motion-distance-micro: 0px;
     --theme-motion-distance-small: 0px;
     --theme-motion-distance-panel: 0px;
-    --theme-easing-emphasis: var(--theme-easing);
   }
 
   .expadioMotionEnter,

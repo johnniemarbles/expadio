@@ -1,57 +1,57 @@
 /* ─────────────────────────────────────────────────────────────────────────────
  * Expadio Design Tokens — Color
+ * Motion UI aesthetic: pure black, yellow #FACC15 accent, sharp 1px borders.
  *
- * Layer 1: Raw --tok-color-* properties derived from expadioTokens (tokens.ts).
- * Layer 2: Semantic --theme-* aliases consumed by all existing components.
- *          Existing consumers need zero changes.
+ * Layer 1: Raw --tok-color-* (from expadioTokens in tokens.ts)
+ * Layer 2: Semantic --theme-* aliases consumed by all components
  * ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── 1. Raw token layer ────────────────────────────────────────────────────── */
 :root {
   /* Background */
-  --tok-color-bg-base:     #0A0C0F;
-  --tok-color-bg-surface:  #12151A;
-  --tok-color-bg-elevated: #161B22;
-  --tok-color-bg-overlay:  #1C2128;
+  --tok-color-bg-base:     #000000;
+  --tok-color-bg-surface:  #0A0A0A;
+  --tok-color-bg-elevated: #111111;
+  --tok-color-bg-overlay:  #171717;
 
   /* Border */
-  --tok-color-border-subtle:  #21262D;
-  --tok-color-border-default: #30363D;
-  --tok-color-border-strong:  #484F58;
-  --tok-color-border-focus:   #22D3EE;
+  --tok-color-border-subtle:  #1F1F1F;
+  --tok-color-border-default: #272727;
+  --tok-color-border-strong:  #3F3F3F;
+  --tok-color-border-focus:   #FACC15;
 
   /* Text */
-  --tok-color-text-primary:   #E6EDF3;
-  --tok-color-text-secondary: #C9D1D9;
-  --tok-color-text-tertiary:  #8B949E;
-  --tok-color-text-muted:     #6E7681;
-  --tok-color-text-disabled:  #484F58;
-  --tok-color-text-inverse:   #0A0C0F;
+  --tok-color-text-primary:   #FAFAFA;
+  --tok-color-text-secondary: #D4D4D8;
+  --tok-color-text-tertiary:  #A1A1AA;
+  --tok-color-text-muted:     #71717A;
+  --tok-color-text-disabled:  #3F3F3F;
+  --tok-color-text-inverse:   #000000;
 
-  /* Accent */
-  --tok-color-accent-primary:        #22D3EE;
-  --tok-color-accent-primary-hover:  #67E8F9;
-  --tok-color-accent-primary-muted:  rgba(34, 211, 238, 0.15);
-  --tok-color-accent-primary-subtle: rgba(34, 211, 238, 0.08);
+  /* Accent — Motion yellow */
+  --tok-color-accent-primary:        #FACC15;
+  --tok-color-accent-primary-hover:  #FDE047;
+  --tok-color-accent-primary-muted:  rgba(250, 204, 21, 0.15);
+  --tok-color-accent-primary-subtle: rgba(250, 204, 21, 0.08);
 
   /* Semantic */
-  --tok-color-semantic-success:       #10B981;
-  --tok-color-semantic-success-muted: rgba(16, 185, 129, 0.15);
-  --tok-color-semantic-warning:       #F59E0B;
-  --tok-color-semantic-warning-muted: rgba(245, 158, 11, 0.15);
-  --tok-color-semantic-critical:      #F43F5E;
-  --tok-color-semantic-critical-muted:rgba(244, 63, 94, 0.15);
-  --tok-color-semantic-info:          #3B82F6;
+  --tok-color-semantic-success:        #22C55E;
+  --tok-color-semantic-success-muted:  rgba(34, 197, 94, 0.15);
+  --tok-color-semantic-warning:        #F59E0B;
+  --tok-color-semantic-warning-muted:  rgba(245, 158, 11, 0.15);
+  --tok-color-semantic-critical:       #EF4444;
+  --tok-color-semantic-critical-muted: rgba(239, 68, 68, 0.15);
+  --tok-color-semantic-info:           #3B82F6;
 
   /* Status */
   --tok-color-status-open:  #F59E0B;
-  --tok-color-status-clear: #10B981;
-  --tok-color-status-live:  #22D3EE;
-  --tok-color-status-idle:  #6E7681;
-  --tok-color-status-error: #F43F5E;
+  --tok-color-status-clear: #22C55E;
+  --tok-color-status-live:  #FACC15;
+  --tok-color-status-idle:  #71717A;
+  --tok-color-status-error: #EF4444;
 }
 
-/* ── 2. Semantic --theme-* layer (light defaults, token-sourced) ───────────── */
+/* ── 2. Light mode — semantic vars (unchanged, token-independent) ──────────── */
 :root,
 [data-theme="light"],
 [data-theme="system"] {
@@ -65,28 +65,28 @@
   --theme-text-secondary: #52657a;
   --theme-text-muted:     #74869a;
   --theme-text-inverse:   #f7fbff;
-  --theme-primary:        #0891b2;
+  --theme-primary:        #ca8a04;
   --theme-secondary:      #7c3aed;
-  --theme-accent:         #06b6d4;
-  --theme-focus:          #0284c7;
-  --theme-success:        #0f9f73;
-  --theme-warning:        #b77906;
-  --theme-danger:         #dc3f59;
+  --theme-accent:         #ca8a04;
+  --theme-focus:          #a16207;
+  --theme-success:        #16a34a;
+  --theme-warning:        #b45309;
+  --theme-danger:         #dc2626;
   --theme-info:           #2563eb;
   --theme-neutral:        #64748b;
-  --theme-sidebar-surface:        #ffffff;
-  --theme-navigation-active:      rgba(6, 182, 212, 0.10);
-  --theme-command-surface:        #eef3f8;
+  --theme-sidebar-surface:   #ffffff;
+  --theme-navigation-active: rgba(202, 138, 4, 0.10);
+  --theme-command-surface:   #eef3f8;
   color-scheme: light;
 }
 
-/* ── 3. Dark mode — semantic vars resolve to raw tokens ───────────────────── */
+/* ── 3. Dark mode — semantic vars resolve to Motion tokens ────────────────── */
 [data-theme="dark"] {
   --theme-canvas:         var(--tok-color-bg-base);
   --theme-surface:        var(--tok-color-bg-surface);
   --theme-surface-raised: var(--tok-color-bg-elevated);
   --theme-surface-muted:  var(--tok-color-bg-overlay);
-  --theme-overlay:        rgba(0, 4, 10, 0.72);
+  --theme-overlay:        rgba(0, 0, 0, 0.80);
   --theme-border:         var(--tok-color-border-default);
   --theme-text-primary:   var(--tok-color-text-primary);
   --theme-text-secondary: var(--tok-color-text-secondary);
@@ -101,9 +101,9 @@
   --theme-danger:         var(--tok-color-semantic-critical);
   --theme-info:           var(--tok-color-semantic-info);
   --theme-neutral:        var(--tok-color-text-muted);
-  --theme-sidebar-surface:        var(--tok-color-bg-base);
-  --theme-navigation-active:      var(--tok-color-accent-primary-subtle);
-  --theme-command-surface:        var(--tok-color-bg-surface);
+  --theme-sidebar-surface:   var(--tok-color-bg-surface);
+  --theme-navigation-active: var(--tok-color-accent-primary-subtle);
+  --theme-command-surface:   var(--tok-color-bg-surface);
   color-scheme: dark;
 }
 
@@ -113,7 +113,7 @@
     --theme-surface:        var(--tok-color-bg-surface);
     --theme-surface-raised: var(--tok-color-bg-elevated);
     --theme-surface-muted:  var(--tok-color-bg-overlay);
-    --theme-overlay:        rgba(0, 4, 10, 0.72);
+    --theme-overlay:        rgba(0, 0, 0, 0.80);
     --theme-border:         var(--tok-color-border-default);
     --theme-text-primary:   var(--tok-color-text-primary);
     --theme-text-secondary: var(--tok-color-text-secondary);
@@ -128,9 +128,9 @@
     --theme-danger:         var(--tok-color-semantic-critical);
     --theme-info:           var(--tok-color-semantic-info);
     --theme-neutral:        var(--tok-color-text-muted);
-    --theme-sidebar-surface:        var(--tok-color-bg-base);
-    --theme-navigation-active:      var(--tok-color-accent-primary-subtle);
-    --theme-command-surface:        var(--tok-color-bg-surface);
+    --theme-sidebar-surface:   var(--tok-color-bg-surface);
+    --theme-navigation-active: var(--tok-color-accent-primary-subtle);
+    --theme-command-surface:   var(--tok-color-bg-surface);
     color-scheme: dark;
   }
 }
@@ -139,17 +139,17 @@
 :root {
   --theme-sidebar-width:  228px;
   --theme-header-height:  64px;
-  --theme-radius-control: 9px;
-  --theme-radius-card:    14px;
-  --theme-radius-modal:   18px;
+  --theme-radius-control: var(--tok-radius-md);
+  --theme-radius-card:    var(--tok-radius-lg);
+  --theme-radius-modal:   var(--tok-radius-xl);
   --theme-page-padding:   28px;
   --theme-section-gap:    20px;
   --theme-card-gap:       14px;
-  --theme-blur:           18px;
-  --theme-translucency:   0.94;
+  --theme-blur:           16px;
+  --theme-translucency:   0.92;
   --theme-border-glow:    0 0 0 1px var(--tok-color-accent-primary-subtle);
 
-  /* ── Legacy compatibility aliases — new code should use --theme-* or --tok-* */
+  /* ── Legacy compatibility aliases */
   --canvas:        var(--theme-canvas);
   --surface:       var(--theme-surface);
   --surface-soft:  var(--theme-surface-muted);
@@ -174,16 +174,16 @@
   --ink-600:       var(--theme-text-secondary);
   --ink-500:       var(--theme-text-muted);
 
-  --sidebar-900:           var(--theme-sidebar-surface);
-  --sidebar-800:           var(--theme-surface-muted);
-  --sidebar-brand:         var(--theme-primary);
-  --sidebar-brand-soft:    var(--theme-navigation-active);
-  --sidebar-text:          var(--theme-text-primary);
-  --sidebar-text-muted:    var(--theme-text-secondary);
-  --sidebar-text-soft:     var(--theme-text-muted);
-  --sidebar-text-bright:   var(--theme-text-primary);
-  --sidebar-icon:          var(--theme-text-secondary);
-  --sidebar-icon-bright:   var(--theme-text-primary);
-  --sidebar-icon-muted:    var(--theme-text-muted);
-  --sidebar-brand-muted:   var(--theme-secondary);
+  --sidebar-900:         var(--theme-sidebar-surface);
+  --sidebar-800:         var(--theme-surface-muted);
+  --sidebar-brand:       var(--theme-primary);
+  --sidebar-brand-soft:  var(--theme-navigation-active);
+  --sidebar-text:        var(--theme-text-primary);
+  --sidebar-text-muted:  var(--theme-text-secondary);
+  --sidebar-text-soft:   var(--theme-text-muted);
+  --sidebar-text-bright: var(--theme-text-primary);
+  --sidebar-icon:        var(--theme-text-secondary);
+  --sidebar-icon-bright: var(--theme-text-primary);
+  --sidebar-icon-muted:  var(--theme-text-muted);
+  --sidebar-brand-muted: var(--theme-secondary);
 }
