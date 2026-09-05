@@ -7,13 +7,22 @@ export default async function AgentSettingsPage() {
   const context = await resolveBrandContext();
   const bindings = await withBrandTransaction(context, async (client) => {
     const res = await client.query(
+<<<<<<< HEAD
+      `SELECT b.binding_id, c.capability_key, c.display_name, c.department, c.description,
+              b.mode AS mapped_to_resource,
+=======
       `SELECT b.binding_id, c.capability_key, b.mode AS mapped_to_resource,
+>>>>>>> origin/main
               COALESCE(s.state, 'NOT_CONFIGURED') AS status, b.created_at
          FROM platform.tenant_capability_bindings b
          JOIN platform.capabilities c ON b.capability_id = c.capability_id
          LEFT JOIN platform.capability_state s ON b.binding_id = s.binding_id
         WHERE b.tenant_id = $1
+<<<<<<< HEAD
+        ORDER BY c.department, c.display_name`,
+=======
         ORDER BY b.created_at DESC`,
+>>>>>>> origin/main
       [context.tenantId]
     );
     return res.rows;

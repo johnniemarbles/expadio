@@ -20,10 +20,25 @@ export async function PATCH(
     await withBrandTransaction(context, async (client) => {
       if (!(await hasBrandAdministrationRole(client, context.subjectId))) throw new Error('FORBIDDEN');
       await client.query(
+<<<<<<< HEAD
+        `INSERT INTO platform.capability_state
+           (binding_id, tenant_id, state, input_hash, version, resolved_at)
+         SELECT $1, b.tenant_id, $2,
+                encode(digest($1::text || $2, 'sha256'), 'hex'),
+                1, NOW()
+           FROM platform.tenant_capability_bindings b
+          WHERE b.binding_id = $1 AND b.tenant_id = $3
+         ON CONFLICT (binding_id) DO UPDATE SET
+           state       = EXCLUDED.state,
+           input_hash  = encode(digest($1::text || $2, 'sha256'), 'hex'),
+           version     = platform.capability_state.version + 1,
+           resolved_at = NOW()`,
+=======
         `INSERT INTO platform.capability_state (binding_id, state, updated_at)
          SELECT $1, $2, NOW() FROM platform.tenant_capability_bindings
           WHERE binding_id = $1 AND tenant_id = $3
          ON CONFLICT (binding_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
+>>>>>>> origin/main
         [binding_id, state, context.tenantId]
       );
     });
