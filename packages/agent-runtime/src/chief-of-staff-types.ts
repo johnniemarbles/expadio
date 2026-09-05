@@ -1,3 +1,5 @@
+import type { ContentPublishingPolicy } from '@expadio/entity';
+
 export interface AgentMission {
   readonly missionId: string;
   readonly tenantId: string;
@@ -38,6 +40,11 @@ export interface AgentApprovalRequest {
   readonly status: 'PENDING' | 'APPROVED' | 'REJECTED';
   readonly proposerSubjectId: string;
   readonly approverSubjectId: string | null;
+  /** Set when this approval was staged via routeApprovalTarget() rather than
+   * the task-level requiresApproval gate -- see committee-approval-staging.ts.
+   * Null for approvals staged the older way (no node-based routing applied). */
+  readonly targetApproverNodeId: string | null;
+  readonly policyApplied: ContentPublishingPolicy | null;
   readonly telegramMessageId: number | null;
   readonly createdAt: Date | string;
   readonly resolvedAt: Date | string | null;

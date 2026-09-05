@@ -33,6 +33,8 @@ function approvalRow(overrides: Record<string, unknown> = {}) {
     status: 'PENDING',
     proposer_subject_id: 'sub-proposer',
     approver_subject_id: null,
+    target_approver_node_id: null,
+    policy_applied: null,
     telegram_message_id: null,
     created_at: '2026-01-01T00:00:00.000Z',
     resolved_at: null,

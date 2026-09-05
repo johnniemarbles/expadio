@@ -288,6 +288,37 @@ export default function BrandSettingsClient({
       </div>
     </section>
 
+        {/* ── Telegram Linking ───────────────────────────────────────── */}
+    <section className={styles.panel}>
+      <div className={styles.panelHead}>
+        <h2>Telegram linking</h2>
+      </div>
+      <div className={styles.panelBody} style={{ display: 'grid', gap: 16 }}>
+        <p style={{ fontSize: 13, color: 'var(--theme-text-muted)', margin: 0 }}>
+          Link your Telegram account to receive approval requests directly on your device.
+        </p>
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/telegram/link', { method: 'POST' });
+              if (res.ok) {
+                alert('Successfully linked Telegram.');
+              } else {
+                alert('Failed to link Telegram: ' + (await res.json()).error);
+              }
+            } catch (err) {
+              alert('Error linking Telegram: ' + err);
+            }
+          }}
+          disabled={saving}
+          className={styles.secondaryButton}
+          style={{ width: 'fit-content' }}
+        >
+          Link Telegram Account
+        </button>
+      </div>
+    </section>
+
     {/* ── Save ─────────────────────────────────────────────────────── */}
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
       <button

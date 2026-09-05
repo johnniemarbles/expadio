@@ -20,6 +20,7 @@
     "@expadio/tenancy": "workspace:*",
     "@expadio/lead-capture": "workspace:*",
     "@expadio/lead-identity": "workspace:*",
+    "@expadio/entity": "workspace:*",
     "@expadio/voice-gateway": "workspace:*",
     "@expadio/ui": "workspace:*",
     "next": "16.3.3",
