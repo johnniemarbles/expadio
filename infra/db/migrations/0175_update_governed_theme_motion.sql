@@ -1,7 +1,7 @@
 -- Migration 0175: Update platform baseline governed theme profile to Motion aesthetic
--- Overwrites stored configuration candidate for appearance.theme.profile with Motion theme specification (#060707 dark charcoal canvas, #0c0e0d surface, #1e2220 border, #facc15 yellow primary, #a88cf8 purple secondary, razor sharp 0-2px radii).
+-- Overwrites stored configuration setting value for appearance.theme.profile in platform.configuration_setting_values with Motion theme specification (#060707 dark charcoal canvas, #0c0e0d surface, #1e2220 border, #facc15 yellow primary, #a88cf8 purple secondary, razor sharp 0-2px radii).
 
-UPDATE platform.configuration_candidates
+UPDATE platform.configuration_setting_values
 SET value = '{
   "schemaVersion": 1,
   "key": "expadio-command-obsidian",

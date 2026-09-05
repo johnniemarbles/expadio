@@ -59,7 +59,7 @@ test('telemetry command center is discoverable and uses honest live signals', ()
 });
 
 test('telemetry visual language includes motion with reduced-motion safety', () => {
-  for (const token of ['#09090b', '#121215', '#27272a', '#06b6d4', '#8b5cf6', '#f59e0b']) {
+  for (const token of ['#09090b', '#121215', '#27272a', 'var\\(--theme-primary', '#8b5cf6', '#f59e0b']) {
     assert.match(css, new RegExp(token));
   }
   assert.match(css, /prefers-reduced-motion:reduce/);
