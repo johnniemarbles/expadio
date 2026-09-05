@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './TenantAccessManager.module.css';
-import { MotionPanel, MotionTabs, MotionFeedback } from '@expadio/ui';
+import { MotionPanel, MotionTabs, MotionFeedback, GovernedSelect } from '@expadio/ui';
 
 type Member = {
   membershipId:string;subjectId:string;status:'ACTIVE'|'SUSPENDED'|'REVOKED';
@@ -124,7 +124,7 @@ export function TenantAccessManager({
       <div className={styles.panelHead}><div><h2>Add tenant user</h2><p>Existing Clerk users are granted immediately. New identities receive a real Clerk invitation.</p></div></div>
       <form className={styles.form} onSubmit={invite}>
         <label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="user@company.com"/></label>
-        <label>Role<select value={roleKey} onChange={e=>setRoleKey(e.target.value)}>{roleKeys.map(r=><option key={r} value={r}>{label(r)}</option>)}</select></label>
+        <label>Role<GovernedSelect options={roleKeys.map(r=>({value:r, label:label(r)}))} value={roleKey} onChange={setRoleKey} /></label>
         <label>Access expires<input type="datetime-local" value={validUntil} onChange={e=>setValidUntil(e.target.value)}/></label>
         <button type="submit" disabled={busy!==null}>{busy==='invite'?'Working…':'Grant or invite'}</button>
       </form>
@@ -137,7 +137,7 @@ export function TenantAccessManager({
       <div className={styles.tableWrap}><table><thead><tr><th>User</th><th>Roles</th><th>Status</th><th>Expiry</th><th>Actions</th></tr></thead><tbody>
         {memberRows.map(member=><tr key={member.membershipId}>
           <td><strong>{member.identity.name??member.identity.email??member.subjectId}</strong><span>{member.identity.email??member.subjectId}</span><span>Clerk ID: {member.subjectId}</span></td>
-          <td><select value={member.roleKeys[0]??''} disabled={member.status!=='ACTIVE'||busy!==null} onChange={e=>void patch(member,{roleKeys:[e.target.value]},`role:${member.membershipId}`)}><option value="" disabled>Select role</option>{roleKeys.map(r=><option key={r} value={r}>{label(r)}</option>)}</select></td>
+          <td><GovernedSelect options={roleKeys.map(r=>({value:r, label:label(r)}))} value={member.roleKeys[0]??''} disabled={member.status!=='ACTIVE'||busy!==null} onChange={val => void patch(member,{roleKeys:[val]},`role:${member.membershipId}`)} /></td>
           <td><span className={styles.status}>{label(member.status)}</span></td>
           <td>{member.validUntil?new Date(member.validUntil).toLocaleString():'No expiry'}</td>
           <td className={styles.actions}>

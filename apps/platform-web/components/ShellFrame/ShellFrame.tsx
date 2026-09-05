@@ -31,6 +31,75 @@ function groupRank(group: string) {
   return GROUP_ORDER.get(group) ?? 99;
 }
 
+function NavIcon({ id, href }: { id: string; href: string }) {
+  const path = (href || id).toLowerCase();
+  const iconProps = { width: 16, height: 16, strokeWidth: 1.75, fill: "none", stroke: "currentColor" };
+  
+  if (path === '/' || path.includes('command') || path.includes('overview') || path.includes('fleet')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+      </svg>
+    );
+  }
+  if (path.includes('organization') || path.includes('enterprise') || path.includes('access')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+        <path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2" />
+        <path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" />
+      </svg>
+    );
+  }
+  if (path.includes('chief-of-staff') || path.includes('agent') || path.includes('bot')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="10" rx="2" />
+        <circle cx="12" cy="5" r="2" />
+        <path d="M12 7v4" />
+        <line x1="8" y1="16" x2="8.01" y2="16" />
+        <line x1="16" y1="16" x2="16.01" y2="16" />
+      </svg>
+    );
+  }
+  if (path.includes('brain') || path.includes('ai') || path.includes('context')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    );
+  }
+  if (path.includes('comms') || path.includes('provider') || path.includes('radio')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M4.9 19.1C1.9 16.1 1.9 11.3 4.9 8.3" />
+        <path d="M7.8 16.2c-1.6-1.6-1.6-4.1 0-5.7" />
+        <circle cx="12" cy="12" r="2" />
+        <path d="M16.2 7.8c1.6 1.6 1.6 4.1 0 5.7" />
+        <path d="M19.1 4.9c3 3 3 7.8 0 10.8" />
+      </svg>
+    );
+  }
+  if (path.includes('governance') || path.includes('authority') || path.includes('audit') || path.includes('workflow')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...iconProps} viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v4" /><path d="M12 18v4" /><path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" />
+    </svg>
+  );
+}
+
 export function ShellFrame({ children, sections, overview, workspaceContext, brandAppOrigin }: { children: React.ReactNode; sections: WorkspaceSection[]; overview: PlatformOverview; workspaceContext: PlatformWorkspaceContext; brandAppOrigin: string | null; }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -235,7 +304,7 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
   return <div className={styles.appShell} data-expadio-theme="platform">
     <aside ref={sidebarRef} className={[styles.sidebar, mobileOpen ? styles.sidebarOpen : ""].join(" ")} aria-label="Platform navigation">
       <div className={styles.brand}><span className={styles.brandMark}>E</span><span><strong>EXPADIO</strong><small>Platform</small></span><button type="button" ref={closeButtonRef} className={styles.mobileClose} onClick={() => { setMobileOpen(false); mobileMenuRef.current?.focus(); }} aria-label="Close navigation"><span aria-hidden="true">×</span></button></div>
-      <nav className={styles.primaryNav} aria-label="Platform sections">{navGroups.map(({ group, items }) => <section className={styles.navGroup} key={group} aria-label={group}><p className={styles.navLabel}>{group}</p><div className={styles.navGroupItems}>{items.map((section) => <Link href={href(section.href)} className={[styles.navItem, section.priority === "secondary" ? styles.navItemSecondary : "", currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}>{section.short}</span><span>{section.label}</span></Link>)}</div></section>)}</nav>
+      <nav className={styles.primaryNav} aria-label="Platform sections">{navGroups.map(({ group, items }) => <section className={styles.navGroup} key={group} aria-label={group}><p className={styles.navLabel}>{group}</p><div className={styles.navGroupItems}>{items.map((section) => <Link href={href(section.href)} className={[styles.navItem, section.priority === "secondary" ? styles.navItemSecondary : "", currentSection?.id === section.id ? styles.navItemActive : ""].join(" ")} key={section.id} aria-current={currentSection?.id === section.id ? "page" : undefined}><span className={styles.navIcon}><NavIcon id={section.id} href={section.href} /></span><span>{section.label}</span></Link>)}</div></section>)}</nav>
       <div className={styles.sidebarFoot}>
         <div className={styles.systemStatus}><span className={[styles.fixtureLight, styles.fixtureConnected].join(" ")} /><span><strong>Platform Connected</strong><small>Live workspace status</small></span></div>
         <div ref={accountAreaRef} className={styles.userAccountWrapper}>
@@ -265,6 +334,15 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
           </span>
           <span className={styles.searchKbd}>⌘K</span>
         </button>
+
+        {/* Header Telemetry Strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, fontFamily: 'monospace' }}>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Node: <strong style={{ color: 'var(--theme-text-primary)' }}>{currentOrganization.name} ({currentOrganization.level?.toUpperCase() || 'L1'})</strong></span>
+          <span style={{ color: 'var(--theme-border)' }}>|</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>BYOK: <strong style={{ color: '#FACC15' }}>Twilio · Resend · Meta API</strong></span>
+          <span style={{ color: 'var(--theme-border)' }}>|</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Fabric Gate: <strong style={{ color: '#22C55E' }}>COUNTRY_BRAND_MANDATORY</strong></span>
+        </div>
 
         <div className={styles.topbarActions}>
           <label className={styles.scopePicker}><span className="sr-only">Active organization</span><select value={currentOrganization.id} onChange={(event) => replaceContext(currentAccount?.id ?? "account_platform", event.target.value)}>{selectableOrganizations.map((organization) => <option key={organization.id} value={organization.id}>{"— ".repeat(organization.level === "platform" ? 0 : organization.level === "country" ? 1 : organization.level === "region" ? 2 : 3)}{organization.name}</option>)}</select></label>
@@ -372,3 +450,4 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
     </main>
   </div>;
 }
+

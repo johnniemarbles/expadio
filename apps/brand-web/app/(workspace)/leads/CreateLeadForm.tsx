@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { GovernedSelect } from '@expadio/ui';
 import { COUNTRIES, CURRENCIES, getStatesForCountry } from '../../../lib/geo-data';
 import styles from '../workspace.module.css';
 
@@ -151,17 +152,19 @@ function FranchiseeFields({ payload, onChange, currency, errors }: {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
           Preferred opening timeline
-          <select style={SEL} value={String(payload.timeline ?? '')} onChange={(e) => onChange('timeline', e.target.value || null)}>
-            <option value="">— Select —</option>
-            {TIMELINES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <GovernedSelect
+            options={[{ value: '', label: '— Select —' }, ...TIMELINES]}
+            value={String(payload.timeline ?? '')}
+            onChange={(val) => onChange('timeline', val || null)}
+          />
         </label>
         <label style={{ display: 'grid', gap: 4, fontSize: 12, fontWeight: 700 }}>
           Intended role
-          <select style={SEL} value={String(payload.intendedRole ?? '')} onChange={(e) => onChange('intendedRole', e.target.value || null)}>
-            <option value="">— Select —</option>
-            {FRANCHISE_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
+          <GovernedSelect
+            options={[{ value: '', label: '— Select —' }, ...FRANCHISE_ROLES]}
+            value={String(payload.intendedRole ?? '')}
+            onChange={(val) => onChange('intendedRole', val || null)}
+          />
         </label>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>

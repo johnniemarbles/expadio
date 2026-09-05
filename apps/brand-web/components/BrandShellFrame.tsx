@@ -13,6 +13,60 @@ interface WorkspaceOption {
   readonly organizationName:string;
 }
 
+function BrandNavIcon({ label, iconKey }: { label: string; iconKey?: string }) {
+  const key = (iconKey || label).toLowerCase();
+  const iconProps = { width: 15, height: 15, strokeWidth: 1.75, fill: "none", stroke: "currentColor" };
+
+  if (key.includes('home') || key.includes('dashboard')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    );
+  }
+  if (key.includes('brain') || key.includes('bb') || key.includes('ai')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    );
+  }
+  if (key.includes('mission') || key.includes('agent') || key.includes('am')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="10" rx="2" />
+        <circle cx="12" cy="5" r="2" />
+        <path d="M12 7v4" />
+      </svg>
+    );
+  }
+  if (key.includes('enterprise') || key.includes('en') || key.includes('org')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+        <path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2" />
+      </svg>
+    );
+  }
+  if (key.includes('comm') || key.includes('cm') || key.includes('radio')) {
+    return (
+      <svg {...iconProps} viewBox="0 0 24 24">
+        <path d="M4.9 19.1C1.9 16.1 1.9 11.3 4.9 8.3" />
+        <circle cx="12" cy="12" r="2" />
+        <path d="M19.1 4.9c3 3 3 7.8 0 10.8" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...iconProps} viewBox="0 0 24 24">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <rect x="9" y="9" width="6" height="6" />
+    </svg>
+  );
+}
+
 export function BrandShellFrame({
   children,
   tenantName,
@@ -44,20 +98,20 @@ export function BrandShellFrame({
 
       <nav className={styles.globalNav}>
         <p className={styles.navGroup}>Workspace</p>
-        <Link className={pathname==='/'?styles.navActive:''} href="/">Home</Link>
-        <Link className={pathname==='/brain'?styles.navActive:''} href="/brain"><span className={styles.navIcon}>BB</span>Brand Brain</Link>
-        <Link className={pathname==='/brain/missions'?styles.navActive:''} href="/brain/missions"><span className={styles.navIcon}>AM</span>Agent missions</Link>
+        <Link className={pathname==='/'?styles.navActive:''} href="/"><span className={styles.navIcon}><BrandNavIcon label="Home" /></span>Home</Link>
+        <Link className={pathname==='/brain'?styles.navActive:''} href="/brain"><span className={styles.navIcon}><BrandNavIcon label="Brain" /></span>Brand Brain</Link>
+        <Link className={pathname==='/brain/missions'?styles.navActive:''} href="/brain/missions"><span className={styles.navIcon}><BrandNavIcon label="Missions" /></span>Agent missions</Link>
         <Link
           className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
           href="/enterprise"
-        ><span className={styles.navIcon}>EN</span>Enterprise</Link>
-        <Link className={communicationsActive?styles.navActive:''} href="/communications"><span className={styles.navIcon}>CM</span>Communications</Link>
+        ><span className={styles.navIcon}><BrandNavIcon label="Enterprise" /></span>Enterprise</Link>
+        <Link className={communicationsActive?styles.navActive:''} href="/communications"><span className={styles.navIcon}><BrandNavIcon label="Communications" /></span>Communications</Link>
         <p className={styles.navGroup}>Apps</p>
         {pinned.map((module)=><Link
           key={module.key}
           href={module.baseRoute}
           className={active?.key===module.key?styles.navActive:''}
-        ><span className={styles.navIcon}>{module.iconKey.slice(0,2).toUpperCase()}</span>{module.name}</Link>)}
+        ><span className={styles.navIcon}><BrandNavIcon label={module.name} iconKey={module.iconKey} /></span>{module.name}</Link>)}
         <Link className={styles.allAppsLink} href="/">＋ All Apps</Link>
         <p className={styles.navGroup}>Administration</p>
         <Link className={pathname==='/appearance'?styles.navActive:''} href="/appearance">Appearance</Link>
@@ -84,13 +138,23 @@ export function BrandShellFrame({
       <header className={styles.topbar}>
         <div className={styles.appContext}>
           {active
-            ? <><span className={styles.appContextIcon}>{active.iconKey.slice(0,2).toUpperCase()}</span><div><strong>{active.name}</strong><small>{organizationName}</small></div></>
+            ? <><span className={styles.appContextIcon}><BrandNavIcon label={active.name} iconKey={active.iconKey} /></span><div><strong>{active.name}</strong><small>{organizationName}</small></div></>
             : enterpriseActive
-              ? <><span className={styles.appContextIcon}>EN</span><div><strong>Enterprise</strong><small>{organizationName}</small></div></>
+              ? <><span className={styles.appContextIcon}><BrandNavIcon label="Enterprise" /></span><div><strong>Enterprise</strong><small>{organizationName}</small></div></>
               : communicationsActive
-                ? <><span className={styles.appContextIcon}>CM</span><div><strong>Communications</strong><small>{organizationName}</small></div></>
+                ? <><span className={styles.appContextIcon}><BrandNavIcon label="Communications" /></span><div><strong>Communications</strong><small>{organizationName}</small></div></>
                 : <div><strong>{organizationName}</strong><small>{tenantName}</small></div>}
         </div>
+
+        {/* Top Telemetry Strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, fontFamily: 'monospace' }}>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Hierarchy: <strong style={{ color: 'var(--theme-text-primary)' }}>Apex Brands &gt; {organizationName || 'OpCo'} (L1)</strong></span>
+          <span style={{ color: 'var(--theme-border)' }}>|</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>BYOK Strip: <strong style={{ color: '#FACC15' }}>Twilio · Resend · Meta API</strong></span>
+          <span style={{ color: 'var(--theme-border)' }}>|</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Decision Gate: <strong style={{ color: '#22C55E' }}>LOCAL_SIGN_OFF</strong></span>
+        </div>
+
         <div className={styles.topbarActions}>
           {active&&ordered.length>1?<details className={styles.appSwitcher}>
             <summary>Switch app</summary>

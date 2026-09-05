@@ -560,11 +560,12 @@ export function EnterpriseHub({
             </form>
             <div className={styles.tableWrap}>
               <table>
-                <thead><tr><th>Agreement</th><th>Parties</th><th>State</th><th>Governed action</th></tr></thead>
+                <thead><tr><th>Agreement Name</th><th>Parties</th><th>Kind</th><th>State</th><th>Action</th></tr></thead>
                 <tbody>{data.portfolio.agreements.map((agreement) => (
                   <tr key={agreement.agreementId}>
-                    <td><strong>{agreement.title}</strong><small>{agreement.agreementNumber ?? agreement.agreementId}</small></td>
+                    <td><strong>{agreement.title}</strong><br/><small className={styles.code}>{agreement.agreementNumber ?? agreement.agreementId}</small></td>
                     <td>{legalById.get(agreement.grantorLegalEntityId)?.legal_name ?? 'Grantor'} → {legalById.get(agreement.granteeLegalEntityId)?.legal_name ?? 'Grantee'}</td>
+                    <td><span className={styles.code}>{readable(agreement.agreementKind)}</span></td>
                     <td><span className={stateTone(agreement.state)}>{readable(agreement.state)}</span></td>
                     <td>
                       {agreement.state === 'DRAFT' && (

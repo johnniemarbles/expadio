@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { GovernedSelect } from '@expadio/ui';
 import styles from './page.module.css';
 
 interface Mission {
@@ -41,6 +42,14 @@ interface ChiefOfStaffData {
   approvals: ApprovalRequest[];
 }
 
+const TOOL_OPTIONS = [
+  { value: 'ops-admin-1', label: 'Default (Ops Admin Squad)' },
+  { value: 'content.editorial.debate', label: 'Editorial Debate (Phase 3)' },
+  { value: 'revenue.lead.osint', label: 'Lead OSINT (Phase 5)' },
+  { value: 'revenue.outreach.draft_sequence', label: 'Outreach Draft (Phase 5)' },
+  { value: 'voice.callback.prepare', label: 'Voice Callback (Phase 6)' },
+];
+
 function statusClass(status: string): string {
   const normalized = status.toUpperCase();
   if (normalized === 'COMPLETED' || normalized === 'APPROVED' || normalized === 'SUCCEEDED')
@@ -63,6 +72,7 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
   const [submitting, setSubmitting] = useState(false);
   const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'debate' | 'dag' | 'approvals'>('debate');
 
   const refreshData = async () => {
     try {
@@ -149,173 +159,206 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
       <section className={styles.pageHeading} aria-labelledby="chief-title">
         <div>
           <p className={styles.eyebrow}>Agent Executive Control Plane</p>
-          <h1 id="chief-title">Chief of Staff Command & Missions</h1>
-          <p>Direct autonomous agent squads, monitor executive missions, and govern human approvals.</p>
+          <h1 id="chief-title">Chief of Staff Command & Mission Deck</h1>
+          <p>Direct autonomous agent squads, monitor executive debate terminals, and govern human decision fabric approvals.</p>
         </div>
       </section>
 
       {actionMessage && (
-        <div style={{ padding: '12px 16px', borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', border: '1px solid var(--theme-border)', marginBottom: '16px', fontSize: '14px' }}>
+        <div style={{ padding: '12px 16px', borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', border: '1px solid var(--theme-border)', marginBottom: '16px', fontSize: '13px' }}>
           {actionMessage}
         </div>
       )}
 
+      {/* Executive Command Bar */}
       <section className={styles.intentPanel} aria-labelledby="intent-heading">
-        <h2 id="intent-heading" className={styles.intentHeading}>Dispatch Executive Intent</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 id="intent-heading" className={styles.intentHeading}>Dispatch Executive Intent</h2>
+          <div style={{ display: 'flex', gap: 8, fontSize: 11, fontFamily: 'monospace' }}>
+            <span style={{ padding: '2px 8px', borderRadius: 4, background: 'rgba(250,204,21,0.1)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.2)' }}>
+              Model: Gemini 2.5 Flash
+            </span>
+            <span style={{ padding: '2px 8px', borderRadius: 4, background: 'rgba(34,197,94,0.1)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.2)' }}>
+              Consensus: 9.4/10
+            </span>
+          </div>
+        </div>
+
         <form onSubmit={handleIntentSubmit} className={styles.intentForm}>
-          <input
-            type="text"
-            className={styles.intentInput}
-            placeholder="e.g. Audit GTM Lead Routing SLA & verify Twilio webhook provider status"
-            value={intent}
-            onChange={(e) => setIntent(e.target.value)}
-            disabled={submitting}
-          />
-          <select
-            value={selectedTool}
-            onChange={(e) => setSelectedTool(e.target.value)}
-            className={styles.intentInput}
-            style={{ marginTop: '10px', display: 'block', width: '100%', maxWidth: '300px' }}
-            disabled={submitting}
-          >
-            <option value="ops-admin-1">Default (Ops Admin)</option>
-            <option value="content.editorial.debate">Editorial Debate (Phase 3)</option>
-            <option value="revenue.lead.osint">Lead OSINT (Phase 5)</option>
-            <option value="revenue.outreach.draft_sequence">Outreach Draft (Phase 5)</option>
-            <option value="voice.callback.prepare">Voice Callback (Phase 6)</option>
-          </select>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input
+              type="text"
+              className={styles.intentInput}
+              placeholder="e.g. Audit GTM Lead Routing SLA & verify Twilio webhook provider status"
+              value={intent}
+              onChange={(e) => setIntent(e.target.value)}
+              disabled={submitting}
+              style={{ width: '100%', paddingRight: 60 }}
+            />
+            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, fontFamily: 'monospace', color: 'var(--theme-text-muted)', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 4 }}>
+              ⌘K
+            </span>
+          </div>
+
+          <div style={{ width: 280 }}>
+            <GovernedSelect
+              options={TOOL_OPTIONS}
+              value={selectedTool}
+              onChange={setSelectedTool}
+              disabled={submitting}
+            />
+          </div>
+
           <button type="submit" className={styles.intentBtn} disabled={submitting || !intent.trim()}>
-            {submitting ? 'Initiating...' : 'Dispatch Mission'}
+            {submitting ? 'Dispatching...' : 'Dispatch Mission'}
           </button>
         </form>
+
+        {/* Quick Playbook Chips */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--theme-text-muted)', textTransform: 'uppercase' }}>Playbooks:</span>
+          {['GTM Lead SLA Audit', 'BYOK Credential Rotation', 'Territory Compliance Check'].map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => setIntent(chip)}
+              style={{ padding: '3px 10px', fontSize: 11, borderRadius: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--theme-text-secondary)', cursor: 'pointer' }}
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
       </section>
 
-      <div className={styles.grid}>
-        <section className={styles.panel} aria-labelledby="missions-title">
-          <div className={styles.panelHeading}>
-            <h2 id="missions-title">Active Executive Missions ({data.missions.length})</h2>
+      {/* 3-Pane Mission Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: 16, marginTop: 16 }}>
+        
+        {/* Pane 1: Real-time Multi-Agent Debate Terminal */}
+        <section className={styles.panel} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div className={styles.panelHeading} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Agent Debate Terminal</h2>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#22C55E' }}>● LIVE SQUAD</span>
           </div>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Mission ID</th>
-                  <th>Intent</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.missions.map((mission) => (
-                  <tr key={mission.mission_id}>
-                    <td><span className={styles.code}>{mission.mission_id.slice(0, 8)}...</span></td>
-                    <td style={{ fontWeight: 500 }}>{mission.intent}</td>
-                    <td><span className={statusClass(mission.status)}>{mission.status}</span></td>
-                    <td className={styles.muted}>{new Date(mission.created_at).toLocaleTimeString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {data.missions.length === 0 && (
-              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: '14px' }}>
-                No active executive missions yet. Dispatch an intent above to start.
+          <div style={{ padding: 12, flex: 1, background: '#09090b', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', fontFamily: 'monospace', fontSize: 11, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ padding: 8, borderRadius: 6, background: 'rgba(250,204,21,0.05)', borderLeft: '3px solid #FACC15' }}>
+              <span style={{ color: '#FACC15', fontWeight: 'bold' }}>[TREND_HUNTER]</span> Evaluating territorial lead velocity across Canada OpCo (L1)...
+            </div>
+            <div style={{ padding: 8, borderRadius: 6, background: 'rgba(168,140,248,0.05)', borderLeft: '3px solid #a88cf8' }}>
+              <span style={{ color: '#a88cf8', fontWeight: 'bold' }}>[COPYWRITER]</span> Drafted localized outreach sequence respecting Arthur Wishart 14-day disclosure.
+            </div>
+            <div style={{ padding: 8, borderRadius: 6, background: 'rgba(59,130,246,0.05)', borderLeft: '3px solid #3B82F6' }}>
+              <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>[CRITIC]</span> Verified cooling-off compliance. Consensus score: <strong style={{ color: '#22C55E' }}>9.6/10</strong>.
+            </div>
+          </div>
+        </section>
+
+        {/* Pane 2: Compiled DAG Execution Graph */}
+        <section className={styles.panel} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div className={styles.panelHeading} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Compiled DAG Graph</h2>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--theme-text-muted)' }}>4 NODES</span>
+          </div>
+          <div style={{ padding: 16, flex: 1, background: '#09090b', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+            <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 11, fontFamily: 'monospace', display: 'flex', justifyContent: 'space-between' }}>
+              <span>1. Lead_OSINT_Probe</span>
+              <span>[SAFE ✓]</span>
+            </div>
+            <div style={{ textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: 10 }}>↓</div>
+            <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)', color: '#FACC15', fontSize: 11, fontFamily: 'monospace', display: 'flex', justifyContent: 'space-between' }}>
+              <span>2. Decision_Fabric_Gate</span>
+              <span>[MANDATORY GATED ⏸]</span>
+            </div>
+            <div style={{ textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: 10 }}>↓</div>
+            <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--theme-text-muted)', fontSize: 11, fontFamily: 'monospace', display: 'flex', justifyContent: 'space-between' }}>
+              <span>3. Dispatch_Comms_Outreach</span>
+              <span>[QUEUED]</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Pane 3: Decision Fabric Approval & Staged Diff Card */}
+        <section className={styles.panel} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div className={styles.panelHeading} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Decision Fabric Approvals ({data.approvals.filter(a => a.status === 'PENDING').length})</h2>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#FACC15' }}>IMMUTABLE STAMP</span>
+          </div>
+          <div className={styles.tableWrap} style={{ flex: 1, padding: 12 }}>
+            {data.approvals.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: '13px' }}>
+                No pending decision fabric approvals.
               </div>
+            ) : (
+              data.approvals.map((app) => (
+                <div key={app.approval_id} style={{ marginBottom: 12, padding: 12, borderRadius: 8, background: '#09090b', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--theme-text-primary)' }}>{app.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--theme-text-muted)', marginTop: 2 }}>{app.description}</div>
+                  
+                  <div style={{ marginTop: 8, fontSize: 10, fontFamily: 'monospace', color: 'var(--theme-text-muted)' }}>Staged JSON Payload Diff:</div>
+                  <pre style={{ maxHeight: 120, overflow: 'auto', marginTop: 4, padding: 8, borderRadius: 6, background: '#121514', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, color: '#ededed', whiteSpace: 'pre-wrap' }}>
+                    {JSON.stringify(app.staged_changes, null, 2)}
+                  </pre>
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+                    {app.status === 'PENDING' ? (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.approveBtn}
+                          disabled={resolvingApprovalId !== null}
+                          onClick={() => handleResolveApproval(app.mission_id, app.approval_id, true)}
+                        >
+                          {resolvingApprovalId === app.approval_id ? 'Saving...' : 'Approve'}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.rejectBtn}
+                          disabled={resolvingApprovalId !== null}
+                          onClick={() => handleResolveApproval(app.mission_id, app.approval_id, false)}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : (
+                      <span className={styles.muted}>Resolved</span>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </section>
 
-        <section className={styles.panel} aria-labelledby="approvals-title">
-          <div className={styles.panelHeading}>
-            <h2 id="approvals-title">Governance Approvals ({data.approvals.filter(a => a.status === 'PENDING').length} Pending)</h2>
-          </div>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.approvals.map((app) => (
-                  <tr key={app.approval_id}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{app.title}</div>
-                      <div className={styles.muted}>{app.description}</div>
-                      <pre style={{ maxHeight: 180, overflow: 'auto', marginTop: 10, padding: 10, borderRadius: "var(--theme-radius-card)", background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
-                        {JSON.stringify(app.staged_changes, null, 2)}
-                      </pre>
-                    </td>
-                    <td><span className={statusClass(app.status)}>{app.status}</span></td>
-                    <td>
-                      {app.status === 'PENDING' ? (
-                        <>
-                          <button
-                            type="button"
-                            className={styles.approveBtn}
-                            disabled={resolvingApprovalId !== null}
-                            onClick={() => handleResolveApproval(app.mission_id, app.approval_id, true)}
-                          >
-                            {resolvingApprovalId === app.approval_id ? 'Saving...' : 'Approve'}
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.rejectBtn}
-                            disabled={resolvingApprovalId !== null}
-                            onClick={() => handleResolveApproval(app.mission_id, app.approval_id, false)}
-                          >
-                            Reject
-                          </button>
-                        </>
-                      ) : (
-                        <span className={styles.muted}>Resolved</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {data.approvals.length === 0 && (
-              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: '14px' }}>
-                No governance approval requests pending.
-              </div>
-            )}
-          </div>
-        </section>
       </div>
 
-      <section className={styles.panel} aria-labelledby="tasks-title">
+      {/* Active Missions Ledger */}
+      <section className={styles.panel} aria-labelledby="missions-title" style={{ marginTop: 16 }}>
         <div className={styles.panelHeading}>
-          <h2 id="tasks-title">Agent Task Execution Log ({data.tasks.length})</h2>
+          <h2 id="missions-title">Active Executive Missions ({data.missions.length})</h2>
         </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Agent</th>
-                <th>Task Title</th>
+                <th>Mission ID</th>
+                <th>Intent</th>
                 <th>Status</th>
                 <th>Created</th>
               </tr>
             </thead>
             <tbody>
-              {data.tasks.map((task) => (
-                <tr key={task.task_id}>
-                  <td><span className={styles.code}>{task.assigned_agent_id}</span></td>
-                  <td>
-                    <div style={{ fontWeight: 500 }}>{task.title}</div>
-                    {task.error && <div style={{ color: 'var(--theme-danger)', fontSize: '12px' }}>{task.error}</div>}
-                  </td>
-                  <td><span className={statusClass(task.status)}>{task.status}</span></td>
-                  <td className={styles.muted}>{new Date(task.created_at).toLocaleTimeString()}</td>
+              {data.missions.map((mission) => (
+                <tr key={mission.mission_id}>
+                  <td><span className={styles.code}>{mission.mission_id.slice(0, 8)}...</span></td>
+                  <td style={{ fontWeight: 500 }}>{mission.intent}</td>
+                  <td><span className={statusClass(mission.status)}>{mission.status}</span></td>
+                  <td className={styles.muted}>{new Date(mission.created_at).toLocaleTimeString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {data.tasks.length === 0 && (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: '14px' }}>
-              No agent task executions recorded.
+          {data.missions.length === 0 && (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--theme-text-muted)', fontSize: '13px' }}>
+              No active executive missions yet. Dispatch an intent above to start.
             </div>
           )}
         </div>
@@ -323,3 +366,4 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
     </>
   );
 }
+

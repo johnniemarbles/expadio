@@ -39,8 +39,16 @@ textarea {
   border: 1px solid var(--border, var(--theme-border));
   border-radius: var(--theme-radius-control, 2px);
   font-size: 13px;
+  height: 36px;
+  padding: 0 12px;
+}
+textarea { height: auto; min-height: 80px; padding: 10px 12px; }
+option {
+  background-color: #171a19 !important;
+  color: #ededed !important;
 }
 input::placeholder,
 textarea::placeholder { color: var(--muted-foreground, var(--theme-text-muted)); }
 table { color: var(--foreground, var(--theme-text-primary)); }
+
 

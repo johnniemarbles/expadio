@@ -1,0 +1,18 @@
+{
+  "themeName": "Motion Yellow & Dark Canvas (Original)",
+  "canvas": "#060707",
+  "surface": "#0c0e0d",
+  "elevated": "#121514",
+  "overlay": "#171a19",
+  "borderDefault": "#1e2220",
+  "borderSubtle": "#181b19",
+  "borderFocus": "#FACC15",
+  "accentPrimary": "#FACC15",
+  "accentPrimaryHover": "#FDE047",
+  "textPrimary": "#ededed",
+  "textSecondary": "#a1a1a1",
+  "textMuted": "#666666",
+  "radiusControl": "2px",
+  "radiusCard": "2px",
+  "radiusModal": "2px"
+}
