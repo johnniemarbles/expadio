@@ -24,4 +24,14 @@ CREATE TABLE platform.telegram_user_links (
 CREATE INDEX telegram_user_links_tenant_subject_idx
   ON platform.telegram_user_links (tenant_id, subject_id);
 
+-- Row level security: the Telegram webhook callback handler runs under a
+-- privileged database role that bypasses RLS (same as platform.tenants itself),
+-- so enabling the standard tenant isolation policy does not affect webhook
+-- identity resolution. Unprivileged tenant sessions are correctly scoped.
+ALTER TABLE platform.telegram_user_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.telegram_user_links FORCE ROW LEVEL SECURITY;
+CREATE POLICY telegram_user_links_tenant_isolation ON platform.telegram_user_links
+  USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+
 COMMIT;
