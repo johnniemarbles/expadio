@@ -99,24 +99,24 @@ export function BrandShellFrame({
       <nav className={styles.globalNav}>
         <p className={styles.navGroup}>Workspace</p>
         <Link className={pathname==='/'?styles.navActive:''} href="/"><span className={styles.navIcon}><BrandNavIcon label="Home" /></span>Home</Link>
-        <Link className={pathname==='/brain'?styles.navActive:''} href="/brain"><span className={styles.navIcon}><BrandNavIcon label="Brain" /></span>Brand Brain</Link>
-        <Link className={pathname==='/brain/missions'?styles.navActive:''} href="/brain/missions"><span className={styles.navIcon}><BrandNavIcon label="Missions" /></span>Agent missions</Link>
+        <Link className={pathname==='/brain'?styles.navActive:''} href="/brain"><span className={styles.navIcon}><BrandNavIcon label="Brain" /></span>Brain</Link>
+        <Link className={pathname==='/brain/missions'?styles.navActive:''} href="/brain/missions"><span className={styles.navIcon}><BrandNavIcon label="Missions" /></span>Missions</Link>
         <Link
           className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
           href="/enterprise"
         ><span className={styles.navIcon}><BrandNavIcon label="Enterprise" /></span>Enterprise</Link>
-        <Link className={communicationsActive?styles.navActive:''} href="/communications"><span className={styles.navIcon}><BrandNavIcon label="Communications" /></span>Communications</Link>
+        <Link className={communicationsActive?styles.navActive:''} href="/communications"><span className={styles.navIcon}><BrandNavIcon label="Communications" /></span>Comms</Link>
         <p className={styles.navGroup}>Apps</p>
         {pinned.map((module)=><Link
           key={module.key}
           href={module.baseRoute}
           className={active?.key===module.key?styles.navActive:''}
         ><span className={styles.navIcon}><BrandNavIcon label={module.name} iconKey={module.iconKey} /></span>{module.name}</Link>)}
-        <Link className={styles.allAppsLink} href="/">＋ All Apps</Link>
+        <Link className={styles.allAppsLink} href="/">＋ Apps</Link>
         <p className={styles.navGroup}>Administration</p>
         <Link className={pathname==='/appearance'?styles.navActive:''} href="/appearance">Appearance</Link>
-        <Link className={pathname==='/settings/brand'||pathname.startsWith('/settings/brand/')?styles.navActive:''} href="/settings/brand">Brand settings</Link>
-        <Link className={pathname==='/settings/agents'||pathname.startsWith('/settings/agents/')?styles.navActive:''} href="/settings/agents">AI Agents</Link>
+        <Link className={pathname==='/settings/brand'||pathname.startsWith('/settings/brand/')?styles.navActive:''} href="/settings/brand">Brand</Link>
+        <Link className={pathname==='/settings/agents'||pathname.startsWith('/settings/agents/')?styles.navActive:''} href="/settings/agents">Agents</Link>
       </nav>
 
       <div className={styles.sidebarBottom}>
@@ -146,13 +146,11 @@ export function BrandShellFrame({
                 : <div><strong>{organizationName}</strong><small>{tenantName}</small></div>}
         </div>
 
-        {/* Top Telemetry Strip */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, fontFamily: 'monospace' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Hierarchy: <strong style={{ color: 'var(--theme-text-primary)' }}>Apex Brands &gt; {organizationName || 'OpCo'} (L1)</strong></span>
-          <span style={{ color: 'var(--theme-border)' }}>|</span>
-          <span style={{ color: 'var(--theme-text-muted)' }}>BYOK Strip: <strong style={{ color: '#FACC15' }}>Twilio · Resend · Meta API</strong></span>
-          <span style={{ color: 'var(--theme-border)' }}>|</span>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Decision Gate: <strong style={{ color: '#22C55E' }}>LOCAL_SIGN_OFF</strong></span>
+        {/* Sleek Header Telemetry Indicator */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', background: 'var(--theme-surface)', borderRadius: 'var(--theme-radius-control)', border: '1px solid var(--theme-border)', fontSize: 11, fontFamily: 'var(--theme-font-mono)', whiteSpace: 'nowrap' }} title={`BYOK: Twilio · Resend · Meta API | Gate: LOCAL_SIGN_OFF`}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} aria-hidden="true" />
+          <span style={{ color: 'var(--theme-text-secondary)', fontWeight: 600 }}>{organizationName || 'OpCo'}</span>
+          <span style={{ color: 'var(--theme-text-muted)', fontSize: 10 }}>(L1)</span>
         </div>
 
         <div className={styles.topbarActions}>

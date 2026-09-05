@@ -335,13 +335,11 @@ export function ShellFrame({ children, sections, overview, workspaceContext, bra
           <span className={styles.searchKbd}>⌘K</span>
         </button>
 
-        {/* Header Telemetry Strip */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, fontFamily: 'monospace' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Node: <strong style={{ color: 'var(--theme-text-primary)' }}>{currentOrganization.name} ({currentOrganization.level?.toUpperCase() || 'L1'})</strong></span>
-          <span style={{ color: 'var(--theme-border)' }}>|</span>
-          <span style={{ color: 'var(--theme-text-muted)' }}>BYOK: <strong style={{ color: '#FACC15' }}>Twilio · Resend · Meta API</strong></span>
-          <span style={{ color: 'var(--theme-border)' }}>|</span>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Fabric Gate: <strong style={{ color: '#22C55E' }}>COUNTRY_BRAND_MANDATORY</strong></span>
+        {/* Sleek Header Telemetry Indicator */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', background: 'var(--theme-surface)', borderRadius: 'var(--theme-radius-control)', border: '1px solid var(--theme-border)', fontSize: 11, fontFamily: 'var(--theme-font-mono)', whiteSpace: 'nowrap' }} title={`BYOK: Twilio · Resend · Meta API | Gate: COUNTRY_BRAND_MANDATORY`}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} aria-hidden="true" />
+          <span style={{ color: 'var(--theme-text-secondary)', fontWeight: 600 }}>{currentOrganization.name}</span>
+          <span style={{ color: 'var(--theme-text-muted)', fontSize: 10 }}>({currentOrganization.level?.toUpperCase() || 'L1'})</span>
         </div>
 
         <div className={styles.topbarActions}>
