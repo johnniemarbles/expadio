@@ -70,11 +70,10 @@ export default async function EnquiryPage(
   { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   const reqHeaders = await headers();
-  // X-Forwarded-Host is set by the Cloudflare Worker (subdomain traffic) and by the
-  // Cloudflare Transform Rule (custom domain traffic). Use it when present so that
-  // the original customer-facing hostname is used for tenant resolution even when
-  // the Host header has been overridden to the Railway origin hostname.
-  const hostname = reqHeaders.get('x-forwarded-host') ?? reqHeaders.get('host') ?? '';
+  // X-Original-Host is set by the Cloudflare Worker for custom domain traffic and is
+  // a non-standard header that Railway's reverse proxy won't overwrite. Fall back to
+  // X-Forwarded-Host (set by the CF Transform Rule), then Host.
+  const hostname = reqHeaders.get('x-original-host') ?? reqHeaders.get('x-forwarded-host') ?? reqHeaders.get('host') ?? '';
   const { slug: slugParts } = await params;
   // slugParts is undefined for /enquire, ['su'] for /enquire/su, etc.
   const offeringSlug = slugParts?.[0] ?? null;
