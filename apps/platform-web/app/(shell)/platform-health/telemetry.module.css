@@ -1,6 +1,6 @@
 .commandCenter {
   --bg:#09090b; --surface:#121215; --raised:#17171b; --line:#27272a;
-  --muted:#8b8b96; --text:#f4f4f5; --cyan:#06b6d4; --violet:#8b5cf6;
+  --muted:#8b8b96; --text:#f4f4f5; --cyan:var(--theme-primary,#facc15); --violet:#8b5cf6;
   --amber:#f59e0b; --red:#fb7185;
   position:relative; isolation:isolate; min-height:calc(100vh - 136px); margin:-10px;
   overflow:hidden; border:1px solid #202024; border-radius:18px; color:var(--text);
