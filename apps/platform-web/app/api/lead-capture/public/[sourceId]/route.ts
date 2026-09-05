@@ -145,11 +145,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
     const counts = await client.query<{ ip_count: string; email_count: string }>(
       `SELECT
          (SELECT count(*) FROM platform.lead_capture_rate_events
-           WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND dimension='IP' AND key_hash=$3
-             AND created_at > now() - make_interval(secs => $5)) AS ip_count,
+           WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND dimension='IP' AND key_hash=$3::text
+             AND created_at > now() - make_interval(secs => $5::float8)) AS ip_count,
          (SELECT count(*) FROM platform.lead_capture_rate_events
-           WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND dimension='EMAIL' AND key_hash=$4
-             AND created_at > now() - make_interval(secs => $5)) AS email_count`,
+           WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND dimension='EMAIL' AND key_hash=$4::text
+             AND created_at > now() - make_interval(secs => $5::float8)) AS email_count`,
       [tenantId, sourceId, ipHash ?? '', emailHash, RATE_WINDOW_SECONDS],
     );
     await client.query('COMMIT');
@@ -167,12 +167,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
     await client.query('BEGIN');
     await setPublicIngressContext(client, tenantId, sourceId);
     await client.query(
-      `SELECT pg_advisory_xact_lock(hashtextextended(concat_ws(':', $1::uuid::text, $2::uuid::text, $3), 0))`,
+      `SELECT pg_advisory_xact_lock(hashtextextended(concat_ws(':', $1::uuid::text, $2::uuid::text, $3::text), 0))`,
       [tenantId, sourceId, idempotencyKey],
     );
     const existing = await client.query<{ capture_lead_id: string | null }>(
       `SELECT capture_lead_id FROM platform.lead_capture_submissions
-        WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND idempotency_key=$3 LIMIT 1`,
+        WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND idempotency_key=$3::text LIMIT 1`,
       [tenantId, sourceId, idempotencyKey],
     );
     if (existing.rows[0]) {
@@ -274,7 +274,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
       return NextResponse.json({ error: 'Capture external reference already exists.' }, { status: 409, headers: corsHeaders(origin, true) });
     }
     console.error('Public Demand Capture ingress failed:', error);
-    return NextResponse.json({ error: 'Capture could not be accepted.' }, { status: 500, headers: corsHeaders(origin, false) });
+    return NextResponse.json({ error: 'Capture could not be accepted.' }, { status: 500, headers: corsHeaders(origin, true) });
   } finally {
     client.release();
   }

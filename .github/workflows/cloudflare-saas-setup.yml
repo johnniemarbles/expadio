@@ -1,0 +1,139 @@
+name: Cloudflare for SaaS — one-time setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_token:
+        description: "Cloudflare API token (Edit Cloudflare Workers template)"
+        required: true
+        type: string
+      brand_web_origin:
+        description: "Railway brand-web public URL"
+        required: true
+        type: string
+        default: "https://glorious-enchantment-production.up.railway.app"
+
+env:
+  ZONE_ID: a871277903f98da014626efd5abe9a17
+  FALLBACK_ORIGIN: forms.expadio.com
+  # Account that has Workers Scripts access for this token.
+  WORKER_ACCOUNT_ID: 9fa4dc0a90be4759feb579c5c0895faf
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mask token in logs
+        run: echo "::add-mask::${{ inputs.cf_token }}"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Add originless AAAA fallback record
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          set -euo pipefail
+          EXISTING=$(curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=AAAA&name=${FALLBACK_ORIGIN}" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "import sys,json; r=json.load(sys.stdin)['result']; print(r[0]['id'] if r else '')")
+          if [ -n "$EXISTING" ]; then
+            echo "Record already exists ($EXISTING), skipping."
+          else
+            RESULT=$(curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+              -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+              --data "{\"type\":\"AAAA\",\"name\":\"${FALLBACK_ORIGIN}\",\"content\":\"100::\",\"ttl\":1,\"proxied\":true}")
+            echo "$RESULT" | python3 -c "import sys,json; r=json.load(sys.stdin); print('Created: '+r['result']['id'] if r.get('success') else 'ERROR: '+str(r))"
+          fi
+
+      - name: Set Custom Hostnames fallback origin
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          set -euo pipefail
+          RESULT=$(curl -sS -X PUT "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            --data "{\"origin\":\"${FALLBACK_ORIGIN}\"}")
+          echo "$RESULT" | python3 -c "import sys,json; r=json.load(sys.stdin); print('OK' if r.get('success') else 'Response: '+str(r))"
+
+      - name: Deploy Cloudflare Worker (script only, no route yet)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.WORKER_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p worker-deploy
+          cat > worker-deploy/worker.js << 'WORKER'
+          export default {
+            async fetch(request, env) {
+              const url = new URL(request.url);
+              const originalHost = request.headers.get("host") ?? url.hostname;
+              if (url.pathname === "/health" && originalHost === "forms.expadio.com") {
+                return new Response("ok\n", { status: 200, headers: { "Content-Type": "text/plain" } });
+              }
+              const origin = env.BRAND_WEB_ORIGIN?.replace(/\/$/, "");
+              if (!origin) return new Response("Worker misconfigured: BRAND_WEB_ORIGIN not set.", { status: 503 });
+              const target = new URL(url.pathname + url.search, origin);
+              const headers = new Headers(request.headers);
+              headers.set("X-Forwarded-Host", originalHost);
+              headers.set("X-Forwarded-Proto", "https");
+              headers.set("Host", new URL(origin).hostname);
+              return fetch(new Request(target.toString(), { method: request.method, headers, body: request.body, redirect: "manual" }));
+            },
+          };
+          WORKER
+
+          # No [[routes]] here — we add the route via Zone API below.
+          cat > worker-deploy/wrangler.toml << TOML
+          name = "expadio-forms-proxy"
+          main = "worker.js"
+          account_id = "$WORKER_ACCOUNT_ID"
+          compatibility_date = "2024-09-23"
+          TOML
+
+          cd worker-deploy
+          npx wrangler deploy
+
+      - name: Set BRAND_WEB_ORIGIN Worker secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.WORKER_ACCOUNT_ID }}
+        run: |
+          cd worker-deploy
+          echo "${{ inputs.brand_web_origin }}" | \
+            npx wrangler secret put BRAND_WEB_ORIGIN --name expadio-forms-proxy
+
+      - name: Add Worker route to zone via API
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          set -euo pipefail
+          # Check if route already exists.
+          EXISTING=$(curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "import sys,json; routes=json.load(sys.stdin).get('result',[]); match=[r for r in routes if r.get('pattern')=='forms.expadio.com/*']; print(match[0]['id'] if match else '')")
+          if [ -n "$EXISTING" ]; then
+            echo "Route already exists ($EXISTING), skipping."
+          else
+            RESULT=$(curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+              -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+              --data '{"pattern":"forms.expadio.com/*","script":"expadio-forms-proxy"}')
+            echo "$RESULT" | python3 -c "import sys,json; r=json.load(sys.stdin); print('Route created: '+r['result']['id'] if r.get('success') else 'ERROR: '+str(r))"
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "========================================"
+          echo "✅ Setup complete!"
+          echo ""
+          echo "One manual step remaining:"
+          echo "  Cloudflare dashboard → SSL/TLS → Custom Hostnames"
+          echo "  Enable 'Custom Hostnames' if not already toggled on."
+          echo ""
+          echo "Set on Railway brand-web service:"
+          echo "  CLOUDFLARE_ZONE_ID=$ZONE_ID"
+          echo "  CLOUDFLARE_API_TOKEN=<the token you used>"
+          echo "========================================"

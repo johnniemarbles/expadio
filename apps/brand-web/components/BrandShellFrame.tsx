@@ -45,7 +45,8 @@ export function BrandShellFrame({
       <nav className={styles.globalNav}>
         <p className={styles.navGroup}>Workspace</p>
         <Link className={pathname==='/'?styles.navActive:''} href="/">Home</Link>
-        <Link className={pathname==='/brain'?styles.navActive:''} href="/brain"><span className={styles.navIcon}>BB</span>Brand Brain</Link>
+        <Link className={pathname==='/brain'||pathname.startsWith('/brain/')?styles.navActive:''} href="/brain"><span className={styles.navIcon}>BB</span>Brand Brain</Link>
+        <Link className={pathname==='/brain/missions'?styles.navActive:''} href="/brain/missions"><span className={styles.navIcon}>AM</span>Agent missions</Link>
         <Link
           className={pathname==='/enterprise'||pathname.startsWith('/enterprise/')?styles.navActive:''}
           href="/enterprise"
@@ -61,6 +62,7 @@ export function BrandShellFrame({
         <p className={styles.navGroup}>Administration</p>
         <Link className={pathname==='/appearance'?styles.navActive:''} href="/appearance">Appearance</Link>
         <Link className={pathname==='/settings/brand'||pathname.startsWith('/settings/brand/')?styles.navActive:''} href="/settings/brand">Brand settings</Link>
+        <Link className={pathname==='/settings/agents'||pathname.startsWith('/settings/agents/')?styles.navActive:''} href="/settings/agents">AI Agents</Link>
       </nav>
 
       <div className={styles.sidebarBottom}>

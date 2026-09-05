@@ -1,0 +1,94 @@
+name: CF — Origin connectivity diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_token:
+        description: "Cloudflare API token"
+        required: true
+        type: string
+
+env:
+  ZONE_ID: a871277903f98da014626efd5abe9a17
+  RAILWAY_HOST: glorious-enchantment-production.up.railway.app
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mask token
+        run: echo "::add-mask::${{ inputs.cf_token }}"
+
+      - name: Check Worker routes on zone
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Worker routes on expadio.com zone ==="
+          curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          routes = r.get('result', [])
+          if routes:
+              for rt in routes:
+                  print('  pattern=' + rt.get('pattern','?') + '  script=' + str(rt.get('script','none')))
+          else:
+              print('  No Worker routes found!')
+          "
+
+      - name: Check Worker script exists in account
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Worker scripts in xpadio-saas-proxy account ==="
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/9fa4dc0a90be4759feb579c5c0895faf/workers/scripts" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          scripts = r.get('result', [])
+          if scripts:
+              for s in scripts:
+                  print('  ' + s.get('id','?'))
+          else:
+              print('  No scripts found or access denied: ' + str(r.get('errors',[])))
+          "
+
+      - name: Curl forms.expadio.com directly (should hit Worker)
+        run: |
+          echo "=== curl forms.expadio.com (should show Worker or Railway response) ==="
+          curl -sv --max-time 15 "https://forms.expadio.com/" 2>&1 | grep -E "^[<>]|HTTP/|location:|server:|cf-ray:|x-forwarded|host:" || true
+
+      - name: Curl apply.mydreamware.org (custom hostname)
+        run: |
+          echo "=== curl apply.mydreamware.org (should show Worker or Railway response) ==="
+          curl -sv --max-time 15 "https://apply.mydreamware.org/" 2>&1 | grep -E "^[<>]|HTTP/|location:|server:|cf-ray:|x-forwarded|host:|via:" || true
+
+      - name: Check fallback origin and DNS state
+        env:
+          CF_TOKEN: ${{ inputs.cf_token }}
+        run: |
+          echo "=== Fallback origin ==="
+          curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/custom_hostnames/fallback_origin" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          if r.get('success'):
+              res = r['result']
+              print('  origin=' + res.get('origin','?') + '  status=' + res.get('status','?'))
+              for e in res.get('errors',[]):
+                  print('  error: ' + str(e))
+          "
+
+          echo "=== DNS for forms.expadio.com ==="
+          curl -sS \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=forms.expadio.com" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c "
+          import sys, json
+          for r in json.load(sys.stdin).get('result',[]):
+              print('  ' + r['type'] + ' ' + r['name'] + ' to ' + r['content'] + ' proxied=' + str(r['proxied']))
+          "

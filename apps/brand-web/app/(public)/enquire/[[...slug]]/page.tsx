@@ -70,18 +70,36 @@ export default async function EnquiryPage(
   { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   const reqHeaders = await headers();
-  // x-forwarded-host is set by the nginx proxy (accepts any tenant domain,
-  // forwards to brand-web internally). Fall back to host for direct Railway access.
-  const hostname = reqHeaders.get('x-forwarded-host') ?? reqHeaders.get('host') ?? '';
+  // X-Original-Host is set by the Cloudflare Worker or forms-proxy nginx for custom domain traffic.
+  // Fall back to X-Forwarded-Host, then Host.
+  const hostname = reqHeaders.get('x-original-host') ?? reqHeaders.get('x-forwarded-host') ?? reqHeaders.get('host') ?? '';
   const { slug: slugParts } = await params;
   // slugParts is undefined for /enquire, ['su'] for /enquire/su, etc.
   const offeringSlug = slugParts?.[0] ?? null;
 
+  // Diagnostic: log all headers to find which one carries the original custom domain
+  const diagHeaders: Record<string, string> = {};
+  for (const key of ['host', 'x-forwarded-host', 'x-forwarded-for', 'x-real-ip',
+    'cf-ray', 'cf-connecting-ip', 'cf-visitor', 'cf-ipcountry',
+    'x-original-host', 'x-custom-host', 'forwarded', 'via', 'origin',
+    'referer', 'x-railway-request-id',
+  ]) {
+    const v = reqHeaders.get(key);
+    if (v) diagHeaders[key] = v;
+  }
+  console.error('[enquire] headers:', JSON.stringify(diagHeaders));
+
   const org = await resolveOrg(hostname);
-  if (!org) return notFound();
+  if (!org) {
+    console.error('[enquire] org not found for hostname:', hostname);
+    return notFound();
+  }
 
   const publications = await resolvePublications(org.tenant_id, org.organization_id);
-  if (publications.length === 0) return notFound();
+  if (publications.length === 0) {
+    console.error('[enquire] no publications for org:', org.organization_id, 'slugs available: none');
+    return notFound();
+  }
 
   // Find the matching publication: if no slug pick the only one, otherwise match
   let pub: PublicationRow | undefined;
@@ -94,7 +112,10 @@ export default async function EnquiryPage(
       return s === `/enquire-${offeringSlug}` || s === '/enquire';
     });
   }
-  if (!pub) return notFound();
+  if (!pub) {
+    console.error('[enquire] no matching slug for offeringSlug:', offeringSlug, 'available slugs:', publications.map((p) => p.publication_slug));
+    return notFound();
+  }
 
   const platformWebUrl = process.env.PLATFORM_WEB_BASE_URL ?? '';
 

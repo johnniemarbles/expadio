@@ -1,6 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { deniedResponse, resolveRequestContext, withTenantTransaction } from '@/lib/request-context';
-import { ChiefOfStaffOrchestrator, type AgentToolAuthorizationPort } from '@expadio/agent-runtime';
+import {
+  ChiefOfStaffOrchestrator,
+  type AgentToolAuthorizationPort,
+  type AgentToolAdapter,
+} from '@expadio/agent-runtime';
 import { PostgresChiefOfStaffRepository } from '@expadio/postgres-runtime/chief-of-staff';
 
 export const runtime = 'nodejs';
@@ -65,13 +70,36 @@ export async function POST(request: Request) {
     }
 
     const authorizationPort: AgentToolAuthorizationPort = {
-      async authorize() {
-        return { decisionId: 'dec-1', allowed: true, reasonKey: 'AUTHORIZED' };
+      async authorize(query) {
+        const decisionId = randomUUID();
+        if (query.tenantId !== context.tenantId) {
+          return { decisionId, allowed: false, reasonKey: 'TENANT_MISMATCH' };
+        }
+        if (query.effect === 'PROPOSE') {
+          return { decisionId, allowed: false, reasonKey: 'PROPOSE_REQUIRES_POLICY' };
+        }
+        return { decisionId, allowed: true, reasonKey: 'TENANT_SCOPED_OBSERVE_ALLOWED' };
+      },
+    };
+
+    const contextObserveTool: AgentToolAdapter = {
+      toolKey: 'cbos.context.observe',
+      effect: 'OBSERVE',
+      async invoke(input) {
+        return {
+          executionId: input.executionId,
+          tenantId: input.tenantId,
+          toolKey: 'cbos.context.observe',
+          kind: 'OBSERVATION',
+          outputReference: `artifact:cbos:context:${input.tenantId}:${input.executionId}`,
+          sourceReferences: [input.contextBundleReference],
+          producedAt: new Date().toISOString(),
+        };
       },
     };
 
     const orchestrator = new ChiefOfStaffOrchestrator({
-      executorOptions: { authorizationPort },
+      executorOptions: { authorizationPort, registeredTools: [contextObserveTool] },
     });
 
     const mission = await withTenantTransaction(context, async (client) => {

@@ -60,6 +60,7 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
   );
   const [intent, setIntent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const refreshData = async () => {
@@ -110,6 +111,9 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
   };
 
   const handleResolveApproval = async (missionId: string, approvalId: string, approved: boolean) => {
+    if (resolvingApprovalId) return;
+    setResolvingApprovalId(approvalId);
+    setActionMessage(null);
     try {
       const res = await fetch(`/api/agent/missions/${missionId}/approve`, {
         method: 'POST',
@@ -126,6 +130,8 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
       }
     } catch (err) {
       setActionMessage(`Error: ${err instanceof Error ? err.message : 'Failed'}`);
+    } finally {
+      setResolvingApprovalId(null);
     }
   };
 
@@ -215,19 +221,26 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
                     <td>
                       <div style={{ fontWeight: 600 }}>{app.title}</div>
                       <div className={styles.muted}>{app.description}</div>
+                      <pre style={{ maxHeight: 180, overflow: 'auto', marginTop: 10, padding: 10, borderRadius: 6, background: 'var(--theme-surface-muted)', fontSize: 11, whiteSpace: 'pre-wrap' }} aria-label="Staged execution payload">
+                        {JSON.stringify(app.staged_changes, null, 2)}
+                      </pre>
                     </td>
                     <td><span className={statusClass(app.status)}>{app.status}</span></td>
                     <td>
                       {app.status === 'PENDING' ? (
                         <>
                           <button
+                            type="button"
                             className={styles.approveBtn}
+                            disabled={resolvingApprovalId !== null}
                             onClick={() => handleResolveApproval(app.mission_id, app.approval_id, true)}
                           >
-                            Approve
+                            {resolvingApprovalId === app.approval_id ? 'Saving...' : 'Approve'}
                           </button>
                           <button
+                            type="button"
                             className={styles.rejectBtn}
+                            disabled={resolvingApprovalId !== null}
                             onClick={() => handleResolveApproval(app.mission_id, app.approval_id, false)}
                           >
                             Reject

@@ -75,6 +75,24 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
     return createAgentTask(this.#client, input);
   }
 
+  async updateMissionStatus(
+    missionId: string,
+    tenantId: string,
+    status: AgentMission['status'],
+  ): Promise<void> {
+    return updateAgentMissionStatus(this.#client, missionId, tenantId, status);
+  }
+
+  async updateTaskStatus(
+    taskId: string,
+    tenantId: string,
+    status: AgentTask['status'],
+    outputArtifact: Record<string, unknown> | null = null,
+    error: string | null = null,
+  ): Promise<void> {
+    return updateAgentTaskStatus(this.#client, taskId, tenantId, status, outputArtifact, error);
+  }
+
   async createApprovalRequest(input: {
     readonly missionId: string;
     readonly taskId: string;
@@ -84,6 +102,19 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
     readonly stagedChanges?: Record<string, unknown>;
   }): Promise<AgentApprovalRequest> {
     return createAgentApprovalRequest(this.#client, input);
+  }
+
+  async listMissionTasks(missionId: string, tenantId: string): Promise<readonly AgentTask[]> {
+    return listAgentMissionTasks(this.#client, missionId, tenantId);
+  }
+
+  async resolveApproval(input: {
+    readonly approvalId: string;
+    readonly missionId: string;
+    readonly tenantId: string;
+    readonly approved: boolean;
+  }): Promise<AgentTask | null> {
+    return resolveAgentApproval(this.#client, input);
   }
 }
 
@@ -174,6 +205,51 @@ export async function createAgentTask(
   };
 }
 
+export async function updateAgentMissionStatus(
+  client: PostgresClient,
+  missionId: string,
+  tenantId: string,
+  status: AgentMission['status'],
+): Promise<void> {
+  await client.query(
+    `UPDATE platform.agent_missions
+        SET status = $1, updated_at = now()
+      WHERE mission_id = $2 AND tenant_id = $3`,
+    [status, missionId, tenantId],
+  );
+}
+
+export async function updateAgentTaskStatus(
+  client: PostgresClient,
+  taskId: string,
+  tenantId: string,
+  status: AgentTask['status'],
+  outputArtifact: Record<string, unknown> | null = null,
+  error: string | null = null,
+): Promise<void> {
+  const startedAt = status === 'RUNNING' ? 'now()' : null;
+  const completedAt = status === 'COMPLETED' || status === 'FAILED' ? 'now()' : null;
+
+  await client.query(
+    `UPDATE platform.agent_tasks
+        SET status = $1,
+            output_artifact = COALESCE($2::jsonb, output_artifact),
+            error = $3,
+            started_at = CASE WHEN $4::boolean THEN now() ELSE started_at END,
+            completed_at = CASE WHEN $5::boolean THEN now() ELSE completed_at END
+      WHERE task_id = $6 AND tenant_id = $7`,
+    [
+      status,
+      outputArtifact !== null ? JSON.stringify(outputArtifact) : null,
+      error,
+      startedAt !== null,
+      completedAt !== null,
+      taskId,
+      tenantId,
+    ],
+  );
+}
+
 export async function createAgentApprovalRequest(
   client: PostgresClient,
   input: {
@@ -216,4 +292,56 @@ export async function createAgentApprovalRequest(
     createdAt: row.created_at,
     resolvedAt: row.resolved_at,
   };
+}
+
+function mapTask(row: RawTaskRow): AgentTask {
+  return {
+    taskId: row.task_id, missionId: row.mission_id, tenantId: row.tenant_id,
+    assignedAgentId: row.assigned_agent_id, title: row.title, description: row.description,
+    actionPayload: row.action_payload ?? {}, dependsOn: row.depends_on ?? [],
+    requiresApproval: row.requires_approval, status: row.status,
+    outputArtifact: row.output_artifact ?? null, error: row.error ?? null,
+    startedAt: row.started_at, completedAt: row.completed_at, createdAt: row.created_at,
+  };
+}
+
+export async function listAgentMissionTasks(
+  client: PostgresClient, missionId: string, tenantId: string,
+): Promise<readonly AgentTask[]> {
+  const result = await client.query<RawTaskRow>(
+    `SELECT task_id, mission_id, tenant_id, assigned_agent_id, title, description,
+            action_payload, depends_on, requires_approval, status, output_artifact,
+            error, started_at, completed_at, created_at
+       FROM platform.agent_tasks
+      WHERE mission_id = $1 AND tenant_id = $2
+      ORDER BY created_at ASC`,
+    [missionId, tenantId],
+  );
+  return result.rows.map(mapTask);
+}
+
+export async function resolveAgentApproval(
+  client: PostgresClient,
+  input: { readonly approvalId: string; readonly missionId: string; readonly tenantId: string; readonly approved: boolean },
+): Promise<AgentTask | null> {
+  const status = input.approved ? 'APPROVED' : 'REJECTED';
+  const taskStatus = input.approved ? 'QUEUED' : 'FAILED';
+  const result = await client.query<RawTaskRow>(
+    `WITH approved_request AS (
+       UPDATE platform.agent_approval_requests
+          SET status = $1, resolved_at = now()
+        WHERE approval_id = $2 AND mission_id = $3 AND tenant_id = $4 AND status = 'PENDING'
+      RETURNING task_id
+     )
+     UPDATE platform.agent_tasks AS task
+        SET status = $5, error = $6
+       FROM approved_request
+      WHERE task.task_id = approved_request.task_id AND task.tenant_id = $4
+      RETURNING task.task_id, task.mission_id, task.tenant_id, task.assigned_agent_id, task.title,
+                task.description, task.action_payload, task.depends_on, task.requires_approval,
+                task.status, task.output_artifact, task.error, task.started_at, task.completed_at, task.created_at`,
+    [status, input.approvalId, input.missionId, input.tenantId, taskStatus,
+      input.approved ? null : 'Task rejected by human approval gate'],
+  );
+  return result.rows[0] ? mapTask(result.rows[0]) : null;
 }
