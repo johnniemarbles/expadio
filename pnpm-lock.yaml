@@ -26,6 +26,9 @@ importers:
       '@expadio/ai-gateway':
         specifier: workspace:*
         version: link:../../packages/ai-gateway
+      '@expadio/entity':
+        specifier: workspace:*
+        version: link:../../packages/entity
       '@expadio/lead-capture':
         specifier: workspace:*
         version: link:../../packages/lead-capture
