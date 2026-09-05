@@ -9,4 +9,5 @@ export default async function BrainMissionsPage({ searchParams }: { searchParams
   const data = await fetchApi<{ missions: any[]; tasks: any[]; approvals: any[] }>('/api/agent/missions');
   if (isDenied(data)) return <DeniedState result={data} />;
   return <ChiefOfStaffClient initialData={data} />;
+}n/main
 }
