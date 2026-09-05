@@ -32,7 +32,7 @@ WHERE
   -- (e.g. CI integration harness) to avoid FK violations.
   EXISTS (
     SELECT 1 FROM platform.tenants
-    WHERE id = '00000000-0000-0000-0000-000000000001'
+    WHERE tenant_id = '00000000-0000-0000-0000-000000000001'
   )
   AND NOT EXISTS (
     SELECT 1
