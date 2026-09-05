@@ -42,9 +42,33 @@ interface RawApprovalRow {
   readonly description: string;
   readonly staged_changes: Record<string, unknown> | null;
   readonly status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  readonly proposer_subject_id: string;
+  readonly approver_subject_id: string | null;
   readonly telegram_message_id: string | number | null;
   readonly created_at: Date | string;
   readonly resolved_at: Date | string | null;
+}
+
+const APPROVAL_COLUMNS = `approval_id, mission_id, task_id, tenant_id, title, description,
+                staged_changes, status, proposer_subject_id, approver_subject_id,
+                telegram_message_id, created_at, resolved_at`;
+
+function mapApproval(row: RawApprovalRow): AgentApprovalRequest {
+  return {
+    approvalId: row.approval_id,
+    missionId: row.mission_id,
+    taskId: row.task_id,
+    tenantId: row.tenant_id,
+    title: row.title,
+    description: row.description,
+    stagedChanges: row.staged_changes ?? {},
+    status: row.status,
+    proposerSubjectId: row.proposer_subject_id,
+    approverSubjectId: row.approver_subject_id,
+    telegramMessageId: row.telegram_message_id ? Number(row.telegram_message_id) : null,
+    createdAt: row.created_at,
+    resolvedAt: row.resolved_at,
+  };
 }
 
 export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePort {
@@ -100,6 +124,7 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
     readonly title: string;
     readonly description?: string;
     readonly stagedChanges?: Record<string, unknown>;
+    readonly proposerSubjectId: string;
   }): Promise<AgentApprovalRequest> {
     return createAgentApprovalRequest(this.#client, input);
   }
@@ -108,11 +133,20 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
     return listAgentMissionTasks(this.#client, missionId, tenantId);
   }
 
+  async getApprovalRequest(
+    approvalId: string,
+    tenantId: string,
+  ): Promise<AgentApprovalRequest | null> {
+    return getAgentApprovalRequest(this.#client, approvalId, tenantId);
+  }
+
   async resolveApproval(input: {
     readonly approvalId: string;
     readonly missionId: string;
     readonly tenantId: string;
     readonly approved: boolean;
+    readonly approverSubjectId: string;
+    readonly reason?: string;
   }): Promise<AgentTask | null> {
     return resolveAgentApproval(this.#client, input);
   }
@@ -259,14 +293,16 @@ export async function createAgentApprovalRequest(
     readonly title: string;
     readonly description?: string;
     readonly stagedChanges?: Record<string, unknown>;
+    readonly proposerSubjectId: string;
   },
 ): Promise<AgentApprovalRequest> {
   const approvalId = randomUUID();
   const query = `
     INSERT INTO platform.agent_approval_requests (
-      approval_id, mission_id, task_id, tenant_id, title, description, staged_changes, status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
-    RETURNING approval_id, mission_id, task_id, tenant_id, title, description, staged_changes, status, telegram_message_id, created_at, resolved_at;
+      approval_id, mission_id, task_id, tenant_id, title, description, staged_changes,
+      status, proposer_subject_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
+    RETURNING ${APPROVAL_COLUMNS};
   `;
   const result = await client.query<RawApprovalRow>(query, [
     approvalId,
@@ -276,22 +312,26 @@ export async function createAgentApprovalRequest(
     input.title,
     input.description ?? '',
     JSON.stringify(input.stagedChanges ?? {}),
+    input.proposerSubjectId,
   ]);
   const row = result.rows[0];
   if (!row) throw new Error('AGENT_APPROVAL_CREATION_FAILED');
-  return {
-    approvalId: row.approval_id,
-    missionId: row.mission_id,
-    taskId: row.task_id,
-    tenantId: row.tenant_id,
-    title: row.title,
-    description: row.description,
-    stagedChanges: row.staged_changes ?? {},
-    status: row.status,
-    telegramMessageId: row.telegram_message_id ? Number(row.telegram_message_id) : null,
-    createdAt: row.created_at,
-    resolvedAt: row.resolved_at,
-  };
+  return mapApproval(row);
+}
+
+export async function getAgentApprovalRequest(
+  client: PostgresClient,
+  approvalId: string,
+  tenantId: string,
+): Promise<AgentApprovalRequest | null> {
+  const result = await client.query<RawApprovalRow>(
+    `SELECT ${APPROVAL_COLUMNS}
+       FROM platform.agent_approval_requests
+      WHERE approval_id = $1 AND tenant_id = $2`,
+    [approvalId, tenantId],
+  );
+  const row = result.rows[0];
+  return row ? mapApproval(row) : null;
 }
 
 function mapTask(row: RawTaskRow): AgentTask {
@@ -322,26 +362,42 @@ export async function listAgentMissionTasks(
 
 export async function resolveAgentApproval(
   client: PostgresClient,
-  input: { readonly approvalId: string; readonly missionId: string; readonly tenantId: string; readonly approved: boolean },
+  input: {
+    readonly approvalId: string;
+    readonly missionId: string;
+    readonly tenantId: string;
+    readonly approved: boolean;
+    readonly approverSubjectId: string;
+    readonly reason?: string;
+  },
 ): Promise<AgentTask | null> {
   const status = input.approved ? 'APPROVED' : 'REJECTED';
   const taskStatus = input.approved ? 'QUEUED' : 'FAILED';
   const result = await client.query<RawTaskRow>(
     `WITH approved_request AS (
        UPDATE platform.agent_approval_requests
-          SET status = $1, resolved_at = now()
-        WHERE approval_id = $2 AND mission_id = $3 AND tenant_id = $4 AND status = 'PENDING'
+          SET status = $1, approver_subject_id = $2, decision_reason = $3, resolved_at = now()
+        WHERE approval_id = $4 AND mission_id = $5 AND tenant_id = $6
+          AND status = 'PENDING' AND proposer_subject_id <> $2
       RETURNING task_id
      )
      UPDATE platform.agent_tasks AS task
-        SET status = $5, error = $6
+        SET status = $7, error = $8
        FROM approved_request
-      WHERE task.task_id = approved_request.task_id AND task.tenant_id = $4
+      WHERE task.task_id = approved_request.task_id AND task.tenant_id = $6
       RETURNING task.task_id, task.mission_id, task.tenant_id, task.assigned_agent_id, task.title,
                 task.description, task.action_payload, task.depends_on, task.requires_approval,
                 task.status, task.output_artifact, task.error, task.started_at, task.completed_at, task.created_at`,
-    [status, input.approvalId, input.missionId, input.tenantId, taskStatus,
-      input.approved ? null : 'Task rejected by human approval gate'],
+    [
+      status,
+      input.approverSubjectId,
+      input.reason ?? null,
+      input.approvalId,
+      input.missionId,
+      input.tenantId,
+      taskStatus,
+      input.approved ? null : 'Task rejected by human approval gate',
+    ],
   );
   return result.rows[0] ? mapTask(result.rows[0]) : null;
 }

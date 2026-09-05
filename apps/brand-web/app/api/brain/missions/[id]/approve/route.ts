@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import type { PoolClient } from 'pg';
-import { ChiefOfStaffOrchestrator, type AgentToolAuthorizationPort, type AgentToolAdapter } from '@expadio/agent-runtime';
+import {
+  ChiefOfStaffOrchestrator,
+  ChiefOfStaffApprovalError,
+  type AgentToolAuthorizationPort,
+  type AgentToolAdapter,
+} from '@expadio/agent-runtime';
 import { PostgresChiefOfStaffRepository } from '@expadio/postgres-runtime/chief-of-staff';
 import { resolveBrandContext, withBrandTransaction } from '../../../../../../lib/brand-context';
 
@@ -30,11 +35,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return { executionId: input.executionId, tenantId: input.tenantId, toolKey: 'cbos.context.observe', kind: 'OBSERVATION', outputReference: `artifact:cbos:context:${input.tenantId}:${input.executionId}`, sourceReferences: [input.contextBundleReference], producedAt: new Date().toISOString() };
       },
     };
-    const status = await withBrandTransaction(context, async (client: PoolClient) => new ChiefOfStaffOrchestrator({
-      executorOptions: { authorizationPort, registeredTools: [contextObserveTool] },
-    }).resolveApproval(new PostgresChiefOfStaffRepository(client), {
-      approvalId, missionId, tenantId: context.tenantId, approved: Boolean(body.approved),
-    }, () => {}));
+    let status: Awaited<ReturnType<ChiefOfStaffOrchestrator['resolveApproval']>>;
+    try {
+      status = await withBrandTransaction(context, async (client: PoolClient) => new ChiefOfStaffOrchestrator({
+        executorOptions: { authorizationPort, registeredTools: [contextObserveTool] },
+      }).resolveApproval(new PostgresChiefOfStaffRepository(client), {
+        approvalId, missionId, tenantId: context.tenantId, approved: Boolean(body.approved),
+        approverSubjectId: context.subjectId,
+      }, () => {}));
+    } catch (err) {
+      if (err instanceof ChiefOfStaffApprovalError && err.code === 'AGENT_SELF_APPROVAL_DENIED') {
+        return NextResponse.json({ error: err.code }, { status: 403 });
+      }
+      throw err;
+    }
 
     if (!status) return NextResponse.json({ error: 'APPROVAL_NOT_PENDING' }, { status: 409 });
     return NextResponse.json({ ok: true, missionId, status });

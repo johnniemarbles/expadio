@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { resolveRequestContext, withTenantTransaction } from '@/lib/request-context';
 import { randomUUID } from 'node:crypto';
-import { ChiefOfStaffOrchestrator, type AgentToolAuthorizationPort, type AgentToolAdapter } from '@expadio/agent-runtime';
+import {
+  ChiefOfStaffOrchestrator,
+  ChiefOfStaffApprovalError,
+  type AgentToolAuthorizationPort,
+  type AgentToolAdapter,
+} from '@expadio/agent-runtime';
 import { PostgresChiefOfStaffRepository } from '@expadio/postgres-runtime/chief-of-staff';
 
 export const runtime = 'nodejs';
@@ -36,12 +41,21 @@ export async function POST(
         return { executionId: input.executionId, tenantId: input.tenantId, toolKey: 'cbos.context.observe', kind: 'OBSERVATION', outputReference: `artifact:cbos:context:${input.tenantId}:${input.executionId}`, sourceReferences: [input.contextBundleReference], producedAt: new Date().toISOString() };
       },
     };
-    const status = await withTenantTransaction(context, async (client) => {
-      const orchestrator = new ChiefOfStaffOrchestrator({ executorOptions: { authorizationPort, registeredTools: [contextObserveTool] } });
-      return orchestrator.resolveApproval(new PostgresChiefOfStaffRepository(client), {
-        approvalId, missionId, tenantId: context.tenantId, approved,
-      }, () => {});
-    });
+    let status: Awaited<ReturnType<ChiefOfStaffOrchestrator['resolveApproval']>>;
+    try {
+      status = await withTenantTransaction(context, async (client) => {
+        const orchestrator = new ChiefOfStaffOrchestrator({ executorOptions: { authorizationPort, registeredTools: [contextObserveTool] } });
+        return orchestrator.resolveApproval(new PostgresChiefOfStaffRepository(client), {
+          approvalId, missionId, tenantId: context.tenantId, approved,
+          approverSubjectId: context.subjectId,
+        }, () => {});
+      });
+    } catch (err) {
+      if (err instanceof ChiefOfStaffApprovalError && err.code === 'AGENT_SELF_APPROVAL_DENIED') {
+        return NextResponse.json({ error: err.code }, { status: 403 });
+      }
+      throw err;
+    }
 
     if (!status) return NextResponse.json({ error: 'APPROVAL_NOT_PENDING' }, { status: 409 });
 
