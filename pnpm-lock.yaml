@@ -23,6 +23,9 @@ importers:
       '@expadio/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
+      '@expadio/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
       '@expadio/lead-capture':
         specifier: workspace:*
         version: link:../../packages/lead-capture
