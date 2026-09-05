@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
+    "@expadio/ai-gateway": "workspace:*",
     "@expadio/business-config": "workspace:*",
     "@expadio/postgres-runtime": "workspace:*"
   }
