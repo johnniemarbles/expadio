@@ -20,6 +20,9 @@ test('ChiefOfStaffOrchestrator processes executive intent and emits events', asy
     executorOptions: { authorizationPort },
   });
 
+  const missionStatusLog: string[] = [];
+  const taskStatusLog: string[] = [];
+
   const mockPersistence: ChiefOfStaffPersistencePort = {
     async createMission(input): Promise<AgentMission> {
       return {
@@ -32,6 +35,9 @@ test('ChiefOfStaffOrchestrator processes executive intent and emits events', asy
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+    },
+    async updateMissionStatus(_missionId, _tenantId, status): Promise<void> {
+      missionStatusLog.push(status);
     },
     async createTask(input): Promise<AgentTask> {
       return {
@@ -51,6 +57,9 @@ test('ChiefOfStaffOrchestrator processes executive intent and emits events', asy
         completedAt: null,
         createdAt: new Date().toISOString(),
       };
+    },
+    async updateTaskStatus(_taskId, _tenantId, status): Promise<void> {
+      taskStatusLog.push(status);
     },
     async createApprovalRequest(input): Promise<AgentApprovalRequest> {
       return {
@@ -82,7 +91,13 @@ test('ChiefOfStaffOrchestrator processes executive intent and emits events', asy
 
   assert.equal(mission.missionId, 'mission-1');
   assert.ok(emitted.includes('mission:created'));
+  assert.ok(emitted.includes('mission:in_progress'));
+  assert.ok(emitted.includes('mission:done'));
   assert.ok(emitted.includes('task:queued'));
   assert.ok(emitted.includes('task:start'));
   assert.ok(emitted.includes('task:completed'));
+
+  assert.deepEqual(missionStatusLog, ['IN_PROGRESS', 'COMPLETED']);
+  assert.ok(taskStatusLog.includes('RUNNING'));
+  assert.ok(taskStatusLog.includes('COMPLETED'));
 });
