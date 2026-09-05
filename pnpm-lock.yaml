@@ -208,6 +208,9 @@ importers:
 
   packages/agent-runtime:
     dependencies:
+      '@expadio/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
