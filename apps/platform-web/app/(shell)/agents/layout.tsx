@@ -5,8 +5,12 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/agents', label: 'Runs', exact: true },
+<<<<<<< HEAD
   { href: '/agents/catalog', label: 'Catalog' },
   { href: '/agents/bindings', label: 'Active Bindings' },
+=======
+  { href: '/agents/bindings', label: 'Bindings' },
+>>>>>>> origin/main
   { href: '/agents/registry', label: 'Registry' },
 ];
 

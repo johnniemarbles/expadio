@@ -53,6 +53,9 @@ jobs:
               if (!newHeaders.get('x-forwarded-host')) {
                 newHeaders.set('X-Forwarded-Host', host);
               }
+              // X-Original-Host is a non-standard header Railway's proxy won't overwrite,
+              // used by brand-web to resolve the tenant when X-Forwarded-Host is clobbered.
+              newHeaders.set('X-Original-Host', host);
 
               const method = request.method;
               const body = (method === 'GET' || method === 'HEAD') ? undefined : request.body;
