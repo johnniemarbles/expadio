@@ -1,20 +1,35 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Expadio Design Tokens — Motion
+ *
+ * --tok-motion-* from expadioTokens.motion (tokens.ts).
+ * Existing --theme-motion-* vars aliased for zero component-breakage.
+ * ───────────────────────────────────────────────────────────────────────────── */
 :root {
+  /* Canonical token names */
+  --tok-motion-fast:     120ms;
+  --tok-motion-normal:   200ms;
+  --tok-motion-slow:     320ms;
+  --tok-easing-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --tok-easing-out:      cubic-bezier(0, 0, 0.2, 1);
+
+  /* Bridge existing --theme-motion-* consumers */
   --theme-motion-instant: 0ms;
-  --theme-motion-fast: 140ms;
-  --theme-motion-normal: 220ms;
-  --theme-motion-slow: 340ms;
-  --theme-motion-panel: 360ms;
-  --theme-motion-data: 700ms;
+  --theme-motion-fast:    var(--tok-motion-fast);
+  --theme-motion-normal:  var(--tok-motion-normal);
+  --theme-motion-slow:    var(--tok-motion-slow);
+  --theme-motion-panel:   360ms;
+  --theme-motion-data:    700ms;
 
   --theme-motion-distance-micro: 2px;
   --theme-motion-distance-small: 6px;
   --theme-motion-distance-panel: 12px;
 
-  --theme-easing: cubic-bezier(.2,.8,.2,1);
-  --theme-easing-emphasis: cubic-bezier(.2,.9,.2,1.2);
-  --theme-easing-linear: linear;
+  --theme-easing:          var(--tok-easing-default);
+  --theme-easing-emphasis: cubic-bezier(0.2, 0.9, 0.2, 1.2);
+  --theme-easing-linear:   linear;
 }
 
+/* ── Animation utility classes ─────────────────────────────────────────────── */
 .expadioMotionEnter {
   animation: expadioMotionEnter var(--theme-motion-slow) var(--theme-easing) both;
 }
@@ -29,38 +44,42 @@
 
 .expadioMotionTab {
   transition:
-    color var(--theme-motion-fast) var(--theme-easing),
-    background-color var(--theme-motion-fast) var(--theme-easing),
-    border-color var(--theme-motion-fast) var(--theme-easing),
-    transform var(--theme-motion-fast) var(--theme-easing);
+    color            var(--tok-motion-fast) var(--tok-easing-default),
+    background-color var(--tok-motion-fast) var(--tok-easing-default),
+    border-color     var(--tok-motion-fast) var(--tok-easing-default),
+    transform        var(--tok-motion-fast) var(--tok-easing-default);
 }
 
 .expadioMotionTab:active { transform: translateY(1px); }
 
 @keyframes expadioMotionEnter {
   from { opacity: 0; transform: translateY(var(--theme-motion-distance-small)); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes expadioMotionPanelIn {
   from { opacity: 0; transform: translateY(var(--theme-motion-distance-panel)); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes expadioMotionRowIn {
   from { opacity: 0; transform: translateX(var(--theme-motion-distance-small)); }
-  to { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
+/* ── Reduced motion override ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   :root,
   [data-expadio-theme="platform"],
   [data-expadio-theme="brand"] {
-    --theme-motion-fast: 0ms;
-    --theme-motion-normal: 0ms;
-    --theme-motion-slow: 0ms;
-    --theme-motion-panel: 0ms;
-    --theme-motion-data: 0ms;
+    --tok-motion-fast:   0ms;
+    --tok-motion-normal: 0ms;
+    --tok-motion-slow:   0ms;
+    --theme-motion-fast:    0ms;
+    --theme-motion-normal:  0ms;
+    --theme-motion-slow:    0ms;
+    --theme-motion-panel:   0ms;
+    --theme-motion-data:    0ms;
     --theme-motion-distance-micro: 0px;
     --theme-motion-distance-small: 0px;
     --theme-motion-distance-panel: 0px;

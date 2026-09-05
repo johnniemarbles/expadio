@@ -1,9 +1,24 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Expadio Design Tokens — Radius
+ *
+ * --tok-radius-* are the canonical names from expadioTokens (tokens.ts).
+ * Legacy numeric aliases (--radius-7 etc.) delegate to the nearest token.
+ * ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  --radius-7: 7px;
-  --radius-8: 8px;
-  --radius-9: 9px;
-  --radius-10: 10px;
-  --radius-11: 11px;
-  --radius-12: 12px;
-  --radius-pill: 999px;
+  /* Canonical token names */
+  --tok-radius-sm:   4px;
+  --tok-radius-md:   6px;
+  --tok-radius-lg:   8px;
+  --tok-radius-xl:   12px;
+  --tok-radius-2xl:  16px;
+  --tok-radius-full: 9999px;
+
+  /* Legacy aliases — keep existing components working */
+  --radius-7:   var(--tok-radius-sm);
+  --radius-8:   var(--tok-radius-lg);
+  --radius-9:   var(--tok-radius-lg);
+  --radius-10:  var(--tok-radius-xl);
+  --radius-11:  var(--tok-radius-xl);
+  --radius-12:  var(--tok-radius-xl);
+  --radius-pill:var(--tok-radius-full);
 }
