@@ -217,6 +217,9 @@ importers:
       '@expadio/business-config':
         specifier: workspace:*
         version: link:../business-config
+      '@expadio/entity':
+        specifier: workspace:*
+        version: link:../entity
       '@expadio/postgres-runtime':
         specifier: workspace:*
         version: link:../postgres-runtime

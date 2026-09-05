@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AgentMission, AgentTask, AgentApprovalRequest, ChiefOfStaffPersistencePort } from '@expadio/agent-runtime';
+import type { ContentPublishingPolicy } from '@expadio/entity';
 import type { PostgresClient } from './index.ts';
 
 export type { AgentMission, AgentTask, AgentApprovalRequest, ChiefOfStaffPersistencePort };
@@ -44,6 +45,8 @@ interface RawApprovalRow {
   readonly status: 'PENDING' | 'APPROVED' | 'REJECTED';
   readonly proposer_subject_id: string;
   readonly approver_subject_id: string | null;
+  readonly target_approver_node_id: string | null;
+  readonly policy_applied: ContentPublishingPolicy | null;
   readonly telegram_message_id: string | number | null;
   readonly created_at: Date | string;
   readonly resolved_at: Date | string | null;
@@ -51,6 +54,7 @@ interface RawApprovalRow {
 
 const APPROVAL_COLUMNS = `approval_id, mission_id, task_id, tenant_id, title, description,
                 staged_changes, status, proposer_subject_id, approver_subject_id,
+                target_approver_node_id, policy_applied,
                 telegram_message_id, created_at, resolved_at`;
 
 function mapApproval(row: RawApprovalRow): AgentApprovalRequest {
@@ -63,6 +67,8 @@ function mapApproval(row: RawApprovalRow): AgentApprovalRequest {
     description: row.description,
     stagedChanges: row.staged_changes ?? {},
     status: row.status,
+    targetApproverNodeId: row.target_approver_node_id,
+    policyApplied: row.policy_applied,
     proposerSubjectId: row.proposer_subject_id,
     approverSubjectId: row.approver_subject_id,
     telegramMessageId: row.telegram_message_id ? Number(row.telegram_message_id) : null,
@@ -294,14 +300,19 @@ export async function createAgentApprovalRequest(
     readonly description?: string;
     readonly stagedChanges?: Record<string, unknown>;
     readonly proposerSubjectId: string;
+    /** Set only by callers that routed this approval via routeApprovalTarget()
+     * (see committee-approval-staging.ts) -- the task-level requiresApproval
+     * gate does not set these, since it has no entity node to route from. */
+    readonly targetApproverNodeId?: string;
+    readonly policyApplied?: ContentPublishingPolicy;
   },
 ): Promise<AgentApprovalRequest> {
   const approvalId = randomUUID();
   const query = `
     INSERT INTO platform.agent_approval_requests (
       approval_id, mission_id, task_id, tenant_id, title, description, staged_changes,
-      status, proposer_subject_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
+      status, proposer_subject_id, target_approver_node_id, policy_applied
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, $9, $10)
     RETURNING ${APPROVAL_COLUMNS};
   `;
   const result = await client.query<RawApprovalRow>(query, [
@@ -313,6 +324,8 @@ export async function createAgentApprovalRequest(
     input.description ?? '',
     JSON.stringify(input.stagedChanges ?? {}),
     input.proposerSubjectId,
+    input.targetApproverNodeId ?? null,
+    input.policyApplied ?? null,
   ]);
   const row = result.rows[0];
   if (!row) throw new Error('AGENT_APPROVAL_CREATION_FAILED');

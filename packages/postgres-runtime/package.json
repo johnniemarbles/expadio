@@ -43,6 +43,7 @@
     "./closure": "./src/closure.ts",
     "./agent-tenant-memory": "./src/agent-tenant-memory.ts",
     "./editorial-committee": "./src/editorial-committee.ts",
+    "./committee-approval-staging": "./src/committee-approval-staging.ts",
     "./domain-events": "./src/domain-events.ts",
     "./domain-event-outbox-worker": "./src/domain-event-outbox-worker.ts",
     "./governed-action-intent": "./src/governed-action-intent.ts",

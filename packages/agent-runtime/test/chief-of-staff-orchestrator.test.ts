@@ -74,6 +74,8 @@ test('ChiefOfStaffOrchestrator processes executive intent and emits events', asy
         status: 'PENDING',
         proposerSubjectId: input.proposerSubjectId,
         approverSubjectId: null,
+        targetApproverNodeId: null,
+        policyApplied: null,
         telegramMessageId: null,
         createdAt: new Date().toISOString(),
         resolvedAt: null,
@@ -128,7 +130,7 @@ test('ChiefOfStaffOrchestrator leaves a mission awaiting approval and resumes th
   const approvalRecord: AgentApprovalRequest = {
     approvalId: 'approval-1', missionId: 'mission-approval', taskId: 'task-approval', tenantId: 'tenant-1',
     title: 'Review draft', description: '', stagedChanges: {}, status: 'PENDING',
-    proposerSubjectId: 'sub-1', approverSubjectId: null, telegramMessageId: null, createdAt: '', resolvedAt: null,
+    proposerSubjectId: 'sub-1', approverSubjectId: null, targetApproverNodeId: null, policyApplied: null, telegramMessageId: null, createdAt: '', resolvedAt: null,
   };
   const persistence: ChiefOfStaffPersistencePort = {
     async createMission(input) { return { missionId: 'mission-approval', tenantId: input.tenantId, userSubjectId: input.userSubjectId, intent: input.intent, status: 'PLANNING', summary: {}, createdAt: '', updatedAt: '' }; },
@@ -158,7 +160,7 @@ test('ChiefOfStaffOrchestrator denies self-approval of a proposal', async () => 
   const approvalRecord: AgentApprovalRequest = {
     approvalId: 'approval-2', missionId: 'mission-2', taskId: 'task-2', tenantId: 'tenant-1',
     title: 'Publish campaign', description: '', stagedChanges: {}, status: 'PENDING',
-    proposerSubjectId: 'sub-1', approverSubjectId: null, telegramMessageId: null, createdAt: '', resolvedAt: null,
+    proposerSubjectId: 'sub-1', approverSubjectId: null, targetApproverNodeId: null, policyApplied: null, telegramMessageId: null, createdAt: '', resolvedAt: null,
   };
 
   let resolveApprovalCalled = false;
