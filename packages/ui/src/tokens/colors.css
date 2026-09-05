@@ -197,39 +197,39 @@
  * ───────────────────────────────────────────────────────────────────────────── */
 :root {
   /* Surfaces */
-  --background:         var(--tok-color-bg-base);
-  --foreground:         var(--tok-color-text-primary);
-  --card:               var(--tok-color-bg-surface);
-  --card-foreground:    var(--tok-color-text-primary);
-  --popover:            var(--tok-color-bg-surface);
-  --popover-foreground: var(--tok-color-text-primary);
+  --background:         var(--theme-canvas);
+  --foreground:         var(--theme-text-primary);
+  --card:               var(--theme-surface);
+  --card-foreground:    var(--theme-text-primary);
+  --popover:            var(--theme-surface-raised);
+  --popover-foreground: var(--theme-text-primary);
 
   /* Brand */
-  --primary:            var(--tok-color-accent-primary);
-  --primary-foreground: var(--tok-color-text-inverse);
-  --primary-hover:      var(--tok-color-accent-primary-hover);
-  --primary-muted:      var(--tok-color-accent-primary-muted);
+  --primary:            var(--theme-primary);
+  --primary-foreground: var(--theme-text-inverse);
+  --primary-hover:      var(--theme-focus);
+  --primary-muted:      var(--theme-navigation-active);
 
   /* Secondary */
-  --secondary:            var(--tok-color-bg-overlay);
-  --secondary-foreground: var(--tok-color-text-primary);
+  --secondary:            var(--theme-secondary);
+  --secondary-foreground: var(--theme-text-primary);
 
   /* Muted */
-  --muted:            var(--tok-color-bg-overlay);
-  --muted-foreground: var(--tok-color-text-muted);
+  --muted:            var(--theme-surface-muted);
+  --muted-foreground: var(--theme-text-muted);
 
   /* Accent (same as primary in Motion theme) */
-  --accent:            var(--tok-color-accent-primary);
-  --accent-foreground: var(--tok-color-text-inverse);
+  --accent:            var(--theme-accent);
+  --accent-foreground: var(--theme-text-inverse);
 
   /* Destructive */
-  --destructive:            var(--tok-color-semantic-critical);
-  --destructive-foreground: var(--tok-color-text-primary);
+  --destructive:            var(--theme-danger);
+  --destructive-foreground: var(--theme-text-inverse);
 
   /* Borders & inputs */
-  --border: var(--tok-color-border-default);
-  --input:  var(--tok-color-border-default);
-  --ring:   var(--tok-color-border-focus);
+  --border: var(--theme-border);
+  --input:  var(--theme-border);
+  --ring:   var(--theme-focus);
 
   /* Border widths */
   --border-width:       1px;
@@ -237,17 +237,17 @@
   --border-width-focus: 2px;
 
   /* Sidebar */
-  --sidebar:            var(--tok-color-bg-surface);
-  --sidebar-foreground: var(--tok-color-text-primary);
-  --sidebar-border:     var(--tok-color-border-subtle);
+  --sidebar:            var(--theme-sidebar-surface);
+  --sidebar-foreground: var(--theme-text-primary);
+  --sidebar-border:     var(--theme-border);
 
   /* Semantic status */
-  --success: var(--tok-color-semantic-success);
-  --warning: var(--tok-color-semantic-warning);
-  --info:    var(--tok-color-semantic-info);
-  --error:   var(--tok-color-semantic-critical);
+  --success: var(--theme-success);
+  --warning: var(--theme-warning);
+  --info:    var(--theme-info);
+  --error:   var(--theme-danger);
 
   /* Glow */
-  --shadow-glow: var(--tok-shadow-glow-primary);
+  --shadow-glow: var(--theme-border-glow);
 }
 
