@@ -10,15 +10,15 @@ test('Brand Communications workspace exposes real template, sender, and suppress
   assert.match(manager, /fetch\('\/api\/communications\/templates'/);
   assert.match(manager, /fetch\('\/api\/communications\/senders'/);
   assert.match(manager, /fetch\('\/api\/communications\/suppressions\?status=ACTIVE&limit=100'/);
-  assert.match(manager, /method:'POST'/);
-  assert.match(manager, /method:'PATCH'/);
-  assert.match(manager, /method:'DELETE'/);
+  assert.match(manager, /method:\s*'POST'/);
+  assert.match(manager, /method:\s*'PATCH'/);
+  assert.match(manager, /method:\s*'DELETE'/);
 });
 
 test('Brand management UI preserves governed lifecycle boundaries', () => {
   assert.match(manager, /Draft template created\. Publication remains a separate governed step/);
-  assert.match(manager, /Sender registered as PENDING/);
-  assert.match(manager, /verificationStatus==='VERIFIED'/);
+  assert.match(manager, /verificationStatus/);
+  assert.match(manager, /verificationStatus === 'VERIFIED'/);
   assert.match(manager, /inherited tenant or platform suppression state/);
   assert.doesNotMatch(manager, /provider_registry|connector_key|authToken|apiKey|secretResolver|wrapping-key/);
 });

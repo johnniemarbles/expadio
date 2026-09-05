@@ -14,6 +14,28 @@ export async function linkTelegramUser(
   );
 }
 
+export async function getTelegramUserLink(
+  client: PostgresClient,
+  input: { readonly tenantId: string; readonly subjectId: string },
+): Promise<{ telegramUserId: number } | null> {
+  const result = await client.query<{ telegram_user_id: string | number }>(
+    `SELECT telegram_user_id FROM platform.telegram_user_links WHERE tenant_id = $1 AND subject_id = $2`,
+    [input.tenantId, input.subjectId],
+  );
+  const row = result.rows[0];
+  return row ? { telegramUserId: Number(row.telegram_user_id) } : null;
+}
+
+export async function unlinkTelegramUser(
+  client: PostgresClient,
+  input: { readonly tenantId: string; readonly subjectId: string },
+): Promise<void> {
+  await client.query(
+    `DELETE FROM platform.telegram_user_links WHERE tenant_id = $1 AND subject_id = $2`,
+    [input.tenantId, input.subjectId],
+  );
+}
+
 /** Resolves which (tenant, subject) a Telegram account is linked to. Used by
  * the webhook to identify who tapped an inline button, with no tenant
  * context available yet -- see platform.telegram_user_links (0173) for why
