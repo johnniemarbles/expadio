@@ -7,6 +7,19 @@ import { GovernedTaskExecutor, type GovernedTaskExecutorOptions } from './govern
 
 export type MissionEventEmitter = (event: string, data: Record<string, unknown>) => void;
 
+export type ChiefOfStaffApprovalErrorCode =
+  | 'AGENT_SELF_APPROVAL_DENIED';
+
+export class ChiefOfStaffApprovalError extends Error {
+  readonly code: ChiefOfStaffApprovalErrorCode;
+
+  constructor(code: ChiefOfStaffApprovalErrorCode, message: string) {
+    super(message);
+    this.name = 'ChiefOfStaffApprovalError';
+    this.code = code;
+  }
+}
+
 export interface ChiefOfStaffOrchestratorOptions {
   readonly executorOptions: GovernedTaskExecutorOptions;
 }
@@ -74,7 +87,13 @@ export class ChiefOfStaffOrchestrator {
     await persistence.updateMissionStatus(mission.missionId, input.tenantId, 'IN_PROGRESS');
     emit('mission:in_progress', { missionId: mission.missionId });
 
-    const finalStatus = await this.runExecutionLoop(persistence, createdTasks, input.tenantId, emit);
+    const finalStatus = await this.runExecutionLoop(
+      persistence,
+      createdTasks,
+      input.tenantId,
+      input.userSubjectId,
+      emit,
+    );
     await persistence.updateMissionStatus(mission.missionId, input.tenantId, finalStatus);
     emit('mission:done', { missionId: mission.missionId, status: finalStatus });
 
@@ -88,9 +107,26 @@ export class ChiefOfStaffOrchestrator {
       readonly missionId: string;
       readonly tenantId: string;
       readonly approved: boolean;
+      readonly approverSubjectId: string;
+      readonly reason?: string;
     },
     emit: MissionEventEmitter,
   ): Promise<'COMPLETED' | 'FAILED' | 'AWAITING_APPROVAL' | null> {
+    const pending = await persistence.getApprovalRequest(input.approvalId, input.tenantId);
+    if (!pending) return null;
+
+    if (pending.proposerSubjectId === input.approverSubjectId) {
+      emit('approval:denied', {
+        approvalId: input.approvalId,
+        missionId: input.missionId,
+        reason: 'AGENT_SELF_APPROVAL_DENIED',
+      });
+      throw new ChiefOfStaffApprovalError(
+        'AGENT_SELF_APPROVAL_DENIED',
+        'The subject who initiated this proposal cannot approve or reject it.',
+      );
+    }
+
     const task = await persistence.resolveApproval(input);
     if (!task) return null;
 
@@ -106,6 +142,7 @@ export class ChiefOfStaffOrchestrator {
       persistence,
       tasks,
       input.tenantId,
+      pending.proposerSubjectId,
       emit,
       new Set([task.taskId]),
     );
@@ -118,6 +155,7 @@ export class ChiefOfStaffOrchestrator {
     persistence: ChiefOfStaffPersistencePort,
     tasksList: readonly AgentTask[],
     tenantId: string,
+    proposerSubjectId: string,
     emit: MissionEventEmitter,
     approvedTaskIds: ReadonlySet<string> = new Set(),
   ): Promise<'COMPLETED' | 'FAILED' | 'AWAITING_APPROVAL'> {
@@ -147,6 +185,7 @@ export class ChiefOfStaffOrchestrator {
             title: task.title,
             description: task.description,
             stagedChanges: task.actionPayload,
+            proposerSubjectId,
           });
           await persistence.updateTaskStatus(task.taskId, tenantId, 'AWAITING_APPROVAL');
 

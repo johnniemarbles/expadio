@@ -36,6 +36,8 @@ export interface AgentApprovalRequest {
   readonly description: string;
   readonly stagedChanges: Record<string, unknown>;
   readonly status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  readonly proposerSubjectId: string;
+  readonly approverSubjectId: string | null;
   readonly telegramMessageId: number | null;
   readonly createdAt: Date | string;
   readonly resolvedAt: Date | string | null;
@@ -80,14 +82,22 @@ export interface ChiefOfStaffPersistencePort {
     readonly title: string;
     readonly description?: string;
     readonly stagedChanges?: Record<string, unknown>;
+    readonly proposerSubjectId: string;
   }): Promise<AgentApprovalRequest>;
 
   listMissionTasks(missionId: string, tenantId: string): Promise<readonly AgentTask[]>;
+
+  getApprovalRequest(
+    approvalId: string,
+    tenantId: string,
+  ): Promise<AgentApprovalRequest | null>;
 
   resolveApproval(input: {
     readonly approvalId: string;
     readonly missionId: string;
     readonly tenantId: string;
     readonly approved: boolean;
+    readonly approverSubjectId: string;
+    readonly reason?: string;
   }): Promise<AgentTask | null>;
 }
