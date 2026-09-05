@@ -167,12 +167,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ sou
     await client.query('BEGIN');
     await setPublicIngressContext(client, tenantId, sourceId);
     await client.query(
-      `SELECT pg_advisory_xact_lock(hashtextextended(concat_ws(':', $1::uuid::text, $2::uuid::text, $3), 0))`,
+      `SELECT pg_advisory_xact_lock(hashtextextended(concat_ws(':', $1::uuid::text, $2::uuid::text, $3::text), 0))`,
       [tenantId, sourceId, idempotencyKey],
     );
     const existing = await client.query<{ capture_lead_id: string | null }>(
       `SELECT capture_lead_id FROM platform.lead_capture_submissions
-        WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND idempotency_key=$3 LIMIT 1`,
+        WHERE tenant_id=$1::uuid AND source_id=$2::uuid AND idempotency_key=$3::text LIMIT 1`,
       [tenantId, sourceId, idempotencyKey],
     );
     if (existing.rows[0]) {
