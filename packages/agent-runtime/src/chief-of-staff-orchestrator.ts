@@ -71,7 +71,14 @@ export class ChiefOfStaffOrchestrator {
       emit('task:queued', { missionId: mission.missionId, taskId: task.taskId, title: task.title });
     }
 
-    await this.runExecutionLoop(persistence, createdTasks, emit);
+    await persistence.updateMissionStatus(mission.missionId, input.tenantId, 'IN_PROGRESS');
+    emit('mission:in_progress', { missionId: mission.missionId });
+
+    const failed = await this.runExecutionLoop(persistence, createdTasks, input.tenantId, emit);
+
+    const finalStatus = failed ? 'FAILED' : 'COMPLETED';
+    await persistence.updateMissionStatus(mission.missionId, input.tenantId, finalStatus);
+    emit('mission:done', { missionId: mission.missionId, status: finalStatus });
 
     return mission;
   }
@@ -79,10 +86,12 @@ export class ChiefOfStaffOrchestrator {
   private async runExecutionLoop(
     persistence: ChiefOfStaffPersistencePort,
     tasksList: AgentTask[],
+    tenantId: string,
     emit: MissionEventEmitter,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const completed = new Set<string>();
     const remaining = [...tasksList];
+    let anyFailed = false;
 
     while (remaining.length > 0) {
       const ready = remaining.filter((t) =>
@@ -91,6 +100,7 @@ export class ChiefOfStaffOrchestrator {
 
       if (ready.length === 0) {
         emit('mission:error', { error: 'Circular task dependencies detected' });
+        anyFailed = true;
         break;
       }
 
@@ -104,6 +114,7 @@ export class ChiefOfStaffOrchestrator {
             description: task.description,
             stagedChanges: task.actionPayload,
           });
+          await persistence.updateTaskStatus(task.taskId, tenantId, 'AWAITING_APPROVAL');
 
           emit('task:needs_approval', {
             missionId: task.missionId,
@@ -116,16 +127,23 @@ export class ChiefOfStaffOrchestrator {
         }
 
         emit('task:start', { missionId: task.missionId, taskId: task.taskId, title: task.title });
+        await persistence.updateTaskStatus(task.taskId, tenantId, 'RUNNING');
+
         const result = await this.executor.executeTask(task, task.assignedAgentId, emit);
 
         if (result.success) {
+          await persistence.updateTaskStatus(task.taskId, tenantId, 'COMPLETED', result.output);
           emit('task:completed', { missionId: task.missionId, taskId: task.taskId, output: result.output });
           completed.add(task.taskId);
         } else {
+          await persistence.updateTaskStatus(task.taskId, tenantId, 'FAILED', null, result.error ?? null);
           emit('task:failed', { missionId: task.missionId, taskId: task.taskId, error: result.error });
+          anyFailed = true;
         }
         remaining.splice(remaining.indexOf(task), 1);
       }
     }
+
+    return anyFailed;
   }
 }
