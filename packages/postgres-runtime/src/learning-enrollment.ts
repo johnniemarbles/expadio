@@ -54,6 +54,8 @@ interface EnrollmentListRow extends EnrollmentRow {
   readonly course_title: string;
 }
 
+type CourseEnrollmentMode = 'OPEN' | 'ASSIGNED_ONLY' | 'APPROVAL_REQUIRED';
+
 interface SelfLessonRow {
   readonly enrollment_id: string;
   readonly lesson_id: string;
@@ -149,6 +151,18 @@ function nullableIso(value: Date | string | null): string | null {
 function number(value: string | number | null): number {
   if (value === null) return 0;
   return Number(value);
+}
+
+function assertEnrollmentPolicyAllowsSource(
+  enrollmentMode: CourseEnrollmentMode,
+  sourceType: EnrollmentSource,
+): void {
+  if (sourceType !== 'SELF') return;
+  if (enrollmentMode === 'OPEN') return;
+  if (enrollmentMode === 'APPROVAL_REQUIRED') {
+    throw new Error('LEARNING_ENROLLMENT_APPROVAL_REQUIRED');
+  }
+  throw new Error('LEARNING_ENROLLMENT_SELF_SERVICE_DISABLED');
 }
 
 async function requireLearning(client: PostgresClient, tenantId: string): Promise<void> {
@@ -315,8 +329,9 @@ export async function createLearningEnrollment(
     readonly version: number;
     readonly course_key: string;
     readonly title: string;
+    readonly enrollment_mode: CourseEnrollmentMode;
   }>(
-    `SELECT v.course_version_id, v.version, c.course_key, v.title
+    `SELECT v.course_version_id, v.version, c.course_key, v.title, v.enrollment_mode
        FROM platform.learning_courses c
        JOIN platform.learning_course_versions v
          ON v.course_id = c.course_id
@@ -330,6 +345,7 @@ export async function createLearningEnrollment(
   );
   const course = courseResult.rows[0];
   if (course === undefined) throw new Error('LEARNING_COURSE_NOT_PUBLISHED');
+  assertEnrollmentPolicyAllowsSource(course.enrollment_mode, value.sourceType);
 
   try {
     await client.query(

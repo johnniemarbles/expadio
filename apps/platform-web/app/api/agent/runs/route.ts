@@ -58,6 +58,7 @@ export async function GET(request: Request) {
          LEFT JOIN platform.agent_definitions a ON a.slug = r.agent_id
          LEFT JOIN platform.capabilities c ON c.capability_key = r.agent_id
          WHERE r.tenant_id = $1
+           AND r.organization_id = $2
          ORDER BY r.created_at DESC
          LIMIT 50`,
         [context.tenantId],

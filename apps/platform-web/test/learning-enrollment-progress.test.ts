@@ -39,6 +39,14 @@ test('enrollment pins immutable published course version at the database layer',
   assert.match(migration, /FOREIGN KEY \(lesson_id, tenant_id, course_version_id\)/);
 });
 
+test('enrollment source respects course enrollment policy before insertion', () => {
+  assert.match(runtime, /assertEnrollmentPolicyAllowsSource/);
+  assert.match(runtime, /v\.enrollment_mode/);
+  assert.match(runtime, /sourceType !== 'SELF'/);
+  assert.match(runtime, /LEARNING_ENROLLMENT_SELF_SERVICE_DISABLED/);
+  assert.match(runtime, /LEARNING_ENROLLMENT_APPROVAL_REQUIRED/);
+});
+
 test('tenant learning records use FORCE RLS', () => {
   for (const table of [
     'learning_learners',
