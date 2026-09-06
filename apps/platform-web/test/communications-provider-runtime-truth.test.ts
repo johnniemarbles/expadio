@@ -33,6 +33,9 @@ test('provider enable boundary cannot activate an unsupported connector', () => 
 test('provider modal exposes only executable providers and canonical custody references', () => {
   assert.match(modal, /EXECUTABLE_COMMUNICATION_PROVIDERS/);
   assert.match(modal, /intakeBody\.credentialRef/);
+  assert.match(modal, /providerType:\s*selected\.providerType/);
+  assert.match(modal, /capabilityKeys/);
+  assert.doesNotMatch(modal, /\bcapabilities,\n/);
   assert.doesNotMatch(modal, /\["sendgrid"/);
   assert.doesNotMatch(modal, /CUSTOMER_EGRESS/);
 });
