@@ -1,0 +1,48 @@
+.sparkline {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+  vertical-align: middle;
+}
+
+.svg {
+  overflow: visible;
+}
+
+.path {
+  fill: none;
+  stroke: var(--spark-color, var(--theme-primary, #facc15));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-dashoffset 800ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fill {
+  opacity: 0.15;
+  transition: opacity 300ms ease;
+}
+
+.cursorDot {
+  fill: var(--spark-color, var(--theme-primary, #facc15));
+  stroke: var(--theme-canvas, #060707);
+  stroke-width: 2;
+  transition: r 150ms ease;
+}
+
+.tooltip {
+  position: absolute;
+  top: -26px;
+  transform: translateX(-50%);
+  background: var(--theme-surface-raised, #121514);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-control, 4px);
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: var(--theme-font-mono, monospace);
+  color: var(--theme-text-primary, #ededed);
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  z-index: 10;
+}

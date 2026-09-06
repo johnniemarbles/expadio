@@ -1,0 +1,76 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--theme-surface, #0c0e0d);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-card, 6px);
+  padding: 16px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-text-primary, #ededed);
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--theme-text-muted, #666666);
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.barRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.barLabel {
+  color: var(--theme-text-primary, #ededed);
+  font-weight: 600;
+}
+
+.barVal {
+  font-family: var(--theme-font-mono, monospace);
+  color: var(--theme-text-secondary, #a1a1a1);
+}
+
+.track {
+  height: 8px;
+  width: 100%;
+  background: var(--theme-surface-raised, #121514);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-control, 4px);
+  overflow: hidden;
+  position: relative;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--theme-radius-control, 4px);
+  transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.barRow:hover .fill {
+  filter: brightness(1.15);
+}

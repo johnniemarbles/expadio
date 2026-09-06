@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { MotionFunnelChart, MotionBarChart, MotionDonutChart } from '@expadio/ui';
 import styles from '../../workspace.module.css';
 
 type FunnelRow = {
@@ -61,6 +62,27 @@ export default function LeadAnalyticsClient() {
   const openTasks = data.taskQueue.filter((r) => r.status === 'OPEN').reduce((s, r) => s + r.total, 0);
   const escalatedTasks = data.taskQueue.reduce((s, r) => s + r.escalated, 0);
 
+  const funnelSteps = data.funnel.map((r) => ({
+    id: r.stage,
+    label: r.stage,
+    value: r.total,
+    color: '#facc15',
+  }));
+
+  const taskBarItems = data.taskQueue.map((r, i) => ({
+    id: `task-${i}`,
+    label: `${r.priority} · ${r.status}`,
+    value: r.total,
+    color: r.priority === 'URGENT' ? '#ef4444' : r.priority === 'HIGH' ? '#f59e0b' : '#a88cf8',
+  }));
+
+  const attributionSegments = data.attributionSources.map((r, i) => ({
+    id: `attr-${i}`,
+    label: r.channel || r.surface || 'Direct',
+    value: r.leadCount,
+    color: ['#facc15', '#a88cf8', '#22c55e', '#3b82f6'][i % 4],
+  }));
+
   return (
     <div>
       {/* KPI strip */}
@@ -107,6 +129,15 @@ export default function LeadAnalyticsClient() {
       {tab === 'funnel' && (
         <div className={styles.panel}>
           <div className={styles.panelHead}><h2>Capture funnel by stage</h2></div>
+          {funnelSteps.length > 0 && (
+            <div style={{ padding: 16, borderBottom: '1px solid var(--theme-border)' }}>
+              <MotionFunnelChart
+                title="19-Stage Conversion Velocity"
+                subtitle="Stage-by-stage progression & drop-off telemetry"
+                steps={funnelSteps}
+              />
+            </div>
+          )}
           {data.funnel.length === 0
             ? <div className={styles.empty}>No funnel data available.</div>
             : (
@@ -145,6 +176,15 @@ export default function LeadAnalyticsClient() {
       {tab === 'tasks' && (
         <div className={styles.panel}>
           <div className={styles.panelHead}><h2>Task queue by priority and status</h2></div>
+          {taskBarItems.length > 0 && (
+            <div style={{ padding: 16, borderBottom: '1px solid var(--theme-border)' }}>
+              <MotionBarChart
+                title="Task Volume Distribution"
+                subtitle="Open, overdue, and escalated tasks grouped by priority"
+                items={taskBarItems}
+              />
+            </div>
+          )}
           {data.taskQueue.length === 0
             ? <div className={styles.empty}>No task queue data available.</div>
             : (
@@ -175,6 +215,16 @@ export default function LeadAnalyticsClient() {
       {tab === 'attribution' && (
         <div className={styles.panel}>
           <div className={styles.panelHead}><h2>Attribution by channel and surface</h2></div>
+          {attributionSegments.length > 0 && (
+            <div style={{ padding: 16, borderBottom: '1px solid var(--theme-border)' }}>
+              <MotionDonutChart
+                title="Lead Source Attribution Share"
+                subtitle="Inbound channel & public surface distribution"
+                segments={attributionSegments}
+                centerLabel="Total Leads"
+              />
+            </div>
+          )}
           {data.attributionSources.length === 0
             ? <div className={styles.empty}>No attribution data available.</div>
             : (
@@ -213,3 +263,4 @@ export default function LeadAnalyticsClient() {
     </div>
   );
 }
+

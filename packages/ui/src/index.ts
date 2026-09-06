@@ -28,6 +28,7 @@ export * from './components/agent/AgentLog';
 export * from './components/agent/ApprovalCard';
 export * from './components/agent/CommandBar';
 
+export * from './analytics';
 export * from './theme';
 export * from './tokens';
 export * from './components/ThemeModeControl';

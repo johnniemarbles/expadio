@@ -1,0 +1,110 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--theme-surface, #0c0e0d);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-card, 6px);
+  padding: 16px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-text-primary, #ededed);
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--theme-text-muted, #666666);
+}
+
+.funnelList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.funnelStep {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--theme-surface-raised, #121514);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-control, 4px);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 150ms ease;
+}
+
+.stepBar:hover {
+  border-color: var(--theme-primary, #facc15);
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--step-color, var(--theme-primary, #facc15)) 15%, transparent);
+  border-right: 2px solid var(--step-color, var(--theme-primary, #facc15));
+  transition: width 600ms ease;
+  pointer-events: none;
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-text-primary, #ededed);
+  z-index: 1;
+}
+
+.stepMetrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-family: var(--theme-font-mono, monospace);
+  z-index: 1;
+}
+
+.stepValue {
+  color: var(--theme-text-primary, #ededed);
+  font-weight: 700;
+}
+
+.stepPct {
+  color: var(--theme-text-muted, #666666);
+  font-size: 10px;
+}
+
+.dropoff {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 16px;
+  font-size: 10px;
+  color: var(--theme-text-muted, #666666);
+  font-family: var(--theme-font-mono, monospace);
+}
+
+.dropoffDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--theme-danger, #ef4444);
+}

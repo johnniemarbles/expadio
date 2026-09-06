@@ -1,0 +1,149 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--theme-surface, #0c0e0d);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-card, 6px);
+  padding: 16px;
+  position: relative;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-text-primary, #ededed);
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--theme-text-muted, #666666);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--theme-text-secondary, #a1a1a1);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: var(--theme-radius-control, 4px);
+  transition: background 150ms ease;
+}
+
+.legendItem:hover {
+  background: var(--theme-surface-raised, #121514);
+}
+
+.legendItem[data-active="false"] {
+  opacity: 0.4;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chartWrapper {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gridLine {
+  stroke: var(--theme-border, #1e2220);
+  stroke-dasharray: 4 4;
+}
+
+.axisText {
+  font-size: 10px;
+  font-family: var(--theme-font-mono, monospace);
+  fill: var(--theme-text-muted, #666666);
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-dashoffset 800ms ease;
+}
+
+.area {
+  opacity: 0.25;
+  transition: opacity 300ms ease;
+}
+
+.crosshair {
+  stroke: var(--theme-text-muted, #666666);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  top: 12px;
+  background: var(--theme-surface-raised, #121514);
+  border: 1px solid var(--theme-border, #1e2220);
+  border-radius: var(--theme-radius-control, 4px);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--theme-text-primary, #ededed);
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 20;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipTime {
+  font-family: var(--theme-font-mono, monospace);
+  font-size: 10px;
+  color: var(--theme-text-muted, #666666);
+  border-bottom: 1px solid var(--theme-border, #1e2220);
+  padding-bottom: 3px;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.tooltipVal {
+  font-family: var(--theme-font-mono, monospace);
+  font-weight: 700;
+}

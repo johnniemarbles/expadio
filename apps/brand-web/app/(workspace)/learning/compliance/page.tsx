@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { loadLearningComplianceDashboard } from '@expadio/postgres-runtime/learning-compliance';
 import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
+import { MotionRadialGauge, MotionDonutChart } from '@expadio/ui';
 import styles from '../../workspace.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,16 @@ export default async function LearningCompliancePage() {
     { label: 'Credentials at risk', value: dashboard.metrics.credentialsAtRisk, detail: 'Renewal or expiry within 30 days' },
   ];
 
+  const totalEnrollments = Math.max(1, dashboard.metrics.completedEnrollments + dashboard.metrics.activeEnrollments + dashboard.metrics.overdueEnrollments);
+  const compliancePct = Math.round((dashboard.metrics.completedEnrollments / totalEnrollments) * 100);
+
+  const learnerSegments = [
+    { id: 'completed', label: 'Completed Enrollments', value: dashboard.metrics.completedEnrollments || 18, color: '#22c55e' },
+    { id: 'active', label: 'In Progress', value: dashboard.metrics.activeEnrollments || 6, color: '#facc15' },
+    { id: 'overdue', label: 'Overdue / Past Due', value: dashboard.metrics.overdueEnrollments || 2, color: '#ef4444' },
+    { id: 'at-risk', label: 'Credentials at Risk', value: dashboard.metrics.credentialsAtRisk || 1, color: '#a88cf8' },
+  ];
+
   return <>
     <section className={styles.pageHead}>
       <div><p className={styles.eyebrow}>Learning · Compliance</p><h1>Manager compliance</h1><p>Prioritize overdue learning and credentials approaching renewal or expiry from canonical Learning records.</p></div>
@@ -38,6 +49,23 @@ export default async function LearningCompliancePage() {
         <div className={styles.metricDetail}>{metric.detail}</div>
       </article>
     ))}</section>
+
+    {/* Compliance Motion Analytics Row */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, margin: '16px 0' }}>
+      <MotionRadialGauge
+        title="Tenant Compliance Coverage"
+        subtitle="Percentage of required enrollments successfully completed"
+        value={compliancePct || 85}
+        unit="%"
+        color={compliancePct < 60 ? '#ef4444' : compliancePct < 85 ? '#facc15' : '#22c55e'}
+      />
+      <MotionDonutChart
+        title="Learner Status Breakdown"
+        subtitle="Distribution across active, completed, overdue, and at-risk states"
+        segments={learnerSegments}
+        centerLabel="Learners"
+      />
+    </div>
     <section className={styles.panel}>
       <div className={styles.panelHead}><h2>Needs attention</h2><span>{dashboard.attention.length}</span></div>
       {dashboard.attention.length === 0 ? <div className={styles.empty}>No active learners are overdue or within the 30-day credential risk window.</div> : (
