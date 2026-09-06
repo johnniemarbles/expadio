@@ -34,6 +34,9 @@ interface CourseVersionRow {
   readonly description: string;
   readonly language: string;
   readonly visibility: 'PRIVATE' | 'TENANT' | 'PUBLIC';
+  readonly enrollment_mode: 'OPEN' | 'ASSIGNED_ONLY' | 'APPROVAL_REQUIRED';
+  readonly certificate_enabled: boolean;
+  readonly passing_score: number | null;
   readonly estimated_minutes: number | null;
   readonly learning_objectives: readonly string[];
   readonly created_by_subject_id: string;
@@ -73,6 +76,9 @@ export interface LearningCourseVersion {
   readonly description: string;
   readonly language: string;
   readonly visibility: 'PRIVATE' | 'TENANT' | 'PUBLIC';
+  readonly enrollmentMode: 'OPEN' | 'ASSIGNED_ONLY' | 'APPROVAL_REQUIRED';
+  readonly certificateEnabled: boolean;
+  readonly passingScore: number | null;
   readonly estimatedMinutes: number | null;
   readonly learningObjectives: readonly string[];
   readonly createdBySubjectId: string;
@@ -202,8 +208,9 @@ export async function createLearningCourse(
     const versionResult = await client.query<CourseVersionRow>(
       "INSERT INTO platform.learning_course_versions " +
         "(tenant_id, course_id, version, state, title, summary, description, language, " +
-        "visibility, estimated_minutes, learning_objectives, created_by_subject_id, updated_by_subject_id) " +
-        "VALUES ($1::uuid, $2::uuid, 1, 'DRAFT', $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $10) " +
+        "visibility, enrollment_mode, certificate_enabled, passing_score, estimated_minutes, " +
+        "learning_objectives, created_by_subject_id, updated_by_subject_id) " +
+        "VALUES ($1::uuid, $2::uuid, 1, 'DRAFT', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $13) " +
         "RETURNING *",
       [
         input.tenantId,
@@ -213,6 +220,9 @@ export async function createLearningCourse(
         draft.description,
         draft.language,
         draft.visibility,
+        draft.enrollmentMode,
+        draft.certificateEnabled,
+        draft.passingScore,
         draft.estimatedMinutes,
         JSON.stringify(draft.learningObjectives),
         input.actorSubjectId,
@@ -303,6 +313,9 @@ export async function loadLearningCourseVersion(
     description: version.description,
     language: version.language,
     visibility: version.visibility,
+    enrollmentMode: version.enrollment_mode,
+    certificateEnabled: version.certificate_enabled,
+    passingScore: version.passing_score,
     estimatedMinutes: version.estimated_minutes,
     learningObjectives: [...version.learning_objectives],
     createdBySubjectId: version.created_by_subject_id,
@@ -354,8 +367,9 @@ export async function replaceLearningCourseDraft(
 
   await client.query(
     "UPDATE platform.learning_course_versions SET title = $4, summary = $5, description = $6, " +
-      "language = $7, visibility = $8, estimated_minutes = $9, learning_objectives = $10::jsonb, " +
-      "updated_by_subject_id = $11, updated_at = now() " +
+      "language = $7, visibility = $8, enrollment_mode = $9, certificate_enabled = $10, " +
+      "passing_score = $11, estimated_minutes = $12, learning_objectives = $13::jsonb, " +
+      "updated_by_subject_id = $14, updated_at = now() " +
       "WHERE tenant_id = $1::uuid AND course_id = $2::uuid AND version = $3",
     [
       input.tenantId,
@@ -366,6 +380,9 @@ export async function replaceLearningCourseDraft(
       draft.description,
       draft.language,
       draft.visibility,
+      draft.enrollmentMode,
+      draft.certificateEnabled,
+      draft.passingScore,
       draft.estimatedMinutes,
       JSON.stringify(draft.learningObjectives),
       input.actorSubjectId,
@@ -440,8 +457,9 @@ export async function clonePublishedLearningCourseVersion(
   const created = await client.query<CourseVersionRow>(
     "INSERT INTO platform.learning_course_versions " +
       "(tenant_id, course_id, version, state, title, summary, description, language, visibility, " +
-      "estimated_minutes, learning_objectives, created_by_subject_id, updated_by_subject_id) " +
-      "VALUES ($1::uuid, $2::uuid, $3, 'DRAFT', $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $11) RETURNING *",
+      "enrollment_mode, certificate_enabled, passing_score, estimated_minutes, learning_objectives, " +
+      "created_by_subject_id, updated_by_subject_id) " +
+      "VALUES ($1::uuid, $2::uuid, $3, 'DRAFT', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14, $14) RETURNING *",
     [
       input.tenantId,
       input.courseId,
@@ -451,6 +469,9 @@ export async function clonePublishedLearningCourseVersion(
       source.description,
       source.language,
       source.visibility,
+      source.enrollmentMode,
+      source.certificateEnabled,
+      source.passingScore,
       source.estimatedMinutes,
       JSON.stringify(source.learningObjectives),
       input.actorSubjectId,
@@ -465,6 +486,9 @@ export async function clonePublishedLearningCourseVersion(
     description: source.description,
     language: source.language,
     visibility: source.visibility,
+    enrollmentMode: source.enrollmentMode,
+    certificateEnabled: source.certificateEnabled,
+    passingScore: source.passingScore,
     estimatedMinutes: source.estimatedMinutes,
     learningObjectives: source.learningObjectives,
     modules: source.modules.map((module) => ({
@@ -564,6 +588,9 @@ export async function publishLearningCourseVersion(
     description: hydrated.description,
     language: hydrated.language,
     visibility: hydrated.visibility,
+    enrollmentMode: hydrated.enrollmentMode,
+    certificateEnabled: hydrated.certificateEnabled,
+    passingScore: hydrated.passingScore,
     estimatedMinutes: hydrated.estimatedMinutes,
     learningObjectives: hydrated.learningObjectives,
     modules: hydrated.modules.map((module) => ({
