@@ -90,6 +90,7 @@ test('ChiefOfStaffOrchestrator processes executive intent and emits events', asy
     async resolveApproval(): Promise<AgentTask | null> {
       return null;
     },
+    async isAgentActive() { return true; },
   };
 
   const emitted: string[] = [];
@@ -141,6 +142,7 @@ test('ChiefOfStaffOrchestrator leaves a mission awaiting approval and resumes th
     async listMissionTasks() { return [{ ...task, status: 'QUEUED' as const }]; },
     async getApprovalRequest() { return approvalRecord; },
     async resolveApproval() { return { ...task, status: 'QUEUED' as const }; },
+    async isAgentActive() { return true; },
   };
 
   await orchestrator.processExecutiveIntent(persistence, { tenantId: 'tenant-1', userSubjectId: 'sub-1', intent: 'Review draft', taskPlans: [{ assignedAgentId: 'agent-1', title: 'Review draft', requiresApproval: true }] }, () => {});
@@ -176,6 +178,7 @@ test('ChiefOfStaffOrchestrator denies self-approval of a proposal', async () => 
       resolveApprovalCalled = true;
       throw new Error('should not be reached');
     },
+    async isAgentActive() { return true; },
   };
 
   await assert.rejects(
