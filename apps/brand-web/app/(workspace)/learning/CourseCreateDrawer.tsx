@@ -79,7 +79,7 @@ export function CourseCreateDrawer({
             title: '1.1 Welcome & Overview',
             contentType: 'video',
             durationMinutes: 10,
-            contentUrl: 'https://example.com/video1.mp4',
+            bodyText: '',
           },
         ],
       },
@@ -162,7 +162,6 @@ export function CourseCreateDrawer({
     setIsSubmitting(true);
     setErrorNotice(null);
     try {
-      // API call to create course
       const response = await fetch('/api/learning/courses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,8 +169,14 @@ export function CourseCreateDrawer({
           title: draft.title,
           description: draft.description,
           category: draft.category,
-          status: isPublish ? 'PUBLISHED' : 'DRAFT',
+          language: draft.language,
+          estimatedDuration: draft.estimatedDuration,
+          visibility: draft.visibility,
+          enrollmentMode: draft.enrollmentMode,
+          certificateEnabled: draft.certificateEnabled,
+          passingScore: draft.passingScore,
           modules: draft.modules,
+          publish: isPublish,
         }),
       });
 
@@ -974,7 +979,7 @@ export function CourseCreateDrawer({
               disabled={isSubmitting || !canProceed()}
               style={{ padding: '8px 16px', fontSize: 13 }}
             >
-              Save as Draft
+              {isSubmitting ? 'Saving…' : 'Save as Draft'}
             </button>
 
             {currentStep < 6 ? (
