@@ -26,6 +26,9 @@ test('course content is versioned rather than edited in place after publication'
   assert.match(migration, /CREATE TABLE platform\.learning_lessons/);
   assert.match(migration, /non-draft learning course versions are immutable/);
   assert.match(migration, /may mutate only while course version is DRAFT/);
+  assert.match(runtime, /enrollmentMode: version\.enrollment_mode/);
+  assert.match(runtime, /certificateEnabled: version\.certificate_enabled/);
+  assert.match(runtime, /passingScore: version\.passing_score/);
   assert.match(runtime, /clonePublishedLearningCourseVersion/);
   assert.match(runtime, /state = 'SUPERSEDED'/);
 });

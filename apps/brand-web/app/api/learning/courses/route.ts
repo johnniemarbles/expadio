@@ -30,6 +30,12 @@ const ACTIVITY_TYPES: Readonly<Record<string, string>> = {
   link: 'EXTERNAL',
 };
 
+const ENROLLMENT_MODES: Readonly<Record<string, string>> = {
+  open: 'OPEN',
+  assigned: 'ASSIGNED_ONLY',
+  approval: 'APPROVAL_REQUIRED',
+};
+
 function stableKey(value: unknown, fallback: string): string {
   const normalized = typeof value === 'string'
     ? value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -47,6 +53,10 @@ function languageTag(value: unknown): string {
     Japanese: 'ja',
   };
   return known[value] ?? value;
+}
+
+function enrollmentMode(value: unknown): string {
+  return typeof value === 'string' ? ENROLLMENT_MODES[value] ?? 'ASSIGNED_ONLY' : 'ASSIGNED_ONLY';
 }
 
 function contentFor(lesson: WizardLesson): Readonly<Record<string, unknown>> {
@@ -108,6 +118,9 @@ export async function POST(request: Request) {
           description,
           language: languageTag(body.language),
           visibility: body.visibility === 'PUBLISHED' ? 'PUBLIC' : body.visibility === 'ASSIGNED_ONLY' ? 'PRIVATE' : 'TENANT',
+          enrollmentMode: enrollmentMode(body.enrollmentMode),
+          certificateEnabled: body.certificateEnabled === true,
+          passingScore: body.certificateEnabled === true ? body.passingScore : null,
           estimatedMinutes: body.estimatedDuration,
           learningObjectives: description === '' ? [] : [description],
           modules: nativeModules(body.modules),
@@ -121,7 +134,7 @@ export async function POST(request: Request) {
         actorSubjectId: context.subjectId,
         correlationId: randomUUID(),
       });
-      return { ...created, version: published, published: true };
+      return { ...created, version: published.version, published: true };
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

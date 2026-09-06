@@ -60,6 +60,9 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
         summary: 'Tenant privacy training',
         language: 'en-CA',
         visibility: 'TENANT',
+        enrollmentMode: 'APPROVAL_REQUIRED',
+        certificateEnabled: true,
+        passingScore: 80,
         estimatedMinutes: 20,
         learningObjectives: ['Recognize protected personal information'],
         modules: [{
@@ -81,6 +84,9 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
     await c.query('COMMIT');
     assert.equal(created.version.version, 1);
     assert.equal(created.version.state, 'DRAFT');
+    assert.equal(created.version.enrollmentMode, 'APPROVAL_REQUIRED');
+    assert.equal(created.version.certificateEnabled, true);
+    assert.equal(created.version.passingScore, 80);
     assert.equal(created.version.modules.length, 1);
 
     await c.query('BEGIN');
@@ -94,6 +100,7 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
     await c.query('COMMIT');
     assert.equal(firstPublish.idempotent, false);
     assert.equal(firstPublish.version.state, 'PUBLISHED');
+    assert.equal(firstPublish.version.enrollmentMode, 'APPROVAL_REQUIRED');
 
     await c.query('BEGIN');
     const replay = await publishLearningCourseVersion(c, {
@@ -116,6 +123,9 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
     await c.query('COMMIT');
     assert.equal(v2.version, 2);
     assert.equal(v2.state, 'DRAFT');
+    assert.equal(v2.enrollmentMode, 'APPROVAL_REQUIRED');
+    assert.equal(v2.certificateEnabled, true);
+    assert.equal(v2.passingScore, 80);
 
     await c.query('BEGIN');
     const editedV2 = await replaceLearningCourseDraft(c, {
@@ -128,6 +138,9 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
         summary: 'Updated tenant privacy training',
         language: 'en-CA',
         visibility: 'TENANT',
+        enrollmentMode: 'ASSIGNED_ONLY',
+        certificateEnabled: false,
+        passingScore: null,
         estimatedMinutes: 25,
         learningObjectives: ['Recognize protected personal information'],
         modules: [{
@@ -148,6 +161,9 @@ test('Learning activation -> draft -> publish -> clone -> supersede is durable a
     });
     await c.query('COMMIT');
     assert.equal(editedV2.title, 'Privacy Fundamentals 2027');
+    assert.equal(editedV2.enrollmentMode, 'ASSIGNED_ONLY');
+    assert.equal(editedV2.certificateEnabled, false);
+    assert.equal(editedV2.passingScore, null);
 
     await c.query('BEGIN');
     const secondPublish = await publishLearningCourseVersion(c, {
