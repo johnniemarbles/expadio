@@ -508,6 +508,25 @@ export function CommunicationsDashboardClient({
                 </button>
               </div>
             </article>
+
+            {/* Card 3: Suppression control plane */}
+            <article className={styles.actionBannerCard}>
+              <div className={styles.cardLeft}>
+                <div className={styles.cardIconBlue} aria-hidden="true">!</div>
+                <div className={styles.cardInfo}>
+                  <h3>Suppression Control Plane</h3>
+                  <p>Inspect, add, and revoke tenant-scoped recipient suppressions without mutating platform-global policy.</p>
+                </div>
+              </div>
+              <div className={styles.cardRight}>
+                <Link
+                  href={`/communications/suppressions${queryString}`}
+                  className={styles.btnPillDark}
+                >
+                  Manage Suppressions →
+                </Link>
+              </div>
+            </article>
           </div>
 
           <MotionPanel className={styles.attentionTablePanel}>

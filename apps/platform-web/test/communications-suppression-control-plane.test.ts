@@ -7,12 +7,15 @@ const listRoute = read("../app/api/communications/suppressions/route.ts");
 const revokeRoute = read("../app/api/communications/suppressions/[suppressionId]/route.ts");
 const panel = read("../app/(shell)/communications/suppressions/SuppressionPanel.tsx");
 const page = read("../app/(shell)/communications/suppressions/page.tsx");
+const dashboard = read("../app/(shell)/communications/CommunicationsDashboardClient.tsx");
 const spine = read("../../../packages/communication/src/spine.ts");
 
 test("suppression trace remediation points to a real control-plane page", () => {
   assert.match(spine, /href:\s*['"]\/communications\/suppressions['"]/);
   assert.match(page, /SuppressionPanel/);
   assert.match(page, /Suppression control plane/);
+  assert.match(dashboard, /href=\{`\/communications\/suppressions\$\{queryString\}`\}/);
+  assert.match(dashboard, /Manage Suppressions/);
 });
 
 test("suppression API is tenant-bound and admin-gated", () => {
