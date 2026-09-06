@@ -10,6 +10,7 @@ import {
   withBrandTransaction,
 } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
+import { LearningNav } from '../LearningNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +31,15 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <section className={styles.pageHead}>
-        <div><p className={styles.eyebrow}>Learning</p><h1>Learning settings</h1><p>Plan entitlement, activation, academy defaults and Learning AI feature control.</p></div>
+      <section className={styles.pageHead} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div>
+          <p className={styles.eyebrow}>Learning · Settings</p>
+          <h1 style={{ margin: '2px 0 6px' }}>Learning settings</h1>
+          <p style={{ margin: 0, color: 'var(--muted-foreground, #A1A1AA)', fontSize: 14 }}>
+            Plan entitlement, activation, academy defaults and Learning AI feature control.
+          </p>
+        </div>
+        <LearningNav activeKey="settings" />
       </section>
       <section className={styles.panel}>
         <div className={styles.panelHead}><h2>Module state</h2></div>

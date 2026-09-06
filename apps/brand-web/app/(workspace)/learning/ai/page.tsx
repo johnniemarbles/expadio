@@ -8,6 +8,7 @@ import {
   withBrandTransaction,
 } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
+import { LearningNav } from '../LearningNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,12 +37,15 @@ export default async function LearningAiPage() {
 
   return (
     <>
-      <section className={styles.pageHead}>
+      <section className={styles.pageHead} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <p className={styles.eyebrow}>Learning · AI</p>
-          <h1>AI tutor & author</h1>
-          <p>Grounded learner assistance and governed draft generation through the Platform AI execution boundary.</p>
+          <h1 style={{ margin: '2px 0 6px' }}>AI tutor & author</h1>
+          <p style={{ margin: 0, color: 'var(--muted-foreground, #A1A1AA)', fontSize: 14 }}>
+            Grounded learner assistance and governed draft generation through the Platform AI execution boundary.
+          </p>
         </div>
+        <LearningNav activeKey="ai" />
       </section>
       {data.module?.availability !== 'ACTIVE' ? (
         <div className={styles.notice}>Activate Learning before using Learning AI.</div>

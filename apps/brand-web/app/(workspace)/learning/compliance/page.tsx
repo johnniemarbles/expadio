@@ -3,6 +3,7 @@ import { loadLearningComplianceDashboard } from '@expadio/postgres-runtime/learn
 import { hasLearningAdmin, resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import { MotionRadialGauge, MotionDonutChart } from '@expadio/ui';
 import styles from '../../workspace.module.css';
+import { LearningNav } from '../LearningNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +39,15 @@ export default async function LearningCompliancePage() {
   ];
 
   return <>
-    <section className={styles.pageHead}>
-      <div><p className={styles.eyebrow}>Learning · Compliance</p><h1>Manager compliance</h1><p>Prioritize overdue learning and credentials approaching renewal or expiry from canonical Learning records.</p></div>
-      <Link className={styles.secondaryButton} href="/learning">Back to Learning</Link>
+    <section className={styles.pageHead} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+        <p className={styles.eyebrow}>Learning · Compliance</p>
+        <h1 style={{ margin: '2px 0 6px' }}>Manager compliance</h1>
+        <p style={{ margin: 0, color: 'var(--muted-foreground, #A1A1AA)', fontSize: 14 }}>
+          Prioritize overdue learning and credentials approaching renewal or expiry from canonical Learning records.
+        </p>
+      </div>
+      <LearningNav activeKey="compliance" />
     </section>
     <section className={styles.grid}>{metrics.map((metric) => (
       <article key={metric.label} className={styles.metric}>

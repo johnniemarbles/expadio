@@ -21,6 +21,7 @@ import {
 } from '../../../../lib/brand-context';
 import { loadLearningReport, loadLearningSection } from '../../../../lib/learning-data';
 import styles from '../../workspace.module.css';
+import { LearningNav } from '../LearningNav';
 
 const META: Record<string, { title: string; description: string }> = {
   learners: { title: 'Learners', description: 'People, audiences, enrollment load and progress.' },
@@ -160,12 +161,13 @@ export default async function LearningSectionPage({ params }: { params: Promise<
 
   return (
     <>
-      <section className={styles.pageHead}>
+      <section className={styles.pageHead} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
-          <p className={styles.eyebrow}>Learning</p>
-          <h1>{meta.title}</h1>
-          <p>{meta.description}</p>
+          <p className={styles.eyebrow}>Learning · {context.organizationName}</p>
+          <h1 style={{ margin: '2px 0 6px' }}>{meta.title}</h1>
+          <p style={{ margin: 0, color: 'var(--muted-foreground, #A1A1AA)', fontSize: 14 }}>{meta.description}</p>
         </div>
+        <LearningNav activeKey={section as any} />
       </section>
       {data.module?.availability !== 'ACTIVE' ? (
         <div className={styles.notice}>Activate Learning before using this surface.</div>
