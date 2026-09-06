@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/migrate.mjs && node scripts/seed.cjs && node scripts/verify-runtime-schema.mjs && node scripts/start-standalone.mjs",
+    "start": "node scripts/migrate.mjs && node scripts/seed.cjs && node scripts/seed-agents.cjs && node scripts/verify-runtime-schema.mjs && node scripts/start-standalone.mjs",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "test": "node --experimental-strip-types --test test/*.test.ts",
