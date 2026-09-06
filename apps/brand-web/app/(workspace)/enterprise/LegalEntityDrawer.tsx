@@ -56,7 +56,7 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
+          background: 'color-mix(in srgb, var(--background) 75%, transparent)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           zIndex: 99,
@@ -69,10 +69,9 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
         style={{
           width: '100%',
           maxWidth: 640,
-          background: 'var(--card, #0A0A0A)',
-          borderLeft: '1px solid var(--border, #272727)',
-          borderRadius: 'var(--radius-xl, 8px) 0 0 var(--radius-xl, 8px)',
-          boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.85)',
+          background: 'var(--card)',
+          borderLeft: '1px solid var(--border)',
+          borderRadius: 'var(--radius-xl) 0 0 var(--radius-xl)',
           display: 'flex',
           flexDirection: 'column',
           height: '100vh',
@@ -87,8 +86,8 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
         <div
           style={{
             padding: '20px 24px 16px',
-            borderBottom: '1px solid var(--border, #272727)',
-            background: 'var(--background, #000000)',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--background)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -101,12 +100,12 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 fontWeight: 700,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
-                color: 'var(--brand-primary, #FACC15)',
+                color: 'var(--brand-primary)',
               }}
             >
               GOVERNED STRUCTURE ONBOARDING
             </span>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--foreground, #FAFAFA)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
               Onboard Legal Entity
             </h2>
           </div>
@@ -115,9 +114,9 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
             onClick={onClose}
             style={{
               background: 'transparent',
-              border: '1px solid var(--border, #272727)',
-              borderRadius: 'var(--radius-md, 4px)',
-              color: 'var(--muted-foreground, #A1A1AA)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--muted-foreground)',
               fontSize: 16,
               width: 32,
               height: 32,
@@ -136,10 +135,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
             style={{
               margin: '16px 24px 0',
               padding: '12px 14px',
-              borderRadius: 'var(--radius-md, 4px)',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #EF4444',
-              color: '#F87171',
+              borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--theme-danger, var(--brand-primary)) 10%, transparent)',
+              border: '1px solid var(--theme-danger, var(--brand-primary))',
+              color: 'var(--theme-danger, var(--brand-primary))',
               fontSize: 13,
             }}
           >
@@ -156,10 +155,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
               placeholder="e.g. Expadio Enterprise Inc."
               style={{
                 padding: '10px 14px',
-                borderRadius: 'var(--radius-md, 4px)',
-                border: '1px solid var(--border, #272727)',
-                background: 'var(--background, #000000)',
-                color: 'var(--foreground, #FAFAFA)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                color: 'var(--foreground)',
                 fontSize: 13,
               }}
             />
@@ -173,10 +172,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 defaultValue="CORPORATION"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
               >
@@ -195,10 +194,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 defaultValue="OPERATING_ENTITY"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
               >
@@ -220,10 +219,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 placeholder="US, GB, DE, IN, CA..."
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
               />
@@ -236,10 +235,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 placeholder="DE, CA, NY, ON..."
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
               />
@@ -254,10 +253,10 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 placeholder="XX-XXXXXXX"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
               />
@@ -270,17 +269,17 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
                 placeholder="State or Federal Reg #"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
               />
             </label>
           </div>
 
-          <p style={{ fontSize: 12, color: 'var(--muted-foreground, #A1A1AA)', margin: 0 }}>
+          <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: 0 }}>
             Legal entities govern commercial authority, jurisdiction appointments, and regulatory contracts across your organization hierarchy.
           </p>
 
@@ -292,9 +291,9 @@ export function LegalEntityDrawer({ isOpen, onClose, onOnboarded }: LegalEntityD
               height: 40,
               fontSize: 13,
               fontWeight: 700,
-              borderRadius: 'var(--radius-md, 4px)',
-              background: 'var(--brand-primary, #FACC15)',
-              color: '#000000',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--brand-primary)',
+              color: 'var(--card)',
               border: 'none',
               cursor: busy ? 'not-allowed' : 'pointer',
             }}

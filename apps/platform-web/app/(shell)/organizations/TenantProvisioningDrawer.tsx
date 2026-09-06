@@ -57,7 +57,7 @@ export function TenantProvisioningDrawer({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
+          background: 'color-mix(in srgb, var(--theme-surface) 75%, transparent)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           zIndex: 99,

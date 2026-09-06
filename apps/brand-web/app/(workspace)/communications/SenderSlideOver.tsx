@@ -179,7 +179,7 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
+          background: 'color-mix(in srgb, var(--background) 75%, transparent)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           zIndex: 99,
@@ -192,10 +192,9 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
         style={{
           width: '100%',
           maxWidth: 640,
-          background: 'var(--card, #0A0A0A)',
-          borderLeft: '1px solid var(--border, #272727)',
-          borderRadius: 'var(--radius-xl, 8px) 0 0 var(--radius-xl, 8px)',
-          boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.85)',
+          background: 'var(--card)',
+          borderLeft: '1px solid var(--border)',
+          borderRadius: 'var(--radius-xl) 0 0 var(--radius-xl)',
           display: 'flex',
           flexDirection: 'column',
           height: '100vh',
@@ -210,8 +209,8 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
         <div
           style={{
             padding: '20px 24px 16px',
-            borderBottom: '1px solid var(--border, #272727)',
-            background: 'var(--background, #000000)',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--background)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -224,12 +223,12 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                 fontWeight: 700,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
-                color: 'var(--brand-primary, #FACC15)',
+                color: 'var(--brand-primary)',
               }}
             >
               IDENTITY ONBOARDING
             </span>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--foreground, #FAFAFA)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
               {phase === 'form' && 'Register Sending Identity'}
               {phase === 'dns' && `DNS Configuration · ${domain}`}
               {phase === 'done' && 'Sender Identity Verified'}
@@ -240,9 +239,9 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
             onClick={onClose}
             style={{
               background: 'transparent',
-              border: '1px solid var(--border, #272727)',
-              borderRadius: 'var(--radius-md, 4px)',
-              color: 'var(--muted-foreground, #A1A1AA)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--muted-foreground)',
               fontSize: 16,
               width: 32,
               height: 32,
@@ -261,10 +260,10 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
             style={{
               margin: '16px 24px 0',
               padding: '12px 14px',
-              borderRadius: 'var(--radius-md, 4px)',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #EF4444',
-              color: '#F87171',
+              borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--theme-danger, var(--brand-primary)) 10%, transparent)',
+              border: '1px solid var(--theme-danger, var(--brand-primary))',
+              color: 'var(--theme-danger, var(--brand-primary))',
               fontSize: 13,
             }}
           >
@@ -284,10 +283,10 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   placeholder="notifications@mail.yourdomain.com"
                   style={{
                     padding: '10px 14px',
-                    borderRadius: 'var(--radius-md, 4px)',
-                    border: '1px solid var(--border, #272727)',
-                    background: 'var(--background, #000000)',
-                    color: 'var(--foreground, #FAFAFA)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
                     fontSize: 13,
                   }}
                 />
@@ -300,10 +299,10 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   placeholder="e.g. Acme Support Team"
                   style={{
                     padding: '10px 14px',
-                    borderRadius: 'var(--radius-md, 4px)',
-                    border: '1px solid var(--border, #272727)',
-                    background: 'var(--background, #000000)',
-                    color: 'var(--foreground, #FAFAFA)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
                     fontSize: 13,
                   }}
                 />
@@ -317,16 +316,16 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   placeholder="support@yourdomain.com"
                   style={{
                     padding: '10px 14px',
-                    borderRadius: 'var(--radius-md, 4px)',
-                    border: '1px solid var(--border, #272727)',
-                    background: 'var(--background, #000000)',
-                    color: 'var(--foreground, #FAFAFA)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
                     fontSize: 13,
                   }}
                 />
               </label>
 
-              <p style={{ fontSize: 12, color: 'var(--muted-foreground, #A1A1AA)', margin: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: 0 }}>
                 Registering a custom domain identity creates the required DNS records (SPF, DMARC, Return-path MX) for verification in the next step.
               </p>
 
@@ -338,9 +337,9 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   height: 40,
                   fontSize: 13,
                   fontWeight: 700,
-                  borderRadius: 'var(--radius-md, 4px)',
-                  background: 'var(--brand-primary, #FACC15)',
-                  color: '#000000',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--brand-primary)',
+                  color: 'var(--card)',
                   border: 'none',
                   cursor: busy === 'register' ? 'not-allowed' : 'pointer',
                 }}
@@ -352,7 +351,7 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
 
           {phase === 'dns' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border, #272727)', paddingBottom: 8 }}>
+              <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
                 {cfAvailable && (
                   <button
                     type="button"
@@ -362,8 +361,8 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                       borderRadius: 4,
                       fontSize: 12,
                       fontWeight: 600,
-                      background: dnsMode === 'cloudflare' ? 'var(--brand-primary, #FACC15)' : 'transparent',
-                      color: dnsMode === 'cloudflare' ? '#000000' : 'var(--muted-foreground, #A1A1AA)',
+                      background: dnsMode === 'cloudflare' ? 'var(--brand-primary)' : 'transparent',
+                      color: dnsMode === 'cloudflare' ? 'var(--card)' : 'var(--muted-foreground)',
                       border: 'none',
                       cursor: 'pointer',
                     }}
@@ -379,8 +378,8 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                     borderRadius: 4,
                     fontSize: 12,
                     fontWeight: 600,
-                    background: dnsMode === 'manual' ? 'var(--brand-primary, #FACC15)' : 'transparent',
-                    color: dnsMode === 'manual' ? '#000000' : 'var(--muted-foreground, #A1A1AA)',
+                    background: dnsMode === 'manual' ? 'var(--brand-primary)' : 'transparent',
+                    color: dnsMode === 'manual' ? 'var(--card)' : 'var(--muted-foreground)',
                     border: 'none',
                     cursor: 'pointer',
                   }}
@@ -391,7 +390,7 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
 
               {dnsMode === 'cloudflare' && cfAvailable ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ fontSize: 13, color: 'var(--muted-foreground, #A1A1AA)', margin: 0 }}>
+                  <p style={{ fontSize: 13, color: 'var(--muted-foreground)', margin: 0 }}>
                     Automatically provision SPF, DMARC, and MX records in your Cloudflare DNS zone.
                   </p>
                   {!cfProvisioned ? (
@@ -404,25 +403,25 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                         fontSize: 13,
                         fontWeight: 600,
                         borderRadius: 4,
-                        background: 'color-mix(in srgb, var(--brand-primary, #FACC15) 15%, transparent)',
-                        border: '1px solid var(--brand-primary, #FACC15)',
-                        color: 'var(--brand-primary, #FACC15)',
+                        background: 'color-mix(in srgb, var(--brand-primary) 15%, transparent)',
+                        border: '1px solid var(--brand-primary)',
+                        color: 'var(--brand-primary)',
                         cursor: busy === 'cf' ? 'not-allowed' : 'pointer',
                       }}
                     >
                       {busy === 'cf' ? 'Provisioning...' : '⚡ Auto-provision DNS via Cloudflare'}
                     </button>
                   ) : (
-                    <div style={{ fontSize: 13, color: '#22C55E' }}>✓ {cfMessage || 'Cloudflare DNS configured successfully!'}</div>
+                    <div style={{ fontSize: 13, color: 'var(--theme-success, var(--brand-primary))' }}>✓ {cfMessage || 'Cloudflare DNS configured successfully!'}</div>
                   )}
                 </div>
               ) : null}
 
               {/* Records Table */}
-              <div style={{ background: 'var(--background, #000000)', borderRadius: 6, border: '1px solid var(--border, #272727)', overflow: 'hidden' }}>
+              <div style={{ background: 'var(--background)', borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden' }}>
                 <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: 'var(--card, #0A0A0A)', borderBottom: '1px solid var(--border, #272727)', textAlign: 'left' }}>
+                    <tr style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                       <th style={{ padding: '8px 12px' }}>Purpose</th>
                       <th style={{ padding: '8px 12px' }}>Type</th>
                       <th style={{ padding: '8px 12px' }}>Host</th>
@@ -431,11 +430,11 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   </thead>
                   <tbody>
                     {dnsRecords.map((r, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border, #171717)' }}>
-                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--brand-primary, #FACC15)' }}>{r.purpose}</td>
+                      <tr key={i} style={{ borderBottom: '1px solid var(--muted)' }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--brand-primary)' }}>{r.purpose}</td>
                         <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>{r.type}</td>
                         <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>{r.name}</td>
-                        <td style={{ padding: '8px 12px', fontFamily: 'monospace', wordBreak: 'break-all', color: 'var(--muted-foreground, #A1A1AA)' }}>{r.value}</td>
+                        <td style={{ padding: '8px 12px', fontFamily: 'monospace', wordBreak: 'break-all', color: 'var(--muted-foreground)' }}>{r.value}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -451,9 +450,9 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   height: 40,
                   fontSize: 13,
                   fontWeight: 700,
-                  borderRadius: 'var(--radius-md, 4px)',
-                  background: 'var(--brand-primary, #FACC15)',
-                  color: '#000000',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--brand-primary)',
+                  color: 'var(--card)',
                   border: 'none',
                   cursor: busy === 'verify' ? 'not-allowed' : 'pointer',
                 }}
@@ -462,7 +461,7 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
               </button>
 
               {verifyResult && verifyResult.verificationStatus !== 'VERIFIED' && (
-                <div style={{ padding: 12, borderRadius: 4, background: 'var(--card, #0A0A0A)', border: '1px solid var(--border, #272727)', fontSize: 12 }}>
+                <div style={{ padding: 12, borderRadius: 4, background: 'var(--card)', border: '1px solid var(--border)', fontSize: 12 }}>
                   <div>SPF Check: <strong>{verifyResult.spfOk ? '✓ Pass' : 'Pending propagation'}</strong></div>
                   <div>DMARC Check: <strong>{verifyResult.dmarcOk ? '✓ Pass' : 'Pending propagation'}</strong></div>
                 </div>
@@ -472,9 +471,9 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
 
           {phase === 'done' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, paddingTop: 40 }}>
-              <div style={{ fontSize: 36, color: '#22C55E' }}>✓</div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--foreground, #FAFAFA)', margin: 0 }}>Sender Identity Active</h3>
-              <p style={{ fontSize: 13, color: 'var(--muted-foreground, #A1A1AA)', maxWidth: 400 }}>
+              <div style={{ fontSize: 36, color: 'var(--theme-success, var(--brand-primary))' }}>✓</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>Sender Identity Active</h3>
+              <p style={{ fontSize: 13, color: 'var(--muted-foreground)', maxWidth: 400 }}>
                 Domain <strong>{domain}</strong> is verified. You can now send governed transactional and marketing communications from this identity.
               </p>
               <button
@@ -486,9 +485,9 @@ export function SenderSlideOver({ isOpen, onClose, onRegistered }: SenderSlideOv
                   padding: '0 24px',
                   fontSize: 13,
                   fontWeight: 700,
-                  borderRadius: 'var(--radius-md, 4px)',
-                  background: 'var(--brand-primary, #FACC15)',
-                  color: '#000000',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--brand-primary)',
+                  color: 'var(--card)',
                   border: 'none',
                   cursor: 'pointer',
                 }}

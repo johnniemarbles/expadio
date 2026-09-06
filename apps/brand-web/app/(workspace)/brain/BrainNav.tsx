@@ -60,7 +60,7 @@ export function BrainNav({
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: 16,
-        borderBottom: '1px solid var(--border, #272727)',
+        borderBottom: '1px solid var(--border)',
         paddingBottom: 0,
         marginBottom: 20,
         marginTop: 16,
@@ -87,10 +87,10 @@ export function BrainNav({
                   gap: 8,
                   fontSize: 14,
                   fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--foreground, #FAFAFA)' : 'var(--muted-foreground, #A1A1AA)',
+                  color: active ? 'var(--foreground)' : 'var(--muted-foreground)',
                   background: 'none',
                   border: 'none',
-                  borderBottom: active ? '2px solid var(--brand-primary, #FACC15)' : '2px solid transparent',
+                  borderBottom: active ? '2px solid var(--brand-primary)' : '2px solid transparent',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   padding: '0 2px',
@@ -113,21 +113,21 @@ export function BrainNav({
               fontSize: 13,
               fontWeight: 600,
               padding: '0 12px',
-              borderRadius: 'var(--radius-md, 4px)',
+              borderRadius: 'var(--radius-md)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               background: isMoreActive
-                ? 'color-mix(in srgb, var(--brand-primary, #FACC15) 15%, transparent)'
-                : 'var(--card, #0A0A0A)',
+                ? 'color-mix(in srgb, var(--brand-primary) 15%, transparent)'
+                : 'var(--card)',
               border: isMoreActive
-                ? '1px solid var(--brand-primary, #FACC15)'
-                : '1px solid var(--border, #272727)',
+                ? '1px solid var(--brand-primary)'
+                : '1px solid var(--border)',
               color: isMoreActive
-                ? 'var(--brand-primary, #FACC15)'
-                : 'var(--foreground, #FAFAFA)',
+                ? 'var(--brand-primary)'
+                : 'var(--foreground)',
             }}
             aria-expanded={openMore}
             aria-haspopup="true"
@@ -153,10 +153,9 @@ export function BrainNav({
                 left: 0,
                 marginTop: 6,
                 width: 270,
-                background: 'var(--card, #0A0A0A)',
-                border: '1px solid var(--border, #272727)',
-                borderRadius: 'var(--radius-md, 6px)',
-                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.85)',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)',
                 zIndex: 100,
                 padding: '6px 0',
                 overflow: 'hidden',
@@ -169,8 +168,8 @@ export function BrainNav({
                   fontWeight: 700,
                   letterSpacing: '0.06em',
                   textTransform: 'uppercase',
-                  color: 'var(--muted-foreground, #A1A1AA)',
-                  borderBottom: '1px solid var(--border, #272727)',
+                  color: 'var(--muted-foreground)',
+                  borderBottom: '1px solid var(--border)',
                   marginBottom: 4,
                 }}
               >
@@ -195,15 +194,15 @@ export function BrainNav({
                       gap: 2,
                       padding: '10px 14px',
                       background: active
-                        ? 'color-mix(in srgb, var(--brand-primary, #FACC15) 12%, transparent)'
+                        ? 'color-mix(in srgb, var(--brand-primary) 12%, transparent)'
                         : 'transparent',
                       border: 'none',
-                      borderLeft: active ? '3px solid var(--brand-primary, #FACC15)' : '3px solid transparent',
+                      borderLeft: active ? '3px solid var(--brand-primary)' : '3px solid transparent',
                       cursor: 'pointer',
                       transition: 'background 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      if (!active) e.currentTarget.style.background = 'var(--muted, #171717)';
+                      if (!active) e.currentTarget.style.background = 'var(--muted)';
                     }}
                     onMouseLeave={(e) => {
                       if (!active) e.currentTarget.style.background = 'transparent';
@@ -213,13 +212,13 @@ export function BrainNav({
                       style={{
                         fontSize: 13,
                         fontWeight: 600,
-                        color: active ? 'var(--brand-primary, #FACC15)' : 'var(--foreground, #FAFAFA)',
+                        color: active ? 'var(--brand-primary)' : 'var(--foreground)',
                       }}
                     >
                       {item.label}
                     </div>
                     {item.desc ? (
-                      <div style={{ fontSize: 11, color: 'var(--muted-foreground, #A1A1AA)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
                         {item.desc}
                       </div>
                     ) : null}
@@ -242,9 +241,9 @@ export function BrainNav({
               fontSize: 13,
               fontWeight: 700,
               padding: '0 16px',
-              borderRadius: 'var(--radius-md, 4px)',
-              background: 'var(--brand-primary, #FACC15)',
-              color: '#000000',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--brand-primary)',
+              color: 'var(--card)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
