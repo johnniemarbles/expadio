@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { MotionDrawer } from '@expadio/ui';
 import CreateContactForm from './CreateContactForm';
+import { LeadManagementNav } from '../LeadManagementNav';
 import styles from '../../workspace.module.css';
 
 interface AccountOption {
@@ -62,41 +63,7 @@ export default function ContactsClient({
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Sub-Navigation */}
-          <nav
-            style={{
-              display: 'flex',
-              gap: 4,
-              padding: 4,
-              background: 'var(--card, #0A0A0A)',
-              borderRadius: 'var(--radius-md, 4px)',
-              border: '1px solid var(--border, #272727)',
-              width: 'fit-content',
-              flexWrap: 'nowrap',
-            }}
-            aria-label="Lead management navigation"
-          >
-            <Link
-              className={styles.secondaryButton}
-              style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }}
-              href="/leads"
-            >
-              Leads
-            </Link>
-            <Link
-              className={styles.button}
-              style={{ height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4, whiteSpace: 'nowrap' }}
-              href="/leads/contacts"
-            >
-              Contacts
-            </Link>
-            <Link
-              className={styles.secondaryButton}
-              style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }}
-              href="/leads/accounts"
-            >
-              Accounts
-            </Link>
-          </nav>
+          <LeadManagementNav activeKey="contacts" />
 
           {/* Primary "+ Create Contact" Button */}
           <button

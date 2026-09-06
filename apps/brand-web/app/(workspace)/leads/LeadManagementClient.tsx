@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { MotionDrawer } from '@expadio/ui';
 import type { BrandLeadSummary, BrandLeadStage } from '../../../lib/brand-leads';
 import { BRAND_LEAD_STAGES } from '../../../lib/brand-leads';
 import CreateLeadForm from './CreateLeadForm';
 import { LeadDetailDrawer } from './LeadDetailDrawer';
+import { LeadManagementNav } from './LeadManagementNav';
 import styles from '../workspace.module.css';
 
 interface LeadManagementClientProps {
@@ -46,7 +46,7 @@ export default function LeadManagementClient({
     }));
   }, [initialLeads]);
 
-  // Filter leads by stage and search query
+  // Filter leads by stage and search query for List View
   const filteredLeads = useMemo(() => {
     let result = [...initialLeads];
     if (selectedStage !== '') {
@@ -78,41 +78,10 @@ export default function LeadManagementClient({
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Sub-Navigation Bar */}
-          <nav
-            style={{
-              display: 'flex',
-              gap: 4,
-              padding: 4,
-              background: 'var(--card, #0A0A0A)',
-              borderRadius: 'var(--radius-md, 4px)',
-              border: '1px solid var(--border, #272727)',
-              width: 'fit-content',
-              flexWrap: 'nowrap',
-            }}
-            aria-label="Lead management navigation"
-          >
-            <Link className={styles.button} style={{ height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4, whiteSpace: 'nowrap' }} href="/leads">
-              Leads
-            </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }} href="/leads/contacts">
-              Contacts
-            </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }} href="/leads/accounts">
-              Accounts
-            </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }} href="/leads/capture/configuration">
-              Capture Config
-            </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }} href="/leads/publications">
-              Publications
-            </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px', borderRadius: 4 }} href="/leads/capture">
-              Demand Capture
-            </Link>
-          </nav>
+          {/* Sub-Navigation Bar with Separate Buttons */}
+          <LeadManagementNav activeKey="leads" />
 
-          {/* Primary "+ Create Lead" Button (EXPADIO Design Guide: 36px height, 4px radius, 0 16px padding) */}
+          {/* Primary "+ Create Lead" Button */}
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
@@ -133,7 +102,7 @@ export default function LeadManagementClient({
         </div>
       </section>
 
-      {/* Primary Pipeline Stage Metric Bar (EXPADIO Design Guide: 6px card radius, 16px padding) */}
+      {/* Primary Pipeline Stage Metric Bar */}
       <section
         style={{
           display: 'grid',
@@ -319,100 +288,102 @@ export default function LeadManagementClient({
         </div>
 
         {/* Content Views */}
-        {filteredLeads.length === 0 ? (
-          <div className={styles.empty} style={{ padding: '56px 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--foreground, #FAFAFA)', margin: '0 0 6px' }}>
-              No leads visible
-            </p>
-            <p style={{ fontSize: 13, color: 'var(--muted-foreground, #A1A1AA)', margin: '0 0 20px' }}>
-              {searchQuery
-                ? `No matching leads found for "${searchQuery}"`
-                : `No leads currently in stage ${selectedStage || 'ALL'}`}
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className={styles.button}
-              style={{ height: 36, padding: '0 16px', borderRadius: 'var(--radius-md, 4px)', fontSize: 13 }}
-            >
-              + Create Lead
-            </button>
-          </div>
-        ) : viewMode === 'list' ? (
-          /* List View Table */
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Contact</th>
-                  <th>Interest</th>
-                  <th>Stage</th>
-                  <th>Value</th>
-                  <th>Created</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLeads.map((lead) => (
-                  <tr
-                    key={lead.leadId}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => setSelectedLead(lead)}
-                  >
-                    <td>
-                      <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>
-                        {lead.contactName ?? lead.title}
-                      </strong>
-                      {lead.contactEmail ? (
-                        <>
-                          <br />
-                          <small style={{ color: 'var(--muted-foreground, #A1A1AA)' }}>{lead.contactEmail}</small>
-                        </>
-                      ) : null}
-                      {lead.contactPhone ? (
-                        <>
-                          <br />
-                          <small style={{ color: 'var(--muted-foreground, #A1A1AA)' }}>{lead.contactPhone}</small>
-                        </>
-                      ) : null}
-                    </td>
-                    <td>{lead.enquiryInterestType ?? '—'}</td>
-                    <td>
-                      <span
-                        className={styles.pill}
-                        style={{
-                          borderColor: STAGE_COLORS[lead.stage] ?? undefined,
-                          color: STAGE_COLORS[lead.stage] ?? undefined,
-                        }}
-                      >
-                        {lead.stage}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>
-                      {lead.amountMinorUnits == null
-                        ? '—'
-                        : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}
-                    </td>
-                    <td style={{ color: 'var(--muted-foreground, #A1A1AA)', fontSize: 12 }}>
-                      {new Date(lead.createdAt).toLocaleDateString()}
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedLead(lead)}
-                        className={styles.secondaryButton}
-                        style={{ height: 30, fontSize: 12, padding: '0 12px', borderRadius: 4 }}
-                      >
-                        View Details →
-                      </button>
-                    </td>
+        {viewMode === 'list' ? (
+          filteredLeads.length === 0 ? (
+            <div className={styles.empty} style={{ padding: '56px 24px', textAlign: 'center' }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--foreground, #FAFAFA)', margin: '0 0 6px' }}>
+                No leads visible
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--muted-foreground, #A1A1AA)', margin: '0 0 20px' }}>
+                {searchQuery
+                  ? `No matching leads found for "${searchQuery}"`
+                  : `No leads currently in stage ${selectedStage || 'ALL'}`}
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                className={styles.button}
+                style={{ height: 36, padding: '0 16px', borderRadius: 'var(--radius-md, 4px)', fontSize: 13 }}
+              >
+                + Create Lead
+              </button>
+            </div>
+          ) : (
+            /* List View Table */
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Contact</th>
+                    <th>Interest</th>
+                    <th>Stage</th>
+                    <th>Value</th>
+                    <th>Created</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredLeads.map((lead) => (
+                    <tr
+                      key={lead.leadId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedLead(lead)}
+                    >
+                      <td>
+                        <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>
+                          {lead.contactName ?? lead.title}
+                        </strong>
+                        {lead.contactEmail ? (
+                          <>
+                            <br />
+                            <small style={{ color: 'var(--muted-foreground, #A1A1AA)' }}>{lead.contactEmail}</small>
+                          </>
+                        ) : null}
+                        {lead.contactPhone ? (
+                          <>
+                            <br />
+                            <small style={{ color: 'var(--muted-foreground, #A1A1AA)' }}>{lead.contactPhone}</small>
+                          </>
+                        ) : null}
+                      </td>
+                      <td>{lead.enquiryInterestType ?? '—'}</td>
+                      <td>
+                        <span
+                          className={styles.pill}
+                          style={{
+                            borderColor: STAGE_COLORS[lead.stage] ?? undefined,
+                            color: STAGE_COLORS[lead.stage] ?? undefined,
+                          }}
+                        >
+                          {lead.stage}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>
+                        {lead.amountMinorUnits == null
+                          ? '—'
+                          : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}
+                      </td>
+                      <td style={{ color: 'var(--muted-foreground, #A1A1AA)', fontSize: 12 }}>
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLead(lead)}
+                          className={styles.secondaryButton}
+                          style={{ height: 30, fontSize: 12, padding: '0 12px', borderRadius: 4 }}
+                        >
+                          View Details →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
-          /* Board (Kanban) View */
+          /* Board (Kanban) View — ALWAYS renders all 5 Kanban stage columns side-by-side */
           <div
             style={{
               display: 'grid',
@@ -423,18 +394,32 @@ export default function LeadManagementClient({
             }}
           >
             {BRAND_LEAD_STAGES.map((stg) => {
-              const colLeads = filteredLeads.filter((l) => l.stage === stg);
+              const colLeads = initialLeads.filter(
+                (l) =>
+                  l.stage === stg &&
+                  (searchQuery === '' ||
+                    (l.contactName ?? l.title ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (l.contactEmail ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (l.contactPhone ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (l.accountName ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+              );
+              const isSelectedStage = selectedStage === stg;
               const color = STAGE_COLORS[stg];
+
               return (
                 <div
                   key={stg}
                   style={{
                     background: 'var(--card, #0A0A0A)',
-                    border: '1px solid var(--border, #272727)',
+                    border: `1px solid ${isSelectedStage ? color : 'var(--border, #272727)'}`,
                     borderRadius: 'var(--radius-lg, 6px)',
                     display: 'flex',
                     flexDirection: 'column',
-                    maxHeight: 700,
+                    minHeight: 480,
+                    maxHeight: 720,
+                    boxShadow: isSelectedStage ? `0 0 0 1px ${color}` : 'none',
+                    transition: 'all 0.15s ease',
+                    opacity: selectedStage !== '' && !isSelectedStage ? 0.6 : 1,
                   }}
                 >
                   {/* Column Header */}
@@ -451,11 +436,18 @@ export default function LeadManagementClient({
                   >
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-                      <strong style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <strong
+                        style={{
+                          fontSize: 12,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          color: isSelectedStage ? color : 'var(--foreground, #FAFAFA)',
+                        }}
+                      >
                         {stg}
                       </strong>
                     </div>
-                    <span className={styles.pill} style={{ fontSize: 11 }}>
+                    <span className={styles.pill} style={{ fontSize: 11, borderColor: isSelectedStage ? color : undefined }}>
                       {colLeads.length}
                     </span>
                   </div>
@@ -474,12 +466,13 @@ export default function LeadManagementClient({
                     {colLeads.length === 0 ? (
                       <div
                         style={{
-                          padding: '24px 12px',
+                          padding: '32px 12px',
                           textAlign: 'center',
                           fontSize: 12,
                           color: 'var(--muted-foreground, #A1A1AA)',
                           border: '1px dashed var(--border, #272727)',
                           borderRadius: 4,
+                          background: 'color-mix(in srgb, var(--card, #0A0A0A) 50%, transparent)',
                         }}
                       >
                         No {stg.toLowerCase()} leads
@@ -497,7 +490,7 @@ export default function LeadManagementClient({
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--brand-primary, #FACC15)')}
+                          onMouseEnter={(e) => (e.currentTarget.style.borderColor = color)}
                           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border, #272727)')}
                         >
                           <strong
