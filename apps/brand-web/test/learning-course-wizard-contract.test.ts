@@ -14,6 +14,9 @@ const route = readFileSync(
 test('course wizard sends the complete authoring intent without placeholder media', () => {
   assert.match(drawer, /estimatedDuration: draft\.estimatedDuration/);
   assert.match(drawer, /visibility: draft\.visibility/);
+  assert.match(drawer, /enrollmentMode: draft\.enrollmentMode/);
+  assert.match(drawer, /certificateEnabled: draft\.certificateEnabled/);
+  assert.match(drawer, /passingScore: draft\.passingScore/);
   assert.match(drawer, /modules: draft\.modules/);
   assert.match(drawer, /publish: isPublish/);
   assert.doesNotMatch(drawer, /example\.com\/video1\.mp4/);
@@ -24,6 +27,9 @@ test('course API maps wizard modules and lessons to the native Learning contract
   assert.match(route, /lessonKey: stableKey/);
   assert.match(route, /activityType: ACTIVITY_TYPES/);
   assert.match(route, /estimatedMinutes:/);
+  assert.match(route, /enrollmentMode: enrollmentMode\(body\.enrollmentMode\)/);
+  assert.match(route, /certificateEnabled: body\.certificateEnabled === true/);
+  assert.match(route, /passingScore: body\.certificateEnabled === true \? body\.passingScore : null/);
   assert.match(route, /content: contentFor\(lesson\)/);
   assert.match(route, /modules: nativeModules\(body\.modules\)/);
 });
@@ -32,6 +38,7 @@ test('publication is explicit and uses the canonical immutable publish operation
   assert.match(route, /if \(body\.publish !== true\)/);
   assert.match(route, /publishLearningCourseVersion/);
   assert.match(route, /version: created\.version\.version/);
+  assert.match(route, /version: published\.version/);
   assert.match(route, /published: true/);
 });
 
