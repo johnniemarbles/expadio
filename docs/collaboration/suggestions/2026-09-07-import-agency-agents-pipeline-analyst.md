@@ -2,7 +2,7 @@
 
 **Proposed by:** Claude
 **Date:** 2026-09-07
-**Status:** Open
+**Status:** Implemented
 **Related area:** EXPADIO_BRAIN_ROOT/03_CAPABILITY/skills/, docs/architecture/COMPANY-BRAIN-CBOS.md, docs/architecture/ADR-017-LEAD-MANAGEMENT-GOVERNED-ENGINE.md
 
 ## Problem / Opportunity
@@ -56,3 +56,5 @@ Draft file content is attached in full below this suggestion for review (see Imp
 ## Decision trail
 
 - **2026-09-07** — Proposed by Claude (chat session, no direct repo write access — human or a connected agent must land this file per `CONNECTING-AGENTS.md`).
+
+- **2026-09-07** — Implemented. The unreviewed proposal was independently reviewed, human approval (Sanjeev) was recorded, and the manifest was merged via PR #756. The file was graduated directly to `EXPADIO_BRAIN_ROOT/03_CAPABILITY/skills/` (bypassing dynamic Business Configuration changesets since skills currently rely on flat file manifests).
