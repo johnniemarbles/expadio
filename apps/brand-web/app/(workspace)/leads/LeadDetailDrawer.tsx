@@ -58,7 +58,7 @@ export function LeadDetailDrawer({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
+            background: 'rgba(0, 0, 0, 0.75)',
             backdropFilter: 'blur(4px)',
             WebkitBackdropFilter: 'blur(4px)',
             zIndex: 99,
@@ -74,8 +74,9 @@ export function LeadDetailDrawer({
         style={{
           width: '100%',
           maxWidth: 540,
-          background: 'var(--theme-surface-raised, #0D0E11)',
-          borderLeft: '1px solid var(--theme-border, #1F242D)',
+          background: 'var(--card, #0A0A0A)',
+          borderLeft: '1px solid var(--border, #272727)',
+          borderRadius: 'var(--radius-xl, 8px) 0 0 var(--radius-xl, 8px)',
           boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.8)',
           display: 'flex',
           flexDirection: 'column',
@@ -91,22 +92,22 @@ export function LeadDetailDrawer({
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid var(--theme-border, #1F242D)',
+            borderBottom: '1px solid var(--border, #272727)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'var(--theme-surface, #060707)',
+            background: 'var(--background, #000000)',
           }}
         >
           <div>
             <span className={styles.pill} style={{ marginBottom: 6, display: 'inline-block' }}>
               {lead.stage}
             </span>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--theme-text-primary, #FFFFFF)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--foreground, #FAFAFA)' }}>
               {lead.contactName ?? lead.title}
             </h2>
             {lead.accountName ? (
-              <p style={{ fontSize: 13, color: 'var(--theme-text-muted, #9CA3AF)', margin: '4px 0 0' }}>
+              <p style={{ fontSize: 13, color: 'var(--muted-foreground, #A1A1AA)', margin: '4px 0 0' }}>
                 Account: {lead.accountName}
               </p>
             ) : null}
@@ -116,10 +117,10 @@ export function LeadDetailDrawer({
             onClick={onClose}
             style={{
               background: 'transparent',
-              border: '1px solid var(--theme-border, #1F242D)',
-              borderRadius: 6,
-              color: 'var(--theme-text-muted, #9CA3AF)',
-              fontSize: 18,
+              border: '1px solid var(--border, #272727)',
+              borderRadius: 'var(--radius-md, 4px)',
+              color: 'var(--muted-foreground, #A1A1AA)',
+              fontSize: 16,
               width: 32,
               height: 32,
               display: 'flex',
@@ -147,16 +148,16 @@ export function LeadDetailDrawer({
           {/* Stage Management Bar */}
           <div
             style={{
-              background: 'var(--theme-surface, #060707)',
-              border: '1px solid var(--theme-border, #1F242D)',
-              borderRadius: 'var(--theme-radius-card, 8px)',
+              background: 'var(--background, #000000)',
+              border: '1px solid var(--border, #272727)',
+              borderRadius: 'var(--radius-lg, 6px)',
               padding: 16,
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--theme-text-muted, #9CA3AF)' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground, #A1A1AA)' }}>
               Lead Pipeline Stage
             </span>
             <form onSubmit={handleStageSubmit} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -166,7 +167,7 @@ export function LeadDetailDrawer({
                 defaultValue={lead.stage}
                 disabled={updatingStage}
                 className={styles.secondaryButton}
-                style={{ flex: 1, height: 38 }}
+                style={{ flex: 1, height: 36, borderRadius: 'var(--radius-md, 4px)' }}
               >
                 {BRAND_LEAD_STAGES.map((s: BrandLeadStage) => (
                   <option key={s} value={s}>
@@ -178,7 +179,7 @@ export function LeadDetailDrawer({
                 type="submit"
                 disabled={updatingStage}
                 className={styles.secondaryButton}
-                style={{ height: 38, padding: '0 16px', whiteSpace: 'nowrap' }}
+                style={{ height: 36, padding: '0 16px', borderRadius: 'var(--radius-md, 4px)', whiteSpace: 'nowrap' }}
               >
                 {updatingStage ? 'Updating…' : 'Update Stage'}
               </button>
@@ -191,7 +192,7 @@ export function LeadDetailDrawer({
                   type="submit"
                   disabled={converting}
                   className={styles.button}
-                  style={{ width: '100%', justifyContent: 'center' }}
+                  style={{ width: '100%', height: 36, borderRadius: 'var(--radius-md, 4px)', justifyContent: 'center' }}
                 >
                   {converting ? 'Converting…' : '✓ Convert Lead to Customer Account'}
                 </button>
@@ -202,33 +203,33 @@ export function LeadDetailDrawer({
           {/* Contact Details Card */}
           <div
             style={{
-              background: 'var(--theme-surface, #060707)',
-              border: '1px solid var(--theme-border, #1F242D)',
-              borderRadius: 'var(--theme-radius-card, 8px)',
+              background: 'var(--background, #000000)',
+              border: '1px solid var(--border, #272727)',
+              borderRadius: 'var(--radius-lg, 6px)',
               padding: 16,
               display: 'grid',
               gap: 12,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--theme-text-muted, #9CA3AF)' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground, #A1A1AA)' }}>
               Contact Information
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Email</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.contactEmail ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Email</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.contactEmail ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Phone</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.contactPhone ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Phone</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.contactPhone ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>First Name</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.firstName ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>First Name</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.firstName ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Last Name</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.lastName ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Last Name</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.lastName ?? '—'}</strong>
               </div>
             </div>
           </div>
@@ -236,35 +237,35 @@ export function LeadDetailDrawer({
           {/* Interest & Deal Value */}
           <div
             style={{
-              background: 'var(--theme-surface, #060707)',
-              border: '1px solid var(--theme-border, #1F242D)',
-              borderRadius: 'var(--theme-radius-card, 8px)',
+              background: 'var(--background, #000000)',
+              border: '1px solid var(--border, #272727)',
+              borderRadius: 'var(--radius-lg, 6px)',
               padding: 16,
               display: 'grid',
               gap: 12,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--theme-text-muted, #9CA3AF)' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground, #A1A1AA)' }}>
               Interest & Deal Value
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Interest Type</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.enquiryInterestType ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Interest Type</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.enquiryInterestType ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Opportunity Type</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.enquiryOpportunityType ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Opportunity Type</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.enquiryOpportunityType ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Estimated Value</span>
-                <strong style={{ color: 'var(--theme-accent, #FACC15)', fontSize: 15 }}>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Estimated Value</span>
+                <strong style={{ color: 'var(--brand-primary, #FACC15)', fontSize: 15 }}>
                   {lead.amountMinorUnits == null ? '—' : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}
                 </strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Source</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.source ?? 'Manual'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Source</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.source ?? 'Manual'}</strong>
               </div>
             </div>
           </div>
@@ -272,33 +273,33 @@ export function LeadDetailDrawer({
           {/* Location & Metadata */}
           <div
             style={{
-              background: 'var(--theme-surface, #060707)',
-              border: '1px solid var(--theme-border, #1F242D)',
-              borderRadius: 'var(--theme-radius-card, 8px)',
+              background: 'var(--background, #000000)',
+              border: '1px solid var(--border, #272727)',
+              borderRadius: 'var(--radius-lg, 6px)',
               padding: 16,
               display: 'grid',
               gap: 12,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--theme-text-muted, #9CA3AF)' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground, #A1A1AA)' }}>
               Location & Timeline
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>City</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.city ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>City</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.city ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Region / State</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.regionOrState ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Region / State</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.regionOrState ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Country</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>{lead.countryCode ?? '—'}</strong>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Country</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>{lead.countryCode ?? '—'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--theme-text-muted, #9CA3AF)', display: 'block', fontSize: 11 }}>Created</span>
-                <strong style={{ color: 'var(--theme-text-primary, #FFFFFF)' }}>
+                <span style={{ color: 'var(--muted-foreground, #A1A1AA)', display: 'block', fontSize: 11 }}>Created</span>
+                <strong style={{ color: 'var(--foreground, #FAFAFA)' }}>
                   {new Date(lead.createdAt).toLocaleDateString()}
                 </strong>
               </div>
