@@ -50,6 +50,12 @@ This checklist is the durable project memory for autonomous execution. Update it
 - [x] Provider webhook lifecycle transition matrix implemented.
 - [x] Out-of-order provider lifecycle events recorded without stale state regression.
 - [x] Replayed provider webhook events with distinct provider event ids recorded without duplicate delivery lifecycle mutation.
+- [x] Twilio SMS/WhatsApp governed provider adapter ported from BEMP and exposed as `twilio-sms` / `twilio-whatsapp`.
+- [x] Twilio Voice governed provider adapter ported from BEMP and exposed as `twilio-voice`.
+- [x] Twilio credential lease binding implemented without raw token access in communication routes.
+- [x] Twilio signed webhook route implemented with explicit tenant/connector coordinates and public URL signature verification.
+- [x] Twilio provider webhook normalization and replay-safe lifecycle evidence covered by unit/integration tests.
+- [x] Communications live certification gate documented for Resend and Twilio provider capabilities.
 - [x] Social channel `social` + capability `communication.social.send` on main (#491).
 - [x] Disabled connector `social.linkedin` on main (#491, `0086_communication_social_channel.sql`).
 - [ ] Delivery-worker social dispatch — forbidden until COMMUNICATE proof + explicit enable.
@@ -311,7 +317,7 @@ Binding keys:
 - [ ] Add Action Fabric contract workflow.
 - [ ] Add Communications lifecycle integration workflow.
 - [ ] Add Scheduler lifecycle integration workflow.
-- [ ] Add Provider webhook lifecycle workflow.
+- [x] Add Provider webhook lifecycle workflow coverage for Resend and Twilio route/lifecycle behavior.
 - [ ] Add event-to-provider-to-webhook-to-trace E2E harness.
 - [ ] Add event-to-schedule-to-child-action-to-trace E2E harness.
 - [ ] Add event-to-create-task-to-trace E2E harness.
