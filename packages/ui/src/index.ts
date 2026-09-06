@@ -33,4 +33,4 @@ export * from './theme';
 export * from './tokens';
 export * from './components/ThemeModeControl';
 export * from './module-shell';
-export * from './governed-theme';
+export * from './governed-theme';export * from './components/SlidePanel';

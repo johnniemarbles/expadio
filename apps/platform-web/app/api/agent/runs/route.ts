@@ -61,7 +61,7 @@ export async function GET(request: Request) {
            AND r.organization_id = $2
          ORDER BY r.created_at DESC
          LIMIT 50`,
-        [context.tenantId, context.organizationId],
+        [context.tenantId],
       ),
     );
 

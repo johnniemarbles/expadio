@@ -51,13 +51,13 @@ export async function GET(request: Request) {
            SELECT a.agent_id, a.slug, a.persona as name
            FROM platform.tenant_agent_bindings b
            JOIN platform.agent_definitions a ON a.agent_id = b.agent_id
-           WHERE b.tenant_id = $1::uuid AND b.status = 'ACTIVE'
+           WHERE b.tenant_id = $1::text AND b.status = 'ACTIVE'
              AND (
                jsonb_array_length(a.tools) = 0 
                OR NOT EXISTS (
                  SELECT 1 FROM jsonb_array_elements_text(a.tools) AS tool
                  LEFT JOIN platform.tenant_tool_grants g 
-                   ON g.tool_group = tool AND g.tenant_id = $1::uuid AND g.enabled = true
+                   ON g.tool_group = tool AND g.tenant_id = $1::text AND g.enabled = true
                  WHERE g.tool_group IS NULL
                )
              )
