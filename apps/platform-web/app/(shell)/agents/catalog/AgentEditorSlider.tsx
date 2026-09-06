@@ -19,24 +19,36 @@ export function AgentEditorSlider({ isOpen, onClose, editingAgent }: AgentEditor
   const [defaultOn, setDefaultOn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
 
   const availableTools = ['GitHub', 'FS', 'DB', 'Audit', 'Comms'];
 
   useEffect(() => {
-    if (isOpen && editingAgent) {
-      setDepartment(editingAgent.department || '');
-      setSlug(editingAgent.capability_key || editingAgent.slug || '');
-      setPersona(editingAgent.display_name || editingAgent.persona || '');
-      setTools(Array.isArray(editingAgent.tools) ? editingAgent.tools : []);
-      setDefaultOn(!!editingAgent.default_on);
-    } else if (isOpen) {
-      setDepartment('');
-      setSlug('');
-      setPersona('');
-      setTools([]);
-      setDefaultOn(false);
+    let active = true;
+    if (isOpen) {
+      fetch('/api/agent-departments')
+        .then(r => r.json())
+        .then(data => {
+          if (active && Array.isArray(data)) setAvailableDepartments(data.map((d: any) => d.name));
+        })
+        .catch(console.error);
+
+      if (editingAgent) {
+        setDepartment(editingAgent.department || '');
+        setSlug(editingAgent.capability_key || editingAgent.slug || '');
+        setPersona(editingAgent.display_name || editingAgent.persona || '');
+        setTools(Array.isArray(editingAgent.tools) ? editingAgent.tools : []);
+        setDefaultOn(!!editingAgent.default_on);
+      } else {
+        setDepartment('');
+        setSlug('');
+        setPersona('');
+        setTools([]);
+        setDefaultOn(false);
+      }
+      setError(null);
     }
-    setError(null);
+    return () => { active = false; };
   }, [isOpen, editingAgent]);
 
   const toggleTool = (t: string) => {
@@ -122,12 +134,17 @@ export function AgentEditorSlider({ isOpen, onClose, editingAgent }: AgentEditor
         
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600 }}>Department</label>
-          <TextField 
-            placeholder="e.g. Engineering"
-            value={department}
-            onChange={(e: any) => setDepartment(e.target.value)}
+          <select 
+            value={department} 
+            onChange={(e) => setDepartment(e.target.value)}
             required
-          />
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 'var(--theme-radius-card)', border: '1px solid var(--theme-border)', background: 'var(--theme-surface-base)', color: 'var(--theme-text-primary)' }}
+          >
+            <option value="" disabled>Select Department...</option>
+            {availableDepartments.map(d => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
         </div>
 
         <div>
