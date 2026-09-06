@@ -68,20 +68,16 @@ export default function LeadManagementClient({
   return (
     <>
       {/* Top Header & Navigation Bar */}
-      <section className={styles.pageHead}>
-        <div>
-          <p className={styles.eyebrow}>Growth · {organizationName}</p>
-          <h1>Lead Management</h1>
-          <p>
-            Organization-scoped CRM projection for active demand. Capture, qualify and convert high-intent leads.
-          </p>
-        </div>
+      <section className={styles.pageHead} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, width: '100%' }}>
+          <div>
+            <p className={styles.eyebrow}>Growth · {organizationName}</p>
+            <h1 style={{ margin: '2px 0 6px' }}>Lead Management</h1>
+            <p style={{ margin: 0, color: 'var(--muted-foreground, #A1A1AA)', fontSize: 14 }}>
+              Capture, qualify and progress organization-scoped leads into customers.
+            </p>
+          </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Sub-Navigation Bar with Separate Buttons */}
-          <LeadManagementNav activeKey="leads" />
-
-          {/* Primary "+ Create Lead" Button */}
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
@@ -100,6 +96,8 @@ export default function LeadManagementClient({
             + Create Lead
           </button>
         </div>
+
+        <LeadManagementNav activeKey="leads" />
       </section>
 
       {/* Primary Pipeline Stage Metric Bar */}
