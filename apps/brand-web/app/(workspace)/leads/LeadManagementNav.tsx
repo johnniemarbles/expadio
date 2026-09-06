@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import styles from './workspace.module.css';
+import styles from '../workspace.module.css';
 
 export type LeadNavKey =
   | 'leads'
