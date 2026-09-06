@@ -695,6 +695,7 @@ export function CommunicationsDashboardClient({
         isOpen={activeConnector !== null}
         onClose={() => setActiveConnector(null)}
         connectorKey={activeConnector?.connectorKey ?? ""}
+        providerType={activeConnector?.providerType ?? ""}
         ownershipScope={activeConnector?.ownershipScope ?? "TENANT"}
         queryString={queryString}
         onChanged={reloadProviders}

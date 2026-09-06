@@ -7,6 +7,7 @@ const route = read('../app/api/communications/providers/[key]/certification-send
 const webhook = read('../lib/communication-provider-webhook.ts');
 const reconciliation = read('../lib/communication-certification-reconciliation.ts');
 const migration = read('../../../infra/db/migrations/0143_communication_certification_requests.sql');
+const modal = read('../app/(shell)/communications/ConnectorActionsModal.tsx');
 
 test('Certification Send enters the durable governed COMMUNICATE spine', () => {
   assert.match(route, /appendDomainEventWithOutbox/);
@@ -39,4 +40,12 @@ test('only signed terminal webhook reconciliation can materialize LIVE certifica
   assert.match(reconciliation, /execution_attempt\.status = 'QUEUED'/);
   assert.match(reconciliation, /input\.finalDeliveryState === 'DELIVERED'/);
   assert.match(reconciliation, /'LIVE_CERTIFIED'/);
+});
+
+test('connector actions modal exposes durable live certification controls', () => {
+  assert.match(modal, /\$\{base\}\/certification-send\$\{queryString\}/);
+  assert.match(modal, /requestId:\s*certificationRequestId\.trim\(\)/);
+  assert.match(modal, /setCertificationRequestId\(makeUuid\(\)\)/);
+  assert.match(modal, /Queue certification/);
+  assert.match(modal, /LIVE requires a signed terminal provider webhook/);
 });
