@@ -1,19 +1,20 @@
-import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { hasBrandGovernanceForOrganization, resolveBrandContext, withBrandTransaction } from '../../../lib/brand-context';
-import { BRAND_LEAD_STAGES, convertBrandLeadToCustomer, listBrandLeads, updateBrandLeadStage } from '../../../lib/brand-leads';
-import CreateLeadForm from './CreateLeadForm';
+import { convertBrandLeadToCustomer, listBrandLeads, updateBrandLeadStage } from '../../../lib/brand-leads';
+import LeadManagementClient from './LeadManagementClient';
 import styles from '../workspace.module.css';
 
 export const dynamic = 'force-dynamic';
 
 async function requireLeadModule() {
   const context = await resolveBrandContext();
-  const module = await withBrandTransaction(context, (client) => loadTenantProductModule(client, {
-    tenantId: context.tenantId,
-    moduleKey: 'lead-management',
-  }));
+  const module = await withBrandTransaction(context, (client) =>
+    loadTenantProductModule(client, {
+      tenantId: context.tenantId,
+      moduleKey: 'lead-management',
+    })
+  );
   return { context, module };
 }
 
@@ -53,60 +54,44 @@ async function convertLeadAction(formData: FormData) {
   revalidatePath('/leads');
 }
 
-export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ stage?: string }> }) {
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ stage?: string }>;
+}) {
   const { context, module } = await requireLeadModule();
   const params = await searchParams;
+
   if (module?.availability !== 'ACTIVE') {
-    return <>
-      <section className={styles.pageHead}><div><p className={styles.eyebrow}>Growth</p><h1>Lead Management</h1><p>Capture, qualify and convert demand inside the selected organization workspace.</p></div></section>
-      <div className={styles.notice}><strong>Lead Management is not active for this tenant.</strong><p>Availability: {module?.availability ?? 'UNAVAILABLE'}. Catalogue metadata never grants entitlement or activates the module.</p></div>
-    </>;
+    return (
+      <>
+        <section className={styles.pageHead}>
+          <div>
+            <p className={styles.eyebrow}>Growth</p>
+            <h1>Lead Management</h1>
+            <p>Capture, qualify and convert demand inside the selected organization workspace.</p>
+          </div>
+        </section>
+        <div className={styles.notice}>
+          <strong>Lead Management is not active for this tenant.</strong>
+          <p>
+            Availability: {module?.availability ?? 'UNAVAILABLE'}. Catalogue metadata never grants
+            entitlement or activates the module.
+          </p>
+        </div>
+      </>
+    );
   }
 
-  const selectedStage = params.stage?.trim().toUpperCase() ?? '';
   const allLeads = await withBrandTransaction(context, (client) => listBrandLeads(client, {}));
-  const leads = selectedStage === '' ? allLeads : allLeads.filter((lead) => lead.stage === selectedStage);
-  const counts = BRAND_LEAD_STAGES.map((stage) => ({ stage, count: allLeads.filter((lead) => lead.stage === stage).length }));
 
-  return <>
-    <section className={styles.pageHead}>
-      <div><p className={styles.eyebrow}>Growth · {context.organizationName}</p><h1>Lead Management</h1><p>Organization-scoped CRM projection for active demand. Demand Capture’s 19-stage journey remains a separate governed layer.</p></div>
-      <nav style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--theme-surface-raised)', borderRadius: 'var(--theme-radius-card)', border: '1px solid var(--theme-border)', width: 'fit-content', flexWrap: 'nowrap' }} aria-label="Lead management navigation">
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/contacts">Contacts</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/accounts">Accounts</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/capture/configuration">Capture Config</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/publications">Publications</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/capture">Demand Capture</Link>
-      </nav>
-    </section>
-
-    <section className={styles.grid}>{counts.map(({ stage, count }) => <article className={styles.metric} key={stage}><div className={styles.metricLabel}>{stage}</div><div className={styles.metricValue}>{count}</div><div className={styles.metricDetail}>Visible in this workspace scope</div></article>)}</section>
-
-    <section id="new-lead" className={styles.panel}>
-      <div className={styles.panelHead}><h2>Create lead</h2></div>
-      <div className={styles.panelBody}>
-        <CreateLeadForm />
-      </div>
-    </section>
-
-    <section className={styles.panel}>
-      <div className={styles.panelHead}><h2>Lead inbox</h2><span className={styles.pill}>{selectedStage || 'ALL'} · {leads.length}</span></div>
-      <div className={styles.panelBody} style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-        <Link className={selectedStage === '' ? styles.button : styles.secondaryButton} href="/leads">All</Link>
-        {BRAND_LEAD_STAGES.map((stage) => <Link key={stage} className={selectedStage === stage ? styles.button : styles.secondaryButton} href={`/leads?stage=${stage}`}>{stage}</Link>)}
-      </div>
-      {leads.length === 0 ? <div className={styles.empty}>No leads are visible for this filter in the selected organization scope.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Contact</th><th>Interest</th><th>Stage</th><th>Value</th><th>Actions</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.leadId}>
-        <td>
-          <strong>{lead.contactName ?? lead.title}</strong>
-          {lead.contactEmail ? <><br /><small>{lead.contactEmail}</small></> : null}
-          {lead.contactPhone ? <><br /><small>{lead.contactPhone}</small></> : null}
-          <br /><small style={{color:'var(--theme-text-muted)'}}>{new Date(lead.createdAt).toLocaleDateString()}</small>
-        </td>
-        <td>{lead.enquiryInterestType ?? '—'}</td>
-        <td><span className={styles.pill}>{lead.stage}</span></td>
-        <td>{lead.amountMinorUnits == null ? '—' : `${lead.currency} ${(lead.amountMinorUnits / 100).toFixed(2)}`}</td>
-        <td><form action={updateStageAction} style={{display:'flex',gap:6,flexWrap:'wrap'}}><input type="hidden" name="leadId" value={lead.leadId}/><select name="stage" defaultValue={lead.stage} className={styles.secondaryButton}>{BRAND_LEAD_STAGES.map((stage) => <option value={stage} key={stage}>{stage}</option>)}</select><button type="submit" className={styles.secondaryButton}>Update</button></form>{lead.stage !== 'LOST' && lead.stage !== 'WON' ? <form action={convertLeadAction} style={{marginTop:6}}><input type="hidden" name="leadId" value={lead.leadId}/><button type="submit" className={styles.button}>Convert to customer</button></form> : null}</td>
-      </tr>)}</tbody></table></div>}
-    </section>
-  </>;
+  return (
+    <LeadManagementClient
+      initialLeads={allLeads}
+      initialStage={params.stage ?? ''}
+      organizationName={context.organizationName ?? 'Brand Workspace'}
+      updateStageAction={updateStageAction}
+      convertLeadAction={convertLeadAction}
+    />
+  );
 }
