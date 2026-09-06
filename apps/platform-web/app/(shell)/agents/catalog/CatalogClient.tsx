@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import styles from '../page.module.css';
+import { Button } from '@expadio/ui';
+import { AgentEditorSlider } from './AgentEditorSlider';
 
 interface CatalogCapability {
   capability_id: string;
@@ -11,6 +13,8 @@ interface CatalogCapability {
   description: string;
   permitted_modes: string[];
   enabled: boolean;
+  tools?: string[];
+  default_on?: boolean;
   binding_id: string | null;
   bound_status: string;
 }
@@ -28,6 +32,8 @@ function isActive(status: string) {
 export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
   const [catalog, setCatalog] = useState<CatalogCapability[]>(initial);
   const [search, setSearch] = useState('');
+  const [isSliderOpen, setIsSliderOpen] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<any>(null);
   const [activeDept, setActiveDept] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ msg: string; kind: 'ok' | 'err' } | null>(null);
@@ -102,7 +108,7 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
 
   return (
     <>
-      <section className={styles.pageHeading} aria-labelledby="catalog-title">
+      <section className={styles.pageHeading} aria-labelledby="catalog-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <p className={styles.eyebrow}>Agent Intelligence</p>
           <h1 id="catalog-title">Agent Catalog</h1>
@@ -110,6 +116,9 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
             Browse all {catalog.length} agents across {departments.length} departments.{' '}
             {boundCount} bound · {activeCount} active for this tenant.
           </p>
+        </div>
+        <div>
+          <Button tone="secondary" onClick={() => { setEditingAgent(null); setIsSliderOpen(true); }}>+ Add Agent</Button>
         </div>
       </section>
 
@@ -231,7 +240,7 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
                       {cap.description}
                     </p>
                   )}
-                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'space-between', alignItems: 'center' }}>
                     <button
                       disabled={busy}
                       onClick={() => (!bound ? bind(cap) : toggle(cap))}
@@ -248,6 +257,16 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
                     >
                       {busy ? '…' : active ? 'Suspend' : 'Activate'}
                     </button>
+                    <button
+                      onClick={() => { setEditingAgent(cap); setIsSliderOpen(true); }}
+                      style={{
+                        padding: '5px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
+                        border: '1px solid var(--theme-border)', background: 'transparent',
+                        color: 'var(--theme-text-secondary)', cursor: 'pointer',
+                      }}
+                    >
+                      Edit
+                    </button>
                   </div>
                 </div>
               );
@@ -261,6 +280,12 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
           {search ? `No agents match "${search}"` : 'No agents in catalog yet.'}
         </div>
       )}
+
+      <AgentEditorSlider 
+        isOpen={isSliderOpen} 
+        onClose={() => setIsSliderOpen(false)} 
+        editingAgent={editingAgent} 
+      />
     </>
   );
 }
