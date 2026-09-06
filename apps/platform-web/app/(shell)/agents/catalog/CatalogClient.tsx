@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import styles from '../page.module.css';
 import { Button } from '@expadio/ui';
 import { AgentEditorSlider } from './AgentEditorSlider';
+import { DepartmentManagerSlider } from './DepartmentManagerSlider';
 
 interface CatalogCapability {
   capability_id: string;
@@ -33,6 +34,7 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
   const [catalog, setCatalog] = useState<CatalogCapability[]>(initial);
   const [search, setSearch] = useState('');
   const [isSliderOpen, setIsSliderOpen] = useState(false);
+  const [isDeptSliderOpen, setIsDeptSliderOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<any>(null);
   const [activeDept, setActiveDept] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
@@ -117,7 +119,8 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
             {boundCount} bound · {activeCount} active for this tenant.
           </p>
         </div>
-        <div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button tone="secondary" onClick={() => setIsDeptSliderOpen(true)}>Manage Departments</Button>
           <Button tone="secondary" onClick={() => { setEditingAgent(null); setIsSliderOpen(true); }}>+ Add Agent</Button>
         </div>
       </section>
@@ -285,6 +288,11 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
         isOpen={isSliderOpen} 
         onClose={() => setIsSliderOpen(false)} 
         editingAgent={editingAgent} 
+      />
+
+      <DepartmentManagerSlider
+        isOpen={isDeptSliderOpen}
+        onClose={() => setIsDeptSliderOpen(false)}
       />
     </>
   );
