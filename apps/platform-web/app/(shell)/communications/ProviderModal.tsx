@@ -59,14 +59,15 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setWarnings([]);
   }
 
-  async function registerConnector(credentialRef: string | null, capabilities: string[]) {
+  async function registerConnector(credentialRef: string | null, capabilityKeys: string[]) {
     const res = await fetch(`/api/communications/providers${window.location.search}`, {
       method: "POST",
       headers: { ...standardStepUp(), "Content-Type": "application/json" },
       body: JSON.stringify({
         providerKey: selected.providerKey,
+        providerType: selected.providerType,
         connectorKey: connectorKey.trim() || undefined,
-        capabilities,
+        capabilityKeys,
         region: region.trim() || undefined,
         priority: parseInt(priority, 10),
         credentialRef,
@@ -124,7 +125,7 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     }
     if (!connectorKey.trim()) setConnectorKey(effectiveConnectorKey);
     const credentialRef = intakeBody.credentialRef || intakeBody.reference;
-    return { reference: credentialRef, capabilities: [selected.capabilityKey] };
+    return { reference: credentialRef, capabilityKeys: [selected.capabilityKey] };
   }
 
   async function submit(event: React.FormEvent) {
@@ -134,9 +135,9 @@ export function ProviderModal({ isOpen, onClose, onCreated }: ProviderModalProps
     setWarnings([]);
     setStatus(null);
     try {
-      const { reference, capabilities } = await runByokIntake();
+      const { reference, capabilityKeys } = await runByokIntake();
       setStatus("Registering the connector…");
-      await registerConnector(reference, capabilities);
+      await registerConnector(reference, capabilityKeys);
       onCreated();
       reset();
       onClose();
