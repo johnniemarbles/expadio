@@ -47,7 +47,7 @@ export function ModuleAction({
 
   if (availability === 'ACTIVE') {
     return brandHref
-      ? <a className={styles.primary} href={brandHref}>Open in Brand</a>
+      ? <a className={styles.secondary} href={brandHref}>Open in Brand ↗</a>
       : <span className={styles.muted}>Brand app URL is not configured.</span>;
   }
   if (availability === 'PROVISIONING') return <span className={styles.muted}>Provisioning…</span>;

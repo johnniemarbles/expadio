@@ -37,28 +37,28 @@
 }
 
 .fixture {
-  background-color: var(--amber-soft);
-  border-bottom: 1px solid var(--amber);
+  background-color: var(--theme-surface-raised, #121514);
+  border-bottom: 1px solid var(--theme-border, #1e2220);
 }
 
 .fixture .dot {
-  background-color: var(--amber);
+  background-color: var(--amber, #f59e0b);
 }
 
 .partial {
-  background-color: var(--brand-soft);
-  border-bottom: 1px solid var(--theme-primary);
+  background-color: var(--theme-surface-raised, #121514);
+  border-bottom: 1px solid var(--theme-border, #1e2220);
 }
 
 .partial .dot {
-  background-color: var(--theme-primary);
+  background-color: var(--theme-primary, #facc15);
 }
 
 .live {
-  background-color: var(--green-soft);
-  border-bottom: 1px solid var(--green);
+  background-color: var(--theme-surface-raised, #121514);
+  border-bottom: 1px solid var(--theme-border, #1e2220);
 }
 
 .live .dot {
-  background-color: var(--green);
+  background-color: var(--green, #22c55e);
 }

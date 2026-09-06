@@ -147,10 +147,9 @@ export function BrandShellFrame({
         </div>
 
         {/* Sleek Header Telemetry Indicator */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', background: 'var(--theme-surface)', borderRadius: 'var(--theme-radius-control)', border: '1px solid var(--theme-border)', fontSize: 11, fontFamily: 'var(--theme-font-mono)', whiteSpace: 'nowrap' }} title={`BYOK: Twilio · Resend · Meta API | Gate: LOCAL_SIGN_OFF`}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'var(--theme-surface)', borderRadius: 'var(--theme-radius-control)', border: '1px solid var(--theme-border)', fontSize: 11, fontFamily: 'var(--theme-font-mono)', whiteSpace: 'nowrap' }} title={`BYOK: Twilio · Resend · Meta API | Gate: LOCAL_SIGN_OFF`}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} aria-hidden="true" />
-          <span style={{ color: 'var(--theme-text-secondary)', fontWeight: 600 }}>{organizationName || 'OpCo'}</span>
-          <span style={{ color: 'var(--theme-text-muted)', fontSize: 10 }}>(L1)</span>
+          <span style={{ color: 'var(--theme-text-primary)', fontWeight: 600 }}>Brand Live</span>
         </div>
 
         <div className={styles.topbarActions}>
