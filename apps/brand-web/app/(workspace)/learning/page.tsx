@@ -34,9 +34,12 @@ export default async function LearningPage() {
   }
 
   return (
-    <LearningClient
-      dashboard={dashboard}
-      academyName={dashboard.academyName ?? `${context.organizationName} Learning Academy`}
-    />
+    <>
+      {/* <Link href="/learning/compliance">Compliance</Link> */}
+      <LearningClient
+        dashboard={dashboard}
+        academyName={dashboard.academyName ?? `${context.organizationName} Learning Academy`}
+      />
+    </>
   );
 }

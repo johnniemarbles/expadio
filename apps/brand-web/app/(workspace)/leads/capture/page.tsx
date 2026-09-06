@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { loadTenantProductModule } from '@expadio/postgres-runtime/product-module';
 import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import styles from '../../workspace.module.css';
@@ -42,6 +43,9 @@ export default async function DemandCapturePage() {
           <p>
             Operate the full 19-stage journey separately from the five-stage CRM projection. Journey stage, operational status, and ownership are independently governed and historically auditable.
           </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Link className={styles.secondaryButton} href="/leads/analytics">Analytics</Link>
         </div>
         <LeadManagementNav activeKey="demand-capture" />
       </section>

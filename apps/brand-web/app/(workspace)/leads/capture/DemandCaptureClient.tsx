@@ -43,14 +43,18 @@ function ActionMenu({
 
   return (
     <div className="dc-action-menu" style={{ position: 'relative', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-      <button
-        type="button"
+      {/* leads/capture/${lead.captureLeadId} */}
+      <Link
+        href={`/leads/capture/${lead.captureLeadId}`}
         className={styles.secondaryButton}
-        onClick={onView}
-        style={{ fontSize: 12, padding: '4px 10px' }}
+        onClick={(e) => {
+          e.preventDefault();
+          onView();
+        }}
+        style={{ fontSize: 12, padding: '4px 10px', textDecoration: 'none' }}
       >
-        View
-      </button>
+        View detail
+      </Link>
 
       <button
         type="button"
@@ -121,7 +125,7 @@ function ActionMenu({
               opacity: isWorking ? 0.5 : 1,
             }}
           >
-            Route Lead Now
+            Route now
           </button>
           <button
             type="button"

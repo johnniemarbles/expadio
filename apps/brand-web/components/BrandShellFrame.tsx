@@ -112,7 +112,7 @@ export function BrandShellFrame({
           href={module.baseRoute}
           className={active?.key===module.key?styles.navActive:''}
         ><span className={styles.navIcon}><BrandNavIcon label={module.name} iconKey={module.iconKey} /></span>{module.name}</Link>)}
-        <Link className={styles.allAppsLink} href="/">＋ Apps</Link>
+        <Link className={styles.allAppsLink} href="/">＋ All Apps</Link>
         <p className={styles.navGroup}>Administration</p>
         <Link className={pathname==='/appearance'?styles.navActive:''} href="/appearance">Appearance</Link>
         <Link className={pathname==='/settings/brand'||pathname.startsWith('/settings/brand/')?styles.navActive:''} href="/settings/brand">Brand</Link>

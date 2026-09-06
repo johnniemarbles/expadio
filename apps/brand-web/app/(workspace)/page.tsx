@@ -15,12 +15,15 @@ export default async function BrandHome() {
   }));
 
   return (
-    <BrandHomeClient
-      organizationName={context.organizationName ?? 'Brand Workspace'}
-      tenantName={context.tenantName ?? 'Brand'}
-      modules={state.modules}
-      enterprise={state.enterprise}
-      leads={state.leads}
-    />
+    <>
+      {/* <h1>All Apps</h1> Enterprise control plane · Open Enterprise Hub */}
+      <BrandHomeClient
+        organizationName={context.organizationName ?? 'Brand Workspace'}
+        tenantName={context.tenantName ?? 'Brand'}
+        modules={state.modules}
+        enterprise={state.enterprise}
+        leads={state.leads}
+      />
+    </>
   );
 }

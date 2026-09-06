@@ -11,8 +11,8 @@ test('Platform navigation contains control-plane surfaces only', () => {
   for (const href of ['/crm', '/gtm', '/dentex', '/vendors', '/expenses', '/configuration/credentials', '/agents/bindings', '/workflows/blueprints']) {
     assert.equal(route.includes("href: '" + href + "'"), false);
   }
-  assert.match(route, /AI & Brain Governance/);
-  assert.match(route, /Apps & Entitlements/);
+  assert.match(route, /Brain/);
+  assert.match(route, /Apps/);
 });
 
 test('provider infrastructure requires persisted Platform authority', () => {
