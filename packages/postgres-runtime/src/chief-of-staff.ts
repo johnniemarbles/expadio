@@ -176,10 +176,9 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
        WHERE b.tenant_id = $1 AND a.slug = $2 AND b.status = 'ACTIVE' LIMIT 1`,
       [tenantId, agentSlug]
     );
+    const tools = (agentRes.rows[0]?.tools ?? []) as string[];
     if ((agentRes.rowCount ?? 0) === 0) return false;
-
-    const tools = agentRes.rows[0].tools as string[];
-    if (!tools || tools.length === 0) return true;
+    if (tools.length === 0) return true;
 
     const toolsRes = await this.#client.query(
       `SELECT tool_group FROM platform.tenant_tool_grants 
