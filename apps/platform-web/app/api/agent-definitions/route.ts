@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { dbPool } from '../../../../lib/iam-adapter';
-import { deniedResponse } from '../../../../lib/request-context';
+import { dbPool } from '@/lib/iam-adapter';
+import { deniedResponse } from '@/lib/request-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
