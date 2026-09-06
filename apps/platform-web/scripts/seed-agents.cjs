@@ -46,17 +46,14 @@ async function seedAgents() {
     }
     console.log(`Ingested ${insertedAgents.length} agent definitions.`);
 
-    console.log("Seeding Enterprise default roster (all on)...");
-    for (const agent of insertedAgents) {
-      if (agent.default_on) {
-        await client.query(
-          `INSERT INTO platform.tenant_agent_bindings (tenant_id, agent_id, status, bound_by)
-           VALUES ($1, $2, 'ACTIVE', 'system-seed')
-           ON CONFLICT (tenant_id, agent_id) DO UPDATE SET status = 'ACTIVE'`,
-          [DEFAULT_TENANT, agent.agent_id]
-        );
-      }
-    }
+    console.log("Seeding Enterprise default roster (binding ALL agents)...");
+    await client.query(
+      `INSERT INTO platform.tenant_agent_bindings (tenant_id, agent_id, status, bound_by)
+       SELECT $1, agent_id, 'ACTIVE', 'system-seed'
+       FROM platform.agent_definitions
+       ON CONFLICT (tenant_id, agent_id) DO UPDATE SET status = 'ACTIVE'`,
+      [DEFAULT_TENANT]
+    );
 
     console.log("Seeding default tool grants for Enterprise...");
     const defaultTools = ['GitHub', 'FS', 'DB', 'Audit', 'Comms'];
