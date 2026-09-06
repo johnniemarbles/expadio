@@ -60,7 +60,7 @@ export async function GET(request: Request) {
          WHERE r.tenant_id = $1
          ORDER BY r.created_at DESC
          LIMIT 50`,
-        [context.tenantId, context.organizationId],
+        [context.tenantId],
       ),
     );
 
