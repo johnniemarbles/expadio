@@ -50,6 +50,7 @@ interface ConnectorActionsModalProps {
   isOpen: boolean;
   onClose: () => void;
   connectorKey: string;
+  providerType: string;
   ownershipScope: "PLATFORM" | "TENANT";
   queryString?: string;
   onChanged: () => void;
@@ -65,6 +66,7 @@ export function ConnectorActionsModal({
   isOpen,
   onClose,
   connectorKey,
+  providerType,
   ownershipScope,
   queryString = "",
   onChanged,
@@ -76,10 +78,18 @@ export function ConnectorActionsModal({
   const [approvalRef, setApprovalRef] = useState("");
   const [needsApproval, setNeedsApproval] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  const [testRecipient, setTestRecipient] = useState("");
+  const [testIdempotencyKey, setTestIdempotencyKey] = useState("");
+  const [certificationRecipient, setCertificationRecipient] = useState("");
+  const [certificationRequestId, setCertificationRequestId] = useState("");
+  const [voiceUrl, setVoiceUrl] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [certifying, setCertifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const base = `/api/communications/providers/${encodeURIComponent(connectorKey)}`;
+  const isVoice = providerType.toLowerCase() === "voice";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,6 +118,8 @@ export function ConnectorActionsModal({
     setNotice(null);
     setNeedsApproval(false);
     setApprovalRef("");
+    setTestIdempotencyKey(makeOperatorId("test-send"));
+    setCertificationRequestId(makeUuid());
     void load();
   }, [isOpen, load]);
 
@@ -147,6 +159,68 @@ export function ConnectorActionsModal({
       setError(cause instanceof Error ? cause.message : "Revocation failed.");
     } finally {
       setRevoking(false);
+    }
+  }
+
+  async function handleTestSend() {
+    setTesting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`${base}/test-send${queryString}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-expadio-reauth-at": new Date().toISOString(),
+        },
+        body: JSON.stringify({
+          recipient: testRecipient.trim(),
+          idempotencyKey: testIdempotencyKey.trim(),
+          ...(isVoice ? { voiceUrl: voiceUrl.trim() } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Test send failed.");
+      }
+      setNotice(`Test send ${data.outcome ?? "submitted"} for ${data.channel ?? providerType}. Trace ${data.traceId ?? "recorded"}.`);
+      setTestIdempotencyKey(makeOperatorId("test-send"));
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Test send failed.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleCertificationSend() {
+    setCertifying(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`${base}/certification-send${queryString}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-expadio-reauth-at": new Date().toISOString(),
+        },
+        body: JSON.stringify({
+          recipient: certificationRecipient.trim(),
+          requestId: certificationRequestId.trim(),
+          ...(isVoice ? { voiceUrl: voiceUrl.trim() } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Certification send failed.");
+      }
+      setNotice(data.message || "Certification delivery queued. LIVE requires a signed terminal provider webhook.");
+      setCertificationRequestId(makeUuid());
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Certification send failed.");
+    } finally {
+      setCertifying(false);
     }
   }
 
@@ -222,6 +296,72 @@ export function ConnectorActionsModal({
           )}
         </section>
 
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Provider activation</h3>
+          <p className={styles.statement}>
+            Run a governed test send, then queue live certification. Certification only flips LIVE after a signed terminal provider webhook.
+          </p>
+          {isVoice && (
+            <label className={styles.fieldLabel}>
+              TwiML voice URL
+              <input
+                value={voiceUrl}
+                onChange={(e) => setVoiceUrl(e.target.value)}
+                placeholder="https://example.com/twiml.xml"
+                className={styles.approvalInput}
+              />
+            </label>
+          )}
+          <div className={styles.activationGrid}>
+            <div className={styles.activationPanel}>
+              <h4 className={styles.activationTitle}>Test send</h4>
+              <label className={styles.fieldLabel}>
+                Test recipient
+                <input
+                  value={testRecipient}
+                  onChange={(e) => setTestRecipient(e.target.value)}
+                  placeholder={providerType.toLowerCase() === "email" ? "ops@example.com" : "+15551234567"}
+                  className={styles.approvalInput}
+                />
+              </label>
+              <label className={styles.fieldLabel}>
+                Idempotency key
+                <input
+                  value={testIdempotencyKey}
+                  onChange={(e) => setTestIdempotencyKey(e.target.value)}
+                  className={styles.approvalInput}
+                />
+              </label>
+              <button type="button" onClick={handleTestSend} disabled={testing} className={styles.primaryButton}>
+                {testing ? "Sending…" : "Run test send"}
+              </button>
+            </div>
+            <div className={styles.activationPanel}>
+              <h4 className={styles.activationTitle}>Live certification</h4>
+              <label className={styles.fieldLabel}>
+                Certification recipient
+                <input
+                  value={certificationRecipient}
+                  onChange={(e) => setCertificationRecipient(e.target.value)}
+                  placeholder={providerType.toLowerCase() === "email" ? "ops@example.com" : "+15551234567"}
+                  className={styles.approvalInput}
+                />
+              </label>
+              <label className={styles.fieldLabel}>
+                Request ID
+                <input
+                  value={certificationRequestId}
+                  onChange={(e) => setCertificationRequestId(e.target.value)}
+                  className={styles.approvalInput}
+                />
+              </label>
+              <button type="button" onClick={handleCertificationSend} disabled={certifying} className={styles.primaryButton}>
+                {certifying ? "Queueing…" : "Queue certification"}
+              </button>
+            </div>
+          </div>
+        </section>
+
         {error && <div role="alert" className={styles.bannerError}>⚠️ {error}</div>}
         {notice && <div className={styles.bannerNotice}>✅ {notice}</div>}
 
@@ -255,4 +395,17 @@ function Stat({ label, value, danger = false }: { label: string; value: string |
       <div className={danger ? styles.statValueDanger : styles.statValue}>{value}</div>
     </div>
   );
+}
+
+function makeUuid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return "00000000-0000-4000-8000-000000000000".replace(/[018]/g, (char) =>
+    (Number(char) ^ (Math.random() * 16) >> (Number(char) / 4)).toString(16),
+  );
+}
+
+function makeOperatorId(prefix: string): string {
+  return `${prefix}-${makeUuid()}`;
 }
