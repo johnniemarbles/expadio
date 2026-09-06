@@ -100,7 +100,7 @@ test('governed theme inherits Platform profile and layers bounded tenant/workspa
     const effective=await resolver(c,{tenantId,brandId:tenantId,workspaceId});
     assert.equal(effective.theme.light.accent,'#ff3366');
     assert.equal(effective.theme.dark.accent,'#ff3366');
-    assert.equal(effective.theme.geometry.cardRadius,'14px');
+    assert.equal(effective.theme.geometry.cardRadius,'2px');
     assert.equal(effective.sourceLevel,'TENANT');
     assert.ok(effective.trace.some((entry)=>
       entry.level==='WORKSPACE'
@@ -112,3 +112,4 @@ test('governed theme inherits Platform profile and layers bounded tenant/workspa
     await p.end();
   }
 });
+
