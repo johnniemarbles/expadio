@@ -68,10 +68,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
         style={{
           width: '100%',
           maxWidth: 640,
-          background: 'var(--card, #0A0A0A)',
-          borderLeft: '1px solid var(--border, #272727)',
-          borderRadius: 'var(--radius-xl, 8px) 0 0 var(--radius-xl, 8px)',
-          boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.85)',
+          background: 'var(--theme-surface)',
+          borderLeft: '1px solid var(--theme-border)',
+          borderRadius: 'var(--theme-radius-card) 0 0 var(--theme-radius-card)',
+          boxShadow: 'var(--theme-shadow-subtle)',
           display: 'flex',
           flexDirection: 'column',
           height: '100vh',
@@ -86,8 +86,8 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
         <div
           style={{
             padding: '20px 24px 16px',
-            borderBottom: '1px solid var(--border, #272727)',
-            background: 'var(--background, #000000)',
+            borderBottom: '1px solid var(--theme-border)',
+            background: 'var(--theme-surface-muted)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -97,15 +97,15 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
             <span
               style={{
                 fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.06em',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: 'var(--brand-primary, #FACC15)',
+                color: 'var(--theme-primary)',
               }}
             >
               AI REGISTRY & BINDINGS
             </span>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--foreground, #FAFAFA)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--theme-text-primary)' }}>
               Register Autonomous Agent
             </h2>
           </div>
@@ -114,9 +114,9 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
             onClick={onClose}
             style={{
               background: 'transparent',
-              border: '1px solid var(--border, #272727)',
-              borderRadius: 'var(--radius-md, 4px)',
-              color: 'var(--muted-foreground, #A1A1AA)',
+              border: '1px solid var(--theme-border)',
+              borderRadius: 'var(--theme-radius-card)',
+              color: 'var(--theme-text-muted)',
               fontSize: 16,
               width: 32,
               height: 32,
@@ -135,10 +135,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
             style={{
               margin: '16px 24px 0',
               padding: '12px 14px',
-              borderRadius: 'var(--radius-md, 4px)',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #EF4444',
-              color: '#F87171',
+              borderRadius: 'var(--theme-radius-card)',
+              background: 'color-mix(in srgb, var(--theme-danger) 10%, transparent)',
+              border: '1px solid var(--theme-danger)',
+              color: 'var(--theme-danger)',
               fontSize: 13,
             }}
           >
@@ -156,10 +156,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
                 placeholder="e.g. ops-telemetry-auditor"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--theme-radius-card)',
+                  border: '1px solid var(--theme-border)',
+                  background: 'var(--theme-surface-muted)',
+                  color: 'var(--theme-text-primary)',
                   fontSize: 13,
                 }}
               />
@@ -173,10 +173,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
                 placeholder="e.g. Telemetry & SLA Auditor"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--theme-radius-card)',
+                  border: '1px solid var(--theme-border)',
+                  background: 'var(--theme-surface-muted)',
+                  color: 'var(--theme-text-primary)',
                   fontSize: 13,
                 }}
               />
@@ -191,10 +191,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
                 defaultValue="gemini-1.5-pro"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--theme-radius-card)',
+                  border: '1px solid var(--theme-border)',
+                  background: 'var(--theme-surface-muted)',
+                  color: 'var(--theme-text-primary)',
                   fontSize: 13,
                 }}
               >
@@ -212,10 +212,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
                 defaultValue="google-vertex"
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-md, 4px)',
-                  border: '1px solid var(--border, #272727)',
-                  background: 'var(--background, #000000)',
-                  color: 'var(--foreground, #FAFAFA)',
+                  borderRadius: 'var(--theme-radius-card)',
+                  border: '1px solid var(--theme-border)',
+                  background: 'var(--theme-surface-muted)',
+                  color: 'var(--theme-text-primary)',
                   fontSize: 13,
                 }}
               >
@@ -236,10 +236,10 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
               placeholder="Specify the autonomous system behavior, safety guardrails, and action boundaries..."
               style={{
                 padding: '10px 14px',
-                borderRadius: 'var(--radius-md, 4px)',
-                border: '1px solid var(--border, #272727)',
-                background: 'var(--background, #000000)',
-                color: 'var(--foreground, #FAFAFA)',
+                borderRadius: 'var(--theme-radius-card)',
+                border: '1px solid var(--theme-border)',
+                background: 'var(--theme-surface-muted)',
+                color: 'var(--theme-text-primary)',
                 fontSize: 13,
                 resize: 'vertical',
               }}
@@ -254,9 +254,9 @@ export function AgentDrawer({ isOpen, onClose, onRegistered }: AgentDrawerProps)
               height: 40,
               fontSize: 13,
               fontWeight: 700,
-              borderRadius: 'var(--radius-md, 4px)',
-              background: 'var(--brand-primary, #FACC15)',
-              color: '#000000',
+              borderRadius: 'var(--theme-radius-card)',
+              background: 'var(--theme-primary)',
+              color: 'var(--theme-surface)',
               border: 'none',
               cursor: busy ? 'not-allowed' : 'pointer',
             }}
