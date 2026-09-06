@@ -7,7 +7,7 @@ import { ChiefOfStaffClient } from './ChiefOfStaffClient';
 
 export default async function ChiefOfStaffPage({ searchParams }: { searchParams: RouteSearchParams }) {
   await requestedOrganizationId(searchParams);
-  const data = await fetchApi<{ missions: any[]; tasks: any[]; approvals: any[] }>('/api/agent/missions');
+  const data = await fetchApi<{ missions: any[]; tasks: any[]; approvals: any[]; readyAgentCount: number; readyAgents: any[] }>('/api/agent/missions');
 
   if (isDenied(data)) return <DeniedState result={data} />;
 
