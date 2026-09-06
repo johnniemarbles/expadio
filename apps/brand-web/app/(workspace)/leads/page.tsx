@@ -71,12 +71,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   return <>
     <section className={styles.pageHead}>
       <div><p className={styles.eyebrow}>Growth · {context.organizationName}</p><h1>Lead Management</h1><p>Organization-scoped CRM projection for active demand. Demand Capture’s 19-stage journey remains a separate governed layer.</p></div>
-      <nav style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--theme-surface-raised)', borderRadius: 'var(--theme-radius-card)', border: '1px solid var(--theme-border)', width: 'fit-content' }} aria-label="Lead management navigation">
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent' }} href="/leads/contacts">Contacts</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent' }} href="/leads/accounts">Accounts</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent' }} href="/leads/capture/configuration">Capture Config</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent' }} href="/leads/publications">Publications</Link>
-        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent' }} href="/leads/capture">Demand Capture</Link>
+      <nav style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--theme-surface-raised)', borderRadius: 'var(--theme-radius-card)', border: '1px solid var(--theme-border)', width: 'fit-content', flexWrap: 'nowrap' }} aria-label="Lead management navigation">
+        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/contacts">Contacts</Link>
+        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/accounts">Accounts</Link>
+        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/capture/configuration">Capture Config</Link>
+        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/publications">Publications</Link>
+        <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap' }} href="/leads/capture">Demand Capture</Link>
       </nav>
     </section>
 

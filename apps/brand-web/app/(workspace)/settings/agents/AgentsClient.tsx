@@ -123,7 +123,7 @@ export function AgentsClient({ initial }: { initial: Binding[] }) {
       ) : (
         <>
           {/* Search + department filter */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
