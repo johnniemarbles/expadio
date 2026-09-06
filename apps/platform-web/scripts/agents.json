@@ -1,0 +1,2934 @@
+[
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-junior",
+    "persona": "Junior Frontend Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-mid-level",
+    "persona": "Mid-Level Frontend Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-senior",
+    "persona": "Senior Frontend Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-lead",
+    "persona": "Lead Frontend Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-principal",
+    "persona": "Principal Frontend Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-staff",
+    "persona": "Staff Frontend Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-react-senior",
+    "persona": "Senior React Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-react-lead",
+    "persona": "Lead React Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-vue-senior",
+    "persona": "Senior Vue Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-vue-lead",
+    "persona": "Lead Vue Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-angular-senior",
+    "persona": "Senior Angular Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-angular-lead",
+    "persona": "Lead Angular Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-web-performance-senior",
+    "persona": "Senior Web Performance Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-web-performance-lead",
+    "persona": "Lead Web Performance Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-accessibility-senior",
+    "persona": "Senior Accessibility Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-frontend-accessibility-lead",
+    "persona": "Lead Accessibility Frontend Expert",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-junior",
+    "persona": "Junior Backend Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-mid-level",
+    "persona": "Mid-Level Backend Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-senior",
+    "persona": "Senior Backend Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-lead",
+    "persona": "Lead Backend Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-principal",
+    "persona": "Principal Backend Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-staff",
+    "persona": "Staff Backend Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-node.js-senior",
+    "persona": "Senior Node.js Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-node.js-lead",
+    "persona": "Lead Node.js Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-python-senior",
+    "persona": "Senior Python Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-python-lead",
+    "persona": "Lead Python Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-go-senior",
+    "persona": "Senior Go Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-go-lead",
+    "persona": "Lead Go Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-java-senior",
+    "persona": "Senior Java Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-java-lead",
+    "persona": "Lead Java Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-microservices-senior",
+    "persona": "Senior Microservices Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-backend-microservices-lead",
+    "persona": "Lead Microservices Backend Expert",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-fullstack-junior",
+    "persona": "Junior Fullstack Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-fullstack-mid-level",
+    "persona": "Mid-Level Fullstack Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-fullstack-senior",
+    "persona": "Senior Fullstack Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-fullstack-lead",
+    "persona": "Lead Fullstack Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-fullstack-principal",
+    "persona": "Principal Fullstack Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-fullstack-staff",
+    "persona": "Staff Fullstack Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-devops-junior",
+    "persona": "Junior DevOps Specialist",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-devops-mid-level",
+    "persona": "Mid-Level DevOps Specialist",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-devops-senior",
+    "persona": "Senior DevOps Specialist",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-devops-lead",
+    "persona": "Lead DevOps Specialist",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-devops-principal",
+    "persona": "Principal DevOps Specialist",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-devops-staff",
+    "persona": "Staff DevOps Specialist",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-security-junior",
+    "persona": "Junior Security Specialist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-security-mid-level",
+    "persona": "Mid-Level Security Specialist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-security-senior",
+    "persona": "Senior Security Specialist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-security-lead",
+    "persona": "Lead Security Specialist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-security-principal",
+    "persona": "Principal Security Specialist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-security-staff",
+    "persona": "Staff Security Specialist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-junior",
+    "persona": "Junior Data Specialist",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-mid-level",
+    "persona": "Mid-Level Data Specialist",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-senior",
+    "persona": "Senior Data Specialist",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-lead",
+    "persona": "Lead Data Specialist",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-principal",
+    "persona": "Principal Data Specialist",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-staff",
+    "persona": "Staff Data Specialist",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-analytics-senior",
+    "persona": "Senior Analytics Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-analytics-lead",
+    "persona": "Lead Analytics Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-engineering-senior",
+    "persona": "Senior Engineering Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-engineering-lead",
+    "persona": "Lead Engineering Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-science-senior",
+    "persona": "Senior Science Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-science-lead",
+    "persona": "Lead Science Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-bi-senior",
+    "persona": "Senior BI Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-data-bi-lead",
+    "persona": "Lead BI Data Expert",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-qa-junior",
+    "persona": "Junior QA Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-qa-mid-level",
+    "persona": "Mid-Level QA Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-qa-senior",
+    "persona": "Senior QA Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-qa-lead",
+    "persona": "Lead QA Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-qa-principal",
+    "persona": "Principal QA Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-qa-staff",
+    "persona": "Staff QA Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-architecture-junior",
+    "persona": "Junior Architecture Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-architecture-mid-level",
+    "persona": "Mid-Level Architecture Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-architecture-senior",
+    "persona": "Senior Architecture Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-architecture-lead",
+    "persona": "Lead Architecture Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-architecture-principal",
+    "persona": "Principal Architecture Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-architecture-staff",
+    "persona": "Staff Architecture Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-mobile-junior",
+    "persona": "Junior Mobile Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-mobile-mid-level",
+    "persona": "Mid-Level Mobile Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-mobile-senior",
+    "persona": "Senior Mobile Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-mobile-lead",
+    "persona": "Lead Mobile Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-mobile-principal",
+    "persona": "Principal Mobile Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-mobile-staff",
+    "persona": "Staff Mobile Specialist",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ml-junior",
+    "persona": "Junior ML Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ml-mid-level",
+    "persona": "Mid-Level ML Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ml-senior",
+    "persona": "Senior ML Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ml-lead",
+    "persona": "Lead ML Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ml-principal",
+    "persona": "Principal ML Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ml-staff",
+    "persona": "Staff ML Specialist",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-junior",
+    "persona": "Junior Sales Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-mid-level",
+    "persona": "Mid-Level Sales Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-senior",
+    "persona": "Senior Sales Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-lead",
+    "persona": "Lead Sales Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-principal",
+    "persona": "Principal Sales Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-staff",
+    "persona": "Staff Sales Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-inbound-senior",
+    "persona": "Senior Inbound Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-inbound-lead",
+    "persona": "Lead Inbound Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-outbound-senior",
+    "persona": "Senior Outbound Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-outbound-lead",
+    "persona": "Lead Outbound Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-enterprise-senior",
+    "persona": "Senior Enterprise Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-enterprise-lead",
+    "persona": "Lead Enterprise Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-smb-senior",
+    "persona": "Senior SMB Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-smb-lead",
+    "persona": "Lead SMB Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-enablement-senior",
+    "persona": "Senior Enablement Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-sales-enablement-lead",
+    "persona": "Lead Enablement Sales Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-junior",
+    "persona": "Junior Marketing Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-mid-level",
+    "persona": "Mid-Level Marketing Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-senior",
+    "persona": "Senior Marketing Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-lead",
+    "persona": "Lead Marketing Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-principal",
+    "persona": "Principal Marketing Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-staff",
+    "persona": "Staff Marketing Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-content-senior",
+    "persona": "Senior Content Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-content-lead",
+    "persona": "Lead Content Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-seo-senior",
+    "persona": "Senior SEO Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-seo-lead",
+    "persona": "Lead SEO Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-performance-senior",
+    "persona": "Senior Performance Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-performance-lead",
+    "persona": "Lead Performance Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-product-marketing-senior",
+    "persona": "Senior Product Marketing Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-product-marketing-lead",
+    "persona": "Lead Product Marketing Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-event-senior",
+    "persona": "Senior Event Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-marketing-event-lead",
+    "persona": "Lead Event Marketing Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-growth-junior",
+    "persona": "Junior Growth Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-growth-mid-level",
+    "persona": "Mid-Level Growth Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-growth-senior",
+    "persona": "Senior Growth Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-growth-lead",
+    "persona": "Lead Growth Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-growth-principal",
+    "persona": "Principal Growth Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-growth-staff",
+    "persona": "Staff Growth Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-revops-junior",
+    "persona": "Junior RevOps Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-revops-mid-level",
+    "persona": "Mid-Level RevOps Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-revops-senior",
+    "persona": "Senior RevOps Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-revops-lead",
+    "persona": "Lead RevOps Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-revops-principal",
+    "persona": "Principal RevOps Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-revops-staff",
+    "persona": "Staff RevOps Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-partnerships-junior",
+    "persona": "Junior Partnerships Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-partnerships-mid-level",
+    "persona": "Mid-Level Partnerships Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-partnerships-senior",
+    "persona": "Senior Partnerships Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-partnerships-lead",
+    "persona": "Lead Partnerships Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-partnerships-principal",
+    "persona": "Principal Partnerships Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-partnerships-staff",
+    "persona": "Staff Partnerships Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-customer-success-junior",
+    "persona": "Junior Customer Success Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-customer-success-mid-level",
+    "persona": "Mid-Level Customer Success Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-customer-success-senior",
+    "persona": "Senior Customer Success Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-customer-success-lead",
+    "persona": "Lead Customer Success Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-customer-success-principal",
+    "persona": "Principal Customer Success Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-customer-success-staff",
+    "persona": "Staff Customer Success Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-management-junior",
+    "persona": "Junior Product Management Specialist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-management-mid-level",
+    "persona": "Mid-Level Product Management Specialist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-management-senior",
+    "persona": "Senior Product Management Specialist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-management-lead",
+    "persona": "Lead Product Management Specialist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-management-principal",
+    "persona": "Principal Product Management Specialist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-management-staff",
+    "persona": "Staff Product Management Specialist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-ui-ux-design-junior",
+    "persona": "Junior UI/UX Design Specialist",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-ui-ux-design-mid-level",
+    "persona": "Mid-Level UI/UX Design Specialist",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-ui-ux-design-senior",
+    "persona": "Senior UI/UX Design Specialist",
+    "tools": [
+      "FS"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Product",
+    "slug": "product-ui-ux-design-lead",
+    "persona": "Lead UI/UX Design Specialist",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-ui-ux-design-principal",
+    "persona": "Principal UI/UX Design Specialist",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-ui-ux-design-staff",
+    "persona": "Staff UI/UX Design Specialist",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-user-research-junior",
+    "persona": "Junior User Research Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-user-research-mid-level",
+    "persona": "Mid-Level User Research Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-user-research-senior",
+    "persona": "Senior User Research Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Product",
+    "slug": "product-user-research-lead",
+    "persona": "Lead User Research Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-user-research-principal",
+    "persona": "Principal User Research Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-user-research-staff",
+    "persona": "Staff User Research Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-ops-junior",
+    "persona": "Junior Product Ops Specialist",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-ops-mid-level",
+    "persona": "Mid-Level Product Ops Specialist",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-ops-senior",
+    "persona": "Senior Product Ops Specialist",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-ops-lead",
+    "persona": "Lead Product Ops Specialist",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-ops-principal",
+    "persona": "Principal Product Ops Specialist",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-product-ops-staff",
+    "persona": "Staff Product Ops Specialist",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-finance-junior",
+    "persona": "Junior Finance Specialist",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-finance-mid-level",
+    "persona": "Mid-Level Finance Specialist",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-finance-senior",
+    "persona": "Senior Finance Specialist",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-finance-lead",
+    "persona": "Lead Finance Specialist",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-finance-principal",
+    "persona": "Principal Finance Specialist",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-finance-staff",
+    "persona": "Staff Finance Specialist",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-legal-junior",
+    "persona": "Junior Legal Specialist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-legal-mid-level",
+    "persona": "Mid-Level Legal Specialist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-legal-senior",
+    "persona": "Senior Legal Specialist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-legal-lead",
+    "persona": "Lead Legal Specialist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-legal-principal",
+    "persona": "Principal Legal Specialist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-legal-staff",
+    "persona": "Staff Legal Specialist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-junior",
+    "persona": "Junior HR Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-mid-level",
+    "persona": "Mid-Level HR Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-senior",
+    "persona": "Senior HR Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-lead",
+    "persona": "Lead HR Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-principal",
+    "persona": "Principal HR Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-staff",
+    "persona": "Staff HR Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-recruiting-senior",
+    "persona": "Senior Recruiting HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-recruiting-lead",
+    "persona": "Lead Recruiting HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-employee-relations-senior",
+    "persona": "Senior Employee Relations HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-employee-relations-lead",
+    "persona": "Lead Employee Relations HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-benefits-senior",
+    "persona": "Senior Benefits HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-benefits-lead",
+    "persona": "Lead Benefits HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-onboarding-senior",
+    "persona": "Senior Onboarding HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-hr-onboarding-lead",
+    "persona": "Lead Onboarding HR Expert",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-it-support-junior",
+    "persona": "Junior IT Support Specialist",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-it-support-mid-level",
+    "persona": "Mid-Level IT Support Specialist",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-it-support-senior",
+    "persona": "Senior IT Support Specialist",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-it-support-lead",
+    "persona": "Lead IT Support Specialist",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-it-support-principal",
+    "persona": "Principal IT Support Specialist",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-it-support-staff",
+    "persona": "Staff IT Support Specialist",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-supply-chain-junior",
+    "persona": "Junior Supply Chain Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-supply-chain-mid-level",
+    "persona": "Mid-Level Supply Chain Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-supply-chain-senior",
+    "persona": "Senior Supply Chain Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-supply-chain-lead",
+    "persona": "Lead Supply Chain Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-supply-chain-principal",
+    "persona": "Principal Supply Chain Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-supply-chain-staff",
+    "persona": "Staff Supply Chain Specialist",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-1-junior",
+    "persona": "Junior Tier 1 Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-1-mid-level",
+    "persona": "Mid-Level Tier 1 Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-1-senior",
+    "persona": "Senior Tier 1 Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-1-lead",
+    "persona": "Lead Tier 1 Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-1-principal",
+    "persona": "Principal Tier 1 Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-1-staff",
+    "persona": "Staff Tier 1 Specialist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-2-junior",
+    "persona": "Junior Tier 2 Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-2-mid-level",
+    "persona": "Mid-Level Tier 2 Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-2-senior",
+    "persona": "Senior Tier 2 Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-2-lead",
+    "persona": "Lead Tier 2 Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-2-principal",
+    "persona": "Principal Tier 2 Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-tier-2-staff",
+    "persona": "Staff Tier 2 Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-technical-support-junior",
+    "persona": "Junior Technical Support Specialist",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-technical-support-mid-level",
+    "persona": "Mid-Level Technical Support Specialist",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-technical-support-senior",
+    "persona": "Senior Technical Support Specialist",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Support",
+    "slug": "support-technical-support-lead",
+    "persona": "Lead Technical Support Specialist",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-technical-support-principal",
+    "persona": "Principal Technical Support Specialist",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-technical-support-staff",
+    "persona": "Staff Technical Support Specialist",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-billing-support-junior",
+    "persona": "Junior Billing Support Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-billing-support-mid-level",
+    "persona": "Mid-Level Billing Support Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-billing-support-senior",
+    "persona": "Senior Billing Support Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": true
+  },
+  {
+    "department": "Support",
+    "slug": "support-billing-support-lead",
+    "persona": "Lead Billing Support Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-billing-support-principal",
+    "persona": "Principal Billing Support Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-billing-support-staff",
+    "persona": "Staff Billing Support Specialist",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-iot-frontend-director",
+    "persona": "IoT Frontend Director",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-fintech-marketing-director",
+    "persona": "Fintech Marketing Director",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-gaming-legal-strategist",
+    "persona": "Gaming Legal Strategist",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-iot-ui-ux-design-engineer",
+    "persona": "IoT UI/UX Design Engineer",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-gaming-product-management-analyst",
+    "persona": "Gaming Product Management Analyst",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-cloud-hr-strategist",
+    "persona": "Cloud HR Strategist",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-blockchain-tier-1-director",
+    "persona": "Blockchain Tier 1 Director",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-iot-partnerships-analyst",
+    "persona": "IoT Partnerships Analyst",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-ai-sales-analyst",
+    "persona": "AI Sales Analyst",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-ai-data-coordinator",
+    "persona": "AI Data Coordinator",
+    "tools": [
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-blockchain-devops-representative",
+    "persona": "Blockchain DevOps Representative",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-fintech-sales-analyst",
+    "persona": "Fintech Sales Analyst",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-ai-supply-chain-officer",
+    "persona": "AI Supply Chain Officer",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-blockchain-product-ops-manager",
+    "persona": "Blockchain Product Ops Manager",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-iot-security-officer",
+    "persona": "IoT Security Officer",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-edtech-partnerships-architect",
+    "persona": "Edtech Partnerships Architect",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-iot-growth-director",
+    "persona": "IoT Growth Director",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-iot-technical-support-representative",
+    "persona": "IoT Technical Support Representative",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-blockchain-supply-chain-consultant",
+    "persona": "Blockchain Supply Chain Consultant",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-cloud-it-support-analyst",
+    "persona": "Cloud IT Support Analyst",
+    "tools": [
+      "Audit",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-cloud-legal-architect",
+    "persona": "Cloud Legal Architect",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-fintech-product-management-manager",
+    "persona": "Fintech Product Management Manager",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-ai-ui-ux-design-director",
+    "persona": "AI UI/UX Design Director",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-gaming-tier-1-consultant",
+    "persona": "Gaming Tier 1 Consultant",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-healthtech-billing-support-analyst",
+    "persona": "Healthtech Billing Support Analyst",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-cybersecurity-technical-support-engineer",
+    "persona": "Cybersecurity Technical Support Engineer",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-cloud-billing-support-manager",
+    "persona": "Cloud Billing Support Manager",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-cloud-legal-engineer",
+    "persona": "Cloud Legal Engineer",
+    "tools": [
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-edtech-devops-manager",
+    "persona": "Edtech DevOps Manager",
+    "tools": [
+      "Audit",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-gaming-technical-support-analyst",
+    "persona": "Gaming Technical Support Analyst",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-e-commerce-qa-representative",
+    "persona": "E-commerce QA Representative",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-e-commerce-partnerships-officer",
+    "persona": "E-commerce Partnerships Officer",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-fintech-technical-support-architect",
+    "persona": "Fintech Technical Support Architect",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-iot-tier-2-consultant",
+    "persona": "IoT Tier 2 Consultant",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-fintech-marketing-officer",
+    "persona": "Fintech Marketing Officer",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-ai-billing-support-consultant",
+    "persona": "AI Billing Support Consultant",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-cloud-ui-ux-design-officer",
+    "persona": "Cloud UI/UX Design Officer",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-fintech-product-ops-coordinator",
+    "persona": "Fintech Product Ops Coordinator",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-gaming-frontend-director",
+    "persona": "Gaming Frontend Director",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-blockchain-ui-ux-design-officer",
+    "persona": "Blockchain UI/UX Design Officer",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-gaming-user-research-analyst",
+    "persona": "Gaming User Research Analyst",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-healthtech-product-management-strategist",
+    "persona": "Healthtech Product Management Strategist",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-edtech-partnerships-officer",
+    "persona": "Edtech Partnerships Officer",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-cybersecurity-marketing-director",
+    "persona": "Cybersecurity Marketing Director",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-ai-tier-2-consultant",
+    "persona": "AI Tier 2 Consultant",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-healthtech-security-strategist",
+    "persona": "Healthtech Security Strategist",
+    "tools": [
+      "Audit",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-e-commerce-billing-support-manager",
+    "persona": "E-commerce Billing Support Manager",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-cybersecurity-backend-analyst",
+    "persona": "Cybersecurity Backend Analyst",
+    "tools": [
+      "FS",
+      "DB",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-healthtech-qa-director",
+    "persona": "Healthtech QA Director",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-cybersecurity-user-research-representative",
+    "persona": "Cybersecurity User Research Representative",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-ai-technical-support-representative",
+    "persona": "AI Technical Support Representative",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-cybersecurity-billing-support-officer",
+    "persona": "Cybersecurity Billing Support Officer",
+    "tools": [
+      "Comms",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-cloud-tier-1-coordinator",
+    "persona": "Cloud Tier 1 Coordinator",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-gaming-technical-support-engineer",
+    "persona": "Gaming Technical Support Engineer",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-cybersecurity-marketing-coordinator",
+    "persona": "Cybersecurity Marketing Coordinator",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-edtech-product-ops-officer",
+    "persona": "Edtech Product Ops Officer",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-e-commerce-sales-engineer",
+    "persona": "E-commerce Sales Engineer",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-cybersecurity-product-ops-representative",
+    "persona": "Cybersecurity Product Ops Representative",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-healthtech-ui-ux-design-coordinator",
+    "persona": "Healthtech UI/UX Design Coordinator",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-edtech-qa-engineer",
+    "persona": "Edtech QA Engineer",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Support",
+    "slug": "support-blockchain-technical-support-consultant",
+    "persona": "Blockchain Technical Support Consultant",
+    "tools": [
+      "Comms",
+      "GitHub",
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-cloud-sales-architect",
+    "persona": "Cloud Sales Architect",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-healthtech-product-ops-director",
+    "persona": "Healthtech Product Ops Director",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "GTM",
+    "slug": "gtm-e-commerce-partnerships-analyst",
+    "persona": "E-commerce Partnerships Analyst",
+    "tools": [
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-edtech-finance-director",
+    "persona": "Edtech Finance Director",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-e-commerce-product-ops-architect",
+    "persona": "E-commerce Product Ops Architect",
+    "tools": [
+      "DB",
+      "Comms"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Engineering",
+    "slug": "engineering-cloud-qa-consultant",
+    "persona": "Cloud QA Consultant",
+    "tools": [
+      "FS",
+      "GitHub"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Operations",
+    "slug": "operations-gaming-finance-consultant",
+    "persona": "Gaming Finance Consultant",
+    "tools": [
+      "DB",
+      "Audit"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-edtech-ui-ux-design-analyst",
+    "persona": "Edtech UI/UX Design Analyst",
+    "tools": [
+      "FS"
+    ],
+    "default_on": false
+  },
+  {
+    "department": "Product",
+    "slug": "product-e-commerce-product-management-consultant",
+    "persona": "E-commerce Product Management Consultant",
+    "tools": [
+      "GitHub",
+      "Comms"
+    ],
+    "default_on": false
+  }
+]
