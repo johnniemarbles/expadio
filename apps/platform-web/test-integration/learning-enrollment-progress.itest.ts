@@ -138,6 +138,21 @@ test('enrollment pins published version and completion survives later course pub
     }));
     assert.equal(learner.subjectIssuer, issuer);
 
+    await assert.rejects(
+      tx(c, () => createLearningEnrollment(c, {
+        tenantId,
+        actorSubjectId: learnerSubject,
+        correlationId: 'enrollment-self-blocked-itest',
+        enrollment: {
+          assignmentKey: 'self:privacy:' + learner.learnerId,
+          learnerId: learner.learnerId,
+          courseId: created.courseId,
+          sourceType: 'SELF',
+        },
+      })),
+      /LEARNING_ENROLLMENT_SELF_SERVICE_DISABLED/,
+    );
+
     const assignmentKey = 'manual:privacy:' + learner.learnerId;
     const assigned = await tx(c, () => createLearningEnrollment(c, {
       tenantId,
