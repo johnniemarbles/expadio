@@ -6,9 +6,19 @@ import type {
   AgentToolAdapterInput
 } from '../index';
 
+export type CoarseToolGroup = 'GitHub' | 'FS' | 'DB' | 'Audit' | 'Comms';
+
+export const TOOL_GROUP_MAPPING: Record<string, CoarseToolGroup | 'EXEMPT'> = {
+  'cbos.context.observe': 'EXEMPT',
+  'content.editorial.debate': 'EXEMPT',
+  'revenue.lead.osint': 'DB',
+  'revenue.outreach.draft_sequence': 'Comms',
+  'voice.callback.prepare': 'Comms',
+};
+
 export function createMissionAuthorizationPort(
   tenantId: string,
-  checkGrant?: (tenantId: string, toolGroup: string) => Promise<boolean>
+  checkGrant?: (tenantId: string, toolGroup: CoarseToolGroup) => Promise<boolean>
 ): AgentToolAuthorizationPort {
   return {
     async authorize(query: AgentToolAuthorizationQuery) {
@@ -16,24 +26,22 @@ export function createMissionAuthorizationPort(
       if (query.tenantId !== tenantId) {
         return { decisionId, allowed: false, reasonKey: 'TENANT_MISMATCH' };
       }
+      
+      // Enforce that state-changing or external dispatch actions require explicit policy/fabric review.
       if (query.effect === 'PROPOSE') {
         return { decisionId, allowed: false, reasonKey: 'PROPOSE_REQUIRES_POLICY' };
       }
 
-      if (checkGrant) {
-        const TOOL_GROUP_MAPPING: Record<string, string> = {
-          'cbos.context.observe': 'Audit',
-          'content.editorial.debate': 'Comms',
-          'revenue.lead.osint': 'DB',
-          'revenue.outreach.draft_sequence': 'Comms',
-          'voice.callback.prepare': 'Comms',
-        };
-        const group = TOOL_GROUP_MAPPING[query.toolKey];
-        if (group) {
-          const granted = await checkGrant(tenantId, group);
-          if (!granted) {
-            return { decisionId, allowed: false, reasonKey: 'TOOL_GROUP_NOT_GRANTED' };
-          }
+      const group = TOOL_GROUP_MAPPING[query.toolKey];
+      
+      if (group === 'EXEMPT') {
+        return { decisionId, allowed: true, reasonKey: 'SYSTEM_INTERNAL_EXEMPT' };
+      }
+
+      if (group && checkGrant) {
+        const granted = await checkGrant(tenantId, group);
+        if (!granted) {
+          return { decisionId, allowed: false, reasonKey: 'TOOL_GROUP_NOT_GRANTED' };
         }
       }
 
