@@ -61,6 +61,7 @@
 
 .closeButton,
 .secondaryButton,
+.primaryButton,
 .dangerButton {
   border: 1px solid var(--theme-border);
   border-radius: var(--theme-radius-control);
@@ -79,12 +80,14 @@
 
 .closeButton:hover,
 .secondaryButton:hover,
+.primaryButton:not(:disabled):hover,
 .dangerButton:not(:disabled):hover {
   transform: translateY(calc(var(--theme-motion-distance-micro) * -1));
 }
 
 .closeButton:active,
 .secondaryButton:active,
+.primaryButton:not(:disabled):active,
 .dangerButton:not(:disabled):active {
   transform: translateY(var(--theme-motion-distance-micro));
 }
@@ -132,6 +135,7 @@
 }
 
 .statGrid,
+.activationGrid,
 .healthBody,
 .attestationList {
   display: grid;
@@ -142,9 +146,29 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.activationGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .stat {
   padding: 8px 10px;
   animation: connectorSectionIn var(--theme-motion-panel) var(--theme-easing) both;
+}
+
+.activationPanel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-card);
+  background: var(--theme-surface);
+  padding: 12px;
+}
+
+.activationTitle {
+  margin: 0;
+  color: var(--theme-text-primary);
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .statGrid .stat:nth-child(2) { animation-delay: calc(var(--theme-motion-fast) * 0.21); }
@@ -247,12 +271,17 @@
   color: var(--theme-success);
 }
 
-.approvalLabel {
+.approvalLabel,
+.fieldLabel {
   display: grid;
   gap: 6px;
   color: var(--theme-text-secondary);
   font-size: 12px;
   margin-bottom: 12px;
+}
+
+.fieldLabel {
+  margin-bottom: 0;
 }
 
 .approvalInput {
@@ -277,6 +306,7 @@
 }
 
 .secondaryButton,
+.primaryButton,
 .dangerButton {
   min-height: 36px;
   padding: 0 16px;
@@ -288,12 +318,19 @@
   color: var(--theme-text-primary);
 }
 
+.primaryButton {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: var(--theme-text-inverse);
+}
+
 .dangerButton {
   background: var(--theme-danger);
   border-color: var(--theme-danger);
   color: var(--theme-text-inverse);
 }
 
+.primaryButton:disabled,
 .dangerButton:disabled {
   cursor: not-allowed;
   opacity: .55;
@@ -301,6 +338,7 @@
 
 .closeButton:focus-visible,
 .secondaryButton:focus-visible,
+.primaryButton:focus-visible,
 .dangerButton:focus-visible,
 .approvalInput:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--theme-primary) 54%, transparent);
@@ -346,10 +384,14 @@
   .statGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .activationGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .backdrop,.dialog,.loading,.section,.stat,.attestation,.bannerError,.bannerNotice { animation: none; }
-  .closeButton,.secondaryButton,.dangerButton,.section,.stat,.attestation,.statValue,.statusBadge,.approvalInput { transition: none; }
-  .closeButton:hover,.closeButton:active,.secondaryButton:hover,.secondaryButton:active,.dangerButton:not(:disabled):hover,.dangerButton:not(:disabled):active,.section:hover,.stat:hover,.attestation:hover { transform: none; }
+  .closeButton,.secondaryButton,.primaryButton,.dangerButton,.section,.stat,.attestation,.statValue,.statusBadge,.approvalInput { transition: none; }
+  .closeButton:hover,.closeButton:active,.secondaryButton:hover,.secondaryButton:active,.primaryButton:not(:disabled):hover,.primaryButton:not(:disabled):active,.dangerButton:not(:disabled):hover,.dangerButton:not(:disabled):active,.section:hover,.stat:hover,.attestation:hover { transform: none; }
 }
