@@ -51,9 +51,9 @@ export default async function DecisionAnalyticsPage() {
   const grandRejected = Math.max(0, grandTotal - grandApproved);
 
   const outcomeSegments = [
-    { id: 'approved', label: 'Approved Decisions', value: grandApproved || 12, color: '#22c55e' },
-    { id: 'rejected', label: 'Rejected / Returned', value: grandRejected || 3, color: '#ef4444' },
-    { id: 'pending', label: 'Pending Review', value: 5, color: '#facc15' },
+    { id: 'approved', label: 'Approved Decisions', value: grandApproved || 12, color: 'var(--theme-success)' },
+    { id: 'rejected', label: 'Rejected / Returned', value: grandRejected || 3, color: 'var(--theme-danger)' },
+    { id: 'pending', label: 'Pending Review', value: 5, color: 'var(--theme-warning)' },
   ];
 
   const cycleBarItems = cycles.slice(0, 6).map((c) => ({
@@ -61,13 +61,13 @@ export default async function DecisionAnalyticsPage() {
     label: resolveWorkTypeLabel(pack, c.workTypeKey),
     value: c.avgSeconds,
     formattedValue: formatDuration(c.avgSeconds),
-    color: '#a88cf8',
+    color: 'var(--theme-primary)',
   }));
   if (cycleBarItems.length === 0) {
     cycleBarItems.push(
-      { id: 'expense', label: 'Expense Authorization', value: 45, formattedValue: '45s', color: '#a88cf8' },
-      { id: 'campaign', label: 'Campaign Sequence', value: 120, formattedValue: '2m', color: '#facc15' },
-      { id: 'vendor', label: 'Vendor Onboarding', value: 360, formattedValue: '6m', color: '#3b82f6' },
+      { id: 'expense', label: 'Expense Authorization', value: 45, formattedValue: '45s', color: 'var(--theme-primary)' },
+      { id: 'campaign', label: 'Campaign Sequence', value: 120, formattedValue: '2m', color: 'var(--theme-warning)' },
+      { id: 'vendor', label: 'Vendor Onboarding', value: 360, formattedValue: '6m', color: 'var(--theme-info)' },
     );
   }
 
@@ -82,7 +82,7 @@ export default async function DecisionAnalyticsPage() {
       </section>
 
       {/* Motion Analytics Visual Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 20 }}>
+      <div className={styles.visualGrid}>
         <MotionDonutChart
           title="Decision Outcome Distribution"
           subtitle="Tenant-wide breakdown of approval vs rejection outcomes"
