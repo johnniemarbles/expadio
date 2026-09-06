@@ -232,37 +232,22 @@ export function CatalogClient({ initial }: { initial: CatalogCapability[] }) {
                     </p>
                   )}
                   <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                    {!bound ? (
-                      <button
-                        disabled={busy}
-                        onClick={() => bind(cap)}
-                        style={{
-                          padding: '5px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
-                          border: 'none', cursor: busy ? 'not-allowed' : 'pointer',
-                          background: 'var(--theme-primary)', color: 'var(--theme-text-inverse)',
-                          opacity: busy ? 0.5 : 1,
-                        }}
-                      >
-                        {busy ? '…' : 'Activate for Tenant'}
-                      </button>
-                    ) : (
-                      <button
-                        disabled={busy}
-                        onClick={() => toggle(cap)}
-                        style={{
-                          padding: '5px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
-                          border: `1px solid ${active
-                            ? 'color-mix(in srgb,var(--theme-warning) 40%,var(--theme-border))'
-                            : 'color-mix(in srgb,var(--theme-success) 40%,var(--theme-border))'}`,
-                          background: 'transparent',
-                          color: active ? 'var(--theme-warning)' : 'var(--theme-success)',
-                          cursor: busy ? 'not-allowed' : 'pointer',
-                          opacity: busy ? 0.5 : 1,
-                        }}
-                      >
-                        {busy ? '…' : active ? 'Suspend' : 'Re-activate'}
-                      </button>
-                    )}
+                    <button
+                      disabled={busy}
+                      onClick={() => (!bound ? bind(cap) : toggle(cap))}
+                      style={{
+                        padding: '5px 12px', borderRadius: "var(--theme-radius-card)", fontSize: 11, fontWeight: 700,
+                        border: active 
+                          ? `1px solid color-mix(in srgb,var(--theme-warning) 40%,var(--theme-border))`
+                          : 'none',
+                        background: active ? 'transparent' : 'var(--theme-primary)',
+                        color: active ? 'var(--theme-warning)' : 'var(--theme-text-inverse)',
+                        cursor: busy ? 'not-allowed' : 'pointer',
+                        opacity: busy ? 0.5 : 1,
+                      }}
+                    >
+                      {busy ? '…' : active ? 'Suspend' : 'Activate'}
+                    </button>
                   </div>
                 </div>
               );

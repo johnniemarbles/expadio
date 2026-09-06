@@ -70,6 +70,10 @@ export class ChiefOfStaffOrchestrator {
 
     const createdTasks: AgentTask[] = [];
     for (const plan of plans) {
+      if (!(await persistence.isAgentActive(input.tenantId, plan.assignedAgentId))) {
+        throw new Error(`Agent ${plan.assignedAgentId} is not bound or active for this tenant.`);
+      }
+
       const task = await persistence.createTask({
         missionId: mission.missionId,
         tenantId: input.tenantId,

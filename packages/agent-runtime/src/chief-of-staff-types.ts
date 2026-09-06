@@ -57,6 +57,8 @@ export interface ChiefOfStaffPersistencePort {
     readonly intent: string;
   }): Promise<AgentMission>;
 
+  isAgentActive(tenantId: string, agentId: string): Promise<boolean>;
+
   updateMissionStatus(
     missionId: string,
     tenantId: string,

@@ -156,6 +156,55 @@ export class PostgresChiefOfStaffRepository implements ChiefOfStaffPersistencePo
   }): Promise<AgentTask | null> {
     return resolveAgentApproval(this.#client, input);
   }
+
+  async isAgentActive(tenantId: string, agentSlug: string): Promise<boolean> {
+    // Check if it's a platform capability
+    const capRes = await this.#client.query(
+      `SELECT 1 FROM platform.tenant_capability_bindings b
+       JOIN platform.capabilities c ON b.capability_id = c.capability_id
+       JOIN platform.capability_state s ON s.binding_id = b.binding_id
+       WHERE b.tenant_id = $1 AND c.capability_key = $2 AND s.state = 'ACTIVE' LIMIT 1`,
+      [tenantId, agentSlug]
+    );
+    if ((capRes.rowCount ?? 0) > 0) return true;
+
+    // Otherwise, check if it's a persona agent and verify its tool grants
+    const agentRes = await this.#client.query(
+      `SELECT a.tools 
+       FROM platform.tenant_agent_bindings b
+       JOIN platform.agent_definitions a ON a.agent_id = b.agent_id
+       WHERE b.tenant_id = $1 AND a.slug = $2 AND b.status = 'ACTIVE' LIMIT 1`,
+      [tenantId, agentSlug]
+    );
+    if ((agentRes.rowCount ?? 0) === 0) return false;
+
+    const tools = agentRes.rows[0].tools as string[];
+    if (!tools || tools.length === 0) return true;
+
+    const toolsRes = await this.#client.query(
+      `SELECT tool_group FROM platform.tenant_tool_grants 
+       WHERE tenant_id = $1 AND enabled = true AND tool_group = ANY($2::text[])`,
+      [tenantId, tools]
+    );
+
+    if ((toolsRes.rowCount ?? 0) !== tools.length) return false;
+
+    // Phase 4: Integrate Communications provider health as preflight check
+    if (tools.includes('Comms')) {
+      const commsRes = await this.#client.query(
+        `SELECT 1 FROM platform.connectors
+         WHERE (tenant_id IS NULL OR tenant_id = $1::uuid)
+           AND enabled = true
+           AND health = 'HEALTHY'
+           AND provider_type IN ('email','sms','whatsapp','voice','push','rcs')
+         LIMIT 1`,
+        [tenantId]
+      );
+      if ((commsRes.rowCount ?? 0) === 0) return false;
+    }
+
+    return true;
+  }
 }
 
 export async function createAgentMission(

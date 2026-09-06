@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GovernedSelect } from '@expadio/ui';
 import styles from './page.module.css';
 
@@ -36,19 +36,18 @@ interface ApprovalRequest {
   created_at: string;
 }
 
+interface ReadyAgent {
+  slug: string;
+  name: string;
+}
+
 interface ChiefOfStaffData {
   missions: Mission[];
   tasks: Task[];
   approvals: ApprovalRequest[];
+  readyAgentCount: number;
+  readyAgents: ReadyAgent[];
 }
-
-const TOOL_OPTIONS = [
-  { value: 'ops-admin-1', label: 'Default (Ops Admin Squad)' },
-  { value: 'content.editorial.debate', label: 'Editorial Debate (Phase 3)' },
-  { value: 'revenue.lead.osint', label: 'Lead OSINT (Phase 5)' },
-  { value: 'revenue.outreach.draft_sequence', label: 'Outreach Draft (Phase 5)' },
-  { value: 'voice.callback.prepare', label: 'Voice Callback (Phase 6)' },
-];
 
 function statusClass(status: string): string {
   const normalized = status.toUpperCase();
@@ -65,10 +64,21 @@ function statusClass(status: string): string {
 
 export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaffData }) {
   const [data, setData] = useState<ChiefOfStaffData>(
-    initialData ?? { missions: [], tasks: [], approvals: [] }
+    initialData ?? { missions: [], tasks: [], approvals: [], readyAgentCount: 0, readyAgents: [] }
   );
   const [intent, setIntent] = useState('');
-  const [selectedTool, setSelectedTool] = useState('ops-admin-1');
+  
+  const toolOptions = useMemo(() => {
+    const opts = data.readyAgents?.map(a => ({ value: a.slug, label: a.name })) || [];
+    // Ensure ops-admin-1 is always available for base platform tasks if not fully data-driven yet,
+    // or just rely entirely on the DB. Let's rely entirely on the DB and add ops-admin-1 fallback if empty
+    if (opts.length === 0) {
+      return [{ value: 'ops-admin-1', label: 'Default (Ops Admin Squad)' }];
+    }
+    return opts;
+  }, [data.readyAgents]);
+
+  const [selectedTool, setSelectedTool] = useState(toolOptions[0]?.value || 'ops-admin-1');
   const [submitting, setSubmitting] = useState(false);
   const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -106,7 +116,7 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
         body: JSON.stringify({
           intent: intent.trim(),
           taskPlans: selectedTool !== 'ops-admin-1' ? [{
-            assignedAgentId: 'agent-stub',
+            assignedAgentId: selectedTool,
             title: `Execute ${selectedTool}`,
             description: intent.trim(),
             actionPayload: { toolKey: selectedTool }
@@ -154,13 +164,16 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
     }
   };
 
-  return (
+    return (
     <>
       <section className={styles.pageHeading} aria-labelledby="chief-title">
         <div>
           <p className={styles.eyebrow}>Agent Executive Control Plane</p>
           <h1 id="chief-title">Chief of Staff Command & Mission Deck</h1>
-          <p>Direct autonomous agent squads, monitor executive debate terminals, and govern human decision fabric approvals.</p>
+          <p>
+            Direct {data.readyAgentCount > 0 ? data.readyAgentCount : 'your'} autonomous {data.readyAgentCount === 1 ? 'agent' : 'agents'}, 
+            monitor executive debate terminals, and govern human decision fabric approvals.
+          </p>
         </div>
       </section>
 
@@ -202,14 +215,14 @@ export function ChiefOfStaffClient({ initialData }: { initialData?: ChiefOfStaff
 
           <div style={{ width: 280 }}>
             <GovernedSelect
-              options={TOOL_OPTIONS}
+              options={toolOptions}
               value={selectedTool}
               onChange={setSelectedTool}
-              disabled={submitting}
+              disabled={submitting || toolOptions.length === 0}
             />
           </div>
 
-          <button type="submit" className={styles.intentBtn} disabled={submitting || !intent.trim()}>
+          <button type="submit" className={styles.intentBtn} disabled={submitting || !intent.trim() || toolOptions.length === 0}>
             {submitting ? 'Dispatching...' : 'Dispatch Mission'}
           </button>
         </form>

@@ -45,10 +45,52 @@ export async function GET(request: Request) {
         [context.tenantId],
       );
 
+      // Calculate ready agents count: active platform capabilities + active equipped persona agents
+      const readyRes = await client.query(
+        `WITH ready_personas AS (
+           SELECT a.agent_id, a.slug, a.persona as name
+           FROM platform.tenant_agent_bindings b
+           JOIN platform.agent_definitions a ON a.agent_id = b.agent_id
+           WHERE b.tenant_id = $1::uuid AND b.status = 'ACTIVE'
+             AND (
+               jsonb_array_length(a.tools) = 0 
+               OR NOT EXISTS (
+                 SELECT 1 FROM jsonb_array_elements_text(a.tools) AS tool
+                 LEFT JOIN platform.tenant_tool_grants g 
+                   ON g.tool_group = tool AND g.tenant_id = $1::uuid AND g.enabled = true
+                 WHERE g.tool_group IS NULL
+               )
+             )
+             AND (
+               NOT (a.tools ? 'Comms')
+               OR EXISTS (
+                 SELECT 1 FROM platform.connectors c
+                 WHERE (c.tenant_id IS NULL OR c.tenant_id = $1::uuid)
+                   AND c.enabled = true
+                   AND c.health = 'HEALTHY'
+                   AND c.provider_type IN ('email','sms','whatsapp','voice','push','rcs')
+               )
+             )
+         ),
+         ready_capabilities AS (
+           SELECT c.capability_id, c.capability_key as slug, c.display_name as name
+           FROM platform.tenant_capability_bindings b
+           JOIN platform.capabilities c ON b.capability_id = c.capability_id
+           JOIN platform.capability_state s ON s.binding_id = b.binding_id
+           WHERE b.tenant_id = $1::uuid AND s.state = 'ACTIVE'
+         )
+         SELECT slug, name FROM ready_personas 
+         UNION ALL 
+         SELECT slug, name FROM ready_capabilities`,
+        [context.tenantId]
+      );
+
       return {
         missions: missionsRes.rows,
         tasks: tasksRes.rows,
         approvals: approvalsRes.rows,
+        readyAgentCount: readyRes.rows.length,
+        readyAgents: readyRes.rows.map(r => ({ slug: r.slug, name: r.name })),
       };
     });
 

@@ -41,18 +41,23 @@ export default async function AgentRunsPage({ searchParams }: { searchParams: Ro
           <table className={styles.table}>
             <thead>
               <tr>
+                <th>Agent Identity</th>
                 <th>Session ID</th>
                 <th>Status</th>
-                <th>Created At</th>
+                <th>Total Cost</th>
                 <th>Updated At</th>
               </tr>
             </thead>
             <tbody>
               {runs.map((run) => (
                 <tr key={run.session_id}>
-                  <td><span className={styles.code}>{run.session_id}</span></td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{run.display_name || run.agent_id}</div>
+                    <div className={styles.muted} style={{ fontSize: 11, marginTop: 2 }}>{run.department || 'System'}</div>
+                  </td>
+                  <td><span className={styles.code}>{run.session_id.slice(0,8)}...</span></td>
                   <td><span className={statusClass(String(run.status ?? 'UNKNOWN'))}>{String(run.status ?? 'UNKNOWN')}</span></td>
-                  <td className={styles.muted}>{new Date(run.created_at).toLocaleString()}</td>
+                  <td>{run.total_cost_minor_units > 0 ? `$${(run.total_cost_minor_units / 1000000).toFixed(4)}` : '-'}</td>
                   <td className={styles.muted}>{new Date(run.updated_at).toLocaleString()}</td>
                 </tr>
               ))}

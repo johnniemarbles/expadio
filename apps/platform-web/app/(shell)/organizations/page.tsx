@@ -136,6 +136,8 @@ export default async function OrganizationsPage({
                     <strong>{organization.name}</strong>
                     <br />
                     <span className={styles.code}>{organization.organization_id}</span>
+                    <br />
+                    <a href={`/organizations/${organization.organization_id}/agents`} style={{ fontSize: 12, color: 'var(--theme-primary)' }}>Manage Agents</a>
                   </td>
                   <td><StatusBadge tone={organizationTone(organization.status)}>{organization.status}</StatusBadge></td>
                   <td>{organization.members ?? 0}</td>

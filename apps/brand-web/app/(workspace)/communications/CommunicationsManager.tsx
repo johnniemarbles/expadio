@@ -489,7 +489,7 @@ export function CommunicationsManager() {
                     )}
                   </div>
                   <div className={styles.actions}>
-                    {sender.status === 'ACTIVE' && sender.verificationStatus !== 'VERIFIED' && (
+                    {sender.verificationStatus !== 'VERIFIED' && (
                       <button
                         className={styles.secondary}
                         disabled={busy === sender.senderId + 'verify'}

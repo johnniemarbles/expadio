@@ -5,6 +5,8 @@ import styles from '../page.module.css';
 
 interface AgentEntry {
   assigned_agent_id: string;
+  display_name?: string;
+  department?: string;
   task_count: number;
   completed_count: number;
   failed_count: number;
@@ -34,7 +36,7 @@ export default async function AgentRegistryPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Agent ID</th>
+                <th>Agent Identity</th>
                 <th>Tasks</th>
                 <th>Completed</th>
                 <th>Failed</th>
@@ -45,7 +47,10 @@ export default async function AgentRegistryPage() {
             <tbody>
               {agents.map((a) => (
                 <tr key={a.assigned_agent_id}>
-                  <td><span className={styles.code}>{a.assigned_agent_id}</span></td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{a.display_name || a.assigned_agent_id}</div>
+                    <div className={styles.muted} style={{ fontSize: 11, marginTop: 2 }}>{a.department || 'System'} · <span className={styles.code}>{a.assigned_agent_id}</span></div>
+                  </td>
                   <td>{a.task_count}</td>
                   <td>
                     <span className={[styles.statusBadge, a.completed_count > 0 ? styles.statusSuccess : styles.statusNeutral].join(' ')}>
