@@ -6,6 +6,10 @@ const route = readFileSync(
   new URL('../app/api/communications/providers/[key]/test-send/route.ts', import.meta.url),
   'utf8',
 );
+const modal = readFileSync(
+  new URL('../app/(shell)/communications/ConnectorActionsModal.tsx', import.meta.url),
+  'utf8',
+);
 
 test('test-send uses governed credential lease paths and never resolves a secret directly', () => {
   assert.match(route, /resolveRequestContext\(request\)/);
@@ -59,4 +63,13 @@ test('test-send remains an explicit operator boundary with channel-specific vali
   assert.match(route, /normalizeRecipient/);
   assert.match(route, /Twilio Voice test sends require an HTTPS TwiML voiceUrl/);
   assert.match(route, /platform-\$\{spec\.providerType\}-test-send/);
+});
+
+test('connector actions modal exposes governed test-send controls', () => {
+  assert.match(modal, /\$\{base\}\/test-send\$\{queryString\}/);
+  assert.match(modal, /"x-expadio-reauth-at": new Date\(\)\.toISOString\(\)/);
+  assert.match(modal, /recipient:\s*testRecipient\.trim\(\)/);
+  assert.match(modal, /idempotencyKey:\s*testIdempotencyKey\.trim\(\)/);
+  assert.match(modal, /isVoice \? \{ voiceUrl: voiceUrl\.trim\(\) \} : \{\}/);
+  assert.match(modal, /Run test send/);
 });
