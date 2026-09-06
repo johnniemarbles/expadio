@@ -1,0 +1,2 @@
+ALTER TABLE platform.agent_definitions
+ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';

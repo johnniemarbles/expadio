@@ -16,11 +16,13 @@ export async function GET(request: Request) {
     const result = await dbPool.query(
       `SELECT a.agent_id as capability_id, a.slug as capability_key, a.persona as display_name, a.department,
               a.persona as description, '[]'::jsonb as permitted_modes, true as enabled,
+              a.tools, a.default_on,
               b.binding_id,
               COALESCE(b.status, 'NOT_CONFIGURED') AS bound_status
          FROM platform.agent_definitions a
          LEFT JOIN platform.tenant_agent_bindings b
            ON b.agent_id = a.agent_id AND b.tenant_id = $1
+        WHERE a.status IS NULL OR a.status != 'SUSPENDED'
         ORDER BY a.department, a.persona`,
       [effectiveContext.tenantId]
     );
