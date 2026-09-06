@@ -73,15 +73,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'INTENT_REQUIRED' }, { status: 400 });
     }
 
-    const authorizationPort = createMissionAuthorizationPort(context.tenantId);
-    const registeredTools = getRegisteredMissionTools();
-
-    const orchestrator = new ChiefOfStaffOrchestrator({
-      executorOptions: { authorizationPort, registeredTools },
-    });
-
     const mission = await withBrandTransaction(context, async (client) => {
+      const authorizationPort = createMissionAuthorizationPort(
+        context.tenantId,
+        async (tenantId, toolGroup) => {
+          const res = await client.query(
+            `SELECT 1 FROM platform.tenant_tool_grants WHERE tenant_id = $1::uuid AND tool_group = $2 AND enabled = true`,
+            [tenantId, toolGroup]
+          );
+          return res.rowCount !== null && res.rowCount > 0;
+        }
+      );
+      
       const repository = new PostgresChiefOfStaffRepository(client);
+      
+      const orchestrator = new ChiefOfStaffOrchestrator({
+        executorOptions: { authorizationPort, registeredTools: getRegisteredMissionTools() },
+      });
+
       return orchestrator.processExecutiveIntent(
         repository,
         {

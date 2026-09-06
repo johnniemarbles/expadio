@@ -6,7 +6,10 @@ import type {
   AgentToolAdapterInput
 } from '../index';
 
-export function createMissionAuthorizationPort(tenantId: string): AgentToolAuthorizationPort {
+export function createMissionAuthorizationPort(
+  tenantId: string,
+  checkGrant?: (tenantId: string, toolGroup: string) => Promise<boolean>
+): AgentToolAuthorizationPort {
   return {
     async authorize(query: AgentToolAuthorizationQuery) {
       const decisionId = randomUUID();
@@ -16,6 +19,24 @@ export function createMissionAuthorizationPort(tenantId: string): AgentToolAutho
       if (query.effect === 'PROPOSE') {
         return { decisionId, allowed: false, reasonKey: 'PROPOSE_REQUIRES_POLICY' };
       }
+
+      if (checkGrant) {
+        const TOOL_GROUP_MAPPING: Record<string, string> = {
+          'cbos.context.observe': 'Audit',
+          'content.editorial.debate': 'Comms',
+          'revenue.lead.osint': 'DB',
+          'revenue.outreach.draft_sequence': 'Comms',
+          'voice.callback.prepare': 'Comms',
+        };
+        const group = TOOL_GROUP_MAPPING[query.toolKey];
+        if (group) {
+          const granted = await checkGrant(tenantId, group);
+          if (!granted) {
+            return { decisionId, allowed: false, reasonKey: 'TOOL_GROUP_NOT_GRANTED' };
+          }
+        }
+      }
+
       return { decisionId, allowed: true, reasonKey: 'TENANT_SCOPED_OBSERVE_ALLOWED' };
     },
   };
@@ -39,6 +60,8 @@ export function createStubTool(toolKey: string): AgentToolAdapter {
   };
 }
 
+import { createLeadOsintTool } from '../committees/lead-osint-tool';
+
 export function getRegisteredMissionTools(): AgentToolAdapter[] {
   const contextObserveTool: AgentToolAdapter = {
     toolKey: 'cbos.context.observe',
@@ -56,10 +79,17 @@ export function getRegisteredMissionTools(): AgentToolAdapter[] {
     },
   };
 
+  // Phase C: Wire real adapters using placeholder/stub ports
+  const leadOsintTool = createLeadOsintTool({
+    osintPort: { async research() { return { companySize: 'Unknown', techStack: [] }; } },
+    targetResolver: { async resolveTarget(ref) { return ref || 'example.com'; } },
+    artifactStore: { async save() {} }
+  });
+
   return [
     contextObserveTool,
     createStubTool('content.editorial.debate'),
-    createStubTool('revenue.lead.osint'),
+    leadOsintTool,
     createStubTool('revenue.outreach.draft_sequence'),
     createStubTool('voice.callback.prepare'),
   ];
