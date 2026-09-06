@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import styles from '../../../../page.module.css';
+import styles from '../../../page.module.css';
 
 interface CatalogCapability {
   capability_id: string;

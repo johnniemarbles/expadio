@@ -1,6 +1,6 @@
 import React from 'react';
-import styles from '../../../../page.module.css';
-import { fetchApi } from '../../../../../../lib/live-adapter';
+import styles from '../../../page.module.css';
+import { fetchApi } from '../../../../../lib/live-adapter';
 import { DeniedState } from '@expadio/ui';
 import { isDenied } from '@expadio/ui/contracts';
 import { AgentsClient } from './AgentsClient';
