@@ -38,15 +38,15 @@ export default function LeadManagementClient({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<BrandLeadSummary | null>(null);
 
-  // Compute metric card counts for all 5 stages
-  const counts = useMemo(() => {
+  // Compute stage counts
+  const stageCounts = useMemo(() => {
     return BRAND_LEAD_STAGES.map((s) => ({
       stage: s,
       count: initialLeads.filter((l) => l.stage === s).length,
     }));
   }, [initialLeads]);
 
-  // Filter leads based on selected stage and search query
+  // Filter leads by stage and search query
   const filteredLeads = useMemo(() => {
     let result = [...initialLeads];
     if (selectedStage !== '') {
@@ -67,7 +67,7 @@ export default function LeadManagementClient({
 
   return (
     <>
-      {/* Top Header & Quick Action */}
+      {/* Top Header & Navigation Bar */}
       <section className={styles.pageHead}>
         <div>
           <p className={styles.eyebrow}>Growth · {organizationName}</p>
@@ -76,8 +76,9 @@ export default function LeadManagementClient({
             Organization-scoped CRM projection for active demand. Capture, qualify and convert high-intent leads.
           </p>
         </div>
+
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Sub-nav bar */}
+          {/* Module Sub-Navigation Pill Bar */}
           <nav
             style={{
               display: 'flex',
@@ -91,59 +92,120 @@ export default function LeadManagementClient({
             }}
             aria-label="Lead management navigation"
           >
-            <Link className={styles.button} style={{ height: 32, fontSize: 12, padding: '0 12px', whiteSpace: 'nowrap' }} href="/leads">
+            <Link className={styles.button} style={{ height: 32, fontSize: 12, padding: '0 14px', whiteSpace: 'nowrap' }} href="/leads">
               Leads
             </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px' }} href="/leads/contacts">
+            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 14px' }} href="/leads/contacts">
               Contacts
             </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px' }} href="/leads/accounts">
+            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 14px' }} href="/leads/accounts">
               Accounts
             </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px' }} href="/leads/capture/configuration">
+            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 14px' }} href="/leads/capture/configuration">
               Capture Config
             </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px' }} href="/leads/publications">
+            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 14px' }} href="/leads/publications">
               Publications
             </Link>
-            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 12px' }} href="/leads/capture">
+            <Link className={styles.secondaryButton} style={{ border: 'none', background: 'transparent', whiteSpace: 'nowrap', height: 32, fontSize: 12, padding: '0 14px' }} href="/leads/capture">
               Demand Capture
             </Link>
           </nav>
 
-          {/* Primary Action Button */}
+          {/* Primary "+ Create Lead" Slide-over Button */}
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
             className={styles.button}
-            style={{ height: 40, padding: '0 18px', fontWeight: 700, fontSize: 13 }}
+            style={{
+              height: 40,
+              padding: '0 20px',
+              fontWeight: 700,
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              boxShadow: '0 2px 8px rgba(250, 204, 21, 0.2)',
+            }}
           >
             + Create Lead
           </button>
         </div>
       </section>
 
-      {/* Overview Stage Summary Metric Cards (Interactive deep-link filter) */}
-      <section className={styles.grid}>
-        {counts.map(({ stage, count }) => {
+      {/* Primary Pipeline Stage Selector Grid (Unified Metrics & Filter Bar) */}
+      <section
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: 12,
+          marginTop: 16,
+        }}
+      >
+        {/* ALL Summary Card */}
+        <article
+          onClick={() => setSelectedStage('')}
+          style={{
+            background: selectedStage === '' ? 'var(--theme-surface-raised, #0D0E11)' : 'var(--theme-surface, #060707)',
+            border: `1px solid ${selectedStage === '' ? 'var(--theme-accent, #FACC15)' : 'var(--theme-border, #1F242D)'}`,
+            borderRadius: 'var(--theme-radius-card, 8px)',
+            padding: '14px 16px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: selectedStage === '' ? '0 0 0 1px var(--theme-accent, #FACC15)' : 'none',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: selectedStage === '' ? 'var(--theme-accent, #FACC15)' : 'var(--theme-text-muted, #9CA3AF)',
+              }}
+            >
+              ALL LEADS
+            </span>
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4, color: 'var(--theme-text-primary, #FFFFFF)' }}>
+            {initialLeads.length}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--theme-text-muted, #9CA3AF)', marginTop: 2 }}>
+            {selectedStage === '' ? '● Active Filter' : 'Click to show all'}
+          </div>
+        </article>
+
+        {/* 5 Stage Summary Cards */}
+        {stageCounts.map(({ stage, count }) => {
           const isActive = selectedStage === stage;
           const color = STAGE_COLORS[stage as BrandLeadStage] ?? '#9CA3AF';
           return (
             <article
               key={stage}
               onClick={() => setSelectedStage(isActive ? '' : stage)}
-              className={styles.metric}
               style={{
+                background: isActive ? 'var(--theme-surface-raised, #0D0E11)' : 'var(--theme-surface, #060707)',
+                border: `1px solid ${isActive ? color : 'var(--theme-border, #1F242D)'}`,
+                borderRadius: 'var(--theme-radius-card, 8px)',
+                padding: '14px 16px',
                 cursor: 'pointer',
-                borderColor: isActive ? color : 'var(--theme-border, #1F242D)',
-                boxShadow: isActive ? `0 0 0 1px ${color}` : 'none',
                 transition: 'all 0.15s ease',
+                boxShadow: isActive ? `0 0 0 1px ${color}` : 'none',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className={styles.metricLabel} style={{ color: isActive ? color : undefined }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    color: isActive ? color : 'var(--theme-text-muted, #9CA3AF)',
+                  }}
+                >
                   {stage}
-                </div>
+                </span>
                 <span
                   style={{
                     width: 8,
@@ -154,18 +216,20 @@ export default function LeadManagementClient({
                   }}
                 />
               </div>
-              <div className={styles.metricValue}>{count}</div>
-              <div className={styles.metricDetail}>
-                {isActive ? 'Active filter — click to clear' : 'Click to filter inbox'}
+              <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4, color: 'var(--theme-text-primary, #FFFFFF)' }}>
+                {count}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--theme-text-muted, #9CA3AF)', marginTop: 2 }}>
+                {isActive ? '● Active Filter' : 'Click to filter'}
               </div>
             </article>
           );
         })}
       </section>
 
-      {/* Main Inbox Controls Section */}
-      <section className={styles.panel} style={{ marginTop: 24 }}>
-        {/* Inbox Toolbar */}
+      {/* Main Working Surface Panel */}
+      <section className={styles.panel} style={{ marginTop: 20 }}>
+        {/* Panel Header Toolbar */}
         <div
           className={styles.panelHead}
           style={{
@@ -174,16 +238,17 @@ export default function LeadManagementClient({
             gap: 16,
             justifyContent: 'space-between',
             alignItems: 'center',
+            padding: '16px 20px',
           }}
         >
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <h2 style={{ margin: 0 }}>Lead Inbox</h2>
-            <span className={styles.pill}>
-              {selectedStage || 'ALL'} · {filteredLeads.length}
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Lead Working Surface</h2>
+            <span className={styles.pill} style={{ fontSize: 11 }}>
+              {selectedStage || 'ALL'} · {filteredLeads.length} visible
             </span>
           </div>
 
-          {/* Search + View Mode Controls */}
+          {/* Search + View Mode Segmented Control */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Search Input */}
             <input
@@ -198,11 +263,11 @@ export default function LeadManagementClient({
                 background: 'var(--theme-surface, #060707)',
                 color: 'var(--theme-text-primary, #FFFFFF)',
                 fontSize: 13,
-                minWidth: 240,
+                minWidth: 260,
               }}
             />
 
-            {/* View Mode Toggle */}
+            {/* View Mode Switcher */}
             <div
               style={{
                 display: 'flex',
@@ -216,7 +281,7 @@ export default function LeadManagementClient({
                 type="button"
                 onClick={() => setViewMode('list')}
                 style={{
-                  padding: '4px 12px',
+                  padding: '5px 14px',
                   fontSize: 12,
                   fontWeight: 600,
                   borderRadius: 4,
@@ -224,6 +289,7 @@ export default function LeadManagementClient({
                   background: viewMode === 'list' ? 'var(--theme-accent, #FACC15)' : 'transparent',
                   color: viewMode === 'list' ? '#060707' : 'var(--theme-text-muted, #9CA3AF)',
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 List View
@@ -232,7 +298,7 @@ export default function LeadManagementClient({
                 type="button"
                 onClick={() => setViewMode('board')}
                 style={{
-                  padding: '4px 12px',
+                  padding: '5px 14px',
                   fontSize: 12,
                   fontWeight: 600,
                   borderRadius: 4,
@@ -240,6 +306,7 @@ export default function LeadManagementClient({
                   background: viewMode === 'board' ? 'var(--theme-accent, #FACC15)' : 'transparent',
                   color: viewMode === 'board' ? '#060707' : 'var(--theme-text-muted, #9CA3AF)',
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 Board View
@@ -248,53 +315,22 @@ export default function LeadManagementClient({
           </div>
         </div>
 
-        {/* Stage Filter Tab Strip */}
-        <div
-          style={{
-            padding: '12px 20px',
-            borderBottom: '1px solid var(--theme-border, #1F242D)',
-            display: 'flex',
-            gap: 8,
-            overflowX: 'auto',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setSelectedStage('')}
-            className={selectedStage === '' ? styles.button : styles.secondaryButton}
-            style={{ height: 32, fontSize: 12, padding: '0 14px' }}
-          >
-            All ({initialLeads.length})
-          </button>
-          {BRAND_LEAD_STAGES.map((s) => {
-            const count = initialLeads.filter((l) => l.stage === s).length;
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSelectedStage(s)}
-                className={selectedStage === s ? styles.button : styles.secondaryButton}
-                style={{ height: 32, fontSize: 12, padding: '0 14px' }}
-              >
-                {s} ({count})
-              </button>
-            );
-          })}
-        </div>
-
         {/* Content Views */}
         {filteredLeads.length === 0 ? (
-          <div className={styles.empty} style={{ padding: '48px 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--theme-text-primary, #FFFFFF)', margin: '0 0 8px' }}>
-              No leads found
+          <div className={styles.empty} style={{ padding: '56px 24px', textAlign: 'center' }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--theme-text-primary, #FFFFFF)', margin: '0 0 6px' }}>
+              No leads visible
             </p>
-            <p style={{ fontSize: 13, color: 'var(--theme-text-muted, #9CA3AF)', margin: '0 0 16px' }}>
-              {searchQuery ? `No results for "${searchQuery}"` : `No leads currently in stage ${selectedStage || 'ALL'}`}
+            <p style={{ fontSize: 13, color: 'var(--theme-text-muted, #9CA3AF)', margin: '0 0 20px' }}>
+              {searchQuery
+                ? `No matching leads found for "${searchQuery}"`
+                : `No leads currently in stage ${selectedStage || 'ALL'}`}
             </p>
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
               className={styles.button}
+              style={{ padding: '8px 20px', fontSize: 13 }}
             >
               + Create Lead
             </button>
@@ -310,7 +346,7 @@ export default function LeadManagementClient({
                   <th>Stage</th>
                   <th>Value</th>
                   <th>Created</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -362,7 +398,7 @@ export default function LeadManagementClient({
                         type="button"
                         onClick={() => setSelectedLead(lead)}
                         className={styles.secondaryButton}
-                        style={{ height: 30, fontSize: 12, padding: '0 10px' }}
+                        style={{ height: 30, fontSize: 12, padding: '0 12px' }}
                       >
                         View Details →
                       </button>
@@ -420,7 +456,7 @@ export default function LeadManagementClient({
                     </span>
                   </div>
 
-                  {/* Column Body / Cards */}
+                  {/* Column Cards */}
                   <div
                     style={{
                       padding: 12,
@@ -455,7 +491,7 @@ export default function LeadManagementClient({
                             borderRadius: 6,
                             padding: 12,
                             cursor: 'pointer',
-                            transition: 'border-color 0.15s ease',
+                            transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--theme-accent, #FACC15)')}
                           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--theme-border, #1F242D)')}
@@ -506,6 +542,23 @@ export default function LeadManagementClient({
         )}
       </section>
 
+      {/* Translucent Backdrop Overlay for Create Drawer */}
+      {isCreateOpen ? (
+        <div
+          onClick={() => setIsCreateOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 99,
+            transition: 'opacity 0.2s ease',
+          }}
+          aria-hidden="true"
+        />
+      ) : null}
+
       {/* Slide-over Drawer for Create Lead */}
       <MotionDrawer
         open={isCreateOpen}
@@ -515,7 +568,7 @@ export default function LeadManagementClient({
           maxWidth: 540,
           background: 'var(--theme-surface-raised, #0D0E11)',
           borderLeft: '1px solid var(--theme-border, #1F242D)',
-          boxShadow: '-8px 0 24px rgba(0,0,0,0.5)',
+          boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.8)',
           display: 'flex',
           flexDirection: 'column',
           height: '100vh',
@@ -544,15 +597,20 @@ export default function LeadManagementClient({
             onClick={() => setIsCreateOpen(false)}
             style={{
               background: 'transparent',
-              border: 'none',
+              border: '1px solid var(--theme-border, #1F242D)',
+              borderRadius: 6,
               color: 'var(--theme-text-muted, #9CA3AF)',
-              fontSize: 24,
+              fontSize: 18,
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'pointer',
-              padding: '4px 8px',
             }}
             aria-label="Close drawer"
           >
-            ×
+            ✕
           </button>
         </div>
         <div style={{ padding: 24, flex: 1, overflowY: 'auto' }}>

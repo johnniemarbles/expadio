@@ -35,7 +35,7 @@ const LIFECYCLE_OPTIONS = [
   { value: 'CHURNED', label: 'Churned' },
 ];
 
-export default function CreateAccountForm() {
+export default function CreateAccountForm({ onCreated }: { onCreated?: () => void } = {}) {
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -115,6 +115,7 @@ export default function CreateAccountForm() {
         setNotice({ kind: 'success', text: `Account "${name.trim()}" created.` });
         setName(''); setDomain(''); setIndustry(''); setLifecycleStage('PROSPECT');
         setCountryCode(''); setCity(''); setCandidates([]);
+        onCreated?.();
         router.refresh();
       }
     } catch {

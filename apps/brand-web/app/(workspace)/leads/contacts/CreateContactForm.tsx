@@ -31,7 +31,7 @@ async function readJson(r: Response): Promise<Record<string, unknown>> {
   return v && typeof v === 'object' ? v as Record<string, unknown> : {};
 }
 
-export default function CreateContactForm({ accounts }: { accounts: readonly AccountOption[] }) {
+export default function CreateContactForm({ accounts, onCreated }: { accounts: readonly AccountOption[]; onCreated?: () => void }) {
   const router = useRouter();
 
   const [fullName, setFullName] = useState('');
@@ -154,6 +154,7 @@ export default function CreateContactForm({ accounts }: { accounts: readonly Acc
         setNotice({ kind: 'success', text: `Contact "${fullName.trim()}" created.` });
         setFullName(''); setEmail(''); setPhone(''); setTitle(''); setAccountId('');
         setCountryCode(''); setRegionOrState(''); setCity(''); setCandidates([]);
+        onCreated?.();
         router.refresh();
       }
     } catch {
