@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { dbPool } from '../../../../../lib/iam-adapter';
-import { deniedResponse } from '../../../../../lib/request-context';
+import { dbPool } from '@/lib/iam-adapter';
+import { deniedResponse } from '@/lib/request-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED' }, { status: 401 });
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { department, slug, persona, tools, default_on, status } = body;
 
@@ -58,13 +58,13 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ denied: true, reasonKey: 'UNAUTHENTICATED' }, { status: 401 });
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const result = await dbPool.query(
       `DELETE FROM platform.agent_definitions WHERE agent_id = $1 RETURNING agent_id`,
