@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync(new URL("../app/(shell)/communications/page.tsx", import.meta.url), "utf8");
@@ -65,6 +65,10 @@ const templatePreviewModal = readFileSync(
 );
 const providerDetailMutationRoute = readFileSync(
   new URL("../app/api/communications/providers/[key]/route.ts", import.meta.url),
+  "utf8",
+);
+const onboardingPage = readFileSync(
+  new URL("../app/(shell)/communications/onboarding/page.tsx", import.meta.url),
   "utf8",
 );
 
@@ -217,6 +221,24 @@ test("setup completion requires a successful governed test-send trace", () => {
   assert.match(setupStateRoute, /reason_code = 'TEST_SEND_OK'/);
   assert.match(setupStateRoute, /outcome = 'SENT'/);
   assert.doesNotMatch(setupStateRoute, /outcome IN \\('SENT','QUEUED'\\)/);
+});
+
+test("communications onboarding links resolve to a real setup surface", () => {
+  const setupStateRoute = readFileSync(
+    new URL("../app/api/communications/setup/state/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(setupStateRoute, /href: '\/communications\/onboarding\?step=custody'/);
+  assert.match(onboardingPage, /fetchApi<SetupState>\(`\/api\/communications\/setup\/state\$\{q\}`\)/);
+  assert.match(onboardingPage, /state\.steps\.map/);
+  assert.match(onboardingPage, /Open Communications console/);
+});
+
+test("obsolete communications placeholder route artifacts are removed", () => {
+  assert.equal(
+    existsSync(new URL("../app/api/communications/templates/[key]/versions/route.ts.tmp", import.meta.url)),
+    false,
+  );
 });
 
 test("decision traces tab surfaces the trace explorer", () => {
