@@ -26,7 +26,7 @@ EXPADIO_BRAIN_ROOT/03_CAPABILITY/skills/candidates/SKILL_pipeline_health_analyst
 The manifest converts Agency Agents' `sales/sales-pipeline-analyst.md` persona into the CBOS schema:
 
 - Full Agent Runtime declaration (identity, role, scope, permissions, tools restricted to the real closed list, knowledge sources scoped to a tenant Brain Map slice, budget/model/retention placeholders, audit)
-- Read-only / diagnostic-only role: tools limited to `search_leads`, `get_organization`, `get_person`, `search_cases`, and proposal-only `create_task` — explicitly excludes `send_email`, `send_sms`, `initiate_call`, `create_workflow_action`
+- Read-only / diagnostic-only role: tools limited to the runtime catalog's `DB` grant, currently exercised through `cbos.context.observe` and `revenue.lead.osint`; task proposal behavior remains future-gated until a governed proposal tool is registered. Explicitly excludes `send_email`, `send_sms`, `initiate_call`, `create_workflow_action`
 - Terminology rebound to EXPADIO's governed Lead Management vocabulary (`interestType`, `opportunityType`, `InterestTypeRegistry`, qualification profile resolved from versioned config) per ADR-017 Invariant 1, rather than the source persona's generic CRM/MEDDPICC framing
 - Explicit statement that it cannot self-publish corrections to lead data, stage, or config (per CBOS: "No model or agent may publish its own correction directly")
 - Activation checklist requiring independent review, filled-in budget/retention values, and human approval before it can leave `UNREVIEWED_PROPOSAL` status
@@ -58,3 +58,4 @@ Draft file content is attached in full below this suggestion for review (see Imp
 - **2026-09-07** — Proposed by Claude (chat session, no direct repo write access — human or a connected agent must land this file per `CONNECTING-AGENTS.md`).
 
 - **2026-09-07** — Implemented. The unreviewed proposal was independently reviewed, human approval (Sanjeev) was recorded, and the manifest was merged via PR #756. The file was graduated directly to `EXPADIO_BRAIN_ROOT/03_CAPABILITY/skills/` (bypassing dynamic Business Configuration changesets since skills currently rely on flat file manifests).
+- **2026-09-07** — Follow-up correction after `expadio-main-8` addendum audit: ghost fine-grained tool names were replaced with the real runtime `DB` grant and registered tool keys, and `pipeline-health-analyst` was added to the database-backed agent catalog path.
