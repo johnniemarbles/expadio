@@ -38,7 +38,10 @@ export function createMissionAuthorizationPort(
         return { decisionId, allowed: true, reasonKey: 'SYSTEM_INTERNAL_EXEMPT' };
       }
 
-      if (group && checkGrant) {
+      if (group) {
+        if (!checkGrant) {
+          return { decisionId, allowed: false, reasonKey: 'AUTHORIZATION_CONFIGURATION_ERROR' };
+        }
         const granted = await checkGrant(tenantId, group);
         if (!granted) {
           return { decisionId, allowed: false, reasonKey: 'TOOL_GROUP_NOT_GRANTED' };
