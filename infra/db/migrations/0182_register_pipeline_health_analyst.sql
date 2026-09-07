@@ -1,6 +1,10 @@
 -- Register the Pipeline & Lead Health Analyst in the real agent catalog.
 -- The flat-file skill manifest is descriptive; runtime activation resolves via platform.agent_definitions.
 
+INSERT INTO platform.departments (name, description)
+VALUES ('Revenue Operations', 'Revenue and lead management operations')
+ON CONFLICT (name) DO NOTHING;
+
 INSERT INTO platform.agent_definitions (
     department,
     slug,
