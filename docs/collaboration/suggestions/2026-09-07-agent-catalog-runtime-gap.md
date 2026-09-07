@@ -2,7 +2,7 @@
 
 **Proposed by:** Claude
 **Date:** 2026-09-07
-**Status:** Implemented (Retroactively Reviewed)
+**Status:** Implemented
 **Related area:** apps/platform-web/app/api/agent/missions/route.ts, apps/brand-web/app/api/brain/missions/route.ts, packages/agent-runtime/src/, platform.agent_definitions, platform.tenant_tool_grants
 
 ## Problem / Opportunity

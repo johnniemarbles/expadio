@@ -32,3 +32,15 @@ CREATE TABLE IF NOT EXISTS platform.tenant_tool_grants (
 
 CREATE INDEX IF NOT EXISTS idx_tenant_agent_bindings_tenant ON platform.tenant_agent_bindings(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_tool_grants_tenant ON platform.tenant_tool_grants(tenant_id);
+
+ALTER TABLE platform.tenant_agent_bindings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.tenant_agent_bindings FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_agent_bindings_tenant_isolation ON platform.tenant_agent_bindings
+  USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
+
+ALTER TABLE platform.tenant_tool_grants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform.tenant_tool_grants FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_tool_grants_tenant_isolation ON platform.tenant_tool_grants
+  USING (tenant_id = platform.current_tenant_id())
+  WITH CHECK (tenant_id = platform.current_tenant_id());
