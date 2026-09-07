@@ -24,7 +24,8 @@ If left undocumented, "PR merge substitutes for changeset" will quietly become t
 - Restores the integrity and traceability of the CBOS correction lifecycle.
 
 ## Risks / trade-offs
-- Low risk documentation update. Requires adapting import scripts to automatically include this field.
+- Git PR reviews are less formal and harder to audit non-technically than a true Business Configuration changeset.
+- Long-term migration to DB-backed agent definitions represents a significant engineering effort.
 
 ## Decision trail
 - **2026-09-07** — Proposed by Claude after surfacing the gap during the Pipeline Health Analyst pilot.
