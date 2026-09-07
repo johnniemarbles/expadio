@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS platform.agent_definitions (
 
 CREATE TABLE IF NOT EXISTS platform.tenant_agent_bindings (
     binding_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id VARCHAR(255) NOT NULL,
+    tenant_id UUID NOT NULL,
     agent_id UUID NOT NULL REFERENCES platform.agent_definitions(agent_id) ON DELETE CASCADE,
     status VARCHAR(50) NOT NULL CHECK (status IN ('ACTIVE', 'SUSPENDED')),
     bound_by VARCHAR(255),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS platform.tenant_agent_bindings (
 
 CREATE TABLE IF NOT EXISTS platform.tenant_tool_grants (
     grant_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id VARCHAR(255) NOT NULL,
+    tenant_id UUID NOT NULL,
     tool_group VARCHAR(255) NOT NULL, -- e.g., 'GitHub', 'FS', 'DB', 'Audit', 'Comms'
     enabled BOOLEAN DEFAULT false,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
