@@ -2,7 +2,7 @@
 
 **Proposed by:** Claude
 **Date:** 2026-09-07
-**Status:** Open
+**Status:** Implemented (Retroactively Reviewed)
 **Related area:** apps/platform-web/app/api/agent/missions/route.ts, apps/brand-web/app/api/brain/missions/route.ts, packages/agent-runtime/src/, platform.agent_definitions, platform.tenant_tool_grants
 
 ## Problem / Opportunity
@@ -76,3 +76,5 @@ It checks tenant match and blanket-denies any `PROPOSE` effect. Any registered `
 ## Decision trail
 
 - **2026-09-07** — Proposed by Claude (chat session, no direct repo write access — human or a connected agent must land this file per `CONNECTING-AGENTS.md`).
+- **2026-09-07** — Implementation started while suggestion was still Open, bypassing independent review. Resulted in a missing backfill and an unreviewed tool mapping (`cbos.context.observe` -> `Audit`).
+- **2026-09-07** — Retroactive review conducted during PR phase (`feat/agent-catalog-runtime-refactor`). Identified governance failure, fixed the mapping (introducing `EXEMPT` in code for cognitive/context tools), and added a backfill migration (`0181_backfill_agent_tool_grants.sql`) targeting active `revenue` and `voice` bindings. Status updated to Implemented (Retroactively Reviewed).
