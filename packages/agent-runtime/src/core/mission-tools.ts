@@ -71,7 +71,7 @@ export function createStubTool(toolKey: string): AgentToolAdapter {
   };
 }
 
-import { createLeadOsintTool } from '../committees/lead-osint-tool';
+import { createLeadOsintTool } from '../committees/lead-osint-tool.ts';
 
 export function getRegisteredMissionTools(): AgentToolAdapter[] {
   const contextObserveTool: AgentToolAdapter = {
