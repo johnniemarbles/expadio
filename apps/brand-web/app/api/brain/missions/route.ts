@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { resolveBrandContext, withBrandTransaction } from '../../../../lib/brand-context';
 import {
   ChiefOfStaffOrchestrator,
+  createMissionAuthorizationPort,
+  getRegisteredMissionTools,
   type AgentToolAuthorizationPort,
   type AgentToolAuthorizationQuery,
   type AgentToolAdapter,
@@ -71,65 +73,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'INTENT_REQUIRED' }, { status: 400 });
     }
 
-    const authorizationPort: AgentToolAuthorizationPort = {
-      async authorize(query: AgentToolAuthorizationQuery) {
-        const decisionId = randomUUID();
-        if (query.tenantId !== context.tenantId) {
-          return { decisionId, allowed: false, reasonKey: 'TENANT_MISMATCH' };
-        }
-        if (query.effect === 'PROPOSE') {
-          return { decisionId, allowed: false, reasonKey: 'PROPOSE_REQUIRES_POLICY' };
-        }
-        return { decisionId, allowed: true, reasonKey: 'TENANT_SCOPED_OBSERVE_ALLOWED' };
-      },
-    };
-
-    const contextObserveTool: AgentToolAdapter = {
-      toolKey: 'cbos.context.observe',
-      effect: 'OBSERVE',
-      async invoke(input: AgentToolAdapterInput) {
-        return {
-          executionId: input.executionId,
-          tenantId: input.tenantId,
-          toolKey: 'cbos.context.observe',
-          kind: 'OBSERVATION',
-          outputReference: `artifact:cbos:context:${input.tenantId}:${input.executionId}`,
-          sourceReferences: [input.contextBundleReference],
-          producedAt: new Date().toISOString(),
-        };
-      },
-    };
-
-        const createStubTool = (toolKey: string): AgentToolAdapter => ({
-      toolKey,
-      effect: 'OBSERVE',
-      async invoke(input) {
-        return {
-          executionId: input.executionId,
-          tenantId: input.tenantId,
-          toolKey,
-          kind: 'OBSERVATION',
-          outputReference: `artifact:stub:${toolKey}:${input.tenantId}:${input.executionId}`,
-          sourceReferences: [],
-          producedAt: new Date().toISOString(),
-        };
-      },
-    });
-
-    const registeredTools = [
-      contextObserveTool,
-      createStubTool('content.editorial.debate'),
-      createStubTool('revenue.lead.osint'),
-      createStubTool('revenue.outreach.draft_sequence'),
-      createStubTool('voice.callback.prepare'),
-    ];
-
-    const orchestrator = new ChiefOfStaffOrchestrator({
-      executorOptions: { authorizationPort, registeredTools },
-    });
-
     const mission = await withBrandTransaction(context, async (client) => {
+      const authorizationPort = createMissionAuthorizationPort(
+        context.tenantId,
+        async (tenantId, toolGroup) => {
+          const res = await client.query(
+            `SELECT 1 FROM platform.tenant_tool_grants WHERE tenant_id = $1::uuid AND tool_group = $2 AND enabled = true`,
+            [tenantId, toolGroup]
+          );
+          return res.rowCount !== null && res.rowCount > 0;
+        }
+      );
+      
       const repository = new PostgresChiefOfStaffRepository(client);
+      
+      const orchestrator = new ChiefOfStaffOrchestrator({
+        executorOptions: { authorizationPort, registeredTools: getRegisteredMissionTools() },
+      });
+
       return orchestrator.processExecutiveIntent(
         repository,
         {
