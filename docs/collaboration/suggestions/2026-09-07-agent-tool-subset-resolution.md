@@ -30,5 +30,9 @@ While `isAgentActive(tenantId, agentSlug)` already serves as a **planning-time g
 - Enforces strict least-privilege per task based on the assigned persona's declared tools.
 - Prevents agents from silently inheriting global tenant access to unrelated tools.
 
+## Risks / trade-offs
+- Slight execution-time overhead parsing the tools JSON array per action, though negligible.
+- If agent tools are overly constrained in definitions, tasks may fail frequently and require manual user intervention.
+
 ## Decision trail
 - **2026-09-07** — Drafted and Opened.
