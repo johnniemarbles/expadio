@@ -920,6 +920,15 @@
     "default_on": false
   },
   {
+    "department": "Revenue Operations",
+    "slug": "pipeline-health-analyst",
+    "persona": "Pipeline & Lead Health Analyst",
+    "tools": [
+      "DB"
+    ],
+    "default_on": false
+  },
+  {
     "department": "GTM",
     "slug": "gtm-sales-junior",
     "persona": "Junior Sales Specialist",

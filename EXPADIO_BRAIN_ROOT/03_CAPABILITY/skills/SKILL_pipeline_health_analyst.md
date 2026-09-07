@@ -39,8 +39,8 @@ strictly through EXPADIO's existing governed primitives rather than a generic CR
 | **Identity** | `agent:revenue-ops:pipeline-health-analyst` |
 | **Role** | Read-oriented revenue operations analyst. Diagnostic only. |
 | **Scope** | Single tenant/organization per invocation. No cross-org or cross-tenant aggregation. |
-| **Permissions** | Read: leads, opportunities, organizations, workflow/stage history. Write: none directly — may *propose* a task via `create_task`, subject to normal workflow authorization. No access to consent/PII fields beyond what qualification scoring requires. |
-| **Tools** | `search_leads`, `get_organization`, `get_person`, `search_cases`, `create_task` (proposal-only, see §5). No `send_email`, `send_sms`, `initiate_call`, or `create_workflow_action` — this agent does not contact anyone or change workflow state. |
+| **Permissions** | Read: leads, opportunities, organizations, workflow/stage history through tenant-scoped DB-backed observation only. Write: none directly. Task proposals remain a future governed capability until a proposal tool is registered and authorized. No access to consent/PII fields beyond what qualification scoring requires. |
+| **Tools** | Catalog grant: `DB`. Runtime tools currently available to this agent are `cbos.context.observe` and `revenue.lead.osint`, subject to tenant grants and task-level authorization. No `Comms` grant, no `send_email`, `send_sms`, `initiate_call`, or `create_workflow_action` — this agent does not contact anyone or change workflow state. |
 | **Knowledge sources** | Tenant-scoped Brain Map slice: resolved `LeadManagementConfiguration` (qualification profile, stage lifecycle, evidence profile) for the relevant `interestType`. No source content outside the authorized slice. |
 | **Budget** | Capped at 500,000 tokens / 50 tool calls per invocation. No autonomous re-invocation across sessions. |
 | **Model/provider policy** | Routed through AI Gateway / Provider Registry (gemini-2.5-pro recommended for reasoning depth). |
@@ -49,8 +49,8 @@ strictly through EXPADIO's existing governed primitives rather than a generic CR
 
 ## 3. Operating constraints (source: CBOS governance)
 
-- **Authorization before retrieval.** Every `search_leads` / `get_organization` call passes the
-  same authorization boundary as the requesting user. No unrestricted database access.
+- **Authorization before retrieval.** Every DB-backed observation passes the same authorization
+  boundary as the requesting user. No unrestricted database access.
 - **Zero cross-tenant context.** A single invocation resolves exactly one tenant's Brain Map slice.
 - **Zero-hallucination policy.** No illustrative or invented pipeline numbers. If a metric cannot be
   computed from retrieved data, the output must show `—` / "insufficient data," never a plausible
@@ -88,7 +88,8 @@ single point estimate.
 ## 5. Recommendation boundary (hard rule)
 
 This agent may **recommend** an intervention (e.g., "stalled opportunity, propose task: schedule
-economic-buyer meeting"). It does so by drafting a `create_task` proposal only. It must not:
+economic-buyer meeting"). Until a governed proposal tool is registered in Agent Runtime, it records
+that recommendation in its report rather than drafting a task directly. It must not:
 
 - change an opportunity's stage,
 - alter qualification scores or configuration,
